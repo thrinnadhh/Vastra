@@ -179,4 +179,10 @@ export default defineConfig([
       ],
     },
   },
+  {
+    files: ['apps/backend/src/**/*.module.ts'],
+    rules: {
+      '@typescript-eslint/no-extraneous-class': 'off',
+    },
+  },
 ]);
