@@ -1,0 +1,26 @@
+{
+  "name": "@vastra/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./mobile": "./src/env/mobile.ts",
+    "./web": "./src/env/web.ts",
+    "./server": "./src/env/server.ts"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "4"
+  },
+  "devDependencies": {
+    "@types/node": "20",
+    "vitest": "3"
+  }
+}
