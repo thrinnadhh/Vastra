@@ -1,6 +1,6 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
 last_updated: 2026-07-11
 ---
@@ -20,6 +20,12 @@ last_updated: 2026-07-11
 - Request eligible cancellations and returns
 - Raise and view own support tickets
 - Submit own reviews
+- Create and manage own private wardrobe items and looks
+- Share an owned saved look with a private room in which the customer is active
+- Create private Group Style rooms; manage participants and close owned rooms
+- Join valid invited rooms and participate while membership is active
+- Share products, vote, comment, shortlist, report abuse, and add available products
+  to the customer's own cart
 
 ### Must not
 
@@ -29,6 +35,10 @@ last_updated: 2026-07-11
 - Assign a captain
 - Change payment or refund status
 - Access merchant or admin records
+- Browse another customer's wardrobe or reuse its media outside an authorized
+  room-scoped look share
+- Access a room after removal or mutate a closed room
+- Create shared carts, payments, orders, or delivery addresses
 
 ## 2. Merchant
 
@@ -163,6 +173,12 @@ settlement.adjust
 campaign.publish
 audit.read
 admin.manage_roles
+wardrobe.read_own
+wardrobe.write_own
+group_room.create
+group_room.manage_own
+group_room.participate
+group_report.review
 ```
 
 ## 9. Enforcement layers

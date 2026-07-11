@@ -1,6 +1,6 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
 last_updated: 2026-07-11
 ---
@@ -49,6 +49,10 @@ Modules:
 - Finance
 - Admin
 - Audit
+- Wardrobe
+- Looks
+- Group Style
+- Trust and Safety
 
 Each module owns:
 
@@ -134,6 +138,12 @@ scripts/
 - Refunds
 - Settlements
 - Admin actions
+- Wardrobe metadata/media finalization and deletion
+- Look create/update/duplicate/delete and cart transfer
+- Group room, invite, membership, share, vote, comment, shortlist, and report writes
+
+Clients may upload bytes only to a backend-issued, owner-scoped signed upload URL.
+They cannot directly insert or mutate Wardrobe or Group Style protected tables.
 
 ## 6. Transaction pattern
 
@@ -176,6 +186,8 @@ Examples:
 - order.status.changed
 - captain.assignment.created
 - refund.created
+- wardrobe.item.deleted
+- group.room.activity.created
 
 ## 8. Environments
 
@@ -196,6 +208,8 @@ Never use production credentials locally.
 - Supabase Realtime
 - FCM
 - Scheduled/background worker
+- Private wardrobe media bucket with signed access
+- Durable Group Style persistence with authorized realtime subscriptions
 
 ### Later
 
@@ -203,4 +217,5 @@ Never use production credentials locally.
 - Search engine for catalogue
 - Dedicated recommendation service
 - Dedicated media/AI processing
+- Recommendation, body scanning, virtual try-on, and fit-prediction services
 - Read replicas and partitioning

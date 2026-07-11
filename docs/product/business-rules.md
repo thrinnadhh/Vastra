@@ -1,6 +1,6 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
 last_updated: 2026-07-11
 ---
@@ -148,7 +148,8 @@ A rejected order:
 
 ## 15. Privacy
 
-- KYC, return evidence, and body-related files use private storage.
+- KYC, return evidence, and wardrobe files use private storage. Any later-approved
+  body-related files must also use private storage, but no body feature is in MVP.
 - Signed URLs expire.
 - Service-role keys never appear in client apps.
 - Sensitive fields are encrypted where appropriate.
@@ -166,3 +167,54 @@ Audit these actions:
 - Manual inventory correction
 - Permission changes
 - Admin login and high-risk access
+
+## 17. Wardrobe and looks
+
+- A wardrobe item and saved look have one customer owner identified by UUID.
+- Wardrobe photos and metadata are private by default and use private storage.
+- Category, colour, occasion, and season are manually supplied; notes are optional.
+- The MVP performs no automatic recognition, background removal, segmentation,
+  measurement, fit prediction, outfit generation, or video scanning.
+- A look may reference the owner's active wardrobe items and active Vastra product
+  variants. It does not reserve inventory or freeze a product price.
+- Product prices are integer paise and are refreshed from the catalogue when a look
+  or room is read and again when an item is added to cart or checked out.
+- Deleting a wardrobe item is backend-mediated and transactional: revoke signed
+  access, remove or tombstone active look references, delete the private storage
+  object, and record the deletion. A failed storage deletion remains inaccessible
+  and is retried; it must not restore user access.
+- Deleting a look revokes future room sharing. Existing room shares become an
+  unavailable tombstone and must not expose wardrobe media.
+- Only currently available shop variants can be added from a look to the owner's
+  individual cart; the one-shop cart rule still applies.
+
+## 18. Group Style
+
+- A room has one customer owner and only invited, active customer participants.
+- Invite links and join codes have an explicit UTC expiry, are revocable, and are
+  stored only as hashes where a bearer secret is involved.
+- An expired or revoked invite cannot add a participant.
+- The owner may remove participants and close the room. Removal revokes access
+  immediately; a closed room is readable by retained members but accepts no new
+  durable activity or joins.
+- Sharing a saved look grants active room members access only to the shared look
+  snapshot and its selected wardrobe media. Later edits to the source look require
+  a new share and never silently expose new wardrobe items. Sharing never grants
+  wardrobe-list access.
+- The owner cannot remove the owner membership; closing the room is the terminal
+  owner action in MVP.
+- Participants may share Vastra products, vote, comment, shortlist, report abuse,
+  and add purchasable variants to their own cart.
+- Each participant has one effective vote per shared item. Repeating a vote updates
+  the existing vote instead of creating another.
+- Shortlist membership is unique per room and shared item.
+- Product shares retain a visible tombstone when unavailable. Current source price
+  and availability are resolved on read; out-of-stock items cannot be purchased.
+- All timestamps are UTC and all identifiers are UUIDs. Realtime is delivery only;
+  rooms, memberships, shares, votes, comments, shortlist changes, and reports are
+  stored durably before events are published.
+- Each participant uses an individual cart, address, payment, and order. There is
+  no shared cart, payment, order, or delivery address.
+- Abuse reports are private to the reporter and authorized support/admin reviewers.
+- Protected writes are backend-mediated, authorized, validated, logged, and use
+  transactions where multiple durable records or access changes are involved.

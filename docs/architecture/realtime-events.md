@@ -1,6 +1,6 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
 last_updated: 2026-07-11
 ---
@@ -28,6 +28,7 @@ captain:{captainId}
 delivery:{deliveryTaskId}
 operations:{cityId}
 support:{ticketId}
+group-room:{roomId}
 ```
 
 ## 3. Event envelope
@@ -55,6 +56,8 @@ support:{ticketId}
 - return.status.changed
 - refund.status.changed
 - support.message.created
+- wardrobe.look.share.updated
+- group.room.activity.created
 
 ## 5. Merchant events
 
@@ -101,7 +104,24 @@ Order committed
 → Retries stop
 ```
 
-## 9. Delivery guarantees
+## 9. Group Style events
+
+- group.room.member.joined
+- group.room.member.removed
+- group.room.closed
+- group.room.share.created
+- group.room.vote.updated
+- group.room.comment.created
+- group.room.shortlist.updated
+
+The backend persists and authorizes the durable action before publishing. Channel
+authorization is re-evaluated on subscription and reconnect; removed members are
+disconnected or denied immediately. Event payloads contain UUID references and
+display-safe summaries, never wardrobe object keys, signed URLs, invite secrets, or
+abuse-report details. Clients refetch product shares to obtain current integer-paise
+price and availability.
+
+## 10. Delivery guarantees
 
 - Events are at-least-once.
 - Consumers must be idempotent.
@@ -110,7 +130,7 @@ Order committed
 - Use outbox processing retries.
 - Dead-letter failed events after configured attempts.
 
-## 10. Location updates
+## 11. Location updates
 
 - High-frequency temporary location may use Realtime Broadcast.
 - Persist durable snapshots every 15–30 seconds or at major events.

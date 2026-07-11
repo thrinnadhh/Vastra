@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Vastra MVP API
-  version: 1.0.0
+  version: 1.1.0
   description: Canonical MVP API contract for Customer, Merchant, Captain, and Admin
     applications.
 servers:
@@ -18,6 +18,8 @@ tags:
 - name: Captain
 - name: Admin
 - name: Webhooks
+- name: Wardrobe
+- name: Group Style
 components:
   securitySchemes:
     bearerAuth:
@@ -43,6 +45,37 @@ components:
       schema:
         type: string
         format: uuid
+  responses:
+    BadRequest:
+      description: Request validation failed
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ApiError'}
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ApiError'}
+    Forbidden:
+      description: Actor is not authorized for the resource
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ApiError'}
+    NotFound:
+      description: Resource not found or not visible to the actor
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ApiError'}
+    Conflict:
+      description: Resource state conflicts with the request
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ApiError'}
+    Gone:
+      description: Invite is expired, revoked, or exhausted
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ApiError'}
   schemas:
     ApiError:
       type: object
@@ -75,6 +108,336 @@ components:
           type:
           - string
           - 'null'
+          format: uuid
+    ActionResult:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          const: true
+    WardrobeItem:
+      type: object
+      required: [id, ownerCustomerId, category, colour, occasion, season, status,
+        createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        ownerCustomerId: {type: string, format: uuid}
+        imageUrl:
+          description: Short-lived signed URL returned only to an authorized viewer.
+          type: [string, 'null']
+          format: uri
+        category: {type: string, minLength: 1, maxLength: 80}
+        colour: {type: string, minLength: 1, maxLength: 80}
+        occasion: {type: string, minLength: 1, maxLength: 80}
+        season: {type: string, minLength: 1, maxLength: 80}
+        notes: {type: [string, 'null'], maxLength: 500}
+        status: {type: string, enum: [ACTIVE, DELETED]}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    WardrobeItemList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/WardrobeItem'}
+        nextCursor: {type: [string, 'null']}
+    CreateWardrobeUploadRequest:
+      type: object
+      required: [contentType, contentLength]
+      properties:
+        contentType: {type: string, enum: [image/jpeg, image/png, image/webp]}
+        contentLength: {type: integer, minimum: 1, maximum: 10485760}
+    WardrobeUploadIntent:
+      type: object
+      required: [uploadId, uploadUrl, expiresAt]
+      properties:
+        uploadId: {type: string, format: uuid}
+        uploadUrl: {type: string, format: uri}
+        expiresAt: {type: string, format: date-time}
+    CreateWardrobeItemRequest:
+      type: object
+      required: [uploadId, category, colour, occasion, season]
+      properties:
+        uploadId: {type: string, format: uuid}
+        category: {type: string, minLength: 1, maxLength: 80}
+        colour: {type: string, minLength: 1, maxLength: 80}
+        occasion: {type: string, minLength: 1, maxLength: 80}
+        season: {type: string, minLength: 1, maxLength: 80}
+        notes: {type: [string, 'null'], maxLength: 500}
+    UpdateWardrobeItemRequest:
+      type: object
+      minProperties: 1
+      properties:
+        category: {type: string, minLength: 1, maxLength: 80}
+        colour: {type: string, minLength: 1, maxLength: 80}
+        occasion: {type: string, minLength: 1, maxLength: 80}
+        season: {type: string, minLength: 1, maxLength: 80}
+        notes: {type: [string, 'null'], maxLength: 500}
+    LookItemInput:
+      type: object
+      required: [sourceType]
+      properties:
+        sourceType: {type: string, enum: [WARDROBE_ITEM, PRODUCT_VARIANT]}
+        wardrobeItemId: {type: [string, 'null'], format: uuid}
+        productVariantId: {type: [string, 'null'], format: uuid}
+      oneOf:
+      - required: [wardrobeItemId]
+        properties:
+          sourceType: {const: WARDROBE_ITEM}
+          wardrobeItemId: {type: string, format: uuid}
+          productVariantId: {type: 'null'}
+      - required: [productVariantId]
+        properties:
+          sourceType: {const: PRODUCT_VARIANT}
+          wardrobeItemId: {type: 'null'}
+          productVariantId: {type: string, format: uuid}
+    LookItem:
+      allOf:
+      - $ref: '#/components/schemas/LookItemInput'
+      - type: object
+        required: [id, displayPosition]
+        properties:
+          id: {type: string, format: uuid}
+          displayPosition: {type: integer, minimum: 0}
+          currentSellingPricePaise: {type: [integer, 'null'], minimum: 0}
+          availableQuantity: {type: [integer, 'null'], minimum: 0}
+          imageUrl: {type: [string, 'null'], format: uri}
+    SavedLook:
+      type: object
+      required: [id, ownerCustomerId, name, items, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        ownerCustomerId: {type: string, format: uuid}
+        name: {type: string}
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/LookItem'}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    SavedLookList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/SavedLook'}
+        nextCursor: {type: [string, 'null']}
+    CreateLookRequest:
+      type: object
+      required: [name, items]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: {$ref: '#/components/schemas/LookItemInput'}
+    UpdateLookRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: {$ref: '#/components/schemas/LookItemInput'}
+    DuplicateLookRequest:
+      type: object
+      properties:
+        name: {type: [string, 'null'], minLength: 1, maxLength: 120}
+    AddLookProductsToCartRequest:
+      type: object
+      required: [productVariantIds]
+      properties:
+        productVariantIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: {type: string, format: uuid}
+    CartTransferResult:
+      type: object
+      required: [cartId, addedVariantIds]
+      properties:
+        cartId: {type: string, format: uuid}
+        addedVariantIds:
+          type: array
+          items: {type: string, format: uuid}
+    GroupRoom:
+      type: object
+      required: [id, ownerCustomerId, name, status, members, shares, createdAt,
+        updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        ownerCustomerId: {type: string, format: uuid}
+        name: {type: string}
+        status: {type: string, enum: [OPEN, CLOSED]}
+        members:
+          type: array
+          items:
+            type: object
+            required: [customerId, role, status, joinedAt]
+            properties:
+              customerId: {type: string, format: uuid}
+              role: {type: string, enum: [OWNER, PARTICIPANT]}
+              status: {type: string, enum: [ACTIVE, REMOVED]}
+              joinedAt: {type: string, format: date-time}
+        shares:
+          type: array
+          items: {$ref: '#/components/schemas/GroupShare'}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+        closedAt: {type: [string, 'null'], format: date-time}
+    GroupRoomList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/GroupRoom'}
+        nextCursor: {type: [string, 'null']}
+    CreateGroupRoomRequest:
+      type: object
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+    CloseGroupRoomRequest:
+      type: object
+      properties:
+        reason: {type: [string, 'null'], maxLength: 500}
+    CreateGroupInviteRequest:
+      type: object
+      required: [method, expiresAt]
+      properties:
+        method: {type: string, enum: [LINK, JOIN_CODE]}
+        expiresAt: {type: string, format: date-time}
+        maxUses: {type: integer, minimum: 1, maximum: 100}
+    GroupInvite:
+      type: object
+      required: [id, roomId, method, expiresAt]
+      properties:
+        id: {type: string, format: uuid}
+        roomId: {type: string, format: uuid}
+        method: {type: string, enum: [LINK, JOIN_CODE]}
+        inviteToken: {type: [string, 'null']}
+        joinCode: {type: [string, 'null']}
+        expiresAt: {type: string, format: date-time}
+      description: The creation response contains exactly one inviteToken or joinCode.
+    JoinGroupRoomRequest:
+      type: object
+      properties:
+        inviteToken: {type: [string, 'null'], minLength: 20}
+        joinCode: {type: [string, 'null'], minLength: 6, maxLength: 12}
+      oneOf:
+      - required: [inviteToken]
+        properties:
+          inviteToken: {type: string, minLength: 20}
+          joinCode: {type: 'null'}
+      - required: [joinCode]
+        properties:
+          inviteToken: {type: 'null'}
+          joinCode: {type: string, minLength: 6, maxLength: 12}
+    GroupShare:
+      type: object
+      required: [id, roomId, sharedBy, shareType, sourceAvailable, createdAt, votes,
+        comments, shortlisted]
+      properties:
+        id: {type: string, format: uuid}
+        roomId: {type: string, format: uuid}
+        sharedBy: {type: string, format: uuid}
+        shareType: {type: string, enum: [PRODUCT_VARIANT, SAVED_LOOK]}
+        productVariantId: {type: [string, 'null'], format: uuid}
+        savedLookId: {type: [string, 'null'], format: uuid}
+        currentSellingPricePaise: {type: [integer, 'null'], minimum: 0}
+        availableQuantity: {type: [integer, 'null'], minimum: 0}
+        sourceAvailable: {type: boolean}
+        sharedLook:
+          description: Room-visible snapshot captured when a saved look was shared.
+          oneOf: [{$ref: '#/components/schemas/SavedLook'}, {type: 'null'}]
+        votes:
+          type: array
+          items:
+            type: object
+            required: [customerId, vote, updatedAt]
+            properties:
+              customerId: {type: string, format: uuid}
+              vote: {type: string, enum: [LOVE, MAYBE, SKIP]}
+              updatedAt: {type: string, format: date-time}
+        comments:
+          type: array
+          items: {$ref: '#/components/schemas/GroupComment'}
+        shortlisted: {type: boolean}
+        createdAt: {type: string, format: date-time}
+    CreateGroupShareRequest:
+      type: object
+      required: [shareType]
+      properties:
+        shareType: {type: string, enum: [PRODUCT_VARIANT, SAVED_LOOK]}
+        productVariantId: {type: [string, 'null'], format: uuid}
+        savedLookId: {type: [string, 'null'], format: uuid}
+      oneOf:
+      - required: [productVariantId]
+        properties:
+          shareType: {const: PRODUCT_VARIANT}
+          productVariantId: {type: string, format: uuid}
+          savedLookId: {type: 'null'}
+      - required: [savedLookId]
+        properties:
+          shareType: {const: SAVED_LOOK}
+          productVariantId: {type: 'null'}
+          savedLookId: {type: string, format: uuid}
+    AddGroupProductToCartRequest:
+      type: object
+      required: [quantity]
+      properties:
+        quantity: {type: integer, minimum: 1, maximum: 20}
+    SetGroupVoteRequest:
+      type: object
+      required: [vote]
+      properties:
+        vote: {type: string, enum: [LOVE, MAYBE, SKIP]}
+    GroupVote:
+      type: object
+      required: [shareId, customerId, vote, updatedAt]
+      properties:
+        shareId: {type: string, format: uuid}
+        customerId: {type: string, format: uuid}
+        vote: {type: string, enum: [LOVE, MAYBE, SKIP]}
+        updatedAt: {type: string, format: date-time}
+    CreateGroupCommentRequest:
+      type: object
+      required: [body]
+      properties:
+        body: {type: string, minLength: 1, maxLength: 1000}
+    GroupComment:
+      type: object
+      required: [id, shareId, authorCustomerId, body, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        shareId: {type: string, format: uuid}
+        authorCustomerId: {type: string, format: uuid}
+        body: {type: string}
+        createdAt: {type: string, format: date-time}
+    CreateGroupReportRequest:
+      type: object
+      required: [reason]
+      properties:
+        shareId: {type: [string, 'null'], format: uuid}
+        commentId: {type: [string, 'null'], format: uuid}
+        reason:
+          type: string
+          enum: [HARASSMENT, HATE, SEXUAL_CONTENT, SPAM, IMPERSONATION, OTHER]
+        details: {type: [string, 'null'], maxLength: 1000}
+    GroupReportReceipt:
+      type: object
+      required: [id, roomId, status, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        roomId: {type: string, format: uuid}
+        status: {type: string, enum: [RECEIVED]}
+        createdAt: {type: string, format: date-time}
     Profile:
       type: object
       properties:
@@ -545,6 +908,685 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+  /customer/wardrobe/upload-intents:
+    post:
+      operationId: createWardrobeUploadIntent
+      summary: Create an owner-scoped private wardrobe upload intent
+      tags: [Wardrobe]
+      security: [{bearerAuth: []}]
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateWardrobeUploadRequest'}
+      responses:
+        '201':
+          description: Upload intent created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WardrobeUploadIntent'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/wardrobe/items:
+    get:
+      operationId: listWardrobeItems
+      summary: List the authenticated customer's private wardrobe
+      tags: [Wardrobe]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cursor
+        in: query
+        schema: {type: string}
+      - name: limit
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Wardrobe items
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WardrobeItemList'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: createWardrobeItem
+      summary: Finalize an uploaded wardrobe item with manual metadata
+      tags: [Wardrobe]
+      security: [{bearerAuth: []}]
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateWardrobeItemRequest'}
+      responses:
+        '201':
+          description: Wardrobe item created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WardrobeItem'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/wardrobe/items/{wardrobeItemId}:
+    get:
+      operationId: getWardrobeItem
+      summary: Get an owned wardrobe item
+      tags: [Wardrobe]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: wardrobeItemId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Wardrobe item
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WardrobeItem'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    patch:
+      operationId: updateWardrobeItem
+      summary: Update manual metadata for an owned wardrobe item
+      tags: [Wardrobe]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: wardrobeItemId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateWardrobeItemRequest'}
+      responses:
+        '200':
+          description: Wardrobe item updated
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WardrobeItem'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+    delete:
+      operationId: deleteWardrobeItem
+      summary: Delete an owned wardrobe item and revoke media access
+      tags: [Wardrobe]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: wardrobeItemId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Wardrobe item access revoked and deletion accepted
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ActionResult'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/looks:
+    get:
+      operationId: listSavedLooks
+      summary: List the authenticated customer's saved looks
+      tags: [Wardrobe]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cursor
+        in: query
+        schema: {type: string}
+      - name: limit
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Saved looks with refreshed product data
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SavedLookList'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: createSavedLook
+      summary: Create a saved look
+      tags: [Wardrobe]
+      security: [{bearerAuth: []}]
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateLookRequest'}
+      responses:
+        '201':
+          description: Saved look created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SavedLook'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/looks/{lookId}:
+    get:
+      operationId: getSavedLook
+      summary: Get an owned saved look with refreshed product data
+      tags: [Wardrobe]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: lookId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Saved look
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SavedLook'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    patch:
+      operationId: updateSavedLook
+      summary: Rename or replace the composition of an owned look
+      tags: [Wardrobe]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: lookId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateLookRequest'}
+      responses:
+        '200':
+          description: Saved look updated
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SavedLook'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+    delete:
+      operationId: deleteSavedLook
+      summary: Delete an owned saved look
+      tags: [Wardrobe]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: lookId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Look deleted and room shares tombstoned
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ActionResult'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/looks/{lookId}/duplicates:
+    post:
+      operationId: duplicateSavedLook
+      summary: Duplicate an owned saved look
+      tags: [Wardrobe]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: lookId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DuplicateLookRequest'}
+      responses:
+        '201':
+          description: Duplicate saved look created with a new UUID
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SavedLook'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/looks/{lookId}/cart-items:
+    post:
+      operationId: addLookProductsToCart
+      summary: Add available product variants from a look to the individual cart
+      tags: [Wardrobe]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: lookId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AddLookProductsToCartRequest'}
+      responses:
+        '200':
+          description: Available variants added under the one-shop cart rule
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CartTransferResult'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/group-style/rooms:
+    get:
+      operationId: listGroupStyleRooms
+      summary: List rooms owned by or joined by the authenticated customer
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cursor
+        in: query
+        schema: {type: string}
+      - name: limit
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Private rooms visible to the member
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GroupRoomList'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: createGroupStyleRoom
+      summary: Create a private Group Style room
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateGroupRoomRequest'}
+      responses:
+        '201':
+          description: Private room created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GroupRoom'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/group-style/memberships:
+    post:
+      operationId: joinGroupStyleRoom
+      summary: Join an open room using an invite token or join code
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/JoinGroupRoomRequest'}
+      responses:
+        '201':
+          description: Membership created and private room returned
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GroupRoom'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '410': {$ref: '#/components/responses/Gone'}
+  /customer/group-style/rooms/{roomId}:
+    get:
+      operationId: getGroupStyleRoom
+      summary: Get room activity with refreshed product price and availability
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Private room visible to an active or retained member
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GroupRoom'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /customer/group-style/rooms/{roomId}/closure:
+    post:
+      operationId: closeGroupStyleRoom
+      summary: Close an owned room and make it read-only
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CloseGroupRoomRequest'}
+      responses:
+        '200':
+          description: Closed room
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GroupRoom'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/group-style/rooms/{roomId}/invites:
+    post:
+      operationId: createGroupStyleInvite
+      summary: Create an expiring room invite link or join code
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateGroupInviteRequest'}
+      responses:
+        '201':
+          description: Invite created; secret is returned only in this response
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GroupInvite'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/group-style/rooms/{roomId}/members/{customerId}:
+    delete:
+      operationId: removeGroupStyleMember
+      summary: Remove a participant from an owned room
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: customerId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Membership removed and access revoked
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ActionResult'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/group-style/rooms/{roomId}/shares:
+    post:
+      operationId: createGroupStyleShare
+      summary: Share a Vastra product or owned saved look with a room
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateGroupShareRequest'}
+      responses:
+        '201':
+          description: Durable share created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GroupShare'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/group-style/rooms/{roomId}/shares/{shareId}/vote:
+    put:
+      operationId: setGroupStyleVote
+      summary: Create or replace the participant's single effective vote
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: shareId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SetGroupVoteRequest'}
+      responses:
+        '200':
+          description: Effective vote stored
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GroupVote'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/group-style/rooms/{roomId}/shares/{shareId}/comments:
+    post:
+      operationId: createGroupStyleComment
+      summary: Add a durable comment to a shared item
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: shareId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateGroupCommentRequest'}
+      responses:
+        '201':
+          description: Durable comment created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GroupComment'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/group-style/rooms/{roomId}/shares/{shareId}/cart-items:
+    post:
+      operationId: addGroupStyleProductToCart
+      summary: Add an available shared product to the participant's individual cart
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: shareId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AddGroupProductToCartRequest'}
+      responses:
+        '200':
+          description: Product added under current stock, price, and one-shop rules
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CartTransferResult'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/group-style/rooms/{roomId}/shortlist/{shareId}:
+    put:
+      operationId: addGroupStyleShortlistItem
+      summary: Add a shared item to the room shortlist
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: shareId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Shortlist membership stored idempotently
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ActionResult'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+    delete:
+      operationId: removeGroupStyleShortlistItem
+      summary: Remove a shared item from the room shortlist
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: shareId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Shortlist membership removed idempotently
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ActionResult'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /customer/group-style/rooms/{roomId}/reports:
+    post:
+      operationId: createGroupStyleAbuseReport
+      summary: Privately report room content or activity for abuse review
+      tags: [Group Style]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateGroupReportRequest'}
+      responses:
+        '201':
+          description: Private report receipt
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GroupReportReceipt'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
   /merchant/dashboard:
     get:
       summary: Get merchant dashboard

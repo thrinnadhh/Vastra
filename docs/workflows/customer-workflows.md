@@ -1,6 +1,6 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
 last_updated: 2026-07-11
 ---
@@ -190,3 +190,74 @@ After completion:
 - Rate captain
 - Optional text
 - Moderation status applies
+
+## 11. Wardrobe item
+
+```text
+Open Wardrobe
+→ Request owner-scoped signed upload intent
+→ Upload one supported photo to private storage
+→ Submit manual category, colour, occasion, season, and optional notes
+→ Backend verifies the uploaded object and creates the owned wardrobe item
+→ View or edit the private item
+```
+
+Deletion:
+
+```text
+Choose owned item
+→ Confirm delete
+→ Backend marks item inaccessible and revokes new signed access transactionally
+→ Active look references are removed or shown as unavailable
+→ Private object is deleted; failed object deletion is retried without restoring access
+```
+
+Loading, empty wardrobe, upload progress, validation failure, expired upload URL,
+and recoverable deletion states must be shown. No image recognition or AI step runs.
+
+## 12. Saved look
+
+```text
+Create look and name it
+→ Select owned wardrobe items and/or nearby-shop product variants
+→ Save ordered composition
+→ View current product price and availability
+→ Rename, duplicate, or delete the owned look
+```
+
+From a look, the customer may add currently available product variants to the
+customer's own cart. The backend revalidates source price, stock, and the one-shop
+cart rule; wardrobe items never enter the commerce cart.
+
+## 13. Group Style room
+
+Owner flow:
+
+```text
+Create private room
+→ Generate link or join code with UTC expiry
+→ Invite participants
+→ Share a Vastra product or a room-visible snapshot of an owned saved look
+→ Vote, comment, and update shared shortlist
+→ Remove a participant when necessary
+→ Close room
+```
+
+Participant flow:
+
+```text
+Open invite link or enter join code
+→ Authenticate
+→ Backend validates open room, invite status, expiry, and usage
+→ Join as active participant
+→ Share products or owned looks
+→ Cast or change one LOVE/MAYBE/SKIP vote per share
+→ Comment, shortlist, or report abuse
+→ Add an available product to the participant's own cart
+```
+
+An expired/revoked invite fails without revealing private room content. A removed
+member immediately loses room and shared wardrobe-media access. Closing makes the
+room read-only for retained members. Out-of-stock products remain visible with
+refreshed source price/availability but cannot be added to cart. Every durable
+action is committed before any optional realtime event is emitted.

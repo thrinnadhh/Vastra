@@ -1,6 +1,6 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
 last_updated: 2026-07-11
 ---
@@ -81,6 +81,31 @@ last_updated: 2026-07-11
 | ORDER_CANCELLATION_NOT_ALLOWED | 409 | Policy disallows cancellation |
 | MERCHANT_RESPONSE_EXPIRED | 409 | Merchant window expired |
 | ORDER_ITEM_NOT_VERIFIED | 409 | Packing incomplete |
+
+## Wardrobe and looks
+
+| WARDROBE_ITEM_NOT_FOUND | 404 | Wardrobe item missing or not visible to actor |
+| WARDROBE_MEDIA_INVALID | 400 | Media type, size, or upload finalization invalid |
+| WARDROBE_MEDIA_UNAVAILABLE | 409 | Private media is unavailable or deletion is pending |
+| WARDROBE_ITEM_IN_USE | 409 | Requested mutation conflicts with an active operation |
+| LOOK_NOT_FOUND | 404 | Saved look missing or not visible to actor |
+| LOOK_ITEM_INVALID | 400 | Look item type or source reference invalid |
+| LOOK_SOURCE_UNAVAILABLE | 409 | Referenced wardrobe item or product is unavailable |
+
+## Group Style
+
+| GROUP_ROOM_NOT_FOUND | 404 | Room missing or actor is not an active/retained member |
+| GROUP_ROOM_CLOSED | 409 | Closed room accepts no joins or durable activity |
+| GROUP_MEMBERSHIP_REQUIRED | 403 | Active room membership required |
+| GROUP_OWNER_REQUIRED | 403 | Room-owner permission required |
+| GROUP_INVITE_INVALID | 400 | Invite link token or join code invalid |
+| GROUP_INVITE_EXPIRED | 410 | Invite expiry has passed |
+| GROUP_INVITE_REVOKED | 410 | Invite was revoked or exhausted |
+| GROUP_MEMBER_REMOVED | 403 | Membership was removed |
+| GROUP_SHARE_NOT_FOUND | 404 | Shared product/look missing or not visible |
+| GROUP_VOTE_INVALID | 400 | Vote is not LOVE, MAYBE, or SKIP |
+| GROUP_COMMENT_NOT_FOUND | 404 | Comment missing or not visible |
+| GROUP_REPORT_INVALID | 400 | Abuse report target or reason invalid |
 
 ## Payments and refunds
 

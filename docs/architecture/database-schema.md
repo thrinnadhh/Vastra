@@ -1,6 +1,6 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
 last_updated: 2026-07-11
 ---
@@ -61,6 +61,23 @@ Use Supabase-managed `auth.users`. Application profile data lives in `public.pro
 - payments
 - payment_events
 - refunds
+
+### Wardrobe and looks
+
+- wardrobe_items
+- saved_looks
+- saved_look_items
+
+### Group Style
+
+- group_rooms
+- group_room_invites
+- group_room_members
+- group_room_shares
+- group_room_votes
+- group_room_comments
+- group_room_shortlist_items
+- group_room_abuse_reports
 
 ### Logistics
 
@@ -192,6 +209,50 @@ Store immutable snapshots:
 - distance and duration estimates
 - timestamps
 
+### wardrobe_items
+
+- id UUID PK
+- owner_customer_id UUID FK
+- storage_object_key (private bucket key; never a public URL)
+- category, colour, occasion, season
+- notes nullable
+- status (`ACTIVE`, `DELETED`)
+- created_at, updated_at, deleted_at as UTC `timestamptz`
+
+### saved_looks and saved_look_items
+
+- saved_looks: id UUID PK, owner_customer_id UUID FK, name, UTC timestamps
+- saved_look_items: id UUID PK, look_id UUID FK, item_type
+  (`WARDROBE_ITEM`, `PRODUCT_VARIANT`), exactly one wardrobe_item_id or
+  product_variant_id, display_position, UTC timestamps
+- Look product references do not snapshot or reserve price or availability.
+
+### group_rooms, invites, and members
+
+- group_rooms: id UUID PK, owner_customer_id UUID FK, name, status
+  (`OPEN`, `CLOSED`), closed_at, UTC timestamps
+- group_room_invites: id UUID PK, room_id UUID FK, token_hash and/or code_hash,
+  expires_at, revoked_at, max_uses, use_count, created_by, UTC timestamps
+- group_room_members: id UUID PK, room_id UUID FK, customer_id UUID FK, role
+  (`OWNER`, `PARTICIPANT`), status (`ACTIVE`, `REMOVED`), joined_at, removed_at,
+  removed_by
+
+### group_room activity
+
+- group_room_shares: id UUID PK, room_id UUID FK, shared_by UUID FK, share_type
+  (`PRODUCT_VARIANT`, `SAVED_LOOK`), exactly one source reference, a validated
+  room-visible look snapshot for saved-look shares, UTC timestamps. Snapshots store
+  source UUIDs and display order, never signed media URLs or product prices.
+- group_room_votes: id UUID PK, share_id UUID FK, voter_customer_id UUID FK,
+  vote (`LOVE`, `MAYBE`, `SKIP`), UTC timestamps
+- group_room_comments: id UUID PK, share_id UUID FK, author_customer_id UUID FK,
+  body, status, UTC timestamps
+- group_room_shortlist_items: id UUID PK, room_id UUID FK, share_id UUID FK,
+  added_by UUID FK, created_at
+- group_room_abuse_reports: id UUID PK, room_id UUID FK, reporter_customer_id
+  UUID FK, share_id/comment_id nullable, reason, details nullable, status, UTC
+  timestamps
+
 ## 4. Constraints
 
 - No negative inventory values.
@@ -202,6 +263,12 @@ Store immutable snapshots:
 - One active accepted captain assignment per delivery task.
 - One active favourite record per customer/shop.
 - One active balance row per shop/variant.
+- One membership row per room/customer; only active members may read room data.
+- One effective vote per share/voter.
+- One shortlist row per room/share.
+- Look and room polymorphic references enforce exactly one valid source.
+- Invite expiry must be later than creation; revoked/expired invites cannot be used.
+- Wardrobe storage keys are unique and owner-scoped.
 
 ## 5. Indexes
 
@@ -217,6 +284,13 @@ Required:
 - Products by shop/category/is_active
 - Support tickets by assignee/status
 - Audit logs by entity and created_at
+- Wardrobe items by owner/status/created_at
+- Saved looks by owner/updated_at and look items by look/display_position
+- Room memberships by customer/status and room/status
+- Room shares/comments by room/created_at
+- Votes by share and shortlist items by room
+- Active invites by room/expires_at
+- Abuse reports by status/created_at
 
 ## 6. Partition candidates
 

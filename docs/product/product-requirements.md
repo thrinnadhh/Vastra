@@ -1,6 +1,6 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
 last_updated: 2026-07-11
 ---
@@ -46,14 +46,15 @@ An internal employee managing merchant approvals, captain approvals, live operat
 3. Make hyperlocal fashion discovery easy.
 4. Keep order, payment, inventory, and delivery state consistent.
 5. Give operations staff enough control to recover from failures.
-6. Build a safe foundation for later Group Style, recommendations, size fitting, and virtual try-on.
+6. Test private, manual Wardrobe and Group Style collaboration in the first pilot.
+7. Keep future recommendations, size fitting, body scanning, and virtual try-on
+   outside the pilot boundary.
 
 ## 4. Non-goals for MVP
 
 The first launch does not include:
 
 - Multi-shop cart
-- Group Style
 - Body scanning
 - AI size prediction
 - Virtual try-on
@@ -64,6 +65,13 @@ The first launch does not include:
 - Complex dynamic commissions
 - Full multi-city operations
 - Loyalty points or wallet
+- Automatic clothing recognition, background removal, segmentation, outfit
+  generation, size measurement, or fit prediction
+- Video wardrobe scanning or public wardrobe profiles
+- Shared carts, split/shared payments, combined multi-user orders, or multiple
+  delivery addresses in one order
+- Public/influencer rooms, live video shopping, group rewards, automatic social
+  discovery, or AI stylist chat
 
 ## 5. Launch assumptions
 
@@ -130,6 +138,35 @@ The first launch does not include:
 - Refund status
 - Support ticket
 - Ratings for product, shop, and captain
+
+### Wardrobe and looks
+
+- Upload one photo for an owned item through private storage
+- Manually assign category, colour, occasion, season, and optional notes
+- List, view, edit, and delete only the customer's own wardrobe items
+- Create looks from owned wardrobe items and nearby-shop products
+- Save, rename, duplicate, and delete looks
+- Share a saved look into a private Group Style room
+- Add currently available shop variants from a look to the customer's own cart
+- Show recoverable upload, refresh, deletion, and availability errors
+- Provide loading, empty, and accessible interactive states
+
+No automatic recognition or transformation of wardrobe images is required.
+
+### Group Style
+
+- Create and list private rooms
+- Invite participants with an expiring link or join code
+- Join a room while the invite is valid
+- Allow the owner to remove participants and close the room
+- Share Vastra products and saved wardrobe looks
+- Cast one effective `LOVE`, `MAYBE`, or `SKIP` vote per participant per shared item
+- Comment and maintain a shared shortlist
+- Refresh product price and availability from the catalogue source
+- Keep out-of-stock shares visible but non-purchasable
+- Report room content or activity for abuse review
+- Use optional realtime updates while storing every durable action
+- Add products only to each participant's existing individual, one-shop cart
 
 ## 7. Merchant requirements
 
@@ -239,6 +276,10 @@ The first launch does not include:
 - Unauthorized cross-user access must fail.
 - Mobile applications must not contain Supabase secret/service keys.
 - Every critical operation must have a recoverable error state.
+- Wardrobe and Group Style cross-customer access must fail unless a room-scoped
+  share grants access to an active participant.
+- Wardrobe deletion must revoke media access and remove active references.
+- Removed members and expired invites must be rejected immediately.
 
 ## 11. Success metrics
 
@@ -252,6 +293,8 @@ The first launch does not include:
 | Unauthorized access tests | 0 failures |
 | Payment webhook idempotency | 100% |
 | Delivery OTP bypass | 0 unauthorized cases |
+| Unauthorized wardrobe or room access | 0 failures |
+| Duplicate effective Group Style votes | 0 |
 
 ## 12. Change control
 

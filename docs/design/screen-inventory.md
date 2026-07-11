@@ -1,6 +1,6 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
 last_updated: 2026-07-11
 ---
@@ -43,10 +43,24 @@ last_updated: 2026-07-11
 | C30 | Ticket Conversation | Yes |
 | C31 | Ratings | Yes |
 | C32 | Profile and Settings | Yes |
-| C33 | Group Style | Post-MVP |
-| C34 | Find My Size | Post-MVP |
-| C35 | Body Scan | Post-MVP |
-| C36 | Virtual Try-On | Post-MVP |
+| C33 | Style Hub | Yes |
+| C34 | Wardrobe List/Empty State | Yes |
+| C35 | Add/Edit Wardrobe Item | Yes |
+| C36 | Wardrobe Item Details/Delete | Yes |
+| C37 | Saved Looks | Yes |
+| C38 | Create/Edit Look | Yes |
+| C39 | Look Details/Share/Add to Cart | Yes |
+| C40 | Group Style Rooms | Yes |
+| C41 | Create Group Room/Invite | Yes |
+| C42 | Join Group Room | Yes |
+| C43 | Group Room Activity | Yes |
+| C44 | Group Share/Comments/Votes/Shortlist | Yes |
+| C45 | Group Members/Close Room | Yes |
+| C46 | Report Group Activity | Yes |
+| C47 | Find My Size | Post-MVP |
+| C48 | Body Scan | Post-MVP |
+| C49 | Virtual Try-On | Post-MVP |
+| C50 | Automatic Wardrobe Recognition | Post-MVP |
 
 ## Merchant App
 

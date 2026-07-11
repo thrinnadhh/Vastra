@@ -1,6 +1,6 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
 last_updated: 2026-07-11
 ---
@@ -40,6 +40,14 @@ Customer discovers product
 - Cancellation before merchant acceptance
 - Return request
 - Support and ratings
+- Private wardrobe with customer-uploaded item photos and manual category, colour,
+  occasion, season, and optional notes
+- Saved looks combining owned wardrobe items and products from nearby Vastra shops
+- Create, rename, duplicate, delete, and privately share saved looks
+- Private Group Style rooms with link or join-code invitations
+- Room membership management, product/look sharing, `LOVE`/`MAYBE`/`SKIP`
+  voting, comments, shared shortlist, and abuse reporting
+- Individual add-to-cart and checkout from looks and room products
 
 ### Merchant application
 
@@ -101,6 +109,8 @@ Customer discovers product
 - Order state machine
 - Inventory row locking
 - Audit history
+- Private wardrobe media with revocable signed access
+- Durable Group Style state with optional realtime delivery
 
 ## Excluded
 
@@ -115,6 +125,7 @@ Customer discovers product
 - Scheduled delivery
 - BNPL
 - Multiple languages
+- Public wardrobe profiles
 
 ### Merchant
 
@@ -145,12 +156,38 @@ Customer discovers product
 
 ### Future intelligence features
 
-- Group Style
 - ML recommendations
 - Camera body scan
 - AI size prediction
 - Virtual try-on
 - AI fashion assistant
+- Automatic clothing recognition, background removal, or segmentation
+- AI-generated outfits
+- Automatic size measurement or fit prediction
+- Video wardrobe scanning
+
+### Future social and commerce features
+
+- Public groups or public wardrobe discovery
+- Influencer rooms
+- Shared carts, split/shared payments, or combined multi-user orders
+- Multiple delivery addresses in one order
+- Live video shopping
+- Group rewards or automatic social discovery
+- AI stylist chat
+
+## Controlled pilot boundaries
+
+- Wardrobe photos and metadata are private by default. Only the owner can manage
+  them; sharing a saved look grants room-scoped access to that look, not access to
+  browse the owner's wardrobe.
+- Room access is limited to the owner and active participants. Owners can remove
+  participants and close rooms; closed rooms are read-only.
+- Product price and availability in looks and rooms are refreshed from the source
+  product. Out-of-stock products remain visible but cannot be added to cart.
+- Every participant retains an individual cart, address, payment, and order. The
+  existing one-shop cart rule continues to apply.
+- No automatic image understanding or other AI processing is required.
 
 ## Release boundary
 

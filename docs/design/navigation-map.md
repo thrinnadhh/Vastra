@@ -1,6 +1,6 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
 last_updated: 2026-07-11
 ---
@@ -16,6 +16,7 @@ Home
 Categories
 Orders
 Favourites
+Style
 Profile
 ```
 
@@ -28,14 +29,19 @@ Orders → Order Details → Tracking
 Orders → Order Details → Return
 Profile → Addresses
 Profile → Support
+Style → Wardrobe → Add/Edit Wardrobe Item
+Style → Looks → Create/Edit Look → Add Available Products to Cart
+Style → Group Style Rooms → Create/Join Room → Room Activity
+Look → Share → Group Style Room
+Invite Link/Join Code → Authenticate → Group Style Room
 ```
 
-Post-MVP:
+Future AI:
 
 ```text
-Home → Group Style
 Product → Find My Size
 Product → Virtual Try-On
+Wardrobe → Automatic Scan/Recognition
 ```
 
 ## Merchant App
@@ -126,6 +132,9 @@ Examples:
 vastra://product/{productId}
 vastra://shop/{shopId}
 vastra://order/{orderId}
+vastra://look/{lookId}
+vastra://group-style/join/{inviteToken}
+vastra://group-style/rooms/{roomId}
 vastra-merchant://order/{orderId}
 vastra-captain://delivery/{deliveryId}
 ```

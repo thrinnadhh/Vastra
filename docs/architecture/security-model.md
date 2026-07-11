@@ -1,6 +1,6 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
 last_updated: 2026-07-11
 ---
@@ -49,6 +49,11 @@ Examples:
 - Captain reads assigned delivery only.
 - User reads own notification only.
 - Public reads only approved, active shops/products.
+- Customer reads and writes only owned wardrobe metadata through the backend.
+- Active room members read room activity; removed/non-members receive no room data.
+- A room-scoped saved-look snapshot exposes only the items selected when it was
+  shared; later source-look edits do not expand room access.
+- Group activity tables deny direct client writes; backend authorization is required.
 
 Service-role access is backend-only.
 
@@ -78,12 +83,34 @@ Buckets:
 | captain-documents | Private |
 | return-evidence | Private |
 | support-attachments | Private |
-| body-scans | Private, post-MVP |
-| virtual-tryon | Private, post-MVP |
+| wardrobe-items | Private; owner or active room-scoped shared-look access |
+| body-scans | Not provisioned for MVP |
+| virtual-tryon | Not provisioned for MVP |
 
-Use signed URLs with short expiry.
+Use signed URLs with short expiry. The backend checks current ownership or active
+room membership before issuing each wardrobe-media URL. URLs are not stored in
+durable room records. Wardrobe deletion first makes the object ineligible for new
+signed URLs, then removes the object; cached URLs must have short expiry.
 
-## 7. Payment security
+## 7. Wardrobe and Group Style authorization
+
+- Wardrobe/list/look management requires the authenticated owner.
+- Finalizing or deleting wardrobe media is backend-mediated. Upload URLs are
+  single-purpose, size/type limited, short-lived, and scoped to an owner key prefix.
+- Creating invites, removing members, and closing a room requires room ownership.
+- Joining requires an open room and an unexpired, unrevoked invite/link or code.
+- Sharing, voting, commenting, shortlisting, reporting, and reading room activity
+  require active membership in an open room; retained members may only read a
+  closed room.
+- Removed members immediately lose room subscriptions, API reads, and eligibility
+  for new media URLs. Previously issued media URLs expire shortly.
+- Abuse reports are visible only to their reporter and authorized support/admin
+  reviewers. Report targets do not see reporter identity through room APIs.
+- Source product price and stock are read from authorized catalogue/inventory
+  projections; clients cannot overwrite them in look or room payloads.
+- Rate-limit room creation, invite generation/join attempts, comments, and reports.
+
+## 8. Payment security
 
 - Verify webhook signatures.
 - Read raw request body.
@@ -92,7 +119,7 @@ Use signed URLs with short expiry.
 - Keep payment secrets backend-only.
 - Never store full card details.
 
-## 8. API protection
+## 9. API protection
 
 - Rate limit authentication and sensitive routes.
 - Validate all input.
@@ -103,7 +130,7 @@ Use signed URLs with short expiry.
 - Reject unsupported content types.
 - Sanitize logs.
 
-## 9. Mobile security
+## 10. Mobile security
 
 - Secure token storage
 - Certificate pinning only after operational review
@@ -112,7 +139,7 @@ Use signed URLs with short expiry.
 - Disable screenshots on highly sensitive KYC screens when justified
 - Clear private cached files
 
-## 10. Admin security
+## 11. Admin security
 
 - MFA
 - Strong session timeout
@@ -123,7 +150,7 @@ Use signed URLs with short expiry.
 - Permission review
 - Disable inactive accounts
 
-## 11. Logging
+## 12. Logging
 
 Never log:
 
@@ -134,8 +161,9 @@ Never log:
 - Payment secrets
 - Full customer addresses unless operationally necessary
 - Raw private evidence URLs
+- Wardrobe signed URLs, raw invite tokens/join codes, and private room content
 
-## 12. Security tests
+## 13. Security tests
 
 - Cross-customer access
 - Cross-merchant access
@@ -148,3 +176,8 @@ Never log:
 - Duplicate idempotency key
 - Malicious file upload
 - Rate-limit abuse
+- Cross-customer wardrobe and look access
+- Non-member, removed-member, and closed-room mutation access
+- Expired/revoked invite use and join-code enumeration
+- Wardrobe media access after deletion or membership removal
+- Abuse reporter identity disclosure
