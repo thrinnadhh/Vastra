@@ -1,9 +1,27 @@
 .DS_Store
+.idea/
+.vscode/
+
+# Local environment and credentials. Keep only sanitized templates.
 .env
 .env.*
-!.env.example
+!.env*.example
+.envrc
+
+# Dependencies and package-manager state.
 node_modules/
+.pnpm-store/
+
+# Build, test, and framework output.
 .turbo/
 dist/
+build/
+out/
+coverage/
+.next/
 .expo/
+*.tsbuildinfo
+*.log
+
+# Local Supabase state.
 supabase/.temp/
