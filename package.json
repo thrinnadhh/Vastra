@@ -1,0 +1,22 @@
+{
+  "name": "vastra",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@8.15.0",
+  "engines": {
+    "node": "20.20.2",
+    "pnpm": "8.15.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "db:test": "turbo run db:test",
+    "lint": "turbo run lint",
+    "openapi:check": "turbo run openapi:check",
+    "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "turbo": "2.10.4"
+  }
+}
