@@ -24,3 +24,5 @@ wireframes/
 
 # Product and execution documentation is formatted manually
 **/*.md
+
+apps/admin-dashboard/next-env.d.ts
