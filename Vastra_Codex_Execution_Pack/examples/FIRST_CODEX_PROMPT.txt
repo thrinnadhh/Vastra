@@ -1,0 +1,14 @@
+Read all active AGENTS.md instructions.
+
+Then read:
+- docs/product/mvp-scope.md
+- docs/product/business-rules.md
+- docs/workflows/order-state-machine.md
+- docs/architecture/system-architecture.md
+- docs/architecture/security-model.md
+- docs/api/openapi.yaml
+- docs/testing/acceptance-tests.md
+
+Audit the repository using codex/prompts/00-repository-audit.md.
+
+Do not modify files.
