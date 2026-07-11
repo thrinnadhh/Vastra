@@ -2,7 +2,7 @@
   "pack": "Vastra Codex Execution Pack",
   "version": "1.0",
   "created": "2026-07-11",
-  "file_count": 33,
+  "file_count": 35,
   "files": [
     ".github/AGENTS.md",
     "AGENTS.md",
@@ -23,6 +23,8 @@
     "codex/prompts/03-authentication-and-roles.md",
     "codex/prompts/04-catalogue-and-inventory.md",
     "codex/prompts/05-customer-discovery-and-cart.md",
+    "codex/prompts/05a-wardrobe-mvp.md",
+    "codex/prompts/05b-group-style-mvp.md",
     "codex/prompts/06-order-vertical-slice.md",
     "codex/prompts/07-merchant-ringing-alerts.md",
     "codex/prompts/08-captain-delivery.md",

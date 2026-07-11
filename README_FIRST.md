@@ -86,11 +86,13 @@ Use this sequence:
 4. Authentication and roles
 5. Catalogue and inventory
 6. Customer discovery and cart
-7. Order vertical slice
-8. Merchant ringing alerts
-9. Captain delivery
-10. Admin operations
-11. Payments, returns, and settlements
-12. Hardening and pilot release
+7. Wardrobe MVP
+8. Group Style MVP
+9. Order vertical slice
+10. Merchant ringing alerts
+11. Captain delivery
+12. Admin operations
+13. Payments, returns, and settlements
+14. Hardening and pilot release
 
 Read `codex/RUN_ORDER.md` before starting.
