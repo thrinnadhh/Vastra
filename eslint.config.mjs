@@ -70,13 +70,7 @@ export default defineConfig([
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: [
-            '*.config.ts',
-            '*.config.mts',
-            'scripts/*.ts',
-            'scripts/*.mts',
-            'vitest.workspace.ts',
-          ],
+          allowDefaultProject: ['*.config.ts', '*.config.mts', 'vitest.workspace.ts'],
           defaultProject: 'tsconfig.base.json',
         },
         tsconfigRootDir: import.meta.dirname,
