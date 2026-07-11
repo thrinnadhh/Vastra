@@ -69,6 +69,8 @@ Run in order:
 03-authentication-and-roles.md
 04-catalogue-and-inventory.md
 05-customer-discovery-and-cart.md
+05a-wardrobe-mvp.md
+05b-group-style-mvp.md
 06-order-vertical-slice.md
 07-merchant-ringing-alerts.md
 08-captain-delivery.md

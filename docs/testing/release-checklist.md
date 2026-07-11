@@ -1,6 +1,6 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
 last_updated: 2026-07-11
 ---
@@ -47,12 +47,17 @@ last_updated: 2026-07-11
 - [ ] Admin MFA enabled
 - [ ] Suspended accounts blocked
 - [ ] Session expiration tested
+- [ ] Wardrobe owner and room membership isolation tested
+- [ ] Removed members and expired/revoked invites rejected
+- [ ] Protected Wardrobe/Group Style tables reject direct client writes
 
 ## 5. Storage
 
 - [ ] Public buckets contain only public assets
 - [ ] KYC buckets private
 - [ ] Return evidence private
+- [ ] Wardrobe bucket private and owner-scoped signed upload tested
+- [ ] Wardrobe media access after deletion/member removal tested
 - [ ] Signed URL expiry tested
 - [ ] Upload size/type restrictions tested
 - [ ] Malware/content validation process documented
@@ -70,6 +75,12 @@ last_updated: 2026-07-11
 - [ ] Cancellation
 - [ ] Return
 - [ ] Support
+- [ ] Wardrobe upload/manual metadata/list/edit/delete and empty state
+- [ ] Saved look create/rename/duplicate/delete/share
+- [ ] Group room create/invite/join/remove/close and abuse report
+- [ ] LOVE/MAYBE/SKIP vote update, comments, and shortlist
+- [ ] Current product price/stock refresh and out-of-stock visibility
+- [ ] Individual one-shop cart, address, payment, and order from Group Style
 - [ ] Error and offline states
 
 ## 7. Merchant app
@@ -132,6 +143,7 @@ last_updated: 2026-07-11
 - [ ] Payment/refund failure alerting
 - [ ] Unassigned order alerting
 - [ ] Database health monitoring
+- [ ] Wardrobe deletion retry and Group Style durable-action metrics visible
 
 ## 12. Operations
 
@@ -144,6 +156,7 @@ last_updated: 2026-07-11
 - [ ] Pilot merchants confirmed
 - [ ] Pilot captains confirmed
 - [ ] Limited service zone configured
+- [ ] Group Style privacy, membership, retention, and abuse runbook ready
 
 ## 13. Go/no-go
 
