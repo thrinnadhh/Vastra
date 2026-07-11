@@ -1,0 +1,1008 @@
+openapi: 3.1.0
+info:
+  title: Vastra MVP API
+  version: 1.0.0
+  description: Canonical MVP API contract for Customer, Merchant, Captain, and Admin
+    applications.
+servers:
+- url: http://localhost:8080/v1
+  description: Local
+- url: https://staging-api.vastra.in/v1
+  description: Staging
+- url: https://api.vastra.in/v1
+  description: Production
+tags:
+- name: Common
+- name: Customer
+- name: Merchant
+- name: Captain
+- name: Admin
+- name: Webhooks
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    webhookSignature:
+      type: apiKey
+      in: header
+      name: X-Webhook-Signature
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    ApiError:
+      type: object
+      required:
+      - success
+      - error
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type:
+              - object
+              - 'null'
+              additionalProperties: true
+            retryable:
+              type: boolean
+              default: false
+        requestId:
+          type:
+          - string
+          - 'null'
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountType:
+          type: string
+          enum:
+          - CUSTOMER
+          - MERCHANT
+          - CAPTAIN
+          - ADMIN
+        fullName:
+          type:
+          - string
+          - 'null'
+        phoneNumber:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+    ProductVariant:
+      type: object
+      required:
+      - id
+      - productId
+      - sizeLabel
+      - sellingPricePaise
+      - availableQuantity
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        colourName:
+          type:
+          - string
+          - 'null'
+        sizeLabel:
+          type: string
+        mrpPaise:
+          type: integer
+          minimum: 0
+        sellingPricePaise:
+          type: integer
+          minimum: 0
+        availableQuantity:
+          type: integer
+          minimum: 0
+    Order:
+      type: object
+      required:
+      - id
+      - orderNumber
+      - status
+      - totalPaise
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        paymentStatus:
+          type: string
+        totalPaise:
+          type: integer
+          minimum: 0
+        placedAt:
+          type: string
+          format: date-time
+    OrderStatus:
+      type: string
+      enum:
+      - PAYMENT_PENDING
+      - WAITING_FOR_MERCHANT
+      - MERCHANT_ACCEPTED
+      - PACKING
+      - READY_FOR_PICKUP
+      - CAPTAIN_SEARCHING
+      - CAPTAIN_ASSIGNED
+      - CAPTAIN_AT_STORE
+      - PICKED_UP
+      - OUT_FOR_DELIVERY
+      - CAPTAIN_AT_CUSTOMER
+      - DELIVERED
+      - COMPLETED
+      - PROBLEM_REPORTED
+      - CANCELLED
+    CreateOrderRequest:
+      type: object
+      required:
+      - cartId
+      - quoteId
+      - addressId
+      - paymentMethod
+      properties:
+        cartId:
+          type: string
+          format: uuid
+        quoteId:
+          type: string
+          format: uuid
+        addressId:
+          type: string
+          format: uuid
+        paymentMethod:
+          type: string
+          enum:
+          - COD
+          - UPI
+          - CARD
+        customerNote:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+    InventoryAdjustmentRequest:
+      type: object
+      required:
+      - variantId
+      - action
+      - quantity
+      properties:
+        variantId:
+          type: string
+          format: uuid
+        action:
+          type: string
+          enum:
+          - ADD_STOCK
+          - OFFLINE_SALE
+          - RETURN_TO_STOCK
+          - MARK_DAMAGED
+          - STOCK_CORRECTION
+          - STOCK_CHECK
+        quantity:
+          type: integer
+          minimum: 1
+        reason:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+    MerchantAcceptRequest:
+      type: object
+      required:
+      - preparationMinutes
+      properties:
+        preparationMinutes:
+          type: integer
+          minimum: 1
+          maximum: 120
+    MerchantRejectRequest:
+      type: object
+      required:
+      - issueType
+      properties:
+        orderItemId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        issueType:
+          type: string
+          enum:
+          - OUT_OF_STOCK
+          - SIZE_UNAVAILABLE
+          - COLOUR_UNAVAILABLE
+          - DAMAGED_ITEM
+          - INVENTORY_MISMATCH
+          - ITEM_NOT_FOUND
+          - SHOP_BUSY
+          - SHOP_CLOSING
+          - OTHER
+        note:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+    DeliveryCompleteRequest:
+      type: object
+      required:
+      - deliveryOtp
+      properties:
+        deliveryOtp:
+          type: string
+          pattern: ^[0-9]{4,8}$
+        codCollectedPaise:
+          type: integer
+          minimum: 0
+        proofMethod:
+          type: string
+          enum:
+          - OTP
+          - ADMIN_OVERRIDE
+security:
+- bearerAuth: []
+paths:
+  /me:
+    get:
+      summary: Get current account
+      tags:
+      - Common
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /me/devices:
+    post:
+      summary: Register device
+      tags:
+      - Common
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /customer/home:
+    get:
+      summary: Get customer home feed
+      tags:
+      - Customer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /shops/nearby:
+    get:
+      summary: List nearby shops
+      tags:
+      - Customer
+      parameters:
+      - name: latitude
+        in: query
+        required: true
+        schema:
+          type: number
+      - name: longitude
+        in: query
+        required: true
+        schema:
+          type: number
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /shops/{shopId}:
+    get:
+      summary: Get shop
+      tags:
+      - Customer
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /products/{productId}:
+    get:
+      summary: Get product details
+      tags:
+      - Customer
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /customer/cart/items:
+    post:
+      summary: Add item to cart
+      tags:
+      - Customer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /checkout/quote:
+    post:
+      summary: Create checkout quote
+      tags:
+      - Customer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /orders:
+    post:
+      summary: Place order
+      tags:
+      - Customer
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /customer/orders:
+    get:
+      summary: List customer orders
+      tags:
+      - Customer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /customer/orders/{orderId}:
+    get:
+      summary: Get customer order
+      tags:
+      - Customer
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /customer/orders/{orderId}/cancel:
+    post:
+      summary: Cancel eligible order
+      tags:
+      - Customer
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /merchant/dashboard:
+    get:
+      summary: Get merchant dashboard
+      tags:
+      - Merchant
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /merchant/order-alerts/{alertId}/acknowledge:
+    post:
+      summary: Acknowledge merchant alert
+      tags:
+      - Merchant
+      parameters:
+      - name: alertId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /merchant/orders/{orderId}/accept:
+    post:
+      summary: Accept order
+      tags:
+      - Merchant
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantAcceptRequest'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /merchant/orders/{orderId}/reject:
+    post:
+      summary: Reject order
+      tags:
+      - Merchant
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantRejectRequest'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /merchant/orders/{orderId}/ready-for-pickup:
+    post:
+      summary: Mark ready for pickup
+      tags:
+      - Merchant
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /merchant/inventory/adjustments:
+    post:
+      summary: Adjust inventory
+      tags:
+      - Merchant
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryAdjustmentRequest'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /merchant/offline-sales:
+    post:
+      summary: Create offline sale
+      tags:
+      - Merchant
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /captain/availability/online:
+    post:
+      summary: Go online
+      tags:
+      - Captain
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /captain/delivery-offers:
+    get:
+      summary: List delivery offers
+      tags:
+      - Captain
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /captain/delivery-offers/{offerId}/accept:
+    post:
+      summary: Accept delivery offer
+      tags:
+      - Captain
+      parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /captain/deliveries/{deliveryId}/confirm-pickup:
+    post:
+      summary: Confirm pickup
+      tags:
+      - Captain
+      parameters:
+      - name: deliveryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /captain/deliveries/{deliveryId}/complete:
+    post:
+      summary: Complete delivery
+      tags:
+      - Captain
+      parameters:
+      - name: deliveryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryCompleteRequest'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /admin/dashboard:
+    get:
+      summary: Get admin dashboard
+      tags:
+      - Admin
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /admin/orders:
+    get:
+      summary: List operational orders
+      tags:
+      - Admin
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /admin/orders/{orderId}/assign-captain:
+    post:
+      summary: Assign captain
+      tags:
+      - Admin
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /admin/merchants/{merchantId}/approve:
+    post:
+      summary: Approve merchant
+      tags:
+      - Admin
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /admin/captains/{captainId}/approve:
+    post:
+      summary: Approve captain
+      tags:
+      - Admin
+      parameters:
+      - name: captainId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /admin/returns/{returnId}/approve:
+    post:
+      summary: Approve return
+      tags:
+      - Admin
+      parameters:
+      - name: returnId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /webhooks/payments/{provider}:
+    post:
+      summary: Receive payment webhook
+      tags:
+      - Webhooks
+      parameters:
+      - name: provider
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security: []
