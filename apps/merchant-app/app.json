@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Vastra Merchant",
+    "slug": "vastra-merchant-app",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["ios", "android", "web"],
+    "plugins": ["expo-status-bar"],
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
