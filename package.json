@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "db:test": "turbo run db:test",
+    "db:test": "bash scripts/run-db-tests.sh",
     "lint": "eslint . --max-warnings=0",
     "openapi:check": "redocly lint docs/api/openapi.yaml --extends=spec",
     "test": "turbo run test",

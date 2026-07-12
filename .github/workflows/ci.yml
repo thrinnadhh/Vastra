@@ -57,6 +57,11 @@ jobs:
       - name: Run integration tests
         run: pnpm test:integration
 
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.109.1
+
       - name: Run database tests
         run: pnpm db:test
 
