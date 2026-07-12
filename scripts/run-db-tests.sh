@@ -33,4 +33,6 @@ if ! supabase status --output json >/dev/null 2>&1; then
 fi
 
 supabase db reset --local
+supabase migration list --local
 supabase test db --local
+supabase db advisors --local
