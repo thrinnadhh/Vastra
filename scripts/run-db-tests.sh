@@ -32,4 +32,5 @@ if ! supabase status --output json >/dev/null 2>&1; then
   started_stack=1
 fi
 
+supabase db reset --local
 supabase test db --local
