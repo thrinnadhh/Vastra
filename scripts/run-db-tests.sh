@@ -35,4 +35,5 @@ fi
 supabase db reset --local
 supabase migration list --local
 supabase test db --local
+bash scripts/run-db-concurrency-tests.sh
 supabase db advisors --local

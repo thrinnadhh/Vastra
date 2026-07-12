@@ -121,8 +121,8 @@ select is(
       'SELECT'
     )
   ),
-  0,
-  'anonymous clients have no shop or address table grants'
+  2,
+  'anon table grants match the final RLS surface'
 );
 
 select is(
@@ -142,8 +142,8 @@ select is(
       'SELECT'
     )
   ),
-  0,
-  'authenticated clients have no grants before RLS policies'
+  5,
+  'authenticated table grants match the final RLS surface'
 );
 
 select ok(

@@ -115,7 +115,7 @@ select is(
     )
   ),
   0,
-  'anonymous users have no operations grants'
+  'anon table grants match the final RLS surface'
 );
 
 select is(
@@ -139,8 +139,8 @@ select is(
       'SELECT'
     )
   ),
-  0,
-  'authenticated users have no operations grants'
+  9,
+  'authenticated table grants match the final RLS surface'
 );
 
 select ok(

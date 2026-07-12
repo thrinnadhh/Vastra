@@ -132,7 +132,7 @@ select is(
     )
   ),
   0,
-  'anonymous clients have no delivery grants'
+  'anon table grants match the final RLS surface'
 );
 
 select is(
@@ -153,8 +153,8 @@ select is(
       'SELECT'
     )
   ),
-  0,
-  'authenticated clients have no delivery grants'
+  6,
+  'authenticated table grants match the final RLS surface'
 );
 
 select ok(

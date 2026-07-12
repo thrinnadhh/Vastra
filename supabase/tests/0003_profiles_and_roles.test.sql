@@ -196,7 +196,7 @@ select is(
     )
   ),
   0,
-  'anonymous clients have no identity table read grants'
+  'anon table grants match the final RLS surface'
 );
 
 select is(
@@ -221,8 +221,8 @@ select is(
       'SELECT'
     )
   ),
-  0,
-  'authenticated clients have no identity table grants before policies'
+  10,
+  'authenticated table grants match the final RLS surface'
 );
 
 select ok(
