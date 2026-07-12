@@ -10,8 +10,9 @@
     "start:prod": "node dist/main.js",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
-    "test": "vitest run",
-    "build": "nest build"
+    "test": "vitest run --exclude '**/*.integration.test.ts'",
+    "build": "nest build",
+    "test:integration": "vitest run integration.test"
   },
   "dependencies": {
     "@nestjs/common": "11",
@@ -22,7 +23,10 @@
   },
   "devDependencies": {
     "@nestjs/cli": "11",
+    "@nestjs/testing": "11",
     "@types/node": "20.19.43",
+    "@types/supertest": "7.2.0",
+    "supertest": "7.2.2",
     "typescript": "5.9.3",
     "vitest": "3.2.7"
   }
