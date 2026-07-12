@@ -1,0 +1,10 @@
+{
+  "extends": ["../../tsconfig.base.json", "expo/tsconfig.base"],
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["jest"]
+  },
+  "include": ["App.tsx", "App.test.tsx", "index.ts"]
+}
