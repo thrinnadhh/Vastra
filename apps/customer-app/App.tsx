@@ -6,6 +6,8 @@ import {
   SafeAreaView,
 } from 'react-native-safe-area-context';
 
+import { CustomerSessionApp } from './src/auth/default-customer-session';
+
 export function CustomerFoundationScreen() {
   return (
     <View style={styles.screen}>
@@ -43,7 +45,10 @@ export default function App() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="dark" />
-        <CustomerFoundationScreen />
+
+        <CustomerSessionApp>
+          <CustomerFoundationScreen />
+        </CustomerSessionApp>
       </SafeAreaView>
     </SafeAreaProvider>
   );
