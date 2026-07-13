@@ -162,6 +162,33 @@ export function createProductVariantSkuConflictException(): HttpException {
   );
 }
 
+export function createInvalidCustomerCatalogueReadException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The customer catalogue query is invalid.',
+    false,
+  );
+}
+
+export function createCustomerCatalogueShopNotFoundException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.NOT_FOUND,
+    'SHOP_NOT_FOUND',
+    'The shop does not exist or is not available to customers.',
+    false,
+  );
+}
+
+export function createCustomerCatalogueProductNotFoundException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.NOT_FOUND,
+    'PRODUCT_NOT_FOUND',
+    'The product does not exist or is not available to customers.',
+    false,
+  );
+}
+
 export function createInvalidInventoryLookupException(): HttpException {
   return createCatalogueException(
     HttpStatus.BAD_REQUEST,

@@ -1658,6 +1658,124 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    CustomerCatalogueShop:
+      type: object
+      required: [id, name, slug, operationalStatus, acceptsOnlineOrders]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        operationalStatus: {type: string}
+        acceptsOnlineOrders: {type: boolean}
+    CustomerCatalogueImage:
+      type: object
+      required: [id, imageType, altText, displayOrder, isPrimary, imageUrl, thumbnailUrl]
+      properties:
+        id: {type: string, format: uuid}
+        imageType:
+          type: string
+          enum: [FRONT, BACK, SIDE, DETAIL, MODEL, SIZE_CHART]
+        altText: {type: ['string', 'null']}
+        displayOrder: {type: integer, minimum: 0}
+        isPrimary: {type: boolean}
+        imageUrl: {type: string, format: uri}
+        thumbnailUrl: {type: ['string', 'null'], format: uri}
+    CustomerCatalogueVariant:
+      type: object
+      required: [id, sku, colourName, colourHex, sizeLabel, mrpPaise, sellingPricePaise, attributes, availableQuantity, isAvailable]
+      properties:
+        id: {type: string, format: uuid}
+        sku: {type: string}
+        colourName: {type: ['string', 'null']}
+        colourHex: {type: ['string', 'null']}
+        sizeLabel: {type: ['string', 'null']}
+        mrpPaise: {type: integer, minimum: 0}
+        sellingPricePaise: {type: integer, minimum: 0}
+        attributes:
+          type: object
+          additionalProperties: true
+        availableQuantity: {type: integer, minimum: 0}
+        isAvailable: {type: boolean}
+    CustomerCatalogueProductCard:
+      type: object
+      required: [id, shopId, categoryId, name, slug, brand, genderCategory, primaryImage, minSellingPricePaise, maxSellingPricePaise, availableVariantCount, totalAvailableQuantity, isAvailable]
+      properties:
+        id: {type: string, format: uuid}
+        shopId: {type: string, format: uuid}
+        categoryId: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        brand: {type: ['string', 'null']}
+        genderCategory:
+          type: string
+          enum: [MEN, WOMEN, KIDS, UNISEX]
+        primaryImage:
+          oneOf:
+          - $ref: '#/components/schemas/CustomerCatalogueImage'
+          - type: 'null'
+        minSellingPricePaise: {type: ['integer', 'null'], minimum: 0}
+        maxSellingPricePaise: {type: ['integer', 'null'], minimum: 0}
+        availableVariantCount: {type: integer, minimum: 0}
+        totalAvailableQuantity: {type: integer, minimum: 0}
+        isAvailable: {type: boolean}
+    CustomerCatalogueProductDetail:
+      allOf:
+      - $ref: '#/components/schemas/CustomerCatalogueProductCard'
+      - type: object
+        required: [shop, description, material, styleTags, occasionTags, careInstructions, returnEligible, returnWindowDays, images, variants]
+        properties:
+          shop: {$ref: '#/components/schemas/CustomerCatalogueShop'}
+          description: {type: ['string', 'null']}
+          material: {type: ['string', 'null']}
+          styleTags:
+            type: array
+            items: {type: string}
+          occasionTags:
+            type: array
+            items: {type: string}
+          careInstructions: {type: ['string', 'null']}
+          returnEligible: {type: boolean}
+          returnWindowDays: {type: integer, minimum: 0, maximum: 90}
+          images:
+            type: array
+            items: {$ref: '#/components/schemas/CustomerCatalogueImage'}
+          variants:
+            type: array
+            items: {$ref: '#/components/schemas/CustomerCatalogueVariant'}
+    ListCustomerCatalogueProductsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [shop, products, nextCursor]
+          properties:
+            shop: {$ref: '#/components/schemas/CustomerCatalogueShop'}
+            products:
+              type: array
+              items: {$ref: '#/components/schemas/CustomerCatalogueProductCard'}
+            nextCursor: {type: ['string', 'null'], format: uuid}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    GetCustomerCatalogueProductResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [product]
+          properties:
+            product: {$ref: '#/components/schemas/CustomerCatalogueProductDetail'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     CreateCustomerInventoryReservationRequest:
       type: object
       additionalProperties: false
@@ -2003,31 +2121,78 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+  /shops/{shopId}/products:
+    get:
+      operationId: listCustomerShopProducts
+      summary: List approved active products from one public shop
+      description: Returns a stable UUID-cursor page with public product summaries and current sellable variant availability. Merchant inventory internals are not exposed.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: cursor
+        in: query
+        required: false
+        schema: {type: string, format: uuid}
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      responses:
+        '200':
+          description: Public shop product page
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ListCustomerCatalogueProductsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Public catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Customer catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
   /products/{productId}:
     get:
-      summary: Get product details
-      tags:
-      - Customer
+      operationId: getCustomerCatalogueProduct
+      summary: Get one approved active product with live variant availability
+      description: Returns public product details, ordered product images, active variants, current prices, and available quantity without exposing inventory internals.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
       parameters:
       - name: productId
         in: path
         required: true
-        schema:
-          type: string
-          format: uuid
+        schema: {type: string, format: uuid}
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Public product detail
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/GetCustomerCatalogueProductResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Public catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Customer catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
   /customer/cart/items:
     post:
       summary: Add item to cart
