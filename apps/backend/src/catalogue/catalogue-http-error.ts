@@ -6,6 +6,8 @@ export type CatalogueErrorCode =
   | 'CATEGORY_NOT_FOUND'
   | 'PRODUCT_NOT_FOUND'
   | 'PRODUCT_SLUG_CONFLICT'
+  | 'VARIANT_NOT_FOUND'
+  | 'VARIANT_SKU_CONFLICT'
   | 'PRODUCT_IMAGE_NOT_FOUND'
   | 'PRODUCT_IMAGE_UPLOAD_INVALID'
   | 'PRODUCT_IMAGE_CONFLICT'
@@ -111,6 +113,42 @@ export function createProductSlugConflictException(): HttpException {
     HttpStatus.CONFLICT,
     'PRODUCT_SLUG_CONFLICT',
     'The product slug is already used by this shop.',
+    false,
+  );
+}
+
+export function createInvalidProductVariantIdException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The product variant identifier is invalid.',
+    false,
+  );
+}
+
+export function createInvalidProductVariantInputException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The product variant request is invalid.',
+    false,
+  );
+}
+
+export function createProductVariantNotFoundException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.NOT_FOUND,
+    'VARIANT_NOT_FOUND',
+    'The product variant does not exist or is not visible to this merchant.',
+    false,
+  );
+}
+
+export function createProductVariantSkuConflictException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.CONFLICT,
+    'VARIANT_SKU_CONFLICT',
+    'The SKU is already used by another variant in this shop.',
     false,
   );
 }

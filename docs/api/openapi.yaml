@@ -230,6 +230,142 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    MerchantProductVariant:
+      type: object
+      required:
+      - id
+      - productId
+      - shopId
+      - sku
+      - colourName
+      - colourHex
+      - sizeLabel
+      - mrpPaise
+      - sellingPricePaise
+      - costPricePaise
+      - weightGrams
+      - lengthCm
+      - widthCm
+      - heightCm
+      - attributes
+      - isActive
+      - createdAt
+      - updatedAt
+      properties:
+        id: {type: string, format: uuid}
+        productId: {type: string, format: uuid}
+        shopId: {type: string, format: uuid}
+        sku: {type: string, minLength: 1, maxLength: 120}
+        colourName: {type: ['string', 'null'], minLength: 1, maxLength: 120}
+        colourHex:
+          type: ['string', 'null']
+          pattern: '^#[0-9A-F]{6}$'
+        sizeLabel: {type: ['string', 'null'], minLength: 1, maxLength: 80}
+        mrpPaise: {type: integer, minimum: 0}
+        sellingPricePaise: {type: integer, minimum: 0}
+        costPricePaise: {type: ['integer', 'null'], minimum: 0}
+        weightGrams: {type: ['integer', 'null'], minimum: 1}
+        lengthCm: {type: ['number', 'null'], exclusiveMinimum: 0, maximum: 999999.99}
+        widthCm: {type: ['number', 'null'], exclusiveMinimum: 0, maximum: 999999.99}
+        heightCm: {type: ['number', 'null'], exclusiveMinimum: 0, maximum: 999999.99}
+        attributes:
+          type: object
+          additionalProperties: true
+        isActive: {type: boolean}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    CreateMerchantProductVariantRequest:
+      type: object
+      additionalProperties: false
+      required: [sku, mrpPaise, sellingPricePaise]
+      properties:
+        sku: {type: string, minLength: 1, maxLength: 120}
+        colourName: {type: ['string', 'null'], minLength: 1, maxLength: 120}
+        colourHex:
+          type: ['string', 'null']
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        sizeLabel: {type: ['string', 'null'], minLength: 1, maxLength: 80}
+        mrpPaise: {type: integer, minimum: 0}
+        sellingPricePaise: {type: integer, minimum: 0}
+        costPricePaise: {type: ['integer', 'null'], minimum: 0}
+        weightGrams: {type: ['integer', 'null'], minimum: 1, maximum: 2147483647}
+        lengthCm: {type: ['number', 'null'], exclusiveMinimum: 0, maximum: 999999.99}
+        widthCm: {type: ['number', 'null'], exclusiveMinimum: 0, maximum: 999999.99}
+        heightCm: {type: ['number', 'null'], exclusiveMinimum: 0, maximum: 999999.99}
+        attributes:
+          type: object
+          additionalProperties: true
+          default: {}
+        isActive: {type: boolean, default: true}
+    UpdateMerchantProductVariantRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        sku: {type: string, minLength: 1, maxLength: 120}
+        colourName: {type: ['string', 'null'], minLength: 1, maxLength: 120}
+        colourHex:
+          type: ['string', 'null']
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        sizeLabel: {type: ['string', 'null'], minLength: 1, maxLength: 80}
+        mrpPaise: {type: integer, minimum: 0}
+        sellingPricePaise: {type: integer, minimum: 0}
+        costPricePaise: {type: ['integer', 'null'], minimum: 0}
+        weightGrams: {type: ['integer', 'null'], minimum: 1, maximum: 2147483647}
+        lengthCm: {type: ['number', 'null'], exclusiveMinimum: 0, maximum: 999999.99}
+        widthCm: {type: ['number', 'null'], exclusiveMinimum: 0, maximum: 999999.99}
+        heightCm: {type: ['number', 'null'], exclusiveMinimum: 0, maximum: 999999.99}
+        attributes:
+          type: object
+          additionalProperties: true
+        isActive: {type: boolean}
+    ListMerchantProductVariantsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [variants]
+          properties:
+            variants:
+              type: array
+              items: {$ref: '#/components/schemas/MerchantProductVariant'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    MerchantProductVariantResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [variant]
+          properties:
+            variant: {$ref: '#/components/schemas/MerchantProductVariant'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    DeactivateMerchantProductVariantResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [deactivatedVariantId]
+          properties:
+            deactivatedVariantId: {type: string, format: uuid}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     MerchantProductImage:
       type: object
       required:
@@ -2535,6 +2671,205 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ArchiveMerchantProductResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/shops/{shopId}/products/{productId}/variants:
+    get:
+      operationId: listMerchantProductVariants
+      summary: List variants and SKU state for an owned product
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: productId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Merchant product variants
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ListMerchantProductVariantsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+    post:
+      operationId: createMerchantProductVariant
+      summary: Create a sellable SKU for an owned product
+      description: SKU uniqueness is enforced across the owned shop. Inventory is managed separately.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: productId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateMerchantProductVariantRequest'}
+      responses:
+        '201':
+          description: Product variant created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MerchantProductVariantResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/shops/{shopId}/products/{productId}/variants/{variantId}:
+    get:
+      operationId: getMerchantProductVariant
+      summary: Get one variant from an owned product
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: productId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: variantId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Merchant product variant
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MerchantProductVariantResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+    patch:
+      operationId: updateMerchantProductVariant
+      summary: Update SKU, pricing, attributes, dimensions, or active state
+      description: Partial price changes are validated against the variant's current MRP and selling price.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: productId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: variantId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateMerchantProductVariantRequest'}
+      responses:
+        '200':
+          description: Product variant updated
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MerchantProductVariantResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+    delete:
+      operationId: deactivateMerchantProductVariant
+      summary: Deactivate a variant while preserving its SKU identity
+      description: The variant row is retained for media, inventory, cart, and order references.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: productId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: variantId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Product variant deactivated
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DeactivateMerchantProductVariantResponse'}
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
