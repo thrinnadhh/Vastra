@@ -30,10 +30,14 @@ function requireHttpServer(app: INestApplication): Server {
 }
 
 describe('Health endpoint integration', () => {
-  let app: INestApplication;
+  let app: INestApplication | undefined;
   let httpServer: Server;
 
   beforeAll(async () => {
+    process.env['SUPABASE_URL'] = 'http://127.0.0.1:54321';
+    process.env['SUPABASE_PUBLISHABLE_KEY'] = 'health-publishable-key-placeholder';
+    process.env['SUPABASE_SERVICE_ROLE_KEY'] = 'health-service-role-key-placeholder';
+
     const testingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -45,7 +49,9 @@ describe('Health endpoint integration', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app !== undefined) {
+      await app.close();
+    }
   });
 
   it('serves health metadata through the HTTP application', async () => {

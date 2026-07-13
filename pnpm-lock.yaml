@@ -102,6 +102,9 @@ importers:
       rxjs:
         specifier: 7.8.2
         version: 7.8.2
+      ws:
+        specifier: 8.18.3
+        version: 8.18.3
     devDependencies:
       '@nestjs/cli':
         specifier: '11'
@@ -115,6 +118,9 @@ importers:
       '@types/supertest':
         specifier: 7.2.0
         version: 7.2.0
+      '@types/ws':
+        specifier: 8.18.1
+        version: 8.18.1
       supertest:
         specifier: 7.2.2
         version: 7.2.2
@@ -3652,6 +3658,12 @@ packages:
 
   /@types/tough-cookie@4.0.5:
     resolution: {integrity: sha512-/Ad8+nIOV7Rl++6f1BdKxFSMgmoqEoYbHRpPcx3JEfv8VRsQe9Z4mCXeJBzxs7mbHY/XOZZuXlRNfhpVPbs6ZA==}
+    dev: true
+
+  /@types/ws@8.18.1:
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+    dependencies:
+      '@types/node': 20.19.43
     dev: true
 
   /@types/yargs-parser@21.0.3:
@@ -10496,6 +10508,19 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
+
+  /ws@8.18.3:
+    resolution: {integrity: sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+    dev: false
 
   /ws@8.21.0:
     resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
