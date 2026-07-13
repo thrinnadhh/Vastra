@@ -12,6 +12,10 @@ import { MerchantProductController } from './merchant-product.controller';
 import { SupabaseMerchantProductGateway } from './merchant-product.gateway';
 import { MerchantProductService } from './merchant-product.service';
 import { MERCHANT_PRODUCT_GATEWAY } from './merchant-product.tokens';
+import { MerchantProductVariantController } from './merchant-product-variant.controller';
+import { SupabaseMerchantProductVariantGateway } from './merchant-product-variant.gateway';
+import { MerchantProductVariantService } from './merchant-product-variant.service';
+import { MERCHANT_PRODUCT_VARIANT_GATEWAY } from './merchant-product-variant.tokens';
 import { ProductImageController } from './product-image.controller';
 import { SupabaseProductImageGateway } from './product-image.gateway';
 import { ProductImageService } from './product-image.service';
@@ -22,13 +26,19 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     MerchantShopContextController,
     CategoryCatalogueController,
     MerchantProductController,
+    MerchantProductVariantController,
     ProductImageController,
   ],
   providers: [
     MerchantShopContextService,
     CategoryCatalogueService,
     MerchantProductService,
+    MerchantProductVariantService,
     ProductImageService,
+    {
+      provide: MERCHANT_PRODUCT_VARIANT_GATEWAY,
+      useClass: SupabaseMerchantProductVariantGateway,
+    },
     {
       provide: PRODUCT_IMAGE_GATEWAY,
       useClass: SupabaseProductImageGateway,
@@ -52,6 +62,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     MERCHANT_SHOP_CONTEXT_GATEWAY,
     CATEGORY_CATALOGUE_GATEWAY,
     MERCHANT_PRODUCT_GATEWAY,
+    MERCHANT_PRODUCT_VARIANT_GATEWAY,
     PRODUCT_IMAGE_GATEWAY,
   ],
 })

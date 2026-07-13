@@ -57,7 +57,8 @@ last_updated: 2026-07-11
 | PRODUCT_IMAGE_NOT_FOUND | 404 | Product image missing or not visible |
 | PRODUCT_IMAGE_UPLOAD_INVALID | 400 | Uploaded image object is missing or invalid |
 | PRODUCT_IMAGE_CONFLICT | 409 | Image key or primary-image state conflicts |
-| VARIANT_NOT_FOUND | 404 | Variant missing |
+| VARIANT_NOT_FOUND | 404 | Variant missing or not visible to actor |
+| VARIANT_SKU_CONFLICT | 409 | SKU already used by another variant in the shop |
 | PRODUCT_INACTIVE | 409 | Product not orderable |
 | VARIANT_INACTIVE | 409 | Variant not orderable |
 | INSUFFICIENT_STOCK | 409 | Not enough stock |
