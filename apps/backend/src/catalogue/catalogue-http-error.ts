@@ -153,6 +153,15 @@ export function createProductVariantSkuConflictException(): HttpException {
   );
 }
 
+export function createInvalidInventoryLookupException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The inventory lookup query or limit is invalid.',
+    false,
+  );
+}
+
 export function createInvalidProductImageInputException(): HttpException {
   return createCatalogueException(
     HttpStatus.BAD_REQUEST,
