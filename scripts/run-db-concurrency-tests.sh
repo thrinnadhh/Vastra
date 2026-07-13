@@ -312,6 +312,43 @@ values (
   true
 );
 
+insert into public.product_variants (
+  id,
+  product_id,
+  shop_id,
+  sku,
+  colour_name,
+  size_label,
+  mrp_paise,
+  selling_price_paise,
+  is_active
+)
+values (
+  '95000000-0000-4000-8000-000000000002',
+  '94000000-0000-0000-0000-000000000001',
+  '93000000-0000-0000-0000-000000000001',
+  'OFFLINE-CONCURRENCY-SKU',
+  'Black',
+  'L',
+  100000,
+  90000,
+  true
+);
+
+select private.apply_inventory_delta(
+  '93000000-0000-0000-0000-000000000001',
+  '95000000-0000-4000-8000-000000000002',
+  1,
+  0,
+  0,
+  'STOCK_RECEIVED',
+  'SYSTEM',
+  'OFFLINE_SALE_CONCURRENCY_FIXTURE',
+  null,
+  'offline sale final-unit fixture',
+  null
+);
+
 insert into public.carts (
   id,
   customer_id,
@@ -526,6 +563,113 @@ test "$reserved_quantity" = "1"
 test "$active_reservations" = "1"
 
 echo "PASS: final unit cannot be reserved twice"
+
+offline_sale_sql_one="
+select public.create_merchant_offline_sale(
+  '93000000-0000-0000-0000-000000000001',
+  null,
+  0,
+  'CASH',
+  '[{\"variantId\":\"95000000-0000-4000-8000-000000000002\",\"quantity\":1,\"unitPricePaise\":90000,\"discountPaise\":0,\"identificationMethod\":\"MANUAL_SEARCH\"}]'::jsonb,
+  '9b000000-0000-4000-8000-000000000001',
+  '91000000-0000-0000-0000-000000000001'
+)->>'id';
+"
+
+offline_sale_sql_two="
+select public.create_merchant_offline_sale(
+  '93000000-0000-0000-0000-000000000001',
+  null,
+  0,
+  'CASH',
+  '[{\"variantId\":\"95000000-0000-4000-8000-000000000002\",\"quantity\":1,\"unitPricePaise\":90000,\"discountPaise\":0,\"identificationMethod\":\"MANUAL_SEARCH\"}]'::jsonb,
+  '9b000000-0000-4000-8000-000000000002',
+  '91000000-0000-0000-0000-000000000001'
+)->>'id';
+"
+
+set +e
+
+docker exec "$db_container" \
+  psql -X -v ON_ERROR_STOP=1 -Atq \
+  -U postgres -d postgres \
+  -c "$offline_sale_sql_one" \
+  >"$tmp_dir/offline-sale-one.out" \
+  2>"$tmp_dir/offline-sale-one.err" &
+offline_sale_pid_one=$!
+
+docker exec "$db_container" \
+  psql -X -v ON_ERROR_STOP=1 -Atq \
+  -U postgres -d postgres \
+  -c "$offline_sale_sql_two" \
+  >"$tmp_dir/offline-sale-two.out" \
+  2>"$tmp_dir/offline-sale-two.err" &
+offline_sale_pid_two=$!
+
+wait "$offline_sale_pid_one"
+offline_sale_status_one=$?
+
+wait "$offline_sale_pid_two"
+offline_sale_status_two=$?
+
+set -e
+
+offline_sale_successes=0
+
+if [ "$offline_sale_status_one" -eq 0 ]; then
+  offline_sale_successes=$((offline_sale_successes + 1))
+fi
+
+if [ "$offline_sale_status_two" -eq 0 ]; then
+  offline_sale_successes=$((offline_sale_successes + 1))
+fi
+
+if [ "$offline_sale_successes" -ne 1 ]; then
+  echo "ERROR: Expected exactly one final-unit offline sale"
+  echo "--- offline sale one ---"
+  cat "$tmp_dir/offline-sale-one.err"
+  echo "--- offline sale two ---"
+  cat "$tmp_dir/offline-sale-two.err"
+  exit 1
+fi
+
+offline_sale_stock="$(
+  psql_exec -Atq -c "
+    select stock_on_hand
+    from public.inventory_balances
+    where shop_id =
+      '93000000-0000-0000-0000-000000000001'
+      and variant_id =
+      '95000000-0000-4000-8000-000000000002';
+  "
+)"
+
+offline_sale_headers="$(
+  psql_exec -Atq -c "
+    select count(*)
+    from public.offline_sales sale
+    join public.offline_sale_items item
+      on item.offline_sale_id = sale.id
+    where item.variant_id =
+      '95000000-0000-4000-8000-000000000002';
+  "
+)"
+
+offline_sale_movements="$(
+  psql_exec -Atq -c "
+    select count(*)
+    from public.inventory_movements
+    where variant_id =
+      '95000000-0000-4000-8000-000000000002'
+      and reference_type = 'OFFLINE_SALE';
+  "
+)"
+
+test "$offline_sale_stock" = "0"
+test "$offline_sale_headers" = "1"
+test "$offline_sale_movements" = "1"
+
+echo "PASS: final unit cannot be sold offline twice"
 
 assignment_sql_one="
 select (
