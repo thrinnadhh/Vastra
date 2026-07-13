@@ -185,6 +185,24 @@ export function createInventoryBarcodeNotFoundException(): HttpException {
   );
 }
 
+export function createInvalidOfflineSaleException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The offline sale request is invalid.',
+    false,
+  );
+}
+
+export function createOfflineSaleIdempotencyKeyRequiredException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'IDEMPOTENCY_KEY_REQUIRED',
+    'An Idempotency-Key header is required for this offline sale.',
+    false,
+  );
+}
+
 export function createInvalidInventoryAdjustmentException(): HttpException {
   return createCatalogueException(
     HttpStatus.BAD_REQUEST,
