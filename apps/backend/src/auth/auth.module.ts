@@ -7,6 +7,10 @@ import { SupabaseAuthorizationGateway } from './authorization.gateway';
 import { AuthorizationGuard } from './authorization.guard';
 import { AuthorizationService } from './authorization.service';
 import { AUTHORIZATION_GATEWAY } from './authorization.tokens';
+import { SupabaseOperationalReadinessGateway } from './operational-readiness.gateway';
+import { OperationalReadinessGuard } from './operational-readiness.guard';
+import { OperationalReadinessService } from './operational-readiness.service';
+import { OPERATIONAL_READINESS_GATEWAY } from './operational-readiness.tokens';
 import { createSupabaseServiceClient, SupabaseAuthenticationGateway } from './supabase.gateway';
 import { loadSupabaseConfiguration, SUPABASE_CONFIGURATION } from './supabase.configuration';
 import { AUTHENTICATION_GATEWAY, SUPABASE_SERVICE_CLIENT } from './supabase.tokens';
@@ -31,8 +35,13 @@ import { AUTHENTICATION_GATEWAY, SUPABASE_SERVICE_CLIENT } from './supabase.toke
       provide: AUTHORIZATION_GATEWAY,
       useClass: SupabaseAuthorizationGateway,
     },
+    {
+      provide: OPERATIONAL_READINESS_GATEWAY,
+      useClass: SupabaseOperationalReadinessGateway,
+    },
     AuthService,
     AuthorizationService,
+    OperationalReadinessService,
     {
       provide: APP_GUARD,
       useClass: AuthenticationGuard,
@@ -41,12 +50,18 @@ import { AUTHENTICATION_GATEWAY, SUPABASE_SERVICE_CLIENT } from './supabase.toke
       provide: APP_GUARD,
       useClass: AuthorizationGuard,
     },
+    {
+      provide: APP_GUARD,
+      useClass: OperationalReadinessGuard,
+    },
   ],
   exports: [
     AuthService,
     AuthorizationService,
+    OperationalReadinessService,
     AUTHENTICATION_GATEWAY,
     AUTHORIZATION_GATEWAY,
+    OPERATIONAL_READINESS_GATEWAY,
     SUPABASE_SERVICE_CLIENT,
   ],
 })
