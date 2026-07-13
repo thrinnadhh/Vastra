@@ -4,6 +4,10 @@ import { CategoryCatalogueController } from './category-catalogue.controller';
 import { SupabaseCategoryCatalogueGateway } from './category-catalogue.gateway';
 import { CategoryCatalogueService } from './category-catalogue.service';
 import { CATEGORY_CATALOGUE_GATEWAY } from './category-catalogue.tokens';
+import { MerchantInventoryAdjustmentController } from './merchant-inventory-adjustment.controller';
+import { SupabaseMerchantInventoryAdjustmentGateway } from './merchant-inventory-adjustment.gateway';
+import { MerchantInventoryAdjustmentService } from './merchant-inventory-adjustment.service';
+import { MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY } from './merchant-inventory-adjustment.tokens';
 import { MerchantInventoryBalanceController } from './merchant-inventory-balance.controller';
 import { SupabaseMerchantInventoryBalanceGateway } from './merchant-inventory-balance.gateway';
 import { MerchantInventoryBalanceService } from './merchant-inventory-balance.service';
@@ -27,6 +31,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
 
 @Module({
   controllers: [
+    MerchantInventoryAdjustmentController,
     MerchantInventoryBalanceController,
     MerchantShopContextController,
     CategoryCatalogueController,
@@ -37,10 +42,15 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
   providers: [
     MerchantShopContextService,
     CategoryCatalogueService,
+    MerchantInventoryAdjustmentService,
     MerchantInventoryBalanceService,
     MerchantProductService,
     MerchantProductVariantService,
     ProductImageService,
+    {
+      provide: MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY,
+      useClass: SupabaseMerchantInventoryAdjustmentGateway,
+    },
     {
       provide: MERCHANT_INVENTORY_BALANCE_GATEWAY,
       useClass: SupabaseMerchantInventoryBalanceGateway,
@@ -71,6 +81,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CategoryCatalogueService,
     MERCHANT_SHOP_CONTEXT_GATEWAY,
     CATEGORY_CATALOGUE_GATEWAY,
+    MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY,
     MERCHANT_INVENTORY_BALANCE_GATEWAY,
     MERCHANT_PRODUCT_GATEWAY,
     MERCHANT_PRODUCT_VARIANT_GATEWAY,
