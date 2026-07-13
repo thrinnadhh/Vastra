@@ -3,6 +3,7 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 export type CatalogueErrorCode =
   | 'VALIDATION_ERROR'
   | 'SHOP_NOT_FOUND'
+  | 'CATEGORY_NOT_FOUND'
   | 'CATALOGUE_STATE_INVALID'
   | 'EXTERNAL_SERVICE_UNAVAILABLE';
 
@@ -51,6 +52,24 @@ export function createShopNotFoundException(): HttpException {
     HttpStatus.NOT_FOUND,
     'SHOP_NOT_FOUND',
     'The shop does not exist or is not visible to this merchant.',
+    false,
+  );
+}
+
+export function createInvalidCategoryIdException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The category identifier is invalid.',
+    false,
+  );
+}
+
+export function createCategoryNotFoundException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.NOT_FOUND,
+    'CATEGORY_NOT_FOUND',
+    'The category does not exist or is not active.',
     false,
   );
 }
