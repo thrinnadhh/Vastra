@@ -11,6 +11,10 @@ export type CatalogueErrorCode =
   | 'PRODUCT_IMAGE_NOT_FOUND'
   | 'PRODUCT_IMAGE_UPLOAD_INVALID'
   | 'PRODUCT_IMAGE_CONFLICT'
+  | 'IDEMPOTENCY_KEY_REQUIRED'
+  | 'IDEMPOTENCY_CONFLICT'
+  | 'INVENTORY_CONFLICT'
+  | 'NEGATIVE_INVENTORY_REJECTED'
   | 'CATALOGUE_STATE_INVALID'
   | 'EXTERNAL_SERVICE_UNAVAILABLE';
 
@@ -158,6 +162,60 @@ export function createInvalidInventoryLookupException(): HttpException {
     HttpStatus.BAD_REQUEST,
     'VALIDATION_ERROR',
     'The inventory lookup query or limit is invalid.',
+    false,
+  );
+}
+
+export function createInvalidInventoryAdjustmentException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The inventory adjustment request is invalid.',
+    false,
+  );
+}
+
+export function createInvalidInventoryMovementQueryException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The inventory movement query is invalid.',
+    false,
+  );
+}
+
+export function createIdempotencyKeyRequiredException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'IDEMPOTENCY_KEY_REQUIRED',
+    'An Idempotency-Key header is required for this inventory adjustment.',
+    false,
+  );
+}
+
+export function createIdempotencyConflictException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.CONFLICT,
+    'IDEMPOTENCY_CONFLICT',
+    'The idempotency key was already used with a different request.',
+    false,
+  );
+}
+
+export function createInventoryConflictException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.CONFLICT,
+    'INVENTORY_CONFLICT',
+    'Inventory changed after it was loaded. Refresh and retry.',
+    false,
+  );
+}
+
+export function createNegativeInventoryRejectedException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.CONFLICT,
+    'NEGATIVE_INVENTORY_REJECTED',
+    'The adjustment would make available inventory invalid.',
     false,
   );
 }

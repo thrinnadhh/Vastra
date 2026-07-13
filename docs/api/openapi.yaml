@@ -1403,31 +1403,113 @@ components:
           maxLength: 500
     InventoryAdjustmentRequest:
       type: object
-      required:
-      - variantId
-      - action
-      - quantity
+      additionalProperties: false
+      required: [variantId, action, quantity, reason, expectedVersion]
+      description: For ADD_STOCK, RETURN_TO_STOCK, and MARK_DAMAGED, quantity is a positive delta. For STOCK_CORRECTION and STOCK_CHECK, quantity is the target physical stock-on-hand and may be zero. Offline sales use the dedicated offline-sales workflow.
       properties:
-        variantId:
-          type: string
-          format: uuid
+        variantId: {type: string, format: uuid}
         action:
           type: string
-          enum:
-          - ADD_STOCK
-          - OFFLINE_SALE
-          - RETURN_TO_STOCK
-          - MARK_DAMAGED
-          - STOCK_CORRECTION
-          - STOCK_CHECK
-        quantity:
-          type: integer
+          enum: [ADD_STOCK, RETURN_TO_STOCK, MARK_DAMAGED, STOCK_CORRECTION, STOCK_CHECK]
+        quantity: {type: integer, minimum: 0}
+        reason: {type: string, minLength: 1, maxLength: 500}
+        expectedVersion:
+          type: ['integer', 'null']
           minimum: 1
-        reason:
-          type:
-          - string
-          - 'null'
-          maxLength: 500
+          description: Current balance version, or null only when the balance has never been persisted.
+    MerchantInventoryMovement:
+      type: object
+      required:
+      - id
+      - shopId
+      - variantId
+      - movementType
+      - quantityChange
+      - reservedChange
+      - damagedChange
+      - stockBefore
+      - stockAfter
+      - reservedBefore
+      - reservedAfter
+      - damagedBefore
+      - damagedAfter
+      - referenceType
+      - referenceId
+      - reason
+      - performedBy
+      - sourceMethod
+      - createdAt
+      properties:
+        id: {type: string, pattern: '^[1-9][0-9]*$'}
+        shopId: {type: string, format: uuid}
+        variantId: {type: string, format: uuid}
+        movementType:
+          type: string
+          enum: [STOCK_RECEIVED, OFFLINE_SALE, ONLINE_ORDER_RESERVED, ONLINE_ORDER_RELEASED, ONLINE_ORDER_COMPLETED, RETURN_TO_STOCK, MARKED_DAMAGED, STOCK_CORRECTION, STOCK_AUDIT]
+        quantityChange: {type: integer}
+        reservedChange: {type: integer}
+        damagedChange: {type: integer}
+        stockBefore: {type: integer, minimum: 0}
+        stockAfter: {type: integer, minimum: 0}
+        reservedBefore: {type: integer, minimum: 0}
+        reservedAfter: {type: integer, minimum: 0}
+        damagedBefore: {type: integer, minimum: 0}
+        damagedAfter: {type: integer, minimum: 0}
+        referenceType: {type: ['string', 'null']}
+        referenceId: {type: ['string', 'null'], format: uuid}
+        reason: {type: ['string', 'null']}
+        performedBy: {type: ['string', 'null'], format: uuid}
+        sourceMethod:
+          type: string
+          enum: [BARCODE, PHOTO_MATCH, MANUAL_SEARCH, SYSTEM, ADMIN]
+        createdAt: {type: string, format: date-time}
+    MerchantInventoryAdjustment:
+      type: object
+      required: [idempotencyKey, replayed, action, movement, balance]
+      properties:
+        idempotencyKey: {type: string, format: uuid}
+        replayed: {type: boolean}
+        action:
+          type: string
+          enum: [ADD_STOCK, RETURN_TO_STOCK, MARK_DAMAGED, STOCK_CORRECTION, STOCK_CHECK]
+        movement: {$ref: '#/components/schemas/MerchantInventoryMovement'}
+        balance: {$ref: '#/components/schemas/MerchantInventoryBalance'}
+    InventoryAdjustmentResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [adjustment]
+          properties:
+            adjustment: {$ref: '#/components/schemas/MerchantInventoryAdjustment'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    ListMerchantInventoryMovementsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [variantId, movements, nextCursor]
+          properties:
+            variantId: {type: string, format: uuid}
+            movements:
+              type: array
+              items: {$ref: '#/components/schemas/MerchantInventoryMovement'}
+            nextCursor:
+              type: ['string', 'null']
+              pattern: '^[1-9][0-9]*$'
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     MerchantAcceptRequest:
       type: object
       required:
@@ -3379,30 +3461,81 @@ paths:
           description: Forbidden
   /merchant/inventory/adjustments:
     post:
-      summary: Adjust inventory
-      tags:
-      - Merchant
+      operationId: applyMerchantInventoryAdjustment
+      summary: Atomically adjust one owned variant inventory balance
+      description: Locks the balance row, validates the expected version, writes one immutable movement, enqueues an availability event, and safely replays an identical idempotent request. OFFLINE_SALE is intentionally excluded and remains a dedicated workflow.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
       parameters:
       - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/InventoryAdjustmentRequest'
+            schema: {$ref: '#/components/schemas/InventoryAdjustmentRequest'}
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Adjustment applied or an identical request replayed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/InventoryAdjustmentResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Inventory data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Inventory provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/inventory/movements:
+    get:
+      operationId: listMerchantInventoryMovements
+      summary: List immutable movement history for one owned variant
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: variantId
+        in: query
+        required: true
+        schema: {type: string, format: uuid}
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+      responses:
+        '200':
+          description: Descending immutable movement page
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+                $ref: '#/components/schemas/ListMerchantInventoryMovementsResponse'
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Inventory data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Inventory provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
   /merchant/offline-sales:
     post:
       summary: Create offline sale
