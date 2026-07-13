@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 
 import { CategoryCatalogueController } from './category-catalogue.controller';
+import { CustomerInventoryReservationController } from './customer-inventory-reservation.controller';
+import { SupabaseCustomerInventoryReservationGateway } from './customer-inventory-reservation.gateway';
+import { CustomerInventoryReservationService } from './customer-inventory-reservation.service';
+import { CUSTOMER_INVENTORY_RESERVATION_GATEWAY } from './customer-inventory-reservation.tokens';
 import { SupabaseCategoryCatalogueGateway } from './category-catalogue.gateway';
 import { CategoryCatalogueService } from './category-catalogue.service';
 import { CATEGORY_CATALOGUE_GATEWAY } from './category-catalogue.tokens';
@@ -39,6 +43,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
 
 @Module({
   controllers: [
+    CustomerInventoryReservationController,
     MerchantInventoryAdjustmentController,
     MerchantInventoryBarcodeController,
     MerchantInventoryBalanceController,
@@ -52,6 +57,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
   providers: [
     MerchantShopContextService,
     CategoryCatalogueService,
+    CustomerInventoryReservationService,
     MerchantInventoryAdjustmentService,
     MerchantInventoryBarcodeService,
     MerchantInventoryBalanceService,
@@ -59,6 +65,10 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     MerchantProductService,
     MerchantProductVariantService,
     ProductImageService,
+    {
+      provide: CUSTOMER_INVENTORY_RESERVATION_GATEWAY,
+      useClass: SupabaseCustomerInventoryReservationGateway,
+    },
     {
       provide: MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY,
       useClass: SupabaseMerchantInventoryAdjustmentGateway,
@@ -101,6 +111,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CategoryCatalogueService,
     MERCHANT_SHOP_CONTEXT_GATEWAY,
     CATEGORY_CATALOGUE_GATEWAY,
+    CUSTOMER_INVENTORY_RESERVATION_GATEWAY,
     MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY,
     MERCHANT_INVENTORY_BARCODE_GATEWAY,
     MERCHANT_INVENTORY_BALANCE_GATEWAY,

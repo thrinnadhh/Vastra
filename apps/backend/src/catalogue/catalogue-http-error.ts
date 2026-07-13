@@ -9,6 +9,10 @@ export type CatalogueErrorCode =
   | 'VARIANT_NOT_FOUND'
   | 'VARIANT_SKU_CONFLICT'
   | 'BARCODE_NOT_FOUND'
+  | 'CART_NOT_FOUND'
+  | 'RESERVATION_NOT_FOUND'
+  | 'RESERVATION_CONFLICT'
+  | 'INSUFFICIENT_INVENTORY'
   | 'PRODUCT_IMAGE_NOT_FOUND'
   | 'PRODUCT_IMAGE_UPLOAD_INVALID'
   | 'PRODUCT_IMAGE_CONFLICT'
@@ -181,6 +185,60 @@ export function createInventoryBarcodeNotFoundException(): HttpException {
     HttpStatus.NOT_FOUND,
     'BARCODE_NOT_FOUND',
     'The barcode does not exist or is not visible to this merchant.',
+    false,
+  );
+}
+
+export function createInvalidInventoryReservationException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The inventory reservation request is invalid.',
+    false,
+  );
+}
+
+export function createInventoryReservationIdempotencyKeyRequiredException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'IDEMPOTENCY_KEY_REQUIRED',
+    'An Idempotency-Key header is required for this inventory reservation.',
+    false,
+  );
+}
+
+export function createCartNotFoundException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.NOT_FOUND,
+    'CART_NOT_FOUND',
+    'The active cart does not exist or is not visible to this customer.',
+    false,
+  );
+}
+
+export function createInventoryReservationNotFoundException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.NOT_FOUND,
+    'RESERVATION_NOT_FOUND',
+    'The inventory reservation does not exist or is not visible to this customer.',
+    false,
+  );
+}
+
+export function createInventoryReservationConflictException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.CONFLICT,
+    'RESERVATION_CONFLICT',
+    'The cart already has an active reservation or the reservation cannot transition.',
+    false,
+  );
+}
+
+export function createInsufficientInventoryException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.CONFLICT,
+    'INSUFFICIENT_INVENTORY',
+    'The requested quantity is no longer available.',
     false,
   );
 }
