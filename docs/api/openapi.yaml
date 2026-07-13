@@ -230,6 +230,148 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    MerchantProductImage:
+      type: object
+      required:
+      - id
+      - productId
+      - variantId
+      - storageObjectKey
+      - thumbnailObjectKey
+      - imageUrl
+      - thumbnailUrl
+      - imageType
+      - altText
+      - displayOrder
+      - isPrimary
+      - widthPx
+      - heightPx
+      - createdAt
+      properties:
+        id: {type: string, format: uuid}
+        productId: {type: string, format: uuid}
+        variantId: {type: 'null'}
+        storageObjectKey: {type: string}
+        thumbnailObjectKey: {type: ['string', 'null']}
+        imageUrl: {type: string, format: uri}
+        thumbnailUrl: {type: ['string', 'null'], format: uri}
+        imageType:
+          type: string
+          enum: [FRONT, BACK, SIDE, DETAIL, MODEL, SIZE_CHART]
+        altText: {type: ['string', 'null'], maxLength: 500}
+        displayOrder: {type: integer, minimum: 0, maximum: 10000}
+        isPrimary: {type: boolean}
+        widthPx: {type: ['integer', 'null'], minimum: 1, maximum: 20000}
+        heightPx: {type: ['integer', 'null'], minimum: 1, maximum: 20000}
+        createdAt: {type: string, format: date-time}
+    CreateProductImageUploadIntentRequest:
+      type: object
+      additionalProperties: false
+      required: [contentType, contentLength]
+      properties:
+        contentType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+        contentLength:
+          type: integer
+          minimum: 1
+          maximum: 10485760
+    ProductImageUploadIntentResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [objectKey, uploadUrl, expiresAt, contentType, maximumBytes]
+          properties:
+            objectKey: {type: string}
+            uploadUrl: {type: string, format: uri}
+            expiresAt: {type: string, format: date-time}
+            contentType:
+              type: string
+              enum: [image/jpeg, image/png, image/webp]
+            maximumBytes: {type: integer, const: 10485760}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    FinalizeMerchantProductImageRequest:
+      type: object
+      additionalProperties: false
+      required: [storageObjectKey]
+      properties:
+        storageObjectKey: {type: string, minLength: 1, maxLength: 500}
+        imageType:
+          type: string
+          enum: [FRONT, BACK, SIDE, DETAIL, MODEL, SIZE_CHART]
+          default: FRONT
+        altText: {type: ['string', 'null'], minLength: 1, maxLength: 500}
+        displayOrder: {type: integer, minimum: 0, maximum: 10000, default: 0}
+        isPrimary: {type: boolean, default: false}
+        widthPx: {type: ['integer', 'null'], minimum: 1, maximum: 20000}
+        heightPx: {type: ['integer', 'null'], minimum: 1, maximum: 20000}
+    UpdateMerchantProductImageRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        imageType:
+          type: string
+          enum: [FRONT, BACK, SIDE, DETAIL, MODEL, SIZE_CHART]
+        altText: {type: ['string', 'null'], minLength: 1, maxLength: 500}
+        displayOrder: {type: integer, minimum: 0, maximum: 10000}
+        isPrimary: {type: boolean, const: true}
+        widthPx: {type: ['integer', 'null'], minimum: 1, maximum: 20000}
+        heightPx: {type: ['integer', 'null'], minimum: 1, maximum: 20000}
+    ListMerchantProductImagesResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [images]
+          properties:
+            images:
+              type: array
+              items: {$ref: '#/components/schemas/MerchantProductImage'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    MerchantProductImageResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [image]
+          properties:
+            image: {$ref: '#/components/schemas/MerchantProductImage'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    DeleteMerchantProductImageResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [deletedImageId]
+          properties:
+            deletedImageId: {type: string, format: uuid}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     MerchantProduct:
       type: object
       required:
@@ -2404,6 +2546,200 @@ paths:
               schema: {$ref: '#/components/schemas/ApiError'}
         '503':
           description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/shops/{shopId}/products/{productId}/images:
+    get:
+      operationId: listMerchantProductImages
+      summary: List product-level images for an owned product
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: productId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Ordered product images with public media URLs
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ListMerchantProductImagesResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue or storage provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+    post:
+      operationId: finalizeMerchantProductImage
+      summary: Finalize uploaded media as product image metadata
+      description: The storage key must come from an upload intent for the same owned product.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: productId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FinalizeMerchantProductImageRequest'}
+      responses:
+        '201':
+          description: Product image finalized
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MerchantProductImageResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue or storage provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/shops/{shopId}/products/{productId}/images/upload-intents:
+    post:
+      operationId: createMerchantProductImageUploadIntent
+      summary: Create a two-hour signed upload URL for product media
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: productId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateProductImageUploadIntentRequest'}
+      responses:
+        '201':
+          description: Signed direct-upload intent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProductImageUploadIntentResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503':
+          description: Storage provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/shops/{shopId}/products/{productId}/images/{imageId}:
+    patch:
+      operationId: updateMerchantProductImage
+      summary: Update product image metadata or make the image primary
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: productId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: imageId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateMerchantProductImageRequest'}
+      responses:
+        '200':
+          description: Product image updated
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MerchantProductImageResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue or storage provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+    delete:
+      operationId: deleteMerchantProductImage
+      summary: Delete product image metadata and request storage cleanup
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: productId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: imageId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Product image deleted
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DeleteMerchantProductImageResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue or storage provider is temporarily unavailable
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ApiError'}

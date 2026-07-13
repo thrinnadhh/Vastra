@@ -12,17 +12,27 @@ import { MerchantProductController } from './merchant-product.controller';
 import { SupabaseMerchantProductGateway } from './merchant-product.gateway';
 import { MerchantProductService } from './merchant-product.service';
 import { MERCHANT_PRODUCT_GATEWAY } from './merchant-product.tokens';
+import { ProductImageController } from './product-image.controller';
+import { SupabaseProductImageGateway } from './product-image.gateway';
+import { ProductImageService } from './product-image.service';
+import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
 
 @Module({
   controllers: [
     MerchantShopContextController,
     CategoryCatalogueController,
     MerchantProductController,
+    ProductImageController,
   ],
   providers: [
     MerchantShopContextService,
     CategoryCatalogueService,
     MerchantProductService,
+    ProductImageService,
+    {
+      provide: PRODUCT_IMAGE_GATEWAY,
+      useClass: SupabaseProductImageGateway,
+    },
     {
       provide: MERCHANT_PRODUCT_GATEWAY,
       useClass: SupabaseMerchantProductGateway,
@@ -42,6 +52,7 @@ import { MERCHANT_PRODUCT_GATEWAY } from './merchant-product.tokens';
     MERCHANT_SHOP_CONTEXT_GATEWAY,
     CATEGORY_CATALOGUE_GATEWAY,
     MERCHANT_PRODUCT_GATEWAY,
+    PRODUCT_IMAGE_GATEWAY,
   ],
 })
 export class CatalogueModule {}

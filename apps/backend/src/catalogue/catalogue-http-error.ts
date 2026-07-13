@@ -6,6 +6,9 @@ export type CatalogueErrorCode =
   | 'CATEGORY_NOT_FOUND'
   | 'PRODUCT_NOT_FOUND'
   | 'PRODUCT_SLUG_CONFLICT'
+  | 'PRODUCT_IMAGE_NOT_FOUND'
+  | 'PRODUCT_IMAGE_UPLOAD_INVALID'
+  | 'PRODUCT_IMAGE_CONFLICT'
   | 'CATALOGUE_STATE_INVALID'
   | 'EXTERNAL_SERVICE_UNAVAILABLE';
 
@@ -108,6 +111,42 @@ export function createProductSlugConflictException(): HttpException {
     HttpStatus.CONFLICT,
     'PRODUCT_SLUG_CONFLICT',
     'The product slug is already used by this shop.',
+    false,
+  );
+}
+
+export function createInvalidProductImageInputException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The product image request is invalid.',
+    false,
+  );
+}
+
+export function createProductImageUploadInvalidException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'PRODUCT_IMAGE_UPLOAD_INVALID',
+    'The uploaded product image is missing or invalid.',
+    false,
+  );
+}
+
+export function createProductImageNotFoundException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.NOT_FOUND,
+    'PRODUCT_IMAGE_NOT_FOUND',
+    'The product image does not exist or is not visible to this merchant.',
+    false,
+  );
+}
+
+export function createProductImageConflictException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.CONFLICT,
+    'PRODUCT_IMAGE_CONFLICT',
+    'The product image conflicts with existing media.',
     false,
   );
 }

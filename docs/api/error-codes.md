@@ -54,6 +54,9 @@ last_updated: 2026-07-11
 | CATALOGUE_STATE_INVALID | 500 | Catalogue data is internally inconsistent |
 | PRODUCT_NOT_FOUND | 404 | Product missing |
 | PRODUCT_SLUG_CONFLICT | 409 | Product slug already used by the shop |
+| PRODUCT_IMAGE_NOT_FOUND | 404 | Product image missing or not visible |
+| PRODUCT_IMAGE_UPLOAD_INVALID | 400 | Uploaded image object is missing or invalid |
+| PRODUCT_IMAGE_CONFLICT | 409 | Image key or primary-image state conflicts |
 | VARIANT_NOT_FOUND | 404 | Variant missing |
 | PRODUCT_INACTIVE | 409 | Product not orderable |
 | VARIANT_INACTIVE | 409 | Variant not orderable |

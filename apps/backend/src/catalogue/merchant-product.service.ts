@@ -160,7 +160,7 @@ export class MerchantProductService {
     }
   }
 
-  private async requireOwnedProduct(
+  public async requireOwnedProduct(
     context: AuthenticatedRequestContext,
     shopId: string,
     productId: string,
