@@ -116,6 +116,70 @@ components:
         success:
           type: boolean
           const: true
+    MerchantCatalogueShop:
+      type: object
+      required:
+      - id
+      - shopCode
+      - name
+      - slug
+      - verificationStatus
+      - operationalStatus
+      - acceptsOnlineOrders
+      - serviceRadiusMeters
+      - minimumOrderPaise
+      - averagePreparationMinutes
+      - createdAt
+      - updatedAt
+      properties:
+        id: {type: string, format: uuid}
+        shopCode: {type: string}
+        name: {type: string}
+        slug: {type: string}
+        verificationStatus:
+          type: string
+          enum: [PENDING, IN_REVIEW, VERIFIED, REJECTED]
+        operationalStatus:
+          type: string
+          enum: [OPEN, BUSY, TEMPORARILY_CLOSED, CLOSED_FOR_DAY, PAUSED, SUSPENDED]
+        acceptsOnlineOrders: {type: boolean}
+        serviceRadiusMeters: {type: integer, minimum: 0}
+        minimumOrderPaise: {type: integer, minimum: 0}
+        averagePreparationMinutes: {type: integer, minimum: 0}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    ListMerchantCatalogueShopsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [shops]
+          properties:
+            shops:
+              type: array
+              items: {$ref: '#/components/schemas/MerchantCatalogueShop'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    GetMerchantCatalogueShopResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [shop]
+          properties:
+            shop: {$ref: '#/components/schemas/MerchantCatalogueShop'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     WardrobeItem:
       type: object
       required: [id, ownerCustomerId, category, colour, occasion, season, status,
@@ -1839,6 +1903,63 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+  /merchant/catalogue/shops:
+    get:
+      operationId: listMerchantCatalogueShops
+      summary: List non-deleted shops owned by the authenticated merchant
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Merchant catalogue shop scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListMerchantCatalogueShopsResponse'
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/shops/{shopId}:
+    get:
+      operationId: getMerchantCatalogueShop
+      summary: Get one shop within the authenticated merchant catalogue scope
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Owned merchant shop
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetMerchantCatalogueShopResponse'
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
   /merchant/dashboard:
     get:
       summary: Get merchant dashboard
