@@ -18,14 +18,17 @@
     "@nestjs/common": "11",
     "@nestjs/core": "11",
     "@nestjs/platform-express": "11",
+    "@supabase/supabase-js": "2.109.0",
     "reflect-metadata": "0.2.2",
-    "rxjs": "7.8.2"
+    "rxjs": "7.8.2",
+    "ws": "8.18.3"
   },
   "devDependencies": {
     "@nestjs/cli": "11",
     "@nestjs/testing": "11",
     "@types/node": "20.19.43",
     "@types/supertest": "7.2.0",
+    "@types/ws": "8.18.1",
     "supertest": "7.2.2",
     "typescript": "5.9.3",
     "vitest": "3.2.7"

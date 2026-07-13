@@ -12,6 +12,7 @@ export const serverEnvSchema = commonEnvSchema.extend({
   DATABASE_URL: z.url(),
 
   SUPABASE_URL: z.url(),
+  SUPABASE_PUBLISHABLE_KEY: z.string().min(16),
   SUPABASE_SERVICE_ROLE_KEY: secretSchema,
 
   PAYMENT_PROVIDER: z.enum(['cashfree', 'razorpay']),
