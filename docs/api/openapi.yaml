@@ -461,6 +461,137 @@ components:
           - 'null'
         status:
           type: string
+    CurrentAccountProfile:
+      type: object
+      required: [fullName, phoneNumber, avatarUrl]
+      properties:
+        fullName: {type: [string, 'null']}
+        phoneNumber: {type: [string, 'null']}
+        avatarUrl: {type: [string, 'null'], format: uri}
+    CustomerRoleProfile:
+      type: object
+      required: [kind, dateOfBirth, genderPreference, profileCompleted, defaultAddressId]
+      properties:
+        kind: {type: string, const: CUSTOMER}
+        dateOfBirth: {type: [string, 'null'], format: date}
+        genderPreference: {type: [string, 'null']}
+        profileCompleted: {type: boolean}
+        defaultAddressId: {type: [string, 'null'], format: uuid}
+    MerchantRoleProfile:
+      type: object
+      required: [kind, legalName, businessType, onboardingStatus, kycStatus, approvedAt]
+      properties:
+        kind: {type: string, const: MERCHANT}
+        legalName: {type: string}
+        businessType: {type: [string, 'null']}
+        onboardingStatus: {type: string}
+        kycStatus: {type: string}
+        approvedAt: {type: [string, 'null'], format: date-time}
+    CaptainRoleProfile:
+      type: object
+      required: [kind, captainCode, kycStatus, availabilityStatus, vehicleType, vehicleNumber,
+        ratingAverage, ratingCount, completedDeliveries, cashBalancePaise, approvedAt]
+      properties:
+        kind: {type: string, const: CAPTAIN}
+        captainCode: {type: string}
+        kycStatus: {type: string}
+        availabilityStatus: {type: string}
+        vehicleType: {type: [string, 'null']}
+        vehicleNumber: {type: [string, 'null']}
+        ratingAverage: {type: [number, 'null'], minimum: 0, maximum: 5}
+        ratingCount: {type: integer, minimum: 0}
+        completedDeliveries: {type: integer, minimum: 0}
+        cashBalancePaise: {type: integer}
+        approvedAt: {type: [string, 'null'], format: date-time}
+    AdminRoleProfile:
+      type: object
+      required: [kind, employeeCode, department, cityScope, managerId, twoFactorEnabled]
+      properties:
+        kind: {type: string, const: ADMIN}
+        employeeCode: {type: string}
+        department: {type: string}
+        cityScope:
+          type: array
+          items: {type: string}
+        managerId: {type: [string, 'null'], format: uuid}
+        twoFactorEnabled: {type: boolean}
+    MerchantScopeShop:
+      type: object
+      required: [id, shopCode, name, verificationStatus, operationalStatus, acceptsOnlineOrders]
+      properties:
+        id: {type: string, format: uuid}
+        shopCode: {type: string}
+        name: {type: string}
+        verificationStatus: {type: string}
+        operationalStatus: {type: string}
+        acceptsOnlineOrders: {type: boolean}
+    CustomerScope:
+      type: object
+      required: [kind]
+      properties:
+        kind: {type: string, const: CUSTOMER}
+    MerchantScope:
+      type: object
+      required: [kind, shops]
+      properties:
+        kind: {type: string, const: MERCHANT}
+        shops:
+          type: array
+          items: {$ref: '#/components/schemas/MerchantScopeShop'}
+    CaptainScope:
+      type: object
+      required: [kind, captainCode, availabilityStatus]
+      properties:
+        kind: {type: string, const: CAPTAIN}
+        captainCode: {type: string}
+        availabilityStatus: {type: string}
+    AdminScope:
+      type: object
+      required: [kind, department, cityScope]
+      properties:
+        kind: {type: string, const: ADMIN}
+        department: {type: string}
+        cityScope:
+          type: array
+          items: {type: string}
+    CurrentAccountData:
+      type: object
+      required: [id, email, accountType, status, profile, roleProfile, scope]
+      properties:
+        id: {type: string, format: uuid}
+        email: {type: [string, 'null'], format: email}
+        accountType:
+          type: string
+          enum: [CUSTOMER, MERCHANT, CAPTAIN, ADMIN]
+        status: {type: string, const: ACTIVE}
+        profile: {$ref: '#/components/schemas/CurrentAccountProfile'}
+        roleProfile:
+          oneOf:
+          - $ref: '#/components/schemas/CustomerRoleProfile'
+          - $ref: '#/components/schemas/MerchantRoleProfile'
+          - $ref: '#/components/schemas/CaptainRoleProfile'
+          - $ref: '#/components/schemas/AdminRoleProfile'
+          discriminator:
+            propertyName: kind
+        scope:
+          oneOf:
+          - $ref: '#/components/schemas/CustomerScope'
+          - $ref: '#/components/schemas/MerchantScope'
+          - $ref: '#/components/schemas/CaptainScope'
+          - $ref: '#/components/schemas/AdminScope'
+          discriminator:
+            propertyName: kind
+    GetCurrentAccountResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data: {$ref: '#/components/schemas/CurrentAccountData'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: [string, 'null'], format: uuid}
     ProductVariant:
       type: object
       required:
@@ -646,22 +777,43 @@ security:
 paths:
   /me:
     get:
-      summary: Get current account
+      operationId: getCurrentAccount
+      summary: Get the authenticated account, role profile, and current scope
       tags:
       - Common
+      security:
+      - bearerAuth: []
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Current authenticated account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCurrentAccountResponse'
+        '401':
+          description: Authentication required
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
         '403':
-          description: Forbidden
+          description: Account is not permitted to access Vastra
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Account profile state is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          description: Account information is temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /me/devices:
     post:
       summary: Register device
