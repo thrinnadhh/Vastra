@@ -366,6 +366,96 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    MerchantInventoryBalance:
+      type: object
+      required:
+      - persisted
+      - stockOnHand
+      - reservedQuantity
+      - damagedQuantity
+      - availableQuantity
+      - reorderLevel
+      - version
+      - lastCountedAt
+      - updatedAt
+      properties:
+        persisted: {type: boolean}
+        stockOnHand: {type: integer, minimum: 0}
+        reservedQuantity: {type: integer, minimum: 0}
+        damagedQuantity: {type: integer, minimum: 0}
+        availableQuantity: {type: integer, minimum: 0}
+        reorderLevel: {type: integer, minimum: 0}
+        version: {type: ['integer', 'null'], minimum: 1}
+        lastCountedAt: {type: ['string', 'null'], format: date-time}
+        updatedAt: {type: ['string', 'null'], format: date-time}
+    MerchantInventoryProductSummary:
+      type: object
+      required: [id, name, slug, brand, isActive]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string, minLength: 1}
+        slug: {type: string, minLength: 1}
+        brand: {type: ['string', 'null']}
+        isActive: {type: boolean}
+    MerchantInventoryVariantSummary:
+      type: object
+      required:
+      - id
+      - productId
+      - sku
+      - colourName
+      - sizeLabel
+      - isActive
+      properties:
+        id: {type: string, format: uuid}
+        productId: {type: string, format: uuid}
+        sku: {type: string, minLength: 1}
+        colourName: {type: ['string', 'null']}
+        sizeLabel: {type: ['string', 'null']}
+        isActive: {type: boolean}
+    MerchantInventoryLookupItem:
+      type: object
+      required: [product, variant, balance, matchKind]
+      properties:
+        product: {$ref: '#/components/schemas/MerchantInventoryProductSummary'}
+        variant: {$ref: '#/components/schemas/MerchantInventoryVariantSummary'}
+        balance: {$ref: '#/components/schemas/MerchantInventoryBalance'}
+        matchKind:
+          type: string
+          enum: [VARIANT_ID, PRODUCT_ID, SKU_EXACT, SKU_PARTIAL, PRODUCT]
+    GetMerchantInventoryBalanceResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [inventory]
+          properties:
+            inventory: {$ref: '#/components/schemas/MerchantInventoryLookupItem'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    LookupMerchantInventoryResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [query, results]
+          properties:
+            query: {type: string, minLength: 1, maxLength: 120}
+            results:
+              type: array
+              items: {$ref: '#/components/schemas/MerchantInventoryLookupItem'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     MerchantProductImage:
       type: object
       required:
@@ -2876,6 +2966,82 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '500':
           description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/shops/{shopId}/inventory/balances/{variantId}:
+    get:
+      operationId: getMerchantVariantInventoryBalance
+      summary: Read the inventory balance of an owned variant
+      description: Missing balance rows are represented as an explicit zero balance. Available quantity is stock on hand minus reserved and damaged quantities.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: variantId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Merchant variant inventory balance
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GetMerchantInventoryBalanceResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Inventory data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/shops/{shopId}/inventory/lookup:
+    get:
+      operationId: lookupMerchantInventory
+      summary: Manually find owned inventory by product, SKU, or variant
+      description: UUID input is matched against product and variant identifiers. Text input searches SKU and the indexed product search vector. Barcode lookup is intentionally handled by a later ticket.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: query
+        in: query
+        required: true
+        schema: {type: string, minLength: 1, maxLength: 120}
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      responses:
+        '200':
+          description: Ranked merchant inventory lookup results
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LookupMerchantInventoryResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Inventory data is internally inconsistent
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ApiError'}

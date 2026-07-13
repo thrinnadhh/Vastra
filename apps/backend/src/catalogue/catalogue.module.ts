@@ -4,6 +4,10 @@ import { CategoryCatalogueController } from './category-catalogue.controller';
 import { SupabaseCategoryCatalogueGateway } from './category-catalogue.gateway';
 import { CategoryCatalogueService } from './category-catalogue.service';
 import { CATEGORY_CATALOGUE_GATEWAY } from './category-catalogue.tokens';
+import { MerchantInventoryBalanceController } from './merchant-inventory-balance.controller';
+import { SupabaseMerchantInventoryBalanceGateway } from './merchant-inventory-balance.gateway';
+import { MerchantInventoryBalanceService } from './merchant-inventory-balance.service';
+import { MERCHANT_INVENTORY_BALANCE_GATEWAY } from './merchant-inventory-balance.tokens';
 import { MerchantShopContextController } from './merchant-shop-context.controller';
 import { SupabaseMerchantShopContextGateway } from './merchant-shop-context.gateway';
 import { MerchantShopContextService } from './merchant-shop-context.service';
@@ -23,6 +27,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
 
 @Module({
   controllers: [
+    MerchantInventoryBalanceController,
     MerchantShopContextController,
     CategoryCatalogueController,
     MerchantProductController,
@@ -32,9 +37,14 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
   providers: [
     MerchantShopContextService,
     CategoryCatalogueService,
+    MerchantInventoryBalanceService,
     MerchantProductService,
     MerchantProductVariantService,
     ProductImageService,
+    {
+      provide: MERCHANT_INVENTORY_BALANCE_GATEWAY,
+      useClass: SupabaseMerchantInventoryBalanceGateway,
+    },
     {
       provide: MERCHANT_PRODUCT_VARIANT_GATEWAY,
       useClass: SupabaseMerchantProductVariantGateway,
@@ -61,6 +71,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CategoryCatalogueService,
     MERCHANT_SHOP_CONTEXT_GATEWAY,
     CATEGORY_CATALOGUE_GATEWAY,
+    MERCHANT_INVENTORY_BALANCE_GATEWAY,
     MERCHANT_PRODUCT_GATEWAY,
     MERCHANT_PRODUCT_VARIANT_GATEWAY,
     PRODUCT_IMAGE_GATEWAY,
