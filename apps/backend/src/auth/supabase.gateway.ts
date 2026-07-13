@@ -8,6 +8,7 @@ import {
   ACCOUNT_TYPES,
   PROFILE_STATUSES,
   type AccountType,
+  type AuthenticatorAssuranceLevel,
   type ProfileSnapshot,
   type ProfileStatus,
   type VerifiedIdentity,
@@ -19,6 +20,7 @@ export type TokenVerificationResult =
   | {
       readonly valid: true;
       readonly identity: VerifiedIdentity;
+      readonly assuranceLevel?: AuthenticatorAssuranceLevel;
     }
   | {
       readonly valid: false;
@@ -116,6 +118,32 @@ function isExpiredAuthError(code: unknown, message: string): boolean {
   return `${normalizedCode} ${message}`.toLowerCase().includes('expired');
 }
 
+/**
+ * The token is decoded only after Supabase Auth has verified it with getUser().
+ * Missing, malformed, or unsupported assurance claims fail closed to aal1.
+ */
+function readAuthenticatorAssuranceLevel(accessToken: string): AuthenticatorAssuranceLevel {
+  const payloadSegment = accessToken.split('.')[1];
+
+  if (payloadSegment === undefined) {
+    return 'aal1';
+  }
+
+  try {
+    const payload = JSON.parse(
+      Buffer.from(payloadSegment, 'base64url').toString('utf8'),
+    ) as unknown;
+
+    if (!isRecord(payload)) {
+      return 'aal1';
+    }
+
+    return payload['aal'] === 'aal2' ? 'aal2' : 'aal1';
+  } catch {
+    return 'aal1';
+  }
+}
+
 @Injectable()
 export class SupabaseAuthenticationGateway implements AuthenticationGateway {
   public constructor(
@@ -146,6 +174,7 @@ export class SupabaseAuthenticationGateway implements AuthenticationGateway {
           id: data.user.id,
           email: data.user.email ?? null,
         },
+        assuranceLevel: readAuthenticatorAssuranceLevel(accessToken),
       };
     } catch (error: unknown) {
       if (error instanceof AuthenticationProviderUnavailableError) {

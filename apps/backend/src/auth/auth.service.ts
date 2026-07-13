@@ -55,6 +55,7 @@ export class AuthService {
     return {
       actor,
       accessToken,
+      assuranceLevel: verification.assuranceLevel ?? 'aal1',
       supabase: this.gateway.createUserClient(accessToken),
     };
   }

@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 
+import { AdminMfaGuard } from './admin-mfa.guard';
 import { AuthenticationGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { SupabaseAuthorizationGateway } from './authorization.gateway';
@@ -45,6 +46,10 @@ import { AUTHENTICATION_GATEWAY, SUPABASE_SERVICE_CLIENT } from './supabase.toke
     {
       provide: APP_GUARD,
       useClass: AuthenticationGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AdminMfaGuard,
     },
     {
       provide: APP_GUARD,

@@ -37,6 +37,14 @@ class IntegrationAuthenticationGateway implements AuthenticationGateway {
     switch (accessToken) {
       case 'customer-token':
       case 'merchant-token':
+        return Promise.resolve({
+          valid: true,
+          identity: {
+            id: `${accessToken}-user-id`,
+            email: `${accessToken}@example.test`,
+          },
+          assuranceLevel: 'aal1',
+        });
       case 'admin-operations-token':
       case 'admin-read-token':
         return Promise.resolve({
@@ -45,6 +53,7 @@ class IntegrationAuthenticationGateway implements AuthenticationGateway {
             id: `${accessToken}-user-id`,
             email: `${accessToken}@example.test`,
           },
+          assuranceLevel: 'aal2',
         });
       default:
         return Promise.resolve({
