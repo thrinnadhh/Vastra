@@ -20,6 +20,10 @@ import { MerchantInventoryBalanceController } from './merchant-inventory-balance
 import { SupabaseMerchantInventoryBalanceGateway } from './merchant-inventory-balance.gateway';
 import { MerchantInventoryBalanceService } from './merchant-inventory-balance.service';
 import { MERCHANT_INVENTORY_BALANCE_GATEWAY } from './merchant-inventory-balance.tokens';
+import { MerchantInventoryLowStockController } from './merchant-inventory-low-stock.controller';
+import { SupabaseMerchantInventoryLowStockGateway } from './merchant-inventory-low-stock.gateway';
+import { MerchantInventoryLowStockService } from './merchant-inventory-low-stock.service';
+import { MERCHANT_INVENTORY_LOW_STOCK_GATEWAY } from './merchant-inventory-low-stock.tokens';
 import { MerchantShopContextController } from './merchant-shop-context.controller';
 import { SupabaseMerchantShopContextGateway } from './merchant-shop-context.gateway';
 import { MerchantShopContextService } from './merchant-shop-context.service';
@@ -47,6 +51,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     MerchantInventoryAdjustmentController,
     MerchantInventoryBarcodeController,
     MerchantInventoryBalanceController,
+    MerchantInventoryLowStockController,
     MerchantOfflineSaleController,
     MerchantShopContextController,
     CategoryCatalogueController,
@@ -61,6 +66,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     MerchantInventoryAdjustmentService,
     MerchantInventoryBarcodeService,
     MerchantInventoryBalanceService,
+    MerchantInventoryLowStockService,
     MerchantOfflineSaleService,
     MerchantProductService,
     MerchantProductVariantService,
@@ -80,6 +86,10 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     {
       provide: MERCHANT_INVENTORY_BALANCE_GATEWAY,
       useClass: SupabaseMerchantInventoryBalanceGateway,
+    },
+    {
+      provide: MERCHANT_INVENTORY_LOW_STOCK_GATEWAY,
+      useClass: SupabaseMerchantInventoryLowStockGateway,
     },
     {
       provide: MERCHANT_OFFLINE_SALE_GATEWAY,
@@ -115,6 +125,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY,
     MERCHANT_INVENTORY_BARCODE_GATEWAY,
     MERCHANT_INVENTORY_BALANCE_GATEWAY,
+    MERCHANT_INVENTORY_LOW_STOCK_GATEWAY,
     MERCHANT_OFFLINE_SALE_GATEWAY,
     MERCHANT_PRODUCT_GATEWAY,
     MERCHANT_PRODUCT_VARIANT_GATEWAY,
