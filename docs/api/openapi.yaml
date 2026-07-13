@@ -1631,6 +1631,58 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    CreateCustomerInventoryReservationRequest:
+      type: object
+      additionalProperties: false
+      required: [cartId, variantId, quantity]
+      properties:
+        cartId: {type: string, format: uuid}
+        variantId: {type: string, format: uuid}
+        quantity: {type: integer, minimum: 1}
+        ttlSeconds:
+          type: integer
+          minimum: 60
+          maximum: 1800
+          default: 900
+    ReleaseCustomerInventoryReservationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason: {type: string, minLength: 1, maxLength: 500}
+    CustomerInventoryReservation:
+      type: object
+      required: [id, idempotencyKey, replayed, shopId, variantId, cartId, quantity, status, expiresAt, createdAt, releasedAt, movement, balance]
+      properties:
+        id: {type: string, format: uuid}
+        idempotencyKey: {type: ['string', 'null'], format: uuid}
+        replayed: {type: boolean}
+        shopId: {type: string, format: uuid}
+        variantId: {type: string, format: uuid}
+        cartId: {type: string, format: uuid}
+        quantity: {type: integer, minimum: 1}
+        status:
+          type: string
+          enum: [ACTIVE, CONVERTED, RELEASED, EXPIRED]
+        expiresAt: {type: string, format: date-time}
+        createdAt: {type: string, format: date-time}
+        releasedAt: {type: ['string', 'null'], format: date-time}
+        movement: {$ref: '#/components/schemas/MerchantInventoryMovement'}
+        balance: {$ref: '#/components/schemas/MerchantInventoryBalance'}
+    CustomerInventoryReservationResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [reservation]
+          properties:
+            reservation: {$ref: '#/components/schemas/CustomerInventoryReservation'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     MerchantAcceptRequest:
       type: object
       required:
@@ -1779,6 +1831,79 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+  /customer/inventory/reservations:
+    post:
+      operationId: createCustomerInventoryReservation
+      summary: Reserve an available variant for the authenticated customer's active cart
+      description: Performs an RLS ownership precheck, then atomically locks inventory, creates one active cart reservation, writes an immutable movement, and safely replays an identical idempotent request.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateCustomerInventoryReservationRequest'}
+      responses:
+        '200':
+          description: Reservation created or an identical request replayed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerInventoryReservationResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Reservation or inventory data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Inventory reservation provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /customer/inventory/reservations/{reservationId}/release:
+    post:
+      operationId: releaseCustomerInventoryReservation
+      summary: Idempotently release one authenticated-customer cart reservation
+      description: Releases reserved quantity, creates one immutable release movement, and returns the existing final state on a repeated request.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: reservationId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReleaseCustomerInventoryReservationRequest'}
+      responses:
+        '200':
+          description: Reservation released or its final state replayed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerInventoryReservationResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Reservation or inventory data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Inventory reservation provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
   /customer/home:
     get:
       summary: Get customer home feed
