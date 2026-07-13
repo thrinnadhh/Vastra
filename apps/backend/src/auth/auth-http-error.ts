@@ -5,6 +5,7 @@ export type AuthenticationErrorCode =
   | 'AUTH_TOKEN_EXPIRED'
   | 'ACCOUNT_BLOCKED'
   | 'ACCOUNT_PENDING'
+  | 'MFA_REQUIRED'
   | 'EXTERNAL_SERVICE_UNAVAILABLE';
 
 interface ApiErrorBody {
@@ -67,6 +68,14 @@ export function createAccountBlockedException(): HttpException {
     HttpStatus.FORBIDDEN,
     'ACCOUNT_BLOCKED',
     'The account is not permitted to access Vastra.',
+  );
+}
+
+export function createMfaRequiredException(): HttpException {
+  return createAuthenticationException(
+    HttpStatus.FORBIDDEN,
+    'MFA_REQUIRED',
+    'Multi-factor authentication is required for administrator access.',
   );
 }
 

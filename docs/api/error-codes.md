@@ -30,6 +30,7 @@ last_updated: 2026-07-11
 | AUTH_TOKEN_EXPIRED | 401 | Token expired |
 | ACCOUNT_BLOCKED | 403 | Account blocked |
 | ACCOUNT_PENDING | 403 | Account not yet approved |
+| MFA_REQUIRED | 403 | Administrator session requires completed MFA |
 | PERMISSION_DENIED | 403 | Missing permission |
 | RESOURCE_NOT_OWNED | 403 | Resource belongs to another actor |
 

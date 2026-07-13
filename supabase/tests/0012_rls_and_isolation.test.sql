@@ -667,6 +667,19 @@ select set_config(
   true
 );
 
+select set_config(
+  'request.jwt.claims',
+  jsonb_build_object(
+    'sub',
+    '81000000-0000-0000-0000-000000000007',
+    'role',
+    'authenticated',
+    'aal',
+    'aal2'
+  )::text,
+  true
+);
+
 select is(
   (
     select count(*)::integer
