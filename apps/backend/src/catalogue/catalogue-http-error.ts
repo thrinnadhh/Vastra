@@ -8,6 +8,7 @@ export type CatalogueErrorCode =
   | 'PRODUCT_SLUG_CONFLICT'
   | 'VARIANT_NOT_FOUND'
   | 'VARIANT_SKU_CONFLICT'
+  | 'BARCODE_NOT_FOUND'
   | 'PRODUCT_IMAGE_NOT_FOUND'
   | 'PRODUCT_IMAGE_UPLOAD_INVALID'
   | 'PRODUCT_IMAGE_CONFLICT'
@@ -162,6 +163,24 @@ export function createInvalidInventoryLookupException(): HttpException {
     HttpStatus.BAD_REQUEST,
     'VALIDATION_ERROR',
     'The inventory lookup query or limit is invalid.',
+    false,
+  );
+}
+
+export function createInvalidInventoryBarcodeException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The inventory barcode is invalid.',
+    false,
+  );
+}
+
+export function createInventoryBarcodeNotFoundException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.NOT_FOUND,
+    'BARCODE_NOT_FOUND',
+    'The barcode does not exist or is not visible to this merchant.',
     false,
   );
 }

@@ -456,6 +456,44 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    MerchantInventoryBarcode:
+      type: object
+      required: [id, value, type, source, isPrimary]
+      properties:
+        id: {type: string, format: uuid}
+        value: {type: string, minLength: 1, maxLength: 255}
+        type:
+          type: string
+          enum: [EAN13, UPC, CODE128, QR, INTERNAL]
+        source:
+          type: string
+          enum: [MANUFACTURER, VASTRA_GENERATED, MERCHANT_ENTERED]
+        isPrimary: {type: boolean}
+    MerchantInventoryBarcodeLookupItem:
+      type: object
+      required: [barcode, product, variant, balance]
+      properties:
+        barcode: {$ref: '#/components/schemas/MerchantInventoryBarcode'}
+        product: {$ref: '#/components/schemas/MerchantInventoryProductSummary'}
+        variant: {$ref: '#/components/schemas/MerchantInventoryVariantSummary'}
+        balance: {$ref: '#/components/schemas/MerchantInventoryBalance'}
+    LookupMerchantInventoryByBarcodeResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [scannedBarcode, inventory]
+          properties:
+            scannedBarcode: {type: string, minLength: 1, maxLength: 255}
+            inventory:
+              $ref: '#/components/schemas/MerchantInventoryBarcodeLookupItem'
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     MerchantProductImage:
       type: object
       required:
@@ -3124,6 +3162,43 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '500':
           description: Inventory data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/shops/{shopId}/inventory/barcode-lookup:
+    get:
+      operationId: lookupMerchantInventoryByBarcode
+      summary: Find one owned inventory variant by an exact barcode scan
+      description: Performs an exact, case-sensitive lookup against merchant-visible variant barcode mappings. It does not perform partial matching or mutate inventory.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: barcode
+        in: query
+        required: true
+        schema: {type: string, minLength: 1, maxLength: 255}
+      responses:
+        '200':
+          description: Exact owned barcode inventory match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LookupMerchantInventoryByBarcodeResponse'
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Barcode or inventory data is internally inconsistent
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ApiError'}

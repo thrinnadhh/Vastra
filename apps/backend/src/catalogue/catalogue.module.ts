@@ -8,6 +8,10 @@ import { MerchantInventoryAdjustmentController } from './merchant-inventory-adju
 import { SupabaseMerchantInventoryAdjustmentGateway } from './merchant-inventory-adjustment.gateway';
 import { MerchantInventoryAdjustmentService } from './merchant-inventory-adjustment.service';
 import { MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY } from './merchant-inventory-adjustment.tokens';
+import { MerchantInventoryBarcodeController } from './merchant-inventory-barcode.controller';
+import { SupabaseMerchantInventoryBarcodeGateway } from './merchant-inventory-barcode.gateway';
+import { MerchantInventoryBarcodeService } from './merchant-inventory-barcode.service';
+import { MERCHANT_INVENTORY_BARCODE_GATEWAY } from './merchant-inventory-barcode.tokens';
 import { MerchantInventoryBalanceController } from './merchant-inventory-balance.controller';
 import { SupabaseMerchantInventoryBalanceGateway } from './merchant-inventory-balance.gateway';
 import { MerchantInventoryBalanceService } from './merchant-inventory-balance.service';
@@ -32,6 +36,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
 @Module({
   controllers: [
     MerchantInventoryAdjustmentController,
+    MerchantInventoryBarcodeController,
     MerchantInventoryBalanceController,
     MerchantShopContextController,
     CategoryCatalogueController,
@@ -43,6 +48,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     MerchantShopContextService,
     CategoryCatalogueService,
     MerchantInventoryAdjustmentService,
+    MerchantInventoryBarcodeService,
     MerchantInventoryBalanceService,
     MerchantProductService,
     MerchantProductVariantService,
@@ -50,6 +56,10 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     {
       provide: MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY,
       useClass: SupabaseMerchantInventoryAdjustmentGateway,
+    },
+    {
+      provide: MERCHANT_INVENTORY_BARCODE_GATEWAY,
+      useClass: SupabaseMerchantInventoryBarcodeGateway,
     },
     {
       provide: MERCHANT_INVENTORY_BALANCE_GATEWAY,
@@ -82,6 +92,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     MERCHANT_SHOP_CONTEXT_GATEWAY,
     CATEGORY_CATALOGUE_GATEWAY,
     MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY,
+    MERCHANT_INVENTORY_BARCODE_GATEWAY,
     MERCHANT_INVENTORY_BALANCE_GATEWAY,
     MERCHANT_PRODUCT_GATEWAY,
     MERCHANT_PRODUCT_VARIANT_GATEWAY,
