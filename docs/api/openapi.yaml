@@ -180,6 +180,56 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    MerchantCatalogueCategory:
+      type: object
+      required:
+      - id
+      - parentId
+      - name
+      - slug
+      - description
+      - iconObjectKey
+      - displayOrder
+      properties:
+        id: {type: string, format: uuid}
+        parentId: {type: ['string', 'null'], format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        description: {type: ['string', 'null']}
+        iconObjectKey: {type: ['string', 'null']}
+        displayOrder: {type: integer, minimum: 0}
+    ListMerchantCatalogueCategoriesResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [categories]
+          properties:
+            categories:
+              type: array
+              items: {$ref: '#/components/schemas/MerchantCatalogueCategory'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    GetMerchantCatalogueCategoryResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [category]
+          properties:
+            category: {$ref: '#/components/schemas/MerchantCatalogueCategory'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     WardrobeItem:
       type: object
       required: [id, ownerCustomerId, category, colour, occasion, season, status,
@@ -1946,6 +1996,63 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetMerchantCatalogueShopResponse'
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/categories:
+    get:
+      operationId: listMerchantCatalogueCategories
+      summary: List active catalogue categories for merchant product management
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Active category catalogue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListMerchantCatalogueCategoriesResponse'
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/categories/{categoryId}:
+    get:
+      operationId: getMerchantCatalogueCategory
+      summary: Get one active category for merchant product management
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: categoryId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Active category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetMerchantCatalogueCategoryResponse'
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
