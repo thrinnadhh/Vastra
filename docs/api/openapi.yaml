@@ -456,6 +456,33 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    MerchantLowStockInventoryItem:
+      type: object
+      required: [product, variant, balance, inventoryState]
+      properties:
+        product: {$ref: '#/components/schemas/MerchantInventoryProductSummary'}
+        variant: {$ref: '#/components/schemas/MerchantInventoryVariantSummary'}
+        balance: {$ref: '#/components/schemas/MerchantInventoryBalance'}
+        inventoryState:
+          type: string
+          enum: [OUT_OF_STOCK, LOW_STOCK]
+    ListMerchantLowStockInventoryResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: {$ref: '#/components/schemas/MerchantLowStockInventoryItem'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     MerchantInventoryBarcode:
       type: object
       required: [id, value, type, source, isPrimary]
@@ -3816,6 +3843,46 @@ paths:
               schema: {$ref: '#/components/schemas/ApiError'}
         '503':
           description: Inventory provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/shops/{shopId}/inventory/low-stock:
+    get:
+      operationId: listMerchantLowStockInventory
+      summary: List persisted low-stock and out-of-stock variants for an owned shop
+      description: Returns balances whose available quantity is at or below the configured reorder level. Active products and variants are returned by default.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+      - name: includeInactive
+        in: query
+        required: false
+        schema: {type: boolean, default: false}
+      responses:
+        '200':
+          description: Ordered low-stock inventory rows
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ListMerchantLowStockInventoryResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Low-stock read-model data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Low-stock inventory provider is temporarily unavailable
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ApiError'}

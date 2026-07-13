@@ -171,6 +171,15 @@ export function createInvalidInventoryLookupException(): HttpException {
   );
 }
 
+export function createInvalidLowStockQueryException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The low-stock inventory query is invalid.',
+    false,
+  );
+}
+
 export function createInvalidInventoryBarcodeException(): HttpException {
   return createCatalogueException(
     HttpStatus.BAD_REQUEST,
