@@ -8,12 +8,25 @@ import { MerchantShopContextController } from './merchant-shop-context.controlle
 import { SupabaseMerchantShopContextGateway } from './merchant-shop-context.gateway';
 import { MerchantShopContextService } from './merchant-shop-context.service';
 import { MERCHANT_SHOP_CONTEXT_GATEWAY } from './merchant-shop-context.tokens';
+import { MerchantProductController } from './merchant-product.controller';
+import { SupabaseMerchantProductGateway } from './merchant-product.gateway';
+import { MerchantProductService } from './merchant-product.service';
+import { MERCHANT_PRODUCT_GATEWAY } from './merchant-product.tokens';
 
 @Module({
-  controllers: [MerchantShopContextController, CategoryCatalogueController],
+  controllers: [
+    MerchantShopContextController,
+    CategoryCatalogueController,
+    MerchantProductController,
+  ],
   providers: [
     MerchantShopContextService,
     CategoryCatalogueService,
+    MerchantProductService,
+    {
+      provide: MERCHANT_PRODUCT_GATEWAY,
+      useClass: SupabaseMerchantProductGateway,
+    },
     {
       provide: CATEGORY_CATALOGUE_GATEWAY,
       useClass: SupabaseCategoryCatalogueGateway,
@@ -28,6 +41,7 @@ import { MERCHANT_SHOP_CONTEXT_GATEWAY } from './merchant-shop-context.tokens';
     CategoryCatalogueService,
     MERCHANT_SHOP_CONTEXT_GATEWAY,
     CATEGORY_CATALOGUE_GATEWAY,
+    MERCHANT_PRODUCT_GATEWAY,
   ],
 })
 export class CatalogueModule {}

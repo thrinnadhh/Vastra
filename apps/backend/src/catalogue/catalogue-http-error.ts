@@ -4,6 +4,8 @@ export type CatalogueErrorCode =
   | 'VALIDATION_ERROR'
   | 'SHOP_NOT_FOUND'
   | 'CATEGORY_NOT_FOUND'
+  | 'PRODUCT_NOT_FOUND'
+  | 'PRODUCT_SLUG_CONFLICT'
   | 'CATALOGUE_STATE_INVALID'
   | 'EXTERNAL_SERVICE_UNAVAILABLE';
 
@@ -70,6 +72,42 @@ export function createCategoryNotFoundException(): HttpException {
     HttpStatus.NOT_FOUND,
     'CATEGORY_NOT_FOUND',
     'The category does not exist or is not active.',
+    false,
+  );
+}
+
+export function createInvalidProductIdException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The product identifier is invalid.',
+    false,
+  );
+}
+
+export function createInvalidProductInputException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The product request is invalid.',
+    false,
+  );
+}
+
+export function createProductNotFoundException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.NOT_FOUND,
+    'PRODUCT_NOT_FOUND',
+    'The product does not exist or is not visible to this merchant.',
+    false,
+  );
+}
+
+export function createProductSlugConflictException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.CONFLICT,
+    'PRODUCT_SLUG_CONFLICT',
+    'The product slug is already used by this shop.',
     false,
   );
 }
