@@ -592,6 +592,70 @@ components:
           required: [requestId]
           properties:
             requestId: {type: [string, 'null'], format: uuid}
+    RegisterDeviceRequest:
+      type: object
+      additionalProperties: false
+      required: [deviceFingerprint, platform, pushProvider, pushToken, appVersion]
+      properties:
+        deviceFingerprint: {type: string, minLength: 1, maxLength: 255}
+        platform:
+          type: string
+          enum: [ANDROID, IOS, WEB]
+        pushProvider:
+          type: [string, 'null']
+          enum: [FCM, APNS, WEB_PUSH, null]
+        pushToken: {type: [string, 'null'], minLength: 1, maxLength: 4096}
+        appVersion: {type: string, minLength: 1, maxLength: 64}
+        deviceModel: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        osVersion: {type: [string, 'null'], minLength: 1, maxLength: 64}
+      allOf:
+      - if:
+          properties:
+            pushProvider: {type: 'null'}
+        then:
+          properties:
+            pushToken: {type: 'null'}
+      - if:
+          properties:
+            pushToken: {type: 'null'}
+        then:
+          properties:
+            pushProvider: {type: 'null'}
+    RegisteredDevice:
+      type: object
+      required: [id, deviceFingerprint, platform, pushProvider, appName, appVersion,
+        deviceModel, osVersion, notificationEnabled, orderSoundEnabled, lastSeenAt,
+        revokedAt]
+      properties:
+        id: {type: string, format: uuid}
+        deviceFingerprint: {type: string}
+        platform:
+          type: string
+          enum: [ANDROID, IOS, WEB]
+        pushProvider:
+          type: [string, 'null']
+          enum: [FCM, APNS, WEB_PUSH, null]
+        appName:
+          type: string
+          enum: [CUSTOMER, MERCHANT, CAPTAIN, ADMIN]
+        appVersion: {type: string}
+        deviceModel: {type: [string, 'null']}
+        osVersion: {type: [string, 'null']}
+        notificationEnabled: {type: boolean}
+        orderSoundEnabled: {type: boolean}
+        lastSeenAt: {type: string, format: date-time}
+        revokedAt: {type: 'null'}
+    RegisterDeviceResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data: {$ref: '#/components/schemas/RegisteredDevice'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: [string, 'null'], format: uuid}
     ProductVariant:
       type: object
       required:
@@ -816,22 +880,58 @@ paths:
                 $ref: '#/components/schemas/ApiError'
   /me/devices:
     post:
-      summary: Register device
+      operationId: registerCurrentDevice
+      summary: Register or refresh the authenticated account's device
+      description: Upserts the device by authenticated user and device fingerprint. The
+        account identity and app name are derived from the access token, and the push
+        token is never returned.
       tags:
       - Common
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDeviceRequest'
       responses:
         '200':
-          description: Success
+          description: Device registered or refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterDeviceResponse'
         '400':
-          description: Bad request
+          description: Device registration input is invalid
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
         '401':
-          description: Unauthorized
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '403':
-          description: Forbidden
+          description: Account is not permitted to access Vastra
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Registered device state is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          description: Device registration is temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /customer/home:
     get:
       summary: Get customer home feed
