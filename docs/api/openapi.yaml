@@ -230,6 +230,168 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    MerchantProduct:
+      type: object
+      required:
+      - id
+      - shopId
+      - categoryId
+      - name
+      - slug
+      - description
+      - brand
+      - material
+      - genderCategory
+      - styleTags
+      - occasionTags
+      - careInstructions
+      - returnEligible
+      - returnWindowDays
+      - moderationStatus
+      - isActive
+      - createdAt
+      - updatedAt
+      - deletedAt
+      properties:
+        id: {type: string, format: uuid}
+        shopId: {type: string, format: uuid}
+        categoryId: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        description: {type: ['string', 'null']}
+        brand: {type: ['string', 'null']}
+        material: {type: ['string', 'null']}
+        genderCategory:
+          type: string
+          enum: [MEN, WOMEN, KIDS, UNISEX]
+        styleTags:
+          type: array
+          items: {type: string}
+        occasionTags:
+          type: array
+          items: {type: string}
+        careInstructions: {type: ['string', 'null']}
+        returnEligible: {type: boolean}
+        returnWindowDays: {type: integer, minimum: 0, maximum: 90}
+        moderationStatus:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED, CORRECTION_REQUIRED]
+        isActive: {type: boolean}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+        deletedAt: {type: ['string', 'null'], format: date-time}
+    CreateMerchantProductRequest:
+      type: object
+      additionalProperties: false
+      required: [categoryId, name, slug]
+      properties:
+        categoryId: {type: string, format: uuid}
+        name: {type: string, minLength: 1, maxLength: 200}
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        description: {type: ['string', 'null'], maxLength: 4000}
+        brand: {type: ['string', 'null'], maxLength: 200}
+        material: {type: ['string', 'null'], maxLength: 200}
+        genderCategory:
+          type: string
+          enum: [MEN, WOMEN, KIDS, UNISEX]
+          default: UNISEX
+        styleTags:
+          type: array
+          maxItems: 30
+          uniqueItems: true
+          items: {type: string, minLength: 1, maxLength: 80}
+        occasionTags:
+          type: array
+          maxItems: 30
+          uniqueItems: true
+          items: {type: string, minLength: 1, maxLength: 80}
+        careInstructions: {type: ['string', 'null'], maxLength: 2000}
+        returnEligible: {type: boolean, default: true}
+        returnWindowDays: {type: integer, minimum: 0, maximum: 90, default: 7}
+        isActive: {type: boolean, default: true}
+    UpdateMerchantProductRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        categoryId: {type: string, format: uuid}
+        name: {type: string, minLength: 1, maxLength: 200}
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        description: {type: ['string', 'null'], maxLength: 4000}
+        brand: {type: ['string', 'null'], maxLength: 200}
+        material: {type: ['string', 'null'], maxLength: 200}
+        genderCategory:
+          type: string
+          enum: [MEN, WOMEN, KIDS, UNISEX]
+        styleTags:
+          type: array
+          maxItems: 30
+          uniqueItems: true
+          items: {type: string, minLength: 1, maxLength: 80}
+        occasionTags:
+          type: array
+          maxItems: 30
+          uniqueItems: true
+          items: {type: string, minLength: 1, maxLength: 80}
+        careInstructions: {type: ['string', 'null'], maxLength: 2000}
+        returnEligible: {type: boolean}
+        returnWindowDays: {type: integer, minimum: 0, maximum: 90}
+        isActive: {type: boolean}
+    ListMerchantProductsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [products]
+          properties:
+            products:
+              type: array
+              items: {$ref: '#/components/schemas/MerchantProduct'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    MerchantProductResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [product]
+          properties:
+            product: {$ref: '#/components/schemas/MerchantProduct'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    ArchiveMerchantProductResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [archivedProductId]
+          properties:
+            archivedProductId: {type: string, format: uuid}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     WardrobeItem:
       type: object
       required: [id, ownerCustomerId, category, colour, occasion, season, status,
@@ -2053,6 +2215,184 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetMerchantCatalogueCategoryResponse'
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/shops/{shopId}/products:
+    get:
+      operationId: listMerchantProducts
+      summary: List non-archived products in an owned shop
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Merchant products
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ListMerchantProductsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+    post:
+      operationId: createMerchantProduct
+      summary: Create a pending product in an owned shop
+      description: Merchant-controlled moderation fields are rejected. New products enter PENDING moderation.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateMerchantProductRequest'}
+      responses:
+        '201':
+          description: Pending product created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MerchantProductResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/catalogue/shops/{shopId}/products/{productId}:
+    get:
+      operationId: getMerchantProduct
+      summary: Get one non-archived product from an owned shop
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: productId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Merchant product
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MerchantProductResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+    patch:
+      operationId: updateMerchantProduct
+      summary: Update one product in an owned shop
+      description: Moderated content changes reset moderation to PENDING. Active-state-only changes preserve moderation.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: productId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateMerchantProductRequest'}
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MerchantProductResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+    delete:
+      operationId: archiveMerchantProduct
+      summary: Soft-archive one product in an owned shop
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: productId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Product archived
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ArchiveMerchantProductResponse'}
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}

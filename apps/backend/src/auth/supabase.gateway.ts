@@ -1,4 +1,4 @@
-import type { SupabaseClient } from './supabase-client.type';
+import type { SupabaseClient, VastraDatabase } from './supabase-client.type';
 
 import { Inject, Injectable } from '@nestjs/common';
 import { createClient, type WebSocketLikeConstructor } from '@supabase/supabase-js';
@@ -73,7 +73,11 @@ function createClientOptions() {
 }
 
 export function createSupabaseServiceClient(configuration: SupabaseConfiguration): SupabaseClient {
-  return createClient(configuration.url, configuration.serviceRoleKey, createClientOptions());
+  return createClient<VastraDatabase>(
+    configuration.url,
+    configuration.serviceRoleKey,
+    createClientOptions(),
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -210,7 +214,7 @@ export class SupabaseAuthenticationGateway implements AuthenticationGateway {
   }
 
   public createUserClient(accessToken: string): SupabaseClient {
-    return createClient(this.configuration.url, this.configuration.publishableKey, {
+    return createClient<VastraDatabase>(this.configuration.url, this.configuration.publishableKey, {
       ...createClientOptions(),
       global: {
         headers: {
