@@ -180,12 +180,8 @@ describe('customer favourite shops and preferences integration', () => {
   });
 
   it('adds and removes favourite shops', async () => {
-    const addResponse = await request(httpServer).put(
-      `/customer/favourite-shops/${SHOP_ID}`,
-    );
-    const removeResponse = await request(httpServer).delete(
-      `/customer/favourite-shops/${SHOP_ID}`,
-    );
+    const addResponse = await request(httpServer).put(`/customer/favourite-shops/${SHOP_ID}`);
+    const removeResponse = await request(httpServer).delete(`/customer/favourite-shops/${SHOP_ID}`);
 
     expect(addResponse.status).toBe(200);
     expect(readData(addResponse.body)['isFavourite']).toBe(true);
@@ -197,35 +193,33 @@ describe('customer favourite shops and preferences integration', () => {
     const response = await request(httpServer).get('/customer/preferences');
 
     expect(response.status).toBe(200);
-    const preferences = requireRecord(
-      readData(response.body)['preferences'],
-      'preferences',
-    );
+    const preferences = requireRecord(readData(response.body)['preferences'], 'preferences');
     expect(preferences['genderCategories']).toStrictEqual([]);
   });
 
   it('replaces and normalizes preferences', async () => {
-    const response = await request(httpServer).put('/customer/preferences').send({
-      genderCategories: ['WOMEN'],
-      styleTags: [' Casual '],
-      preferredColours: ['#aabbcc'],
-      minPricePaise: 10000,
-      maxPricePaise: 50000,
-    });
+    const response = await request(httpServer)
+      .put('/customer/preferences')
+      .send({
+        genderCategories: ['WOMEN'],
+        styleTags: [' Casual '],
+        preferredColours: ['#aabbcc'],
+        minPricePaise: 10000,
+        maxPricePaise: 50000,
+      });
 
     expect(response.status).toBe(200);
-    const preferences = requireRecord(
-      readData(response.body)['preferences'],
-      'preferences',
-    );
+    const preferences = requireRecord(readData(response.body)['preferences'], 'preferences');
     expect(preferences['styleTags']).toStrictEqual(['Casual']);
     expect(preferences['preferredColours']).toStrictEqual(['#AABBCC']);
   });
 
   it('rejects invalid preference payloads', async () => {
-    const response = await request(httpServer).put('/customer/preferences').send({
-      preferredColours: ['blue'],
-    });
+    const response = await request(httpServer)
+      .put('/customer/preferences')
+      .send({
+        preferredColours: ['blue'],
+      });
 
     expect(response.status).toBe(400);
     expect(readErrorCode(response.body)).toBe('VALIDATION_ERROR');

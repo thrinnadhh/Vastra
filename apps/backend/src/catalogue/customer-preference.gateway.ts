@@ -1,10 +1,7 @@
 import type { SupabaseClient } from '../auth/supabase-client.type';
 import { Injectable } from '@nestjs/common';
 
-import {
-  PRODUCT_GENDER_CATEGORIES,
-  type ProductGenderCategory,
-} from './merchant-product.types';
+import { PRODUCT_GENDER_CATEGORIES, type ProductGenderCategory } from './merchant-product.types';
 import {
   SHOP_OPERATIONAL_STATUSES,
   type ShopOperationalStatus,
@@ -33,10 +30,7 @@ export interface CustomerPreferenceGateway {
     shopId: string,
     favourite: boolean,
   ): Promise<{ readonly shopId: string; readonly isFavourite: boolean }>;
-  getPreferences(
-    client: SupabaseClient,
-    customerId: string,
-  ): Promise<CustomerPreferencesSnapshot>;
+  getPreferences(client: SupabaseClient, customerId: string): Promise<CustomerPreferencesSnapshot>;
   replacePreferences(
     client: SupabaseClient,
     customerId: string,
@@ -196,11 +190,7 @@ function requireGenderCategories(
 ): readonly ProductGenderCategory[] {
   const value = requireTextArray(record, 'gender_categories');
 
-  if (
-    value.some(
-      (item) => !PRODUCT_GENDER_CATEGORIES.some((candidate) => candidate === item),
-    )
-  ) {
+  if (value.some((item) => !PRODUCT_GENDER_CATEGORIES.some((candidate) => candidate === item))) {
     throw new CustomerPreferenceDataInvalidError();
   }
 
@@ -235,9 +225,10 @@ function parseFavouriteRows(value: unknown): readonly CustomerFavouriteShopSnaps
   return value.map((row) => parseFavouriteShop(row));
 }
 
-function parseFavouriteMutation(
-  value: unknown,
-): { readonly shopId: string; readonly isFavourite: boolean } {
+function parseFavouriteMutation(value: unknown): {
+  readonly shopId: string;
+  readonly isFavourite: boolean;
+} {
   if (!Array.isArray(value) || value.length !== 1 || !isRecord(value[0])) {
     throw new CustomerPreferenceDataInvalidError();
   }
@@ -269,11 +260,7 @@ function parsePreferences(value: unknown): CustomerPreferencesSnapshot {
   const minPricePaise = requireNullableNonNegativeInteger(value, 'min_price_paise');
   const maxPricePaise = requireNullableNonNegativeInteger(value, 'max_price_paise');
 
-  if (
-    minPricePaise !== null &&
-    maxPricePaise !== null &&
-    minPricePaise > maxPricePaise
-  ) {
+  if (minPricePaise !== null && maxPricePaise !== null && minPricePaise > maxPricePaise) {
     throw new CustomerPreferenceDataInvalidError();
   }
 

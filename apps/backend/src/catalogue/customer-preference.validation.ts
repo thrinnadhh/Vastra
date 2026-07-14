@@ -1,11 +1,7 @@
-import {
-  PRODUCT_GENDER_CATEGORIES,
-  type ProductGenderCategory,
-} from './merchant-product.types';
+import { PRODUCT_GENDER_CATEGORIES, type ProductGenderCategory } from './merchant-product.types';
 import type { ReplaceCustomerPreferencesInput } from './customer-preference.types';
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const COLOUR_PATTERN = /^#[0-9a-f]{6}$/iu;
 const MAX_PRICE_PAISE = Number.MAX_SAFE_INTEGER;
 const ALLOWED_KEYS = new Set([
@@ -67,11 +63,7 @@ function parseTextArray(
     const candidate = transform(item.trim());
     const identity = candidate.toLocaleLowerCase('en-US');
 
-    if (
-      candidate.length === 0 ||
-      candidate.length > maxLength ||
-      identities.has(identity)
-    ) {
+    if (candidate.length === 0 || candidate.length > maxLength || identities.has(identity)) {
       throw new CustomerPreferenceValidationError();
     }
 
@@ -82,9 +74,7 @@ function parseTextArray(
   return normalized;
 }
 
-function parseGenderCategories(
-  record: Record<string, unknown>,
-): readonly ProductGenderCategory[] {
+function parseGenderCategories(record: Record<string, unknown>): readonly ProductGenderCategory[] {
   const value = record['genderCategories'];
 
   if (value === undefined) {
@@ -149,20 +139,12 @@ export function parseReplaceCustomerPreferencesInput(
   const minPricePaise = parseNullablePrice(record, 'minPricePaise');
   const maxPricePaise = parseNullablePrice(record, 'maxPricePaise');
 
-  if (
-    minPricePaise !== null &&
-    maxPricePaise !== null &&
-    minPricePaise > maxPricePaise
-  ) {
+  if (minPricePaise !== null && maxPricePaise !== null && minPricePaise > maxPricePaise) {
     throw new CustomerPreferenceValidationError();
   }
 
-  const preferredColours = parseTextArray(
-    record,
-    'preferredColours',
-    12,
-    7,
-    (colour) => colour.toUpperCase(),
+  const preferredColours = parseTextArray(record, 'preferredColours', 12, 7, (colour) =>
+    colour.toUpperCase(),
   );
 
   if (preferredColours.some((colour) => !COLOUR_PATTERN.test(colour))) {

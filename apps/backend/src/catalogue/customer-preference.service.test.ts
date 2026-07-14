@@ -189,9 +189,7 @@ describe('CustomerPreferenceService', () => {
   });
 
   it('rejects an invalid favourite shop identifier', async () => {
-    const error = await captureHttpException(
-      service.setFavouriteShop(context, 'not-a-uuid', true),
-    );
+    const error = await captureHttpException(service.setFavouriteShop(context, 'not-a-uuid', true));
 
     expect(error.getStatus()).toBe(400);
     expect(readCode(error)).toBe('VALIDATION_ERROR');
@@ -245,9 +243,7 @@ describe('CustomerPreferenceService', () => {
   it('maps an unavailable favourite shop to not found', async () => {
     gateway.error = new CustomerFavouriteShopNotFoundError();
 
-    const error = await captureHttpException(
-      service.setFavouriteShop(context, SHOP_ID, true),
-    );
+    const error = await captureHttpException(service.setFavouriteShop(context, SHOP_ID, true));
 
     expect(error.getStatus()).toBe(404);
     expect(readCode(error)).toBe('SHOP_NOT_FOUND');

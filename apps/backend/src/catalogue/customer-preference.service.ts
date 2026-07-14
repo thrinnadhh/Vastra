@@ -55,11 +55,7 @@ export class CustomerPreferenceService {
   ): Promise<SetCustomerFavouriteShopResponse> {
     try {
       const shopId = parseCustomerShopId(shopIdValue);
-      const result = await this.gateway.setFavouriteShop(
-        context.supabase,
-        shopId,
-        favourite,
-      );
+      const result = await this.gateway.setFavouriteShop(context.supabase, shopId, favourite);
 
       return {
         success: true,
@@ -75,10 +71,7 @@ export class CustomerPreferenceService {
     context: AuthenticatedRequestContext,
   ): Promise<GetCustomerPreferencesResponse> {
     try {
-      const preferences = await this.gateway.getPreferences(
-        context.supabase,
-        context.actor.id,
-      );
+      const preferences = await this.gateway.getPreferences(context.supabase, context.actor.id);
 
       return {
         success: true,
