@@ -9,6 +9,10 @@ import { CustomerCartController } from './customer-cart.controller';
 import { SupabaseCustomerCartGateway } from './customer-cart.gateway';
 import { CustomerCartService } from './customer-cart.service';
 import { CUSTOMER_CART_GATEWAY } from './customer-cart.tokens';
+import { CustomerCheckoutQuoteController } from './customer-checkout-quote.controller';
+import { SupabaseCustomerCheckoutQuoteGateway } from './customer-checkout-quote.gateway';
+import { CustomerCheckoutQuoteService } from './customer-checkout-quote.service';
+import { CUSTOMER_CHECKOUT_QUOTE_GATEWAY } from './customer-checkout-quote.tokens';
 import { CustomerHomeController } from './customer-home.controller';
 import { CustomerHomeService } from './customer-home.service';
 import { CustomerPreferenceController } from './customer-preference.controller';
@@ -75,6 +79,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
   controllers: [
     CustomerCatalogueReadController,
     CustomerCartController,
+    CustomerCheckoutQuoteController,
     CustomerHomeController,
     CustomerPreferenceController,
     CustomerInventoryReservationController,
@@ -97,6 +102,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CategoryCatalogueService,
     CustomerCatalogueReadService,
     CustomerCartService,
+    CustomerCheckoutQuoteService,
     CustomerHomeService,
     CustomerPreferenceService,
     CustomerInventoryReservationService,
@@ -118,6 +124,10 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     {
       provide: CUSTOMER_CART_GATEWAY,
       useClass: SupabaseCustomerCartGateway,
+    },
+    {
+      provide: CUSTOMER_CHECKOUT_QUOTE_GATEWAY,
+      useClass: SupabaseCustomerCheckoutQuoteGateway,
     },
     {
       provide: CUSTOMER_PREFERENCE_GATEWAY,
@@ -187,6 +197,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CATEGORY_CATALOGUE_GATEWAY,
     CUSTOMER_CATALOGUE_READ_GATEWAY,
     CUSTOMER_CART_GATEWAY,
+    CUSTOMER_CHECKOUT_QUOTE_GATEWAY,
     CUSTOMER_PREFERENCE_GATEWAY,
     CUSTOMER_INVENTORY_RESERVATION_GATEWAY,
     CUSTOMER_NEARBY_SHOP_GATEWAY,

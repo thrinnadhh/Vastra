@@ -12,6 +12,10 @@ export type CatalogueErrorCode =
   | 'CART_NOT_FOUND'
   | 'CART_ITEM_NOT_FOUND'
   | 'CART_SHOP_CONFLICT'
+  | 'ADDRESS_NOT_FOUND'
+  | 'SHOP_UNAVAILABLE'
+  | 'OUTSIDE_SERVICE_AREA'
+  | 'MINIMUM_ORDER_NOT_MET'
   | 'RESERVATION_NOT_FOUND'
   | 'RESERVATION_CONFLICT'
   | 'INSUFFICIENT_INVENTORY'
@@ -295,6 +299,51 @@ export function createCartShopConflictException(): HttpException {
     HttpStatus.CONFLICT,
     'CART_SHOP_CONFLICT',
     'The active cart belongs to another shop. Confirm replacement before continuing.',
+    false,
+  );
+}
+
+export function createInvalidCheckoutQuoteRequestException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The checkout quote request is invalid.',
+    false,
+  );
+}
+
+export function createCheckoutAddressNotFoundException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.NOT_FOUND,
+    'ADDRESS_NOT_FOUND',
+    'The delivery address does not exist or is not visible to this customer.',
+    false,
+  );
+}
+
+export function createCheckoutShopUnavailableException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.CONFLICT,
+    'SHOP_UNAVAILABLE',
+    'The cart shop is not currently accepting checkout.',
+    false,
+  );
+}
+
+export function createCheckoutOutsideServiceAreaException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.CONFLICT,
+    'OUTSIDE_SERVICE_AREA',
+    'The selected address is outside the cart shop service area.',
+    false,
+  );
+}
+
+export function createCheckoutMinimumOrderNotMetException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.CONFLICT,
+    'MINIMUM_ORDER_NOT_MET',
+    'The current cart subtotal is below the shop minimum order.',
     false,
   );
 }
