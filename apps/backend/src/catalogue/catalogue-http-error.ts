@@ -396,6 +396,15 @@ export function createProductImageConflictException(): HttpException {
   );
 }
 
+export function createInvalidCustomerPreferenceRequestException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The favourite-shop or customer-preference request is invalid.',
+    false,
+  );
+}
+
 export function createCatalogueStateInvalidException(): HttpException {
   return createCatalogueException(
     HttpStatus.INTERNAL_SERVER_ERROR,

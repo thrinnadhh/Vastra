@@ -2143,8 +2143,141 @@ components:
           enum:
           - OTP
           - ADMIN_OVERRIDE
+    CustomerFavouriteShop:
+      type: object
+      required: [id, name, slug, logoObjectKey, coverImageObjectKey, operationalStatus, acceptsOnlineOrders, ratingAverage, ratingCount, followerCount, favouritedAt]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        logoObjectKey: {type: ['string', 'null']}
+        coverImageObjectKey: {type: ['string', 'null']}
+        operationalStatus:
+          type: string
+          enum: [OPEN, BUSY, TEMPORARILY_CLOSED, CLOSED_FOR_DAY]
+        acceptsOnlineOrders: {type: boolean}
+        ratingAverage: {type: ['number', 'null'], minimum: 1, maximum: 5}
+        ratingCount: {type: integer, minimum: 0}
+        followerCount: {type: integer, minimum: 0}
+        favouritedAt: {type: string, format: date-time}
+    ListCustomerFavouriteShopsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [shops]
+          properties:
+            shops:
+              type: array
+              items: {$ref: '#/components/schemas/CustomerFavouriteShop'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    SetCustomerFavouriteShopResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [shopId, isFavourite]
+          properties:
+            shopId: {type: string, format: uuid}
+            isFavourite: {type: boolean}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    CustomerPreferences:
+      type: object
+      required: [genderCategories, styleTags, occasionTags, preferredColours, preferredSizes, minPricePaise, maxPricePaise, updatedAt]
+      properties:
+        genderCategories:
+          type: array
+          maxItems: 4
+          uniqueItems: true
+          items:
+            type: string
+            enum: [MEN, WOMEN, KIDS, UNISEX]
+        styleTags:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: {type: string, minLength: 1, maxLength: 40}
+        occasionTags:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: {type: string, minLength: 1, maxLength: 40}
+        preferredColours:
+          type: array
+          maxItems: 12
+          uniqueItems: true
+          items: {type: string, pattern: '^#[0-9A-F]{6}$'}
+        preferredSizes:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: {type: string, minLength: 1, maxLength: 20}
+        minPricePaise: {type: ['integer', 'null'], minimum: 0}
+        maxPricePaise: {type: ['integer', 'null'], minimum: 0}
+        updatedAt: {type: ['string', 'null'], format: date-time}
+    ReplaceCustomerPreferencesRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        genderCategories:
+          type: array
+          maxItems: 4
+          uniqueItems: true
+          items:
+            type: string
+            enum: [MEN, WOMEN, KIDS, UNISEX]
+        styleTags:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: {type: string, minLength: 1, maxLength: 40}
+        occasionTags:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: {type: string, minLength: 1, maxLength: 40}
+        preferredColours:
+          type: array
+          maxItems: 12
+          uniqueItems: true
+          items: {type: string, pattern: '^#[0-9A-Fa-f]{6}$'}
+        preferredSizes:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: {type: string, minLength: 1, maxLength: 20}
+        minPricePaise: {type: ['integer', 'null'], minimum: 0}
+        maxPricePaise: {type: ['integer', 'null'], minimum: 0}
+    CustomerPreferencesResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [preferences]
+          properties:
+            preferences: {$ref: '#/components/schemas/CustomerPreferences'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
 security:
 - bearerAuth: []
+
 paths:
   /me:
     get:
@@ -4762,3 +4895,86 @@ paths:
         '403':
           description: Forbidden
       security: []
+
+  /customer/favourite-shops:
+    get:
+      operationId: listCustomerFavouriteShops
+      summary: List the authenticated customer's favourite public shops
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Favourite shops
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ListCustomerFavouriteShopsResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /customer/favourite-shops/{shopId}:
+    parameters:
+    - name: shopId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    put:
+      operationId: addCustomerFavouriteShop
+      summary: Add a public shop to the authenticated customer's favourites
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Shop is favourited
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SetCustomerFavouriteShopResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    delete:
+      operationId: removeCustomerFavouriteShop
+      summary: Remove a shop from the authenticated customer's favourites
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Shop is no longer favourited
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SetCustomerFavouriteShopResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /customer/preferences:
+    get:
+      operationId: getCustomerPreferences
+      summary: Read the authenticated customer's discovery preferences
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Customer preferences, with empty defaults when not configured
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerPreferencesResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    put:
+      operationId: replaceCustomerPreferences
+      summary: Replace the authenticated customer's discovery preferences
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReplaceCustomerPreferencesRequest'}
+      responses:
+        '200':
+          description: Updated customer preferences
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerPreferencesResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
