@@ -7,6 +7,10 @@ import { CustomerCatalogueReadService } from './customer-catalogue-read.service'
 import { CUSTOMER_CATALOGUE_READ_GATEWAY } from './customer-catalogue-read.tokens';
 import { CustomerInventoryReservationController } from './customer-inventory-reservation.controller';
 import { CustomerNearbyShopController } from './customer-nearby-shop.controller';
+import { CustomerShopDetailController } from './customer-shop-detail.controller';
+import { SupabaseCustomerShopDetailGateway } from './customer-shop-detail.gateway';
+import { CustomerShopDetailService } from './customer-shop-detail.service';
+import { CUSTOMER_SHOP_DETAIL_GATEWAY } from './customer-shop-detail.tokens';
 import { SupabaseCustomerNearbyShopGateway } from './customer-nearby-shop.gateway';
 import { CustomerNearbyShopService } from './customer-nearby-shop.service';
 import { CUSTOMER_NEARBY_SHOP_GATEWAY } from './customer-nearby-shop.tokens';
@@ -58,6 +62,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CustomerCatalogueReadController,
     CustomerInventoryReservationController,
     CustomerNearbyShopController,
+    CustomerShopDetailController,
     MerchantInventoryAdjustmentController,
     MerchantInventoryBarcodeController,
     MerchantInventoryBalanceController,
@@ -75,6 +80,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CustomerCatalogueReadService,
     CustomerInventoryReservationService,
     CustomerNearbyShopService,
+    CustomerShopDetailService,
     MerchantInventoryAdjustmentService,
     MerchantInventoryBarcodeService,
     MerchantInventoryBalanceService,
@@ -94,6 +100,10 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     {
       provide: CUSTOMER_NEARBY_SHOP_GATEWAY,
       useClass: SupabaseCustomerNearbyShopGateway,
+    },
+    {
+      provide: CUSTOMER_SHOP_DETAIL_GATEWAY,
+      useClass: SupabaseCustomerShopDetailGateway,
     },
     {
       provide: MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY,
@@ -144,6 +154,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CUSTOMER_CATALOGUE_READ_GATEWAY,
     CUSTOMER_INVENTORY_RESERVATION_GATEWAY,
     CUSTOMER_NEARBY_SHOP_GATEWAY,
+    CUSTOMER_SHOP_DETAIL_GATEWAY,
     MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY,
     MERCHANT_INVENTORY_BARCODE_GATEWAY,
     MERCHANT_INVENTORY_BALANCE_GATEWAY,

@@ -1702,6 +1702,89 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    CustomerShopLocation:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude: {type: number, minimum: -90, maximum: 90}
+        longitude: {type: number, minimum: -180, maximum: 180}
+    CustomerShopServiceability:
+      type: object
+      required: [customerLatitude, customerLongitude, distanceMeters, serviceRadiusMeters, isServiceable]
+      properties:
+        customerLatitude: {type: number, minimum: -90, maximum: 90}
+        customerLongitude: {type: number, minimum: -180, maximum: 180}
+        distanceMeters: {type: integer, minimum: 0}
+        serviceRadiusMeters: {type: integer, minimum: 1}
+        isServiceable: {type: boolean}
+    CustomerShopWeeklyHours:
+      type: object
+      required: [dayOfWeek, isClosed, opensAt, closesAt]
+      properties:
+        dayOfWeek: {type: integer, minimum: 0, maximum: 6}
+        isClosed: {type: boolean}
+        opensAt: {type: ['string', 'null'], format: time}
+        closesAt: {type: ['string', 'null'], format: time}
+    CustomerShopTodayHours:
+      type: object
+      required: [date, dayOfWeek, timeZone, source, isClosed, opensAt, closesAt, isOpenNow]
+      properties:
+        date: {type: string, format: date}
+        dayOfWeek: {type: integer, minimum: 0, maximum: 6}
+        timeZone: {type: string, const: Asia/Kolkata}
+        source:
+          type: string
+          enum: [WEEKLY, SPECIAL_DATE, NONE]
+        isClosed: {type: boolean}
+        opensAt: {type: ['string', 'null'], format: time}
+        closesAt: {type: ['string', 'null'], format: time}
+        isOpenNow: {type: boolean}
+    CustomerShopDetail:
+      type: object
+      required: [id, name, slug, description, phoneNumber, email, location, operationalStatus, acceptsOnlineOrders, orderingStatus, canPlaceOrder, serviceability, todayHours, weeklyHours, minimumOrderPaise, averagePreparationMinutes, ratingAverage, ratingCount, followerCount]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        description: {type: ['string', 'null']}
+        phoneNumber: {type: string}
+        email: {type: ['string', 'null'], format: email}
+        location: {$ref: '#/components/schemas/CustomerShopLocation'}
+        operationalStatus:
+          type: string
+          enum: [OPEN, BUSY, TEMPORARILY_CLOSED, CLOSED_FOR_DAY]
+        acceptsOnlineOrders: {type: boolean}
+        orderingStatus:
+          type: string
+          enum: [ACCEPTING_ORDERS, BUSY, CLOSED, OUTSIDE_SERVICE_AREA, ONLINE_ORDERS_DISABLED]
+        canPlaceOrder: {type: boolean}
+        serviceability: {$ref: '#/components/schemas/CustomerShopServiceability'}
+        todayHours: {$ref: '#/components/schemas/CustomerShopTodayHours'}
+        weeklyHours:
+          type: array
+          minItems: 7
+          maxItems: 7
+          items: {$ref: '#/components/schemas/CustomerShopWeeklyHours'}
+        minimumOrderPaise: {type: integer, minimum: 0}
+        averagePreparationMinutes: {type: integer, minimum: 0}
+        ratingAverage: {type: ['number', 'null'], minimum: 1, maximum: 5}
+        ratingCount: {type: integer, minimum: 0}
+        followerCount: {type: integer, minimum: 0}
+    GetCustomerShopDetailResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [shop]
+          properties:
+            shop: {$ref: '#/components/schemas/CustomerShopDetail'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     CustomerCatalogueShop:
       type: object
       required: [id, name, slug, operationalStatus, acceptsOnlineOrders]
@@ -2152,29 +2235,44 @@ paths:
               schema: {$ref: '#/components/schemas/ApiError'}
   /shops/{shopId}:
     get:
-      summary: Get shop
-      tags:
-      - Customer
+      operationId: getCustomerShopDetail
+      summary: Get one public shop with current serviceability and ordering status
+      description: Requires the customer's serviceable location and returns public shop metadata, distance, delivery-radius coverage, weekly hours, today's effective hours in Asia/Kolkata, and whether an online order can currently be placed.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
       parameters:
       - name: shopId
         in: path
         required: true
-        schema:
-          type: string
-          format: uuid
+        schema: {type: string, format: uuid}
+      - name: latitude
+        in: query
+        required: true
+        schema: {type: number, minimum: -90, maximum: 90}
+      - name: longitude
+        in: query
+        required: true
+        schema: {type: number, minimum: -180, maximum: 180}
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Public shop detail and current ordering decision
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/GetCustomerShopDetailResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Public shop or schedule data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Shop detail is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
   /shops/{shopId}/products:
     get:
       operationId: listCustomerShopProducts
