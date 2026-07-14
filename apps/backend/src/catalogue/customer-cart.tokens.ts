@@ -1,0 +1,1 @@
+export const CUSTOMER_CART_GATEWAY = Symbol('CUSTOMER_CART_GATEWAY');

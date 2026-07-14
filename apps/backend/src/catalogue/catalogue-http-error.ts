@@ -10,6 +10,8 @@ export type CatalogueErrorCode =
   | 'VARIANT_SKU_CONFLICT'
   | 'BARCODE_NOT_FOUND'
   | 'CART_NOT_FOUND'
+  | 'CART_ITEM_NOT_FOUND'
+  | 'CART_SHOP_CONFLICT'
   | 'RESERVATION_NOT_FOUND'
   | 'RESERVATION_CONFLICT'
   | 'INSUFFICIENT_INVENTORY'
@@ -257,6 +259,42 @@ export function createCartNotFoundException(): HttpException {
     HttpStatus.NOT_FOUND,
     'CART_NOT_FOUND',
     'The active cart does not exist or is not visible to this customer.',
+    false,
+  );
+}
+
+export function createInvalidCustomerCartRequestException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The customer cart request is invalid.',
+    false,
+  );
+}
+
+export function createCartItemNotFoundException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.NOT_FOUND,
+    'CART_ITEM_NOT_FOUND',
+    'The cart item does not exist or is not visible to this customer.',
+    false,
+  );
+}
+
+export function createCustomerCartVariantNotFoundException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.NOT_FOUND,
+    'VARIANT_NOT_FOUND',
+    'The product variant does not exist or is not available to customers.',
+    false,
+  );
+}
+
+export function createCartShopConflictException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.CONFLICT,
+    'CART_SHOP_CONFLICT',
+    'The active cart belongs to another shop. Confirm replacement before continuing.',
     false,
   );
 }
