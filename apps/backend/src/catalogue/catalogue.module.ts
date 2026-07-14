@@ -7,6 +7,10 @@ import { CustomerCatalogueReadService } from './customer-catalogue-read.service'
 import { CUSTOMER_CATALOGUE_READ_GATEWAY } from './customer-catalogue-read.tokens';
 import { CustomerInventoryReservationController } from './customer-inventory-reservation.controller';
 import { CustomerNearbyShopController } from './customer-nearby-shop.controller';
+import { CustomerProductSearchController } from './customer-product-search.controller';
+import { SupabaseCustomerProductSearchGateway } from './customer-product-search.gateway';
+import { CustomerProductSearchService } from './customer-product-search.service';
+import { CUSTOMER_PRODUCT_SEARCH_GATEWAY } from './customer-product-search.tokens';
 import { CustomerShopDetailController } from './customer-shop-detail.controller';
 import { SupabaseCustomerShopDetailGateway } from './customer-shop-detail.gateway';
 import { CustomerShopDetailService } from './customer-shop-detail.service';
@@ -62,6 +66,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CustomerCatalogueReadController,
     CustomerInventoryReservationController,
     CustomerNearbyShopController,
+    CustomerProductSearchController,
     CustomerShopDetailController,
     MerchantInventoryAdjustmentController,
     MerchantInventoryBarcodeController,
@@ -80,6 +85,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CustomerCatalogueReadService,
     CustomerInventoryReservationService,
     CustomerNearbyShopService,
+    CustomerProductSearchService,
     CustomerShopDetailService,
     MerchantInventoryAdjustmentService,
     MerchantInventoryBarcodeService,
@@ -100,6 +106,10 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     {
       provide: CUSTOMER_NEARBY_SHOP_GATEWAY,
       useClass: SupabaseCustomerNearbyShopGateway,
+    },
+    {
+      provide: CUSTOMER_PRODUCT_SEARCH_GATEWAY,
+      useClass: SupabaseCustomerProductSearchGateway,
     },
     {
       provide: CUSTOMER_SHOP_DETAIL_GATEWAY,
@@ -154,6 +164,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CUSTOMER_CATALOGUE_READ_GATEWAY,
     CUSTOMER_INVENTORY_RESERVATION_GATEWAY,
     CUSTOMER_NEARBY_SHOP_GATEWAY,
+    CUSTOMER_PRODUCT_SEARCH_GATEWAY,
     CUSTOMER_SHOP_DETAIL_GATEWAY,
     MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY,
     MERCHANT_INVENTORY_BARCODE_GATEWAY,
