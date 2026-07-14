@@ -2275,6 +2275,127 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    CustomerCartShop:
+      type: object
+      required:
+      - id
+      - name
+      - slug
+      - logoObjectKey
+      - operationalStatus
+      - acceptsOnlineOrders
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string, minLength: 1}
+        slug: {type: string, minLength: 1}
+        logoObjectKey: {type: ['string', 'null']}
+        operationalStatus:
+          type: string
+          enum: [OPEN, BUSY, TEMPORARILY_CLOSED, CLOSED_FOR_DAY, PAUSED, SUSPENDED]
+        acceptsOnlineOrders: {type: boolean}
+    CustomerCartItem:
+      type: object
+      required:
+      - id
+      - variantId
+      - productId
+      - productName
+      - productSlug
+      - sku
+      - colourName
+      - sizeLabel
+      - imageObjectKey
+      - quantity
+      - unitPricePaise
+      - currentUnitPricePaise
+      - priceChanged
+      - availableQuantity
+      - isAvailable
+      - lineTotalPaise
+      - currentLineTotalPaise
+      - addedAt
+      - updatedAt
+      properties:
+        id: {type: string, format: uuid}
+        variantId: {type: string, format: uuid}
+        productId: {type: string, format: uuid}
+        productName: {type: string, minLength: 1}
+        productSlug: {type: string, minLength: 1}
+        sku: {type: string, minLength: 1}
+        colourName: {type: ['string', 'null']}
+        sizeLabel: {type: ['string', 'null']}
+        imageObjectKey: {type: ['string', 'null']}
+        quantity: {type: integer, minimum: 1, maximum: 20}
+        unitPricePaise: {type: integer, minimum: 0}
+        currentUnitPricePaise: {type: integer, minimum: 0}
+        priceChanged: {type: boolean}
+        availableQuantity: {type: integer, minimum: 0}
+        isAvailable: {type: boolean}
+        lineTotalPaise: {type: integer, minimum: 0}
+        currentLineTotalPaise: {type: integer, minimum: 0}
+        addedAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    CustomerCart:
+      type: object
+      required:
+      - id
+      - shop
+      - items
+      - itemCount
+      - subtotalPaise
+      - currentSubtotalPaise
+      - hasPriceChanges
+      - hasUnavailableItems
+      - createdAt
+      - updatedAt
+      properties:
+        id: {type: string, format: uuid}
+        shop: {$ref: '#/components/schemas/CustomerCartShop'}
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CustomerCartItem'}
+        itemCount: {type: integer, minimum: 0}
+        subtotalPaise: {type: integer, minimum: 0}
+        currentSubtotalPaise: {type: integer, minimum: 0}
+        hasPriceChanges: {type: boolean}
+        hasUnavailableItems: {type: boolean}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    CustomerCartResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [cart]
+          properties:
+            cart:
+              oneOf:
+              - $ref: '#/components/schemas/CustomerCart'
+              - type: 'null'
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    SetCustomerCartItemRequest:
+      type: object
+      additionalProperties: false
+      required: [variantId, quantity]
+      properties:
+        variantId: {type: string, format: uuid}
+        quantity: {type: integer, minimum: 1, maximum: 20}
+        replaceExistingCart:
+          type: boolean
+          default: false
+          description: Must be true to abandon an active cart from another shop.
+    UpdateCustomerCartItemRequest:
+      type: object
+      additionalProperties: false
+      required: [quantity]
+      properties:
+        quantity: {type: integer, minimum: 1, maximum: 20}
 security:
 - bearerAuth: []
 
@@ -2720,24 +2841,157 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ApiError'}
-  /customer/cart/items:
-    post:
-      summary: Add item to cart
-      tags:
-      - Customer
+  /customer/cart:
+    get:
+      operationId: getCustomerCart
+      summary: Get the authenticated customer's active one-shop cart
+      description: Returns add-time price snapshots together with current prices and live variant availability. Another customer's cart is never visible.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Active cart or null when the customer has no active cart
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/CustomerCartResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500':
+          description: Cart or catalogue data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Customer cart provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+    delete:
+      operationId: clearCustomerCart
+      summary: Clear the authenticated customer's active cart
+      description: Releases active cart reservations, removes all lines, and abandons the cart idempotently.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: No active cart remains
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerCartResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500':
+          description: Cart or inventory state is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Customer cart provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /customer/cart/items:
+    post:
+      operationId: setCustomerCartItem
+      summary: Add a variant or set its final cart quantity
+      description: The mutation is retry-safe because quantity is a desired final value. A variant from another shop is rejected unless replaceExistingCart is explicitly true; confirmed replacement releases reservations and abandons the previous cart.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SetCustomerCartItemRequest'}
+      responses:
+        '200':
+          description: Current one-shop cart
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerCartResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Cart, catalogue, or inventory data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Customer cart provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /customer/cart/items/{cartItemId}:
+    patch:
+      operationId: updateCustomerCartItem
+      summary: Set the final quantity of an owned cart item
+      description: Revalidates live availability and releases any stale active reservation when quantity changes.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cartItemId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateCustomerCartItemRequest'}
+      responses:
+        '200':
+          description: Updated one-shop cart
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerCartResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Cart, catalogue, or inventory data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Customer cart provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+    delete:
+      operationId: removeCustomerCartItem
+      summary: Remove an owned cart item
+      description: Releases the line's active reservations. Removing the final line abandons the empty active cart.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cartItemId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Remaining cart or null after removing the final item
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerCartResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Cart or inventory state is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Customer cart provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
   /checkout/quote:
     post:
       summary: Create checkout quote
