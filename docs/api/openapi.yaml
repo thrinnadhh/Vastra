@@ -1785,6 +1785,82 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    CustomerProductSearchShop:
+      type: object
+      required: [id, name, slug, operationalStatus, acceptsOnlineOrders, distanceMeters, isServiceable]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        operationalStatus:
+          type: string
+          enum: [OPEN, BUSY, TEMPORARILY_CLOSED, CLOSED_FOR_DAY]
+        acceptsOnlineOrders: {type: boolean}
+        distanceMeters: {type: integer, minimum: 0}
+        isServiceable: {type: boolean, const: true}
+    CustomerProductSearchProduct:
+      type: object
+      required: [id, shopId, categoryId, name, slug, brand, genderCategory, primaryImage, minSellingPricePaise, maxSellingPricePaise, availableVariantCount, totalAvailableQuantity, isAvailable]
+      properties:
+        id: {type: string, format: uuid}
+        shopId: {type: string, format: uuid}
+        categoryId: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        brand: {type: ['string', 'null']}
+        genderCategory:
+          type: string
+          enum: [MEN, WOMEN, KIDS, UNISEX]
+        primaryImage:
+          oneOf:
+          - {$ref: '#/components/schemas/CustomerCatalogueImage'}
+          - {type: 'null'}
+        minSellingPricePaise: {type: integer, minimum: 0}
+        maxSellingPricePaise: {type: integer, minimum: 0}
+        availableVariantCount: {type: integer, minimum: 0}
+        totalAvailableQuantity: {type: integer, minimum: 0}
+        isAvailable: {type: boolean}
+    CustomerProductSearchItem:
+      type: object
+      required: [product, shop]
+      properties:
+        product: {$ref: '#/components/schemas/CustomerProductSearchProduct'}
+        shop: {$ref: '#/components/schemas/CustomerProductSearchShop'}
+    SearchCustomerProductsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [query, filters, location, results, nextCursor]
+          properties:
+            query: {type: string, minLength: 2, maxLength: 100}
+            filters:
+              type: object
+              required: [categoryId, genderCategory, shopId, minPricePaise, maxPricePaise, availableOnly, sort]
+              properties:
+                categoryId: {type: ['string', 'null'], format: uuid}
+                genderCategory:
+                  type: ['string', 'null']
+                  enum: [MEN, WOMEN, KIDS, UNISEX, null]
+                shopId: {type: ['string', 'null'], format: uuid}
+                minPricePaise: {type: ['integer', 'null'], minimum: 0}
+                maxPricePaise: {type: ['integer', 'null'], minimum: 0}
+                availableOnly: {type: boolean}
+                sort:
+                  type: string
+                  enum: [RELEVANCE, DISTANCE, PRICE_ASC, PRICE_DESC]
+            location: {$ref: '#/components/schemas/ServiceableLocation'}
+            results:
+              type: array
+              items: {$ref: '#/components/schemas/CustomerProductSearchItem'}
+            nextCursor: {type: ['string', 'null']}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     CustomerCatalogueShop:
       type: object
       required: [id, name, slug, operationalStatus, acceptsOnlineOrders]
@@ -2310,6 +2386,87 @@ paths:
               schema: {$ref: '#/components/schemas/ApiError'}
         '503':
           description: Customer catalogue provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /customer/products/search:
+    get:
+      operationId: searchCustomerProducts
+      summary: Search approved products from shops serviceable for a customer location
+      description: Uses weighted PostgreSQL full-text search over product name, brand, description, material, style tags, and occasion tags. Only products from public shops covering the requested location are considered. Live inventory is hydrated without exposing inventory internals.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema: {type: string, minLength: 2, maxLength: 100}
+      - name: latitude
+        in: query
+        required: true
+        schema: {type: number, minimum: -90, maximum: 90}
+      - name: longitude
+        in: query
+        required: true
+        schema: {type: number, minimum: -180, maximum: 180}
+      - name: categoryId
+        in: query
+        required: false
+        schema: {type: string, format: uuid}
+      - name: gender
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [MEN, WOMEN, KIDS, UNISEX]
+      - name: shopId
+        in: query
+        required: false
+        schema: {type: string, format: uuid}
+      - name: minPricePaise
+        in: query
+        required: false
+        schema: {type: integer, minimum: 0}
+      - name: maxPricePaise
+        in: query
+        required: false
+        schema: {type: integer, minimum: 0}
+      - name: availableOnly
+        in: query
+        required: false
+        schema: {type: boolean, default: false}
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [RELEVANCE, DISTANCE, PRICE_ASC, PRICE_DESC]
+          default: RELEVANCE
+      - name: cursor
+        in: query
+        required: false
+        schema: {type: string}
+        description: Opaque continuation cursor returned by the previous response.
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      responses:
+        '200':
+          description: Serviceable public product-search page
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SearchCustomerProductsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500':
+          description: Search, catalogue, or availability data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Product search is temporarily unavailable
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ApiError'}
