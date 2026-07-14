@@ -11,6 +11,7 @@ type OrderErrorCode =
   | 'SHOP_NOT_ACCEPTING_ORDERS'
   | 'ADDRESS_NOT_SERVICEABLE'
   | 'INSUFFICIENT_STOCK'
+  | 'ORDER_NOT_FOUND'
   | 'INTERNAL_ERROR'
   | 'EXTERNAL_SERVICE_UNAVAILABLE';
 
@@ -149,6 +150,42 @@ export function createCustomerOrderProviderUnavailableException(): HttpException
     HttpStatus.SERVICE_UNAVAILABLE,
     'EXTERNAL_SERVICE_UNAVAILABLE',
     'Order placement is temporarily unavailable.',
+    true,
+  );
+}
+
+export function createInvalidCustomerOrderReadException(): HttpException {
+  return createOrderException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The customer order query is invalid.',
+    false,
+  );
+}
+
+export function createCustomerOrderNotFoundException(): HttpException {
+  return createOrderException(
+    HttpStatus.NOT_FOUND,
+    'ORDER_NOT_FOUND',
+    'The order does not exist or is not visible to this customer.',
+    false,
+  );
+}
+
+export function createCustomerOrderReadStateInvalidException(): HttpException {
+  return createOrderException(
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    'INTERNAL_ERROR',
+    'Customer order history or snapshot data is internally inconsistent.',
+    false,
+  );
+}
+
+export function createCustomerOrderReadProviderUnavailableException(): HttpException {
+  return createOrderException(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'EXTERNAL_SERVICE_UNAVAILABLE',
+    'Customer order history is temporarily unavailable.',
     true,
   );
 }
