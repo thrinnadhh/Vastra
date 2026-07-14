@@ -76,6 +76,7 @@ last_updated: 2026-07-11
 | CART_PRICE_CHANGED | 409 | Price changed |
 | CART_ITEM_UNAVAILABLE | 409 | Item unavailable |
 | ADDRESS_NOT_SERVICEABLE | 409 | Address outside zone |
+| CHECKOUT_QUOTE_NOT_FOUND | 404 | Quote missing or not visible to customer |
 | CHECKOUT_QUOTE_EXPIRED | 409 | Quote expired |
 | SHOP_NOT_ACCEPTING_ORDERS | 409 | Shop closed/paused |
 

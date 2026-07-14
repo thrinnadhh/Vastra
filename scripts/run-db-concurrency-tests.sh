@@ -669,6 +669,269 @@ test "$offline_sale_movements" = "1"
 
 echo "PASS: final unit cannot be sold offline twice"
 
+
+printf '\n--- COD ORDER FINAL-UNIT CONCURRENCY ---\n'
+
+psql_exec -q <<'SQL'
+do $$
+declare
+  reservation_row record;
+begin
+  for reservation_row in
+    select reservation.id, cart.customer_id
+    from public.inventory_reservations reservation
+    join public.carts cart
+      on cart.id = reservation.cart_id
+    where reservation.status = 'ACTIVE'
+      and cart.id in (
+        '96000000-0000-0000-0000-000000000001',
+        '96000000-0000-0000-0000-000000000002'
+      )
+    order by reservation.id
+  loop
+    perform public.release_customer_cart_reservation(
+      reservation_row.id,
+      'Reset before COD order concurrency',
+      reservation_row.customer_id
+    );
+  end loop;
+end;
+$$;
+
+update public.carts
+set status = 'ABANDONED'
+where id in (
+  '96000000-0000-0000-0000-000000000001',
+  '96000000-0000-0000-0000-000000000002'
+);
+
+insert into public.product_variants (
+  id,
+  product_id,
+  shop_id,
+  sku,
+  colour_name,
+  size_label,
+  mrp_paise,
+  selling_price_paise,
+  is_active
+)
+values (
+  '95000000-0000-4000-8000-000000000003',
+  '94000000-0000-0000-0000-000000000001',
+  '93000000-0000-0000-0000-000000000001',
+  'COD-ORDER-CONCURRENCY-SKU',
+  'Green',
+  'XL',
+  100000,
+  90000,
+  true
+);
+
+select private.apply_inventory_delta(
+  '93000000-0000-0000-0000-000000000001',
+  '95000000-0000-4000-8000-000000000003',
+  1,
+  0,
+  0,
+  'STOCK_RECEIVED',
+  'SYSTEM',
+  'COD_ORDER_CONCURRENCY',
+  null,
+  'COD order final-unit fixture',
+  null
+);
+
+insert into public.carts (
+  id,
+  customer_id,
+  shop_id,
+  status
+)
+values
+  (
+    '96000000-0000-4000-8000-000000000003',
+    '91000000-0000-0000-0000-000000000002',
+    '93000000-0000-0000-0000-000000000001',
+    'ACTIVE'
+  ),
+  (
+    '96000000-0000-4000-8000-000000000004',
+    '91000000-0000-0000-0000-000000000003',
+    '93000000-0000-0000-0000-000000000001',
+    'ACTIVE'
+  );
+
+insert into public.cart_items (
+  id,
+  cart_id,
+  shop_id,
+  variant_id,
+  quantity,
+  unit_price_snapshot_paise
+)
+values
+  (
+    '96000000-0000-4000-8000-000000000013',
+    '96000000-0000-4000-8000-000000000003',
+    '93000000-0000-0000-0000-000000000001',
+    '95000000-0000-4000-8000-000000000003',
+    1,
+    90000
+  ),
+  (
+    '96000000-0000-4000-8000-000000000014',
+    '96000000-0000-4000-8000-000000000004',
+    '93000000-0000-0000-0000-000000000001',
+    '95000000-0000-4000-8000-000000000003',
+    1,
+    90000
+  );
+SQL
+
+order_quote_one="$(
+  psql_exec -Atq -c "
+    select (
+      public.create_customer_checkout_quote(
+        '91000000-0000-0000-0000-000000000002',
+        '92000000-0000-0000-0000-000000000002'
+      )
+    )->>'id';
+  "
+)"
+
+order_quote_two="$(
+  psql_exec -Atq -c "
+    select (
+      public.create_customer_checkout_quote(
+        '91000000-0000-0000-0000-000000000003',
+        '92000000-0000-0000-0000-000000000003'
+      )
+    )->>'id';
+  "
+)"
+
+order_sql_one="
+select public.place_customer_cod_order(
+  '91000000-0000-0000-0000-000000000002',
+  '96000000-0000-4000-8000-000000000003',
+  '$order_quote_one',
+  '92000000-0000-0000-0000-000000000002',
+  null,
+  '9d000000-0000-4000-8000-000000000001'
+)->>'id';
+"
+
+order_sql_two="
+select public.place_customer_cod_order(
+  '91000000-0000-0000-0000-000000000003',
+  '96000000-0000-4000-8000-000000000004',
+  '$order_quote_two',
+  '92000000-0000-0000-0000-000000000003',
+  null,
+  '9d000000-0000-4000-8000-000000000002'
+)->>'id';
+"
+
+set +e
+
+docker exec "$db_container" \
+  psql -X -v ON_ERROR_STOP=1 -Atq \
+  -U postgres -d postgres \
+  -c "$order_sql_one" \
+  >"$tmp_dir/order-one.out" \
+  2>"$tmp_dir/order-one.err" &
+order_pid_one=$!
+
+docker exec "$db_container" \
+  psql -X -v ON_ERROR_STOP=1 -Atq \
+  -U postgres -d postgres \
+  -c "$order_sql_two" \
+  >"$tmp_dir/order-two.out" \
+  2>"$tmp_dir/order-two.err" &
+order_pid_two=$!
+
+wait "$order_pid_one"
+order_status_one=$?
+
+wait "$order_pid_two"
+order_status_two=$?
+
+set -e
+
+order_successes=0
+
+if [ "$order_status_one" -eq 0 ]; then
+  order_successes=$((order_successes + 1))
+fi
+
+if [ "$order_status_two" -eq 0 ]; then
+  order_successes=$((order_successes + 1))
+fi
+
+if [ "$order_successes" -ne 1 ]; then
+  echo "ERROR: Expected exactly one final-unit COD order"
+  echo "--- order one ---"
+  cat "$tmp_dir/order-one.err"
+  echo "--- order two ---"
+  cat "$tmp_dir/order-two.err"
+  exit 1
+fi
+
+order_headers="$(
+  psql_exec -Atq -c "
+    select count(*)
+    from public.orders placed_order
+    join public.order_items item
+      on item.order_id = placed_order.id
+    where item.variant_id =
+      '95000000-0000-4000-8000-000000000003';
+  "
+)"
+
+order_reservations="$(
+  psql_exec -Atq -c "
+    select count(*)
+    from public.inventory_reservations
+    where variant_id =
+      '95000000-0000-4000-8000-000000000003'
+      and order_id is not null
+      and status = 'ACTIVE';
+  "
+)"
+
+order_reserved_quantity="$(
+  psql_exec -Atq -c "
+    select reserved_quantity
+    from public.inventory_balances
+    where shop_id =
+      '93000000-0000-0000-0000-000000000001'
+      and variant_id =
+      '95000000-0000-4000-8000-000000000003';
+  "
+)"
+
+order_outbox_events="$(
+  psql_exec -Atq -c "
+    select count(*)
+    from public.outbox_events event
+    join public.orders placed_order
+      on placed_order.id = event.aggregate_id
+    join public.order_items item
+      on item.order_id = placed_order.id
+    where event.event_type = 'order.placed'
+      and item.variant_id =
+        '95000000-0000-4000-8000-000000000003';
+  "
+)"
+
+test "$order_headers" = "1"
+test "$order_reservations" = "1"
+test "$order_reserved_quantity" = "1"
+test "$order_outbox_events" = "1"
+
+echo "PASS: final unit cannot create two COD orders"
+
 assignment_sql_one="
 select (
   private.accept_delivery_assignment(
