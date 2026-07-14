@@ -5,6 +5,8 @@ import { CustomerCatalogueReadController } from './customer-catalogue-read.contr
 import { SupabaseCustomerCatalogueReadGateway } from './customer-catalogue-read.gateway';
 import { CustomerCatalogueReadService } from './customer-catalogue-read.service';
 import { CUSTOMER_CATALOGUE_READ_GATEWAY } from './customer-catalogue-read.tokens';
+import { CustomerHomeController } from './customer-home.controller';
+import { CustomerHomeService } from './customer-home.service';
 import { CustomerInventoryReservationController } from './customer-inventory-reservation.controller';
 import { CustomerNearbyShopController } from './customer-nearby-shop.controller';
 import { CustomerProductSearchController } from './customer-product-search.controller';
@@ -64,6 +66,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
 @Module({
   controllers: [
     CustomerCatalogueReadController,
+    CustomerHomeController,
     CustomerInventoryReservationController,
     CustomerNearbyShopController,
     CustomerProductSearchController,
@@ -83,6 +86,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     MerchantShopContextService,
     CategoryCatalogueService,
     CustomerCatalogueReadService,
+    CustomerHomeService,
     CustomerInventoryReservationService,
     CustomerNearbyShopService,
     CustomerProductSearchService,
