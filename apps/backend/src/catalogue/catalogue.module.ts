@@ -7,6 +7,10 @@ import { CustomerCatalogueReadService } from './customer-catalogue-read.service'
 import { CUSTOMER_CATALOGUE_READ_GATEWAY } from './customer-catalogue-read.tokens';
 import { CustomerHomeController } from './customer-home.controller';
 import { CustomerHomeService } from './customer-home.service';
+import { CustomerPreferenceController } from './customer-preference.controller';
+import { SupabaseCustomerPreferenceGateway } from './customer-preference.gateway';
+import { CustomerPreferenceService } from './customer-preference.service';
+import { CUSTOMER_PREFERENCE_GATEWAY } from './customer-preference.tokens';
 import { CustomerInventoryReservationController } from './customer-inventory-reservation.controller';
 import { CustomerNearbyShopController } from './customer-nearby-shop.controller';
 import { CustomerProductSearchController } from './customer-product-search.controller';
@@ -67,6 +71,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
   controllers: [
     CustomerCatalogueReadController,
     CustomerHomeController,
+    CustomerPreferenceController,
     CustomerInventoryReservationController,
     CustomerNearbyShopController,
     CustomerProductSearchController,
@@ -87,6 +92,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CategoryCatalogueService,
     CustomerCatalogueReadService,
     CustomerHomeService,
+    CustomerPreferenceService,
     CustomerInventoryReservationService,
     CustomerNearbyShopService,
     CustomerProductSearchService,
@@ -102,6 +108,10 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     {
       provide: CUSTOMER_CATALOGUE_READ_GATEWAY,
       useClass: SupabaseCustomerCatalogueReadGateway,
+    },
+    {
+      provide: CUSTOMER_PREFERENCE_GATEWAY,
+      useClass: SupabaseCustomerPreferenceGateway,
     },
     {
       provide: CUSTOMER_INVENTORY_RESERVATION_GATEWAY,
@@ -166,6 +176,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     MERCHANT_SHOP_CONTEXT_GATEWAY,
     CATEGORY_CATALOGUE_GATEWAY,
     CUSTOMER_CATALOGUE_READ_GATEWAY,
+    CUSTOMER_PREFERENCE_GATEWAY,
     CUSTOMER_INVENTORY_RESERVATION_GATEWAY,
     CUSTOMER_NEARBY_SHOP_GATEWAY,
     CUSTOMER_PRODUCT_SEARCH_GATEWAY,
