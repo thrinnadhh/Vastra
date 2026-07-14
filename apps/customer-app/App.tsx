@@ -7,36 +7,51 @@ import {
 } from 'react-native-safe-area-context';
 
 import { CustomerSessionApp } from './src/auth/default-customer-session';
+import { CustomerNetworkStateBoundary } from './src/ui/customer-network-state';
+import type { CustomerNetworkScreenState } from './src/ui/customer-network-state.types';
+
+const foundationNetworkState: CustomerNetworkScreenState = {
+  kind: 'SUCCESS',
+  staleReason: null,
+};
+
+function retryFoundationScreen(): void {
+  return;
+}
 
 export function CustomerFoundationScreen() {
   return (
-    <View style={styles.screen}>
-      <View accessible accessibilityLabel="Vastra brand mark" style={styles.brandMark}>
-        <Text style={styles.brandLetter}>V</Text>
-      </View>
+    <CustomerNetworkStateBoundary onRetry={retryFoundationScreen} state={foundationNetworkState}>
+      <View style={styles.screen}>
+        <View accessible accessibilityLabel="Vastra brand mark" style={styles.brandMark}>
+          <Text style={styles.brandLetter}>V</Text>
+        </View>
 
-      <Text style={styles.eyebrow}>CUSTOMER MOBILE</Text>
+        <Text style={styles.eyebrow}>CUSTOMER MOBILE</Text>
 
-      <Text accessibilityRole="header" style={styles.title}>
-        Vastra
-      </Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          Vastra
+        </Text>
 
-      <Text style={styles.description}>A calm foundation for discovering fashion.</Text>
+        <Text style={styles.description}>A calm foundation for discovering fashion.</Text>
 
-      <View
-        accessible
-        accessibilityLabel="Customer mobile foundation is ready"
-        style={styles.statusCard}
-      >
-        <View style={styles.statusDot} />
+        <View
+          accessible
+          accessibilityLabel="Customer mobile foundation is ready"
+          style={styles.statusCard}
+        >
+          <View style={styles.statusDot} />
 
-        <View style={styles.statusCopy}>
-          <Text style={styles.statusTitle}>Foundation ready</Text>
+          <View style={styles.statusCopy}>
+            <Text style={styles.statusTitle}>Foundation ready</Text>
 
-          <Text style={styles.statusDescription}>The customer experience will be built here.</Text>
+            <Text style={styles.statusDescription}>
+              The customer experience will be built here.
+            </Text>
+          </View>
         </View>
       </View>
-    </View>
+    </CustomerNetworkStateBoundary>
   );
 }
 
