@@ -1397,6 +1397,76 @@ components:
         availableQuantity:
           type: integer
           minimum: 0
+    MerchantOrderAlert:
+      type: object
+      required: [id, status, attemptCount, firstSentAt, lastSentAt, acknowledgedAt, expiresAt, soundName, failureReason, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        status:
+          type: string
+          enum: [PENDING, SENT, DELIVERED, ACKNOWLEDGED, EXPIRED, FAILED]
+        attemptCount: {type: integer, minimum: 0}
+        firstSentAt: {type: ['string', 'null'], format: date-time}
+        lastSentAt: {type: ['string', 'null'], format: date-time}
+        acknowledgedAt: {type: ['string', 'null'], format: date-time}
+        expiresAt: {type: string, format: date-time}
+        soundName: {type: string, minLength: 1}
+        failureReason: {type: ['string', 'null']}
+        createdAt: {type: string, format: date-time}
+    MerchantOrderSummary:
+      allOf:
+      - $ref: '#/components/schemas/CustomerOrderSummary'
+      - type: object
+        required: [customerName, alert]
+        properties:
+          customerName: {type: string, minLength: 1}
+          alert:
+            oneOf:
+            - $ref: '#/components/schemas/MerchantOrderAlert'
+            - type: 'null'
+    MerchantOrderDetail:
+      allOf:
+      - $ref: '#/components/schemas/CustomerOrderDetail'
+      - type: object
+        required: [alert]
+        properties:
+          alert:
+            oneOf:
+            - $ref: '#/components/schemas/MerchantOrderAlert'
+            - type: 'null'
+    ListMerchantOrdersResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [orders, nextCursor]
+          properties:
+            orders:
+              type: array
+              items: {$ref: '#/components/schemas/MerchantOrderSummary'}
+            nextCursor: {type: ['string', 'null']}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    GetMerchantOrderResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [order]
+          properties:
+            order: {$ref: '#/components/schemas/MerchantOrderDetail'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     CustomerOrderAddress:
       type: object
       required: [id, label, recipientName, phoneNumber, line1, line2, landmark, area, city, state, postalCode, countryCode, latitude, longitude]
@@ -4914,6 +4984,73 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+  /merchant/orders:
+    get:
+      operationId: listMerchantOrders
+      summary: List orders for the authenticated merchant shop
+      description: Returns newest shop orders first with immutable totals, customer recipient name, item count, preview image, and durable merchant alert deadline/state. Results are constrained by merchant shop RLS.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema: {type: string}
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      responses:
+        '200':
+          description: Merchant shop order summaries
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ListMerchantOrdersResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500':
+          description: Merchant order or alert data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Merchant incoming orders are temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /merchant/orders/{orderId}:
+    get:
+      operationId: getMerchantOrder
+      summary: Get one order from the authenticated merchant shop
+      description: Returns immutable customer address and item snapshots, totals, lifecycle history, and the durable alert state. Another shop's identifier is returned as not found.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Merchant-owned order detail
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GetMerchantOrderResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500':
+          description: Merchant order, alert, or history data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Merchant incoming orders are temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
   /merchant/order-alerts/{alertId}/acknowledge:
     post:
       summary: Acknowledge merchant alert

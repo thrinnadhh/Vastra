@@ -189,3 +189,39 @@ export function createCustomerOrderReadProviderUnavailableException(): HttpExcep
     true,
   );
 }
+
+export function createInvalidMerchantOrderReadException(): HttpException {
+  return createOrderException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The merchant order query is invalid.',
+    false,
+  );
+}
+
+export function createMerchantOrderNotFoundException(): HttpException {
+  return createOrderException(
+    HttpStatus.NOT_FOUND,
+    'ORDER_NOT_FOUND',
+    'The order does not exist or is not visible to this merchant.',
+    false,
+  );
+}
+
+export function createMerchantOrderReadStateInvalidException(): HttpException {
+  return createOrderException(
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    'INTERNAL_ERROR',
+    'Merchant order, alert, or history data is internally inconsistent.',
+    false,
+  );
+}
+
+export function createMerchantOrderReadProviderUnavailableException(): HttpException {
+  return createOrderException(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'EXTERNAL_SERVICE_UNAVAILABLE',
+    'Merchant incoming orders are temporarily unavailable.',
+    true,
+  );
+}
