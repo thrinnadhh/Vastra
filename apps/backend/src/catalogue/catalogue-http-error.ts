@@ -162,6 +162,15 @@ export function createProductVariantSkuConflictException(): HttpException {
   );
 }
 
+export function createInvalidNearbyShopQueryException(): HttpException {
+  return createCatalogueException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The nearby-shop location or limit is invalid.',
+    false,
+  );
+}
+
 export function createInvalidCustomerCatalogueReadException(): HttpException {
   return createCatalogueException(
     HttpStatus.BAD_REQUEST,

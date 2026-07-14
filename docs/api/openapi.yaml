@@ -1658,6 +1658,50 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    ServiceableLocation:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude: {type: number, minimum: -90, maximum: 90}
+        longitude: {type: number, minimum: -180, maximum: 180}
+    CustomerNearbyShop:
+      type: object
+      required: [id, name, slug, description, operationalStatus, acceptsOnlineOrders, distanceMeters, serviceRadiusMeters, minimumOrderPaise, averagePreparationMinutes, ratingAverage, ratingCount, followerCount, isServiceable]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        description: {type: ['string', 'null']}
+        operationalStatus:
+          type: string
+          enum: [OPEN, BUSY, TEMPORARILY_CLOSED, CLOSED_FOR_DAY]
+        acceptsOnlineOrders: {type: boolean}
+        distanceMeters: {type: integer, minimum: 0}
+        serviceRadiusMeters: {type: integer, minimum: 1}
+        minimumOrderPaise: {type: integer, minimum: 0}
+        averagePreparationMinutes: {type: integer, minimum: 0}
+        ratingAverage: {type: ['number', 'null'], minimum: 1, maximum: 5}
+        ratingCount: {type: integer, minimum: 0}
+        followerCount: {type: integer, minimum: 0}
+        isServiceable: {type: boolean, const: true}
+    ListCustomerNearbyShopsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [location, shops]
+          properties:
+            location: {$ref: '#/components/schemas/ServiceableLocation'}
+            shops:
+              type: array
+              items: {$ref: '#/components/schemas/CustomerNearbyShop'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     CustomerCatalogueShop:
       type: object
       required: [id, name, slug, operationalStatus, acceptsOnlineOrders]
@@ -2069,33 +2113,43 @@ paths:
           description: Forbidden
   /shops/nearby:
     get:
-      summary: List nearby shops
-      tags:
-      - Customer
+      operationId: listCustomerNearbyShops
+      summary: List public shops serviceable for a customer location
+      description: Uses each shop's own delivery radius and PostGIS distance to return only public shops that can serve the requested point, ordered nearest first.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
       parameters:
       - name: latitude
         in: query
         required: true
-        schema:
-          type: number
+        schema: {type: number, minimum: -90, maximum: 90}
       - name: longitude
         in: query
         required: true
-        schema:
-          type: number
+        schema: {type: number, minimum: -180, maximum: 180}
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 50, default: 20}
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Public shops whose service radius covers the location
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/ListCustomerNearbyShopsResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500':
+          description: Nearby-shop data is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Nearby-shop discovery is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
   /shops/{shopId}:
     get:
       summary: Get shop

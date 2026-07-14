@@ -6,6 +6,10 @@ import { SupabaseCustomerCatalogueReadGateway } from './customer-catalogue-read.
 import { CustomerCatalogueReadService } from './customer-catalogue-read.service';
 import { CUSTOMER_CATALOGUE_READ_GATEWAY } from './customer-catalogue-read.tokens';
 import { CustomerInventoryReservationController } from './customer-inventory-reservation.controller';
+import { CustomerNearbyShopController } from './customer-nearby-shop.controller';
+import { SupabaseCustomerNearbyShopGateway } from './customer-nearby-shop.gateway';
+import { CustomerNearbyShopService } from './customer-nearby-shop.service';
+import { CUSTOMER_NEARBY_SHOP_GATEWAY } from './customer-nearby-shop.tokens';
 import { SupabaseCustomerInventoryReservationGateway } from './customer-inventory-reservation.gateway';
 import { CustomerInventoryReservationService } from './customer-inventory-reservation.service';
 import { CUSTOMER_INVENTORY_RESERVATION_GATEWAY } from './customer-inventory-reservation.tokens';
@@ -53,6 +57,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
   controllers: [
     CustomerCatalogueReadController,
     CustomerInventoryReservationController,
+    CustomerNearbyShopController,
     MerchantInventoryAdjustmentController,
     MerchantInventoryBarcodeController,
     MerchantInventoryBalanceController,
@@ -69,6 +74,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CategoryCatalogueService,
     CustomerCatalogueReadService,
     CustomerInventoryReservationService,
+    CustomerNearbyShopService,
     MerchantInventoryAdjustmentService,
     MerchantInventoryBarcodeService,
     MerchantInventoryBalanceService,
@@ -84,6 +90,10 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     {
       provide: CUSTOMER_INVENTORY_RESERVATION_GATEWAY,
       useClass: SupabaseCustomerInventoryReservationGateway,
+    },
+    {
+      provide: CUSTOMER_NEARBY_SHOP_GATEWAY,
+      useClass: SupabaseCustomerNearbyShopGateway,
     },
     {
       provide: MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY,
@@ -133,6 +143,7 @@ import { PRODUCT_IMAGE_GATEWAY } from './product-image.tokens';
     CATEGORY_CATALOGUE_GATEWAY,
     CUSTOMER_CATALOGUE_READ_GATEWAY,
     CUSTOMER_INVENTORY_RESERVATION_GATEWAY,
+    CUSTOMER_NEARBY_SHOP_GATEWAY,
     MERCHANT_INVENTORY_ADJUSTMENT_GATEWAY,
     MERCHANT_INVENTORY_BARCODE_GATEWAY,
     MERCHANT_INVENTORY_BALANCE_GATEWAY,
