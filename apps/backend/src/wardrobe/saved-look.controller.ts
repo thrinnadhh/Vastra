@@ -17,6 +17,7 @@ import { AllowAccountTypes } from '../auth/account-types.decorator';
 import type { AuthenticatedRequestContext } from '../auth/auth.types';
 import { CurrentAuthContext } from '../auth/current-auth-context.decorator';
 import { RequireOperationalReadiness } from '../auth/operational-readiness.decorator';
+import { SavedLookDuplicationService } from './saved-look-duplication.service';
 import { SavedLookService } from './saved-look.service';
 import type { SavedLook, SavedLookList } from './saved-look.types';
 
@@ -27,6 +28,8 @@ export class SavedLookController {
   public constructor(
     @Inject(SavedLookService)
     private readonly service: SavedLookService,
+    @Inject(SavedLookDuplicationService)
+    private readonly duplicationService: SavedLookDuplicationService,
   ) {}
 
   @Get()
@@ -46,6 +49,17 @@ export class SavedLookController {
     @Body() body: unknown,
   ): Promise<SavedLook> {
     return this.service.create(context, idempotencyKey, body);
+  }
+
+  @Post(':lookId/duplicates')
+  @HttpCode(HttpStatus.CREATED)
+  public duplicate(
+    @CurrentAuthContext() context: AuthenticatedRequestContext,
+    @Param('lookId') lookId: unknown,
+    @Headers('idempotency-key') idempotencyKey: unknown,
+    @Body() body: unknown,
+  ): Promise<SavedLook> {
+    return this.duplicationService.duplicate(context, lookId, idempotencyKey, body);
   }
 
   @Get(':lookId')

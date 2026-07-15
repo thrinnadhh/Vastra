@@ -80,3 +80,11 @@ export function parseUpdateSavedLookInput(body: unknown): UpdateSavedLookInput {
   if (Object.prototype.hasOwnProperty.call(body, 'items')) input.items = parseItems(body['items']);
   return input;
 }
+
+export function parseDuplicateSavedLookName(body: unknown): string | null {
+  if (!isRecord(body) || Object.keys(body).some((key) => key !== 'name')) {
+    throw new WardrobeValidationError();
+  }
+  if (!Object.prototype.hasOwnProperty.call(body, 'name') || body['name'] === null) return null;
+  return parseName(body['name']);
+}
