@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { SavedLookController } from './saved-look.controller';
+import { SavedLookService } from './saved-look.service';
 import { WardrobeItemController } from './wardrobe-item.controller';
 import { WardrobeItemCreateService } from './wardrobe-item-create.service';
 import { WardrobeItemManagementService } from './wardrobe-item-management.service';
@@ -12,9 +14,10 @@ import { WardrobeUploadService } from './wardrobe-upload.service';
 import { WARDROBE_UPLOAD_GATEWAY } from './wardrobe-upload.tokens';
 
 @Module({
-  controllers: [WardrobeUploadController, WardrobeItemController],
+  controllers: [WardrobeUploadController, WardrobeItemController, SavedLookController],
   providers: [
     WardrobeUploadService,
+    SavedLookService,
     WardrobeItemCreateService,
     WardrobeItemManagementService,
     WardrobeStorageDeletionProcessor,

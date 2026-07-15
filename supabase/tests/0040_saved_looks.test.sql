@@ -1,0 +1,16 @@
+begin;
+select plan(12);
+select has_table('public','saved_looks','saved looks exist');
+select has_table('public','saved_look_items','ordered composition exists');
+select has_index('public','saved_looks','saved_looks_owner_updated_idx','owner cursor index exists');
+select has_index('public','saved_look_items','saved_look_items_look_position_idx','composition index exists');
+select col_is_pk('public','saved_looks','id','look UUID is primary key');
+select col_is_pk('public','saved_look_items','id','look item UUID is primary key');
+select has_function('public','create_saved_look',array['uuid','text','jsonb','uuid'],'atomic create exists');
+select has_function('public','update_saved_look',array['uuid','uuid','jsonb'],'atomic replace exists');
+select has_function('public','delete_saved_look',array['uuid','uuid','uuid'],'idempotent delete exists');
+select has_trigger('public','wardrobe_items','wardrobe_item_delete_saved_look_refs','wardrobe deletion removes look references');
+select policies_are('public','saved_looks',array['saved_looks_owner_select'],'look rows are owner scoped');
+select policies_are('public','saved_look_items',array['saved_look_items_owner_select'],'look items are owner scoped');
+select * from finish();
+rollback;
