@@ -1,8 +1,4 @@
-import type {
-  CreateSavedLookInput,
-  LookItemInput,
-  UpdateSavedLookInput,
-} from './saved-look.types';
+import type { CreateSavedLookInput, LookItemInput, UpdateSavedLookInput } from './saved-look.types';
 import {
   parseWardrobeIdempotencyKey,
   parseWardrobeUuid,
@@ -72,7 +68,11 @@ export function parseCreateSavedLookInput(
 }
 
 export function parseUpdateSavedLookInput(body: unknown): UpdateSavedLookInput {
-  if (!isRecord(body) || Object.keys(body).length === 0 || Object.keys(body).some((key) => !UPDATE_KEYS.has(key))) {
+  if (
+    !isRecord(body) ||
+    Object.keys(body).length === 0 ||
+    Object.keys(body).some((key) => !UPDATE_KEYS.has(key))
+  ) {
     throw new WardrobeValidationError();
   }
   const input: { name?: string; items?: LookItemInput[] } = {};
@@ -87,4 +87,19 @@ export function parseDuplicateSavedLookName(body: unknown): string | null {
   }
   if (!Object.prototype.hasOwnProperty.call(body, 'name') || body['name'] === null) return null;
   return parseName(body['name']);
+}
+
+export function parseLookCartVariantIds(body: unknown): string[] {
+  if (
+    !isRecord(body) ||
+    Object.keys(body).length !== 1 ||
+    !Array.isArray(body['productVariantIds'])
+  ) {
+    throw new WardrobeValidationError();
+  }
+  const values = body['productVariantIds'];
+  if (values.length < 1 || values.length > 50) throw new WardrobeValidationError();
+  const ids = values.map(parseWardrobeUuid);
+  if (new Set(ids).size !== ids.length) throw new WardrobeValidationError();
+  return [...ids].sort();
 }

@@ -17,6 +17,7 @@ import { AllowAccountTypes } from '../auth/account-types.decorator';
 import type { AuthenticatedRequestContext } from '../auth/auth.types';
 import { CurrentAuthContext } from '../auth/current-auth-context.decorator';
 import { RequireOperationalReadiness } from '../auth/operational-readiness.decorator';
+import { SavedLookCartService, type CartTransferResult } from './saved-look-cart.service';
 import { SavedLookDuplicationService } from './saved-look-duplication.service';
 import { SavedLookService } from './saved-look.service';
 import type { SavedLook, SavedLookList } from './saved-look.types';
@@ -30,6 +31,8 @@ export class SavedLookController {
     private readonly service: SavedLookService,
     @Inject(SavedLookDuplicationService)
     private readonly duplicationService: SavedLookDuplicationService,
+    @Inject(SavedLookCartService)
+    private readonly cartService: SavedLookCartService,
   ) {}
 
   @Get()
@@ -49,6 +52,17 @@ export class SavedLookController {
     @Body() body: unknown,
   ): Promise<SavedLook> {
     return this.service.create(context, idempotencyKey, body);
+  }
+
+  @Post(':lookId/cart-items')
+  @HttpCode(HttpStatus.OK)
+  public addProductsToCart(
+    @CurrentAuthContext() context: AuthenticatedRequestContext,
+    @Param('lookId') lookId: unknown,
+    @Headers('idempotency-key') idempotencyKey: unknown,
+    @Body() body: unknown,
+  ): Promise<CartTransferResult> {
+    return this.cartService.addProducts(context, lookId, idempotencyKey, body);
   }
 
   @Post(':lookId/duplicates')

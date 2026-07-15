@@ -1,0 +1,11 @@
+begin;
+select plan(7);
+select has_table('private','saved_look_cart_requests','durable cart transfer receipts exist');
+select has_function('public','add_saved_look_products_to_cart',array['uuid','uuid','uuid[]','uuid'],'atomic look-to-cart command exists');
+select function_privs_are('public','add_saved_look_products_to_cart',array['uuid','uuid','uuid[]','uuid'],'authenticated',array[]::text[],'clients cannot bypass cart command');
+select function_privs_are('public','add_saved_look_products_to_cart',array['uuid','uuid','uuid[]','uuid'],'service_role',array['EXECUTE'],'backend can transfer look products');
+select isnt_empty($$select 1 from pg_proc where proname='add_saved_look_products_to_cart' and prosrc like '%release_customer_cart_reservations%'$$,'existing reservations are invalidated');
+select isnt_empty($$select 1 from pg_proc where proname='add_saved_look_products_to_cart' and prosrc like '%unit_price_snapshot_paise%'$$,'current price is snapshotted');
+select isnt_empty($$select 1 from pg_proc where proname='add_saved_look_products_to_cart' and prosrc like '%P0003%'$$,'one-shop conflict is enforced');
+select * from finish();
+rollback;

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { SavedLookCartService } from './saved-look-cart.service';
 import { SavedLookController } from './saved-look.controller';
 import { SavedLookDuplicationService } from './saved-look-duplication.service';
 import { SavedLookResolutionService } from './saved-look-resolution.service';
@@ -20,6 +21,7 @@ import { WARDROBE_UPLOAD_GATEWAY } from './wardrobe-upload.tokens';
   providers: [
     WardrobeUploadService,
     SavedLookService,
+    SavedLookCartService,
     SavedLookDuplicationService,
     SavedLookResolutionService,
     WardrobeItemCreateService,
