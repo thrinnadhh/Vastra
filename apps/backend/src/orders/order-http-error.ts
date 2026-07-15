@@ -339,3 +339,57 @@ export function createMerchantOrderDecisionProviderUnavailableException(): HttpE
     true,
   );
 }
+
+export function createInvalidMerchantOrderPackingException(): HttpException {
+  return createOrderException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The merchant packing request is invalid.',
+    false,
+  );
+}
+
+export function createMerchantOrderPackingNotFoundException(): HttpException {
+  return createOrderException(
+    HttpStatus.NOT_FOUND,
+    'ORDER_NOT_FOUND',
+    'The order or order item does not exist or is not visible to this merchant.',
+    false,
+  );
+}
+
+export function createMerchantOrderPackingInvalidStateException(): HttpException {
+  return createOrderException(
+    HttpStatus.CONFLICT,
+    'INVALID_ORDER_STATE',
+    'The order is not in an allowed packing state.',
+    false,
+  );
+}
+
+export function createMerchantOrderPackingConflictException(): HttpException {
+  return createOrderException(
+    HttpStatus.CONFLICT,
+    'IDEMPOTENCY_CONFLICT',
+    'The item already has a conflicting successful verification.',
+    false,
+  );
+}
+
+export function createMerchantOrderPackingStateInvalidException(): HttpException {
+  return createOrderException(
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    'INTERNAL_ERROR',
+    'Merchant packing data is internally inconsistent.',
+    false,
+  );
+}
+
+export function createMerchantOrderPackingProviderUnavailableException(): HttpException {
+  return createOrderException(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'EXTERNAL_SERVICE_UNAVAILABLE',
+    'Merchant packing is temporarily unavailable.',
+    true,
+  );
+}
