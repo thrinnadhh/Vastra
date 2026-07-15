@@ -90,6 +90,7 @@ last_updated: 2026-07-11
 | ORDER_ALREADY_CANCELLED | 409 | Already cancelled |
 | ORDER_CANCELLATION_NOT_ALLOWED | 409 | Policy disallows cancellation |
 | MERCHANT_RESPONSE_EXPIRED | 409 | Merchant window expired |
+| MERCHANT_ORDER_ALERT_NOT_FOUND | 404 | Alert missing or not visible to merchant |
 | ORDER_ITEM_NOT_VERIFIED | 409 | Packing incomplete |
 
 ## Wardrobe and looks
