@@ -147,9 +147,7 @@ describe('WardrobeUploadService', () => {
         contentType: 'image/gif',
         contentLength: 20 * 1024 * 1024,
       }),
-    ).rejects.toSatisfy(
-      (error: unknown) => requireHttpErrorCode(error) === 'VALIDATION_ERROR',
-    );
+    ).rejects.toSatisfy((error: unknown) => requireHttpErrorCode(error) === 'VALIDATION_ERROR');
   });
 
   it('maps an idempotency mismatch to conflict', async () => {
@@ -160,9 +158,7 @@ describe('WardrobeUploadService', () => {
         contentType: 'image/webp',
         contentLength: 2048,
       }),
-    ).rejects.toSatisfy(
-      (error: unknown) => requireHttpErrorCode(error) === 'IDEMPOTENCY_CONFLICT',
-    );
+    ).rejects.toSatisfy((error: unknown) => requireHttpErrorCode(error) === 'IDEMPOTENCY_CONFLICT');
   });
 
   it('maps storage failures to a retryable provider error', async () => {

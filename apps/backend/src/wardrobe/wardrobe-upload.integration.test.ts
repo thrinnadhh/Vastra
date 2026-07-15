@@ -6,10 +6,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type {
-  AuthenticatedHttpRequest,
-  AuthenticatedRequestContext,
-} from '../auth/auth.types';
+import type { AuthenticatedHttpRequest, AuthenticatedRequestContext } from '../auth/auth.types';
 import { WardrobeUploadController } from './wardrobe-upload.controller';
 import type { WardrobeUploadGateway } from './wardrobe-upload.gateway';
 import { WardrobeUploadService } from './wardrobe-upload.service';
@@ -143,12 +140,10 @@ describe('wardrobe upload intent integration', () => {
   });
 
   it('rejects a missing idempotency key', async () => {
-    const response = await request(httpServer)
-      .post('/customer/wardrobe/upload-intents')
-      .send({
-        contentType: 'image/webp',
-        contentLength: 4096,
-      });
+    const response = await request(httpServer).post('/customer/wardrobe/upload-intents').send({
+      contentType: 'image/webp',
+      contentLength: 4096,
+    });
 
     expect(response.status).toBe(400);
     expect(readErrorCode(response.body)).toBe('IDEMPOTENCY_KEY_REQUIRED');

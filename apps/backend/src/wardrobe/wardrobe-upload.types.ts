@@ -1,8 +1,4 @@
-export const WARDROBE_IMAGE_CONTENT_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-] as const;
+export const WARDROBE_IMAGE_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
 export type WardrobeImageContentType = (typeof WARDROBE_IMAGE_CONTENT_TYPES)[number];
 
