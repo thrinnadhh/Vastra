@@ -1447,6 +1447,137 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    MerchantOrderStartPackingResult:
+      type: object
+      additionalProperties: false
+      required: [orderId, orderNumber, status, replayed]
+      properties:
+        orderId: {type: string, format: uuid}
+        orderNumber: {type: string, minLength: 1}
+        status: {type: string, const: PACKING}
+        replayed: {type: boolean}
+    StartMerchantOrderPackingResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [order]
+          properties:
+            order: {$ref: '#/components/schemas/MerchantOrderStartPackingResult'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    MerchantOrderPackingVerification:
+      type: object
+      additionalProperties: false
+      required: [method, result, scannedBarcode, verifiedAt]
+      properties:
+        method: {type: string, enum: [BARCODE, MANUAL]}
+        result: {type: string, enum: [MATCH, MISMATCH, OVERRIDDEN]}
+        scannedBarcode: {type: ['string', 'null'], minLength: 1, maxLength: 255}
+        verifiedAt: {type: string, format: date-time}
+    MerchantOrderPackingItem:
+      type: object
+      additionalProperties: false
+      required: [orderItemId, productName, sku, colour, size, imageObjectKey, quantity, fulfilmentStatus, verification]
+      properties:
+        orderItemId: {type: string, format: uuid}
+        productName: {type: string, minLength: 1}
+        sku: {type: string, minLength: 1}
+        colour: {type: ['string', 'null']}
+        size: {type: ['string', 'null']}
+        imageObjectKey: {type: ['string', 'null']}
+        quantity: {type: integer, minimum: 1}
+        fulfilmentStatus:
+          type: string
+          enum: [PENDING, VERIFIED, PACKED, HANDED_OVER, RETURNED, CANCELLED]
+        verification:
+          oneOf:
+          - $ref: '#/components/schemas/MerchantOrderPackingVerification'
+          - type: 'null'
+    MerchantOrderPackingList:
+      type: object
+      additionalProperties: false
+      required: [orderId, orderNumber, status, totalLines, verifiedLines, allVerified, items]
+      properties:
+        orderId: {type: string, format: uuid}
+        orderNumber: {type: string, minLength: 1}
+        status: {type: string, enum: [MERCHANT_ACCEPTED, PACKING]}
+        totalLines: {type: integer, minimum: 1}
+        verifiedLines: {type: integer, minimum: 0}
+        allVerified: {type: boolean}
+        items:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/MerchantOrderPackingItem'}
+    GetMerchantOrderPackingListResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [packingList]
+          properties:
+            packingList: {$ref: '#/components/schemas/MerchantOrderPackingList'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    VerifyMerchantOrderItemRequest:
+      oneOf:
+      - type: object
+        additionalProperties: false
+        required: [method, barcode]
+        properties:
+          method: {type: string, const: BARCODE}
+          barcode: {type: string, minLength: 1, maxLength: 255}
+      - type: object
+        additionalProperties: false
+        required: [method]
+        properties:
+          method: {type: string, const: MANUAL}
+      discriminator:
+        propertyName: method
+    MerchantOrderItemVerificationResult:
+      type: object
+      additionalProperties: false
+      required: [orderId, orderItemId, fulfilmentStatus, method, result, scannedBarcode, verified, verifiedAt, totalLines, verifiedLines, allVerified, replayed]
+      properties:
+        orderId: {type: string, format: uuid}
+        orderItemId: {type: string, format: uuid}
+        fulfilmentStatus:
+          type: string
+          enum: [PENDING, VERIFIED, PACKED, HANDED_OVER, RETURNED, CANCELLED]
+        method: {type: string, enum: [BARCODE, MANUAL]}
+        result: {type: string, enum: [MATCH, MISMATCH]}
+        scannedBarcode: {type: ['string', 'null'], minLength: 1, maxLength: 255}
+        verified: {type: boolean}
+        verifiedAt: {type: string, format: date-time}
+        totalLines: {type: integer, minimum: 1}
+        verifiedLines: {type: integer, minimum: 0}
+        allVerified: {type: boolean}
+        replayed: {type: boolean}
+    VerifyMerchantOrderItemResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [verification]
+          properties:
+            verification: {$ref: '#/components/schemas/MerchantOrderItemVerificationResult'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     MerchantOrderSummary:
       allOf:
       - $ref: '#/components/schemas/CustomerOrderSummary'
@@ -5190,6 +5321,116 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+  /merchant/orders/{orderId}/start-packing:
+    post:
+      operationId: startMerchantOrderPacking
+      summary: Idempotently start packing an accepted merchant order
+      description: Transitions an owned MERCHANT_ACCEPTED order to PACKING. Replays in PACKING do not duplicate history or outbox events.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              maxProperties: 0
+      responses:
+        '200':
+          description: Packing started or safely replayed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StartMerchantOrderPackingResponse'}
+              examples:
+                started:
+                  value: {success: true, data: {order: {orderId: 20000000-0000-4000-8000-000000000001, orderNumber: VAS-1001, status: PACKING, replayed: false}}, meta: {requestId: null}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Packing state is internally inconsistent
+          content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
+        '503':
+          description: Merchant packing is temporarily unavailable
+          content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
+  /merchant/orders/{orderId}/packing-list:
+    get:
+      operationId: getMerchantOrderPackingList
+      summary: Read an owned accepted or packing order checklist
+      description: Returns price-independent immutable item snapshots and verification progress without changing order state.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Packing checklist
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GetMerchantOrderPackingListResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Packing checklist data is internally inconsistent
+          content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
+        '503':
+          description: Merchant packing is temporarily unavailable
+          content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
+  /merchant/orders/{orderId}/items/{orderItemId}/verify:
+    post:
+      operationId: verifyMerchantOrderItem
+      summary: Verify one packing checklist line by barcode or manual confirmation
+      description: Records durable MATCH or MISMATCH evidence. A mismatch is a successful operational response and never advances the order to READY_FOR_PICKUP.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: orderItemId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/VerifyMerchantOrderItemRequest'}
+      responses:
+        '200':
+          description: Verification recorded or safely replayed, including barcode mismatches
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/VerifyMerchantOrderItemResponse'}
+              examples:
+                mismatch:
+                  value: {success: true, data: {verification: {orderId: 20000000-0000-4000-8000-000000000001, orderItemId: 30000000-0000-4000-8000-000000000001, fulfilmentStatus: PENDING, method: BARCODE, result: MISMATCH, scannedBarcode: UNKNOWN-123, verified: false, verifiedAt: '2026-07-16T03:30:00Z', totalLines: 2, verifiedLines: 0, allVerified: false, replayed: false}}, meta: {requestId: null}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Verification data is internally inconsistent
+          content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
+        '503':
+          description: Merchant packing is temporarily unavailable
+          content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
   /merchant/orders/{orderId}/ready-for-pickup:
     post:
       summary: Mark ready for pickup

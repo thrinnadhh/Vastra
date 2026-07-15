@@ -20,6 +20,10 @@ import { MerchantOrderDecisionController } from './merchant-order-decision.contr
 import { SupabaseMerchantOrderDecisionGateway } from './merchant-order-decision.gateway';
 import { MerchantOrderDecisionService } from './merchant-order-decision.service';
 import { MERCHANT_ORDER_DECISION_GATEWAY } from './merchant-order-decision.tokens';
+import { MerchantOrderPackingController } from './merchant-order-packing.controller';
+import { SupabaseMerchantOrderPackingGateway } from './merchant-order-packing.gateway';
+import { MerchantOrderPackingService } from './merchant-order-packing.service';
+import { MERCHANT_ORDER_PACKING_GATEWAY } from './merchant-order-packing.tokens';
 
 @Module({
   controllers: [
@@ -27,6 +31,7 @@ import { MERCHANT_ORDER_DECISION_GATEWAY } from './merchant-order-decision.token
     CustomerOrderReadController,
     MerchantOrderAlertController,
     MerchantOrderDecisionController,
+    MerchantOrderPackingController,
     MerchantOrderReadController,
   ],
   providers: [
@@ -35,6 +40,7 @@ import { MERCHANT_ORDER_DECISION_GATEWAY } from './merchant-order-decision.token
     MerchantOrderAlertService,
     MerchantOrderReadService,
     MerchantOrderDecisionService,
+    MerchantOrderPackingService,
     {
       provide: CUSTOMER_ORDER_GATEWAY,
       useClass: SupabaseCustomerOrderGateway,
@@ -48,6 +54,7 @@ import { MERCHANT_ORDER_DECISION_GATEWAY } from './merchant-order-decision.token
       useClass: SupabaseMerchantOrderAlertGateway,
     },
     { provide: MERCHANT_ORDER_DECISION_GATEWAY, useClass: SupabaseMerchantOrderDecisionGateway },
+    { provide: MERCHANT_ORDER_PACKING_GATEWAY, useClass: SupabaseMerchantOrderPackingGateway },
     {
       provide: MERCHANT_ORDER_READ_GATEWAY,
       useClass: SupabaseMerchantOrderReadGateway,
@@ -57,6 +64,7 @@ import { MERCHANT_ORDER_DECISION_GATEWAY } from './merchant-order-decision.token
     CUSTOMER_ORDER_GATEWAY,
     CUSTOMER_ORDER_READ_GATEWAY,
     MERCHANT_ORDER_ALERT_GATEWAY,
+    MERCHANT_ORDER_PACKING_GATEWAY,
     MERCHANT_ORDER_READ_GATEWAY,
   ],
 })
