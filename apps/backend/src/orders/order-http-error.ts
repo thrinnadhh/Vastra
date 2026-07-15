@@ -12,9 +12,9 @@ type OrderErrorCode =
   | 'ADDRESS_NOT_SERVICEABLE'
   | 'INSUFFICIENT_STOCK'
   | 'ORDER_NOT_FOUND'
-  | 'MERCHANT_ORDER_ALERT_NOT_FOUND'
-  | 'MERCHANT_RESPONSE_EXPIRED'
   | 'INVALID_ORDER_STATE'
+  | 'MERCHANT_RESPONSE_EXPIRED'
+  | 'MERCHANT_ORDER_ALERT_NOT_FOUND'
   | 'INTERNAL_ERROR'
   | 'EXTERNAL_SERVICE_UNAVAILABLE';
 
@@ -279,6 +279,63 @@ export function createMerchantOrderAlertProviderUnavailableException(): HttpExce
     HttpStatus.SERVICE_UNAVAILABLE,
     'EXTERNAL_SERVICE_UNAVAILABLE',
     'Merchant order alert acknowledgement is temporarily unavailable.',
+    true,
+  );
+}
+
+export function createInvalidMerchantOrderDecisionException(): HttpException {
+  return createOrderException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The merchant order decision is invalid.',
+    false,
+  );
+}
+export function createMerchantOrderDecisionNotFoundException(): HttpException {
+  return createOrderException(
+    HttpStatus.NOT_FOUND,
+    'ORDER_NOT_FOUND',
+    'The order does not exist or is not visible to this merchant.',
+    false,
+  );
+}
+export function createMerchantOrderDecisionExpiredException(): HttpException {
+  return createOrderException(
+    HttpStatus.CONFLICT,
+    'MERCHANT_RESPONSE_EXPIRED',
+    'The merchant response window has expired.',
+    false,
+  );
+}
+export function createMerchantOrderDecisionInvalidStateException(): HttpException {
+  return createOrderException(
+    HttpStatus.CONFLICT,
+    'INVALID_ORDER_STATE',
+    'The order cannot be accepted or rejected in its current state.',
+    false,
+  );
+}
+export function createMerchantOrderDecisionConflictException(): HttpException {
+  return createOrderException(
+    HttpStatus.CONFLICT,
+    'IDEMPOTENCY_CONFLICT',
+    'The repeated merchant decision does not match the stored decision.',
+    false,
+  );
+}
+export function createMerchantOrderDecisionStateInvalidException(): HttpException {
+  return createOrderException(
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    'INTERNAL_ERROR',
+    'Merchant order decision data is internally inconsistent.',
+    false,
+  );
+}
+export function createMerchantOrderDecisionProviderUnavailableException(): HttpException {
+  return createOrderException(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'EXTERNAL_SERVICE_UNAVAILABLE',
+    'Merchant order decisions are temporarily unavailable.',
     true,
   );
 }
