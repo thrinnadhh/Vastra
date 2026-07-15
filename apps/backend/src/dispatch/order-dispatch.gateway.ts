@@ -74,6 +74,8 @@ function mapRpcError(error: { readonly code?: string }): Error {
       return new OrderDispatchIneligibleFulfilmentError();
     case 'P0032':
       return new OrderDispatchDataInvalidError();
+    case undefined:
+      return new OrderDispatchGatewayUnavailableError();
     default:
       return new OrderDispatchGatewayUnavailableError();
   }

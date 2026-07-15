@@ -12,7 +12,7 @@ export class OrderDispatchService {
     private readonly gateway: OrderDispatchGateway,
   ) {}
 
-  public start(value: unknown): Promise<StartOrderDispatchResult> {
+  public async start(value: unknown): Promise<StartOrderDispatchResult> {
     return this.gateway.start(parseStartOrderDispatchInput(value));
   }
 }
