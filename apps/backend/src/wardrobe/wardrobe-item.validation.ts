@@ -130,3 +130,40 @@ export function parseUpdateWardrobeItemInput(body: unknown): UpdateWardrobeItemI
 
   return input;
 }
+
+export interface WardrobeListCursor {
+  readonly createdAt: string;
+  readonly id: string;
+}
+
+export function parseWardrobeListLimit(value: unknown): number {
+  if (value === undefined) return 20;
+  const parsed = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+  if (typeof parsed !== 'number' || !Number.isSafeInteger(parsed) || parsed < 1 || parsed > 100) {
+    throw new WardrobeValidationError();
+  }
+  return parsed;
+}
+
+export function parseWardrobeListCursor(value: unknown): WardrobeListCursor | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || value.length > 512) throw new WardrobeValidationError();
+
+  try {
+    const decoded: unknown = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
+    if (!isRecord(decoded)) throw new WardrobeValidationError();
+    const createdAt = decoded['createdAt'];
+    if (typeof createdAt !== 'string' || Number.isNaN(Date.parse(createdAt))) {
+      throw new WardrobeValidationError();
+    }
+    return { createdAt, id: parseWardrobeUuid(decoded['id']) };
+  } catch (error: unknown) {
+    if (error instanceof WardrobeValidationError) throw error;
+    throw new WardrobeValidationError();
+  }
+}
+
+export function encodeWardrobeListCursor(cursor: WardrobeListCursor | null): string | null {
+  if (cursor === null) return null;
+  return Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url');
+}

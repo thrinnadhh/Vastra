@@ -1,0 +1,16 @@
+begin;
+select plan(12);
+select has_table('private','wardrobe_deletion_jobs','durable deletion jobs exist');
+select has_table('private','wardrobe_item_delete_requests','durable delete receipts exist');
+select has_function('public','list_wardrobe_items',array['uuid','timestamp with time zone','uuid','integer'],'list function exists');
+select has_function('public','get_wardrobe_item',array['uuid','uuid'],'get function exists');
+select has_function('public','update_wardrobe_item',array['uuid','uuid','jsonb'],'update function exists');
+select has_function('public','delete_wardrobe_item',array['uuid','uuid','uuid'],'delete function exists');
+select has_function('public','claim_wardrobe_deletion_job',array[]::text[],'retry claim exists');
+select has_function('public','complete_wardrobe_deletion_job',array['uuid'],'retry completion exists');
+select has_function('public','fail_wardrobe_deletion_job',array['uuid','text'],'retry failure exists');
+select policies_are('storage','objects',array['wardrobe_media_owner_insert'],'finalized objects cannot be read/updated/deleted directly');
+select function_privs_are('public','delete_wardrobe_item',array['uuid','uuid','uuid'],'authenticated',array[]::text[],'delete is backend-only');
+select isnt_empty($$select 1 from pg_indexes where indexname='wardrobe_deletion_jobs_retry_idx'$$,'retry queue is indexed');
+select * from finish();
+rollback;

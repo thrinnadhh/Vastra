@@ -10,6 +10,7 @@ import type { AuthenticatedHttpRequest, AuthenticatedRequestContext } from '../a
 import type { WardrobeGateway } from './wardrobe.gateway';
 import { WardrobeItemController } from './wardrobe-item.controller';
 import { WardrobeItemCreateService } from './wardrobe-item-create.service';
+import { WardrobeItemManagementService } from './wardrobe-item-management.service';
 import { WARDROBE_GATEWAY } from './wardrobe.tokens';
 
 const ACTOR_ID = '10000000-0000-4000-8000-000000000001';
@@ -23,17 +24,33 @@ class Gateway implements WardrobeGateway {
       id: '40000000-0000-4000-8000-000000000001',
       ownerCustomerId: ACTOR_ID,
       storageObjectKey: `${ACTOR_ID}/${UPLOAD_ID}.webp`,
-      category: 'Kurta', colour: 'Blue', occasion: 'Festive', season: 'All season', notes: null,
-      status: 'ACTIVE', createdAt: '2026-07-16T09:00:00.000Z', updatedAt: '2026-07-16T09:00:00.000Z',
+      category: 'Kurta',
+      colour: 'Blue',
+      occasion: 'Festive',
+      season: 'All season',
+      notes: null,
+      status: 'ACTIVE',
+      createdAt: '2026-07-16T09:00:00.000Z',
+      updatedAt: '2026-07-16T09:00:00.000Z',
     });
   }
-  public createSignedImageUrl(): Promise<string> { return Promise.resolve('https://storage.example.test/item'); }
-  public removeObject(): Promise<void> { return Promise.resolve(); }
+  public createSignedImageUrl(): Promise<string> {
+    return Promise.resolve('https://storage.example.test/item');
+  }
+  public removeObject(): Promise<void> {
+    return Promise.resolve();
+  }
 }
 
 const context: AuthenticatedRequestContext = {
-  actor: { id: ACTOR_ID, email: 'customer@example.test', accountType: 'CUSTOMER', status: 'ACTIVE' },
-  accessToken: 'token', supabase: emptyClient,
+  actor: {
+    id: ACTOR_ID,
+    email: 'customer@example.test',
+    accountType: 'CUSTOMER',
+    status: 'ACTIVE',
+  },
+  accessToken: 'token',
+  supabase: emptyClient,
 };
 
 function isHttpServer(value: unknown): value is Server {
@@ -64,10 +81,17 @@ describe('POST /customer/wardrobe/items', () => {
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       controllers: [WardrobeItemController],
-      providers: [WardrobeItemCreateService, { provide: WARDROBE_GATEWAY, useClass: Gateway }],
+      providers: [
+        WardrobeItemCreateService,
+        WardrobeItemManagementService,
+        { provide: WARDROBE_GATEWAY, useClass: Gateway },
+      ],
     }).compile();
     app = module.createNestApplication();
-    app.use((req: AuthenticatedHttpRequest, _res: unknown, next: () => void) => { req.authContext = context; next(); });
+    app.use((req: AuthenticatedHttpRequest, _res: unknown, next: () => void) => {
+      req.authContext = context;
+      next();
+    });
     await app.init();
   });
 
@@ -77,7 +101,13 @@ describe('POST /customer/wardrobe/items', () => {
     const response = await request(server(app))
       .post('/customer/wardrobe/items')
       .set('Idempotency-Key', KEY)
-      .send({ uploadId: UPLOAD_ID, category: 'Kurta', colour: 'Blue', occasion: 'Festive', season: 'All season' })
+      .send({
+        uploadId: UPLOAD_ID,
+        category: 'Kurta',
+        colour: 'Blue',
+        occasion: 'Festive',
+        season: 'All season',
+      })
       .expect(201);
 
     const body: unknown = response.body;
