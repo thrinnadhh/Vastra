@@ -16,12 +16,17 @@ import { MerchantOrderReadController } from './merchant-order-read.controller';
 import { SupabaseMerchantOrderReadGateway } from './merchant-order-read.gateway';
 import { MerchantOrderReadService } from './merchant-order-read.service';
 import { MERCHANT_ORDER_READ_GATEWAY } from './merchant-order-read.tokens';
+import { MerchantOrderDecisionController } from './merchant-order-decision.controller';
+import { SupabaseMerchantOrderDecisionGateway } from './merchant-order-decision.gateway';
+import { MerchantOrderDecisionService } from './merchant-order-decision.service';
+import { MERCHANT_ORDER_DECISION_GATEWAY } from './merchant-order-decision.tokens';
 
 @Module({
   controllers: [
     CustomerOrderController,
     CustomerOrderReadController,
     MerchantOrderAlertController,
+    MerchantOrderDecisionController,
     MerchantOrderReadController,
   ],
   providers: [
@@ -29,6 +34,7 @@ import { MERCHANT_ORDER_READ_GATEWAY } from './merchant-order-read.tokens';
     CustomerOrderReadService,
     MerchantOrderAlertService,
     MerchantOrderReadService,
+    MerchantOrderDecisionService,
     {
       provide: CUSTOMER_ORDER_GATEWAY,
       useClass: SupabaseCustomerOrderGateway,
@@ -41,6 +47,7 @@ import { MERCHANT_ORDER_READ_GATEWAY } from './merchant-order-read.tokens';
       provide: MERCHANT_ORDER_ALERT_GATEWAY,
       useClass: SupabaseMerchantOrderAlertGateway,
     },
+    { provide: MERCHANT_ORDER_DECISION_GATEWAY, useClass: SupabaseMerchantOrderDecisionGateway },
     {
       provide: MERCHANT_ORDER_READ_GATEWAY,
       useClass: SupabaseMerchantOrderReadGateway,
