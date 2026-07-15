@@ -1578,6 +1578,34 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    MerchantOrderReadyResult:
+      type: object
+      additionalProperties: false
+      required: [orderId, orderNumber, status, readyAt, totalLines, packedLines, allPacked, replayed]
+      properties:
+        orderId: {type: string, format: uuid}
+        orderNumber: {type: string, minLength: 1}
+        status: {type: string, const: READY_FOR_PICKUP}
+        readyAt: {type: string, format: date-time}
+        totalLines: {type: integer, minimum: 1}
+        packedLines: {type: integer, minimum: 1}
+        allPacked: {type: boolean, const: true}
+        replayed: {type: boolean}
+    MarkMerchantOrderReadyResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [order]
+          properties:
+            order: {$ref: '#/components/schemas/MerchantOrderReadyResult'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     MerchantOrderSummary:
       allOf:
       - $ref: '#/components/schemas/CustomerOrderSummary'
@@ -5433,30 +5461,47 @@ paths:
           content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
   /merchant/orders/{orderId}/ready-for-pickup:
     post:
-      summary: Mark ready for pickup
-      tags:
-      - Merchant
+      operationId: markMerchantOrderReadyForPickup
+      summary: Mark a completely verified packing checklist ready for pickup
+      description: Atomically transitions an owned PACKING order to READY_FOR_PICKUP only after every line has consistent successful verification evidence. A valid already-ready order safely replays without duplicate side effects. Captain dispatch is a separate command and is not started here.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
       parameters:
       - name: orderId
         in: path
         required: true
-        schema:
-          type: string
-          format: uuid
+        schema: {type: string, format: uuid}
       - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              maxProperties: 0
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Order marked ready for pickup or safely replayed
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/MarkMerchantOrderReadyResponse'}
+              examples:
+                ready:
+                  value: {success: true, data: {order: {orderId: 20000000-0000-4000-8000-000000000001, orderNumber: VAS-1234, status: READY_FOR_PICKUP, readyAt: '2026-07-16T04:30:00Z', totalLines: 2, packedLines: 2, allPacked: true, replayed: false}}, meta: {requestId: null}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Order state is invalid or one or more order items are not successfully verified
+          content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
+        '500':
+          description: Ready-for-pickup state or evidence is internally inconsistent
+          content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
+        '503':
+          description: Merchant ready-for-pickup is temporarily unavailable
+          content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
   /merchant/inventory/adjustments:
     post:
       operationId: applyMerchantInventoryAdjustment
