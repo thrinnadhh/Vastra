@@ -15,6 +15,7 @@ type OrderErrorCode =
   | 'INVALID_ORDER_STATE'
   | 'MERCHANT_RESPONSE_EXPIRED'
   | 'MERCHANT_ORDER_ALERT_NOT_FOUND'
+  | 'ORDER_ITEM_NOT_VERIFIED'
   | 'INTERNAL_ERROR'
   | 'EXTERNAL_SERVICE_UNAVAILABLE';
 
@@ -390,6 +391,69 @@ export function createMerchantOrderPackingProviderUnavailableException(): HttpEx
     HttpStatus.SERVICE_UNAVAILABLE,
     'EXTERNAL_SERVICE_UNAVAILABLE',
     'Merchant packing is temporarily unavailable.',
+    true,
+  );
+}
+
+export function createInvalidMerchantOrderReadyException(): HttpException {
+  return createOrderException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The merchant ready-for-pickup request is invalid.',
+    false,
+  );
+}
+
+export function createMerchantOrderReadyIdempotencyKeyRequiredException(): HttpException {
+  return createOrderException(
+    HttpStatus.BAD_REQUEST,
+    'IDEMPOTENCY_KEY_REQUIRED',
+    'A valid Idempotency-Key header is required to mark an order ready for pickup.',
+    false,
+  );
+}
+
+export function createMerchantOrderReadyNotFoundException(): HttpException {
+  return createOrderException(
+    HttpStatus.NOT_FOUND,
+    'ORDER_NOT_FOUND',
+    'The order does not exist or is not visible to this merchant.',
+    false,
+  );
+}
+
+export function createMerchantOrderReadyInvalidStateException(): HttpException {
+  return createOrderException(
+    HttpStatus.CONFLICT,
+    'INVALID_ORDER_STATE',
+    'The order cannot be marked ready for pickup in its current state.',
+    false,
+  );
+}
+
+export function createMerchantOrderReadyItemNotVerifiedException(): HttpException {
+  return createOrderException(
+    HttpStatus.CONFLICT,
+    'ORDER_ITEM_NOT_VERIFIED',
+    'Every order item must be successfully verified before pickup readiness.',
+    false,
+  );
+}
+
+export function createMerchantOrderReadyStateInvalidException(): HttpException {
+  return createOrderException(
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    'INTERNAL_ERROR',
+    'Merchant ready-for-pickup data is internally inconsistent.',
+    false,
+  );
+}
+
+export function createMerchantOrderReadyProviderUnavailableException(): HttpException {
+  return createOrderException(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'EXTERNAL_SERVICE_UNAVAILABLE',
+    'Merchant ready-for-pickup is temporarily unavailable.',
     true,
   );
 }
