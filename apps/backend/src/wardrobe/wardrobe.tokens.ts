@@ -1,0 +1,1 @@
+export const WARDROBE_GATEWAY = Symbol('WARDROBE_GATEWAY');
