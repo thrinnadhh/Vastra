@@ -12,6 +12,9 @@ type OrderErrorCode =
   | 'ADDRESS_NOT_SERVICEABLE'
   | 'INSUFFICIENT_STOCK'
   | 'ORDER_NOT_FOUND'
+  | 'MERCHANT_ORDER_ALERT_NOT_FOUND'
+  | 'MERCHANT_RESPONSE_EXPIRED'
+  | 'INVALID_ORDER_STATE'
   | 'INTERNAL_ERROR'
   | 'EXTERNAL_SERVICE_UNAVAILABLE';
 
@@ -222,6 +225,60 @@ export function createMerchantOrderReadProviderUnavailableException(): HttpExcep
     HttpStatus.SERVICE_UNAVAILABLE,
     'EXTERNAL_SERVICE_UNAVAILABLE',
     'Merchant incoming orders are temporarily unavailable.',
+    true,
+  );
+}
+
+export function createInvalidMerchantOrderAlertRequestException(): HttpException {
+  return createOrderException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The merchant order alert identifier is invalid.',
+    false,
+  );
+}
+
+export function createMerchantOrderAlertNotFoundException(): HttpException {
+  return createOrderException(
+    HttpStatus.NOT_FOUND,
+    'MERCHANT_ORDER_ALERT_NOT_FOUND',
+    'The merchant order alert does not exist or is not visible to this merchant.',
+    false,
+  );
+}
+
+export function createMerchantOrderAlertExpiredException(): HttpException {
+  return createOrderException(
+    HttpStatus.CONFLICT,
+    'MERCHANT_RESPONSE_EXPIRED',
+    'The merchant response window has expired.',
+    false,
+  );
+}
+
+export function createMerchantOrderAlertNotAcknowledgeableException(): HttpException {
+  return createOrderException(
+    HttpStatus.CONFLICT,
+    'INVALID_ORDER_STATE',
+    'The order alert cannot be acknowledged in its current state.',
+    false,
+  );
+}
+
+export function createMerchantOrderAlertStateInvalidException(): HttpException {
+  return createOrderException(
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    'INTERNAL_ERROR',
+    'Merchant order alert acknowledgement data is internally inconsistent.',
+    false,
+  );
+}
+
+export function createMerchantOrderAlertProviderUnavailableException(): HttpException {
+  return createOrderException(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'EXTERNAL_SERVICE_UNAVAILABLE',
+    'Merchant order alert acknowledgement is temporarily unavailable.',
     true,
   );
 }
