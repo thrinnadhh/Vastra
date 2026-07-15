@@ -6,8 +6,17 @@ import { DispatchModule } from './dispatch/dispatch.module';
 import { HealthModule } from './health/health.module';
 import { MeModule } from './me/me.module';
 import { OrdersModule } from './orders/orders.module';
+import { WardrobeModule } from './wardrobe/wardrobe.module';
 
 @Module({
-  imports: [AuthModule, CatalogueModule, DispatchModule, HealthModule, MeModule, OrdersModule],
+  imports: [
+    AuthModule,
+    CatalogueModule,
+    DispatchModule,
+    HealthModule,
+    MeModule,
+    OrdersModule,
+    WardrobeModule,
+  ],
 })
 export class AppModule {}
