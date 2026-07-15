@@ -10,6 +10,7 @@ export interface WardrobeGateway {
   execute(functionName: string, args: Record<string, unknown>): Promise<unknown>;
   createSignedImageUrl(objectKey: string): Promise<string>;
   removeObject(objectKey: string): Promise<void>;
+  createPublicProductImageUrl?(objectKey: string): string;
 }
 
 export class WardrobeGatewayError extends Error {
@@ -69,6 +70,10 @@ export class SupabaseWardrobeGateway implements WardrobeGateway {
 
       throw new WardrobeStorageError();
     }
+  }
+
+  public createPublicProductImageUrl(objectKey: string): string {
+    return this.client.storage.from('product-images').getPublicUrl(objectKey).data.publicUrl;
   }
 
   public async removeObject(objectKey: string): Promise<void> {

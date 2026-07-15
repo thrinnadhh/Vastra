@@ -1,0 +1,10 @@
+begin;
+select plan(6);
+select has_function('public','resolve_saved_look_items',array['uuid','uuid[]'],'batch resolver exists');
+select function_privs_are('public','resolve_saved_look_items',array['uuid','uuid[]'],'authenticated',array[]::text[],'resolver is backend-only');
+select function_privs_are('public','resolve_saved_look_items',array['uuid','uuid[]'],'service_role',array['EXECUTE'],'backend may resolve looks');
+select isnt_empty($$select 1 from pg_proc where proname='resolve_saved_look_items' and prosrc like '%stock_on_hand%reserved_quantity%damaged_quantity%'$$,'live availability formula is used');
+select is_empty($$select column_name from information_schema.columns where table_schema='public' and table_name='saved_look_items' and column_name in('current_selling_price_paise','available_quantity','image_url')$$,'live data is not persisted');
+select isnt_empty($$select 1 from pg_proc where proname='resolve_saved_look_items' and prosrc like '%moderation_status%APPROVED%'$$,'orderability state is considered');
+select * from finish();
+rollback;
