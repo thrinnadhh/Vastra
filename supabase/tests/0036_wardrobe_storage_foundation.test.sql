@@ -108,8 +108,8 @@ select is(
         'wardrobe_media_owner_delete'
       )
   ),
-  4,
-  'Wardrobe media has owner-scoped CRUD policies'
+  1,
+  'Wardrobe media exposes only the intent-gated upload policy'
 );
 
 insert into auth.users (
@@ -221,6 +221,25 @@ values (
   'Wardrobe Merchant Legal'
 );
 
+insert into private.wardrobe_upload_intents (
+  id,
+  owner_customer_id,
+  idempotency_key,
+  content_type,
+  content_length,
+  storage_object_key,
+  expires_at
+)
+values (
+  'b2000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000001',
+  'c2000000-0000-4000-8000-000000000001',
+  'image/jpeg',
+  1024,
+  'a1000000-0000-4000-8000-000000000001/b2000000-0000-4000-8000-000000000001.jpg',
+  statement_timestamp() + interval '2 hours'
+);
+
 set local role authenticated;
 
 select set_config(
@@ -258,8 +277,8 @@ select is(
       and name =
         'a1000000-0000-4000-8000-000000000001/b2000000-0000-4000-8000-000000000001.jpg'
   ),
-  1,
-  'the owner may read their private Wardrobe object'
+  0,
+  'the owner cannot directly read private Wardrobe storage metadata'
 );
 
 select is(
@@ -311,8 +330,8 @@ select is(
           'a1000000-0000-4000-8000-000000000001/b2000000-0000-4000-8000-000000000001.jpg'
     $statement$
   ),
-  1,
-  'the owner may rename an object within their own valid key space'
+  0,
+  'the owner cannot directly rename a finalized Wardrobe object'
 );
 
 select set_config(
@@ -439,16 +458,18 @@ select set_config(
 );
 
 select ok(
-  exists (
+  not exists (
     select 1
     from pg_policies
     where schemaname = 'storage'
       and tablename = 'objects'
-      and policyname = 'wardrobe_media_owner_delete'
-      and cmd = 'DELETE'
-      and 'authenticated' = any(roles)
+      and policyname in (
+        'wardrobe_media_owner_select',
+        'wardrobe_media_owner_update',
+        'wardrobe_media_owner_delete'
+      )
   ),
-  'authenticated customers have a Wardrobe media delete policy'
+  'authenticated customers cannot directly read, update, or delete Wardrobe media'
 );
 
 select ok(
@@ -457,13 +478,12 @@ select ok(
     from pg_policies
     where schemaname = 'storage'
       and tablename = 'objects'
-      and policyname = 'wardrobe_media_owner_delete'
-      and qual ~ 'bucket_id.*wardrobe-media'
-      and qual ~ 'is_active_customer'
-      and qual ~ 'foldername'
-      and qual ~ 'auth\.uid'
+      and policyname = 'wardrobe_media_owner_insert'
+      and cmd = 'INSERT'
+      and 'authenticated' = any(roles)
+      and with_check ~ 'can_upload_wardrobe_object'
   ),
-  'Wardrobe deletion is restricted to the active owner key space'
+  'Wardrobe uploads require a live owner-scoped upload intent'
 );
 
 reset role;

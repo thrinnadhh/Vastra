@@ -2,7 +2,7 @@
 project: Vastra
 version: 1.1
 status: Frozen MVP
-last_updated: 2026-07-11
+last_updated: 2026-07-16
 ---
 
 # Security Model
@@ -83,7 +83,7 @@ Buckets:
 | captain-documents | Private |
 | return-evidence | Private |
 | support-attachments | Private |
-| wardrobe-items | Private; owner or active room-scoped shared-look access |
+| wardrobe-media | Private; backend-signed owner or active room-scoped shared-look access |
 | body-scans | Not provisioned for MVP |
 | virtual-tryon | Not provisioned for MVP |
 
