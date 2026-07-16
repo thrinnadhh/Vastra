@@ -46,6 +46,7 @@ export default defineConfig([
     '**/.next/**',
     '**/.expo/**',
     '**/*.tsbuildinfo',
+    'packages/api-client/src/generated/**',
     'supabase/.temp/**',
     'Vastra_Supabase_SQL_and_Env_Pack/**',
     'database/**',
@@ -133,7 +134,7 @@ export default defineConfig([
     },
     settings: {
       node: {
-        version: '20.20.2',
+        version: '>=24.0.0 <25',
       },
     },
     rules: {

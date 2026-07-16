@@ -1,51 +1,40 @@
 import 'reflect-metadata';
 
+import type { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
+import {
+  type BackendBootstrapConfiguration,
+  loadBackendBootstrapConfiguration,
+} from './bootstrap/bootstrap.configuration';
+import { configureBackendApplication } from './bootstrap/configure-application';
+import { StructuredLogger } from './bootstrap/structured-logger';
 
-const DEFAULT_PORT = 8080;
-const MINIMUM_PORT = 1;
-const MAXIMUM_PORT = 65_535;
+export async function createBackendApplication(
+  configuration: BackendBootstrapConfiguration = loadBackendBootstrapConfiguration(),
+): Promise<INestApplication> {
+  const logger = new StructuredLogger();
+  const application = await NestFactory.create(AppModule, { logger });
 
-function resolvePort(value: string | undefined): number {
-  const candidate =
-    value === undefined || value.trim().length === 0 ? String(DEFAULT_PORT) : value.trim();
-
-  if (!/^\d+$/u.test(candidate)) {
-    throw new Error('Invalid environment configuration: PORT');
-  }
-
-  const port = Number(candidate);
-
-  if (!Number.isInteger(port) || port < MINIMUM_PORT || port > MAXIMUM_PORT) {
-    throw new Error('Invalid environment configuration: PORT');
-  }
-
-  return port;
+  configureBackendApplication(application, configuration, logger);
+  return application;
 }
 
-async function bootstrap(port: number): Promise<void> {
-  const application = await NestFactory.create(AppModule);
-
-  await application.listen(port);
+export async function startBackend(): Promise<void> {
+  const configuration = loadBackendBootstrapConfiguration();
+  const application = await createBackendApplication(configuration);
+  await application.listen(configuration.port, '0.0.0.0');
 }
 
-function startBackend(): void {
-  let port: number;
-
-  try {
-    port = resolvePort(process.env['PORT']);
-  } catch {
-    console.error('Invalid environment configuration: PORT');
-    process.exitCode = 1;
-    return;
-  }
-
-  void bootstrap(port).catch(() => {
-    console.error('Vastra backend failed to start.');
+if (require.main === module) {
+  void startBackend().catch((error: unknown) => {
+    const logger = new StructuredLogger();
+    logger.fatal({
+      event: 'application.start.failed',
+      errorName: error instanceof Error ? error.name : 'UnknownError',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+    });
     process.exitCode = 1;
   });
 }
-
-startBackend();

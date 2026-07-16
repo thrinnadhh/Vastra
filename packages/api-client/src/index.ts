@@ -1,12 +1,22 @@
-/**
- * Marker for the future generated API client.
- *
- * The client must eventually be generated from docs/api/openapi.yaml.
- * Do not manually duplicate endpoint schemas in this package.
- */
-export const API_CLIENT_GENERATION_BOUNDARY = {
-  contract: 'docs/api/openapi.yaml',
-  status: 'not-generated',
-} as const;
+import createClient, { type ClientOptions } from 'openapi-fetch';
 
-export type ApiClientGenerationBoundary = typeof API_CLIENT_GENERATION_BOUNDARY;
+import type { components, operations, paths } from './generated/schema.js';
+
+export type VastraApiComponents = components;
+export type VastraApiOperations = operations;
+export type VastraApiPaths = paths;
+
+export type VastraApiClientOptions = Omit<ClientOptions, 'baseUrl'> & {
+  readonly baseUrl: string;
+};
+
+/**
+ * Creates the shared, OpenAPI-typed client used by Vastra applications.
+ * Authentication remains explicit so callers can supply the current session token.
+ */
+export function createVastraApiClient(options: VastraApiClientOptions) {
+  return createClient<paths>({
+    ...options,
+    baseUrl: options.baseUrl.replace(/\/$/u, ''),
+  });
+}

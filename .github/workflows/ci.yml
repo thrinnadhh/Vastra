@@ -32,7 +32,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 20.20.2
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -68,5 +68,45 @@ jobs:
       - name: Validate OpenAPI
         run: pnpm openapi:check
 
+      - name: Verify generated API types
+        run: pnpm api:check
+
       - name: Build
         run: pnpm build
+
+  dependency-audit:
+    name: Audit production dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Audit production dependencies
+        run: pnpm security:audit
+
+  secret-scan:
+    name: Scan committed secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2

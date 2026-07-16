@@ -48,6 +48,7 @@ describe('environment validation', () => {
       ...commonEnvironment,
       NODE_ENV: 'test',
       PORT: '8080',
+      CORS_ALLOWED_ORIGINS: 'http://localhost:3000,http://localhost:8081',
       DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
       SUPABASE_URL: 'http://127.0.0.1:54321',
       SUPABASE_PUBLISHABLE_KEY: 'local-publishable-placeholder',
