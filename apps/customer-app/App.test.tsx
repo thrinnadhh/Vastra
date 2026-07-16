@@ -1,18 +1,30 @@
-import type { ReactNode } from 'react';
 import { render } from '@testing-library/react-native';
+import { Text as MockText } from 'react-native';
 
 jest.mock('./src/auth/default-customer-session', () => ({
-  CustomerSessionApp: ({ children }: { readonly children: ReactNode }) => children,
+  CustomerSessionApp: ({ children }: { readonly children: React.ReactNode }) => children,
 }));
 
-import { CustomerFoundationScreen } from './App';
+jest.mock('./src/checkout/default-customer-checkout-quote', () => {
+  return {
+    DefaultCustomerCheckoutQuote: ({ addressId }: { readonly addressId: string | null }) => (
+      <MockText>{addressId ?? 'Checkout awaits an address'}</MockText>
+    ),
+  };
+});
 
-describe('CustomerFoundationScreen', () => {
-  it('renders the accessible customer foundation screen', () => {
-    const { getByLabelText, getByRole, getByText } = render(<CustomerFoundationScreen />);
+import { CustomerAppContent } from './App';
 
-    expect(getByRole('header', { name: 'Vastra' })).toBeTruthy();
-    expect(getByText('A calm foundation for discovering fashion.')).toBeTruthy();
-    expect(getByLabelText('Customer mobile foundation is ready')).toBeTruthy();
+describe('CustomerAppContent', () => {
+  it('exposes checkout through an empty address-selection boundary', () => {
+    const { getByText } = render(<CustomerAppContent />);
+
+    expect(getByText('Checkout awaits an address')).toBeTruthy();
+  });
+
+  it('passes a selected address into the checkout boundary', () => {
+    const { getByText } = render(<CustomerAppContent addressId="selected-address-id" />);
+
+    expect(getByText('selected-address-id')).toBeTruthy();
   });
 });

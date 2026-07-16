@@ -16,12 +16,14 @@ import {
   type CustomerSupabaseClient,
 } from './supabase-session-adapter';
 import type { AuthSessionPort, SessionRestorer } from './session-restoration.types';
+import { CustomerApiSessionProvider } from './customer-api-session';
 
 interface CustomerSessionAppProps {
   readonly children: ReactNode;
 }
 
 interface CustomerSessionDependencies {
+  readonly apiBaseUrl: string;
   readonly client: CustomerSupabaseClient;
   readonly authSession: AuthSessionPort;
   readonly sessionRestorer: SessionRestorer;
@@ -46,6 +48,7 @@ function createDependencies(): DependencyResult {
     return {
       kind: 'READY',
       dependencies: {
+        apiBaseUrl: environment.apiBaseUrl,
         client,
         authSession,
         sessionRestorer: new SessionRestorationService(authSession, currentAccount),
@@ -72,12 +75,17 @@ function ConfiguredCustomerSessionApp({
   useEffect(() => startSupabaseAuthLifecycle(dependencies.client), [dependencies.client]);
 
   return (
-    <CustomerSessionRoot
+    <CustomerApiSessionProvider
+      apiBaseUrl={dependencies.apiBaseUrl}
       authSession={dependencies.authSession}
-      sessionRestorer={dependencies.sessionRestorer}
     >
-      {children}
-    </CustomerSessionRoot>
+      <CustomerSessionRoot
+        authSession={dependencies.authSession}
+        sessionRestorer={dependencies.sessionRestorer}
+      >
+        {children}
+      </CustomerSessionRoot>
+    </CustomerApiSessionProvider>
   );
 }
 
