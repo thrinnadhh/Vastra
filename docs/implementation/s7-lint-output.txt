@@ -1,0 +1,80 @@
+
+> vastra@0.0.0 lint /home/runner/work/Vastra/Vastra
+> eslint . --max-warnings=0
+
+
+/home/runner/work/Vastra/Vastra/apps/merchant-app/src/alerts/merchant-alert-diagnostics.screen.tsx
+   7:18  error  A `require()` style import is forbidden                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-require-imports
+  46:7   error  Error: This value cannot be modified
+
+Modifying a value returned from a hook is not allowed. Consider moving the modification into the hook where the value is constructed.
+
+/home/runner/work/Vastra/Vastra/apps/merchant-app/src/alerts/merchant-alert-diagnostics.screen.tsx:46:7
+  44 |     setTestFailure(null);
+  45 |     try {
+> 46 |       player.loop = false;
+     |       ^^^^^^ `player` cannot be modified
+  47 |       await player.seekTo(0);
+  48 |       player.play();
+  49 |       await runtime.testNotification();  react-hooks/immutability
+
+/home/runner/work/Vastra/Vastra/apps/merchant-app/src/alerts/merchant-alert-notification.runtime.tsx
+  317:24  error  `getLastNotificationResponseAsync` is deprecated. Use `getLastNotificationResponse` instead  @typescript-eslint/no-deprecated
+
+/home/runner/work/Vastra/Vastra/apps/merchant-app/src/alerts/merchant-urgent-alert.modal.tsx
+  13:18  error  A `require()` style import is forbidden                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-require-imports
+  18:13  error  Invalid type "number" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/restrict-template-expressions
+  42:5   error  Error: This value cannot be modified
+
+Modifying a value returned from a hook is not allowed. Consider moving the modification into the hook where the value is constructed.
+
+/home/runner/work/Vastra/Vastra/apps/merchant-app/src/alerts/merchant-urgent-alert.modal.tsx:42:5
+  40 |
+  41 |   useEffect(() => {
+> 42 |     player.loop = true;
+     |     ^^^^^^ `player` cannot be modified
+  43 |     if (alert !== null && merchantAlertSecondsRemaining(alert.expiresAt) > 0) {
+  44 |       player.play();
+  45 |     } else {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react-hooks/immutability
+  57:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/runner/work/Vastra/Vastra/apps/merchant-app/src/alerts/merchant-urgent-alert.modal.tsx:57:7
+  55 |   useEffect(() => {
+  56 |     if (alert === null) {
+> 57 |       setRemaining(0);
+     |       ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  58 |       return;
+  59 |     }
+  60 |     const update = () => {  react-hooks/set-state-in-effect
+  67:18  error  Returning a void expression from an arrow function shorthand is forbidden. Please add braces to the arrow function                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-confusing-void-expression
+
+/home/runner/work/Vastra/Vastra/apps/merchant-app/src/orders/merchant-order.screen.tsx
+  388:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/runner/work/Vastra/Vastra/apps/merchant-app/src/orders/merchant-order.screen.tsx:388:5
+  386 |   useEffect(() => {
+  387 |     if (requestedOrderId === null) return;
+> 388 |     setSelectedOrderId(requestedOrderId);
+      |     ^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  389 |     onRequestedOrderHandled?.();
+  390 |   }, [onRequestedOrderHandled, requestedOrderId]);
+  391 |  react-hooks/set-state-in-effect
+
+✖ 9 problems (9 errors, 0 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
+ ELIFECYCLE  Command failed with exit code 1.
+
+LINT_EXIT_CODE=1
