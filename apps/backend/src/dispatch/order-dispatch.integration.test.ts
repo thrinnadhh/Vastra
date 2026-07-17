@@ -6,6 +6,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { SupabaseClient } from '../auth/supabase-client.type';
+import { CAPTAIN_PRESENCE_GATEWAY } from './captain-presence.tokens';
 import { DispatchModule } from './dispatch.module';
 import {
   type OrderDispatchGateway,
@@ -38,12 +39,16 @@ class IntegrationGateway implements OrderDispatchGateway {
   }
 }
 
+const unusedCaptainPresenceGateway = Object.freeze({});
+
 describe('dispatch module and gateway integration', () => {
   let app: INestApplication | undefined;
   let server: Server;
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [DispatchModule] })
+      .overrideProvider(CAPTAIN_PRESENCE_GATEWAY)
+      .useValue(unusedCaptainPresenceGateway)
       .overrideProvider(ORDER_DISPATCH_GATEWAY)
       .useClass(IntegrationGateway)
       .compile();
