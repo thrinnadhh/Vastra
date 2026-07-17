@@ -1,0 +1,51 @@
+name: S8 lint diagnostics
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lint-diagnostics:
+    if: github.event.pull_request.head.ref == 'agent/s8-03-10-captain-delivery'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Capture lint report
+        shell: bash
+        run: |
+          set +e
+          pnpm lint > /tmp/s8-lint.log 2>&1
+          status=$?
+          echo "$status" > /tmp/s8-lint-status.txt
+          exit 0
+
+      - name: Upload lint report
+        uses: actions/upload-artifact@v4
+        with:
+          name: s8-lint-diagnostics
+          path: |
+            /tmp/s8-lint.log
+            /tmp/s8-lint-status.txt
+          if-no-files-found: error
+          retention-days: 1
