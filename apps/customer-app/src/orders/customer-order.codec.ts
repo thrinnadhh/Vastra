@@ -2,10 +2,14 @@ import {
   CUSTOMER_ORDER_STATUSES,
   type CustomerOrderAddress,
   type CustomerOrderFailureKind,
+  type CustomerOrderFulfilmentType,
   type CustomerOrderItem,
+  type CustomerOrderPaymentStatus,
   type CustomerOrderShop,
   type CustomerOrderStatus,
+  type CustomerOrderSummary,
   type CustomerOrderTotals,
+  type CustomerOrdersPage,
   type PlacedCustomerCodOrder,
 } from './customer-order.types';
 
@@ -84,6 +88,39 @@ export function readStatus(record: Record<string, unknown>, key: string): Custom
     throw new TypeError('Invalid customer order response');
   }
   return value as CustomerOrderStatus;
+}
+
+const PAYMENT_STATUSES: readonly CustomerOrderPaymentStatus[] = [
+  'PENDING',
+  'AUTHORIZED',
+  'CAPTURED',
+  'FAILED',
+  'PARTIALLY_REFUNDED',
+  'REFUNDED',
+  'COD_PENDING',
+  'COD_COLLECTED',
+];
+
+function readPaymentStatus(
+  record: Record<string, unknown>,
+  key: string,
+): CustomerOrderPaymentStatus {
+  const value = record[key];
+  if (!PAYMENT_STATUSES.some((status) => status === value)) {
+    throw new TypeError('Invalid customer order response');
+  }
+  return value as CustomerOrderPaymentStatus;
+}
+
+function readFulfilmentType(
+  record: Record<string, unknown>,
+  key: string,
+): CustomerOrderFulfilmentType {
+  const value = record[key];
+  if (value !== 'DELIVERY' && value !== 'CUSTOMER_PICKUP') {
+    throw new TypeError('Invalid customer order response');
+  }
+  return value;
 }
 
 export function parseOrderAddress(value: unknown): CustomerOrderAddress {
@@ -210,6 +247,42 @@ export function parsePlacedCustomerCodOrderEnvelope(value: unknown): PlacedCusto
     customerNote: readNullableString(order, 'customerNote'),
     placedAt: readDateTime(order, 'placedAt'),
     replayed: order['replayed'],
+  };
+}
+
+export function parseCustomerOrderSummary(value: unknown): CustomerOrderSummary {
+  if (!isRecord(value)) {
+    throw new TypeError('Invalid customer order response');
+  }
+  return {
+    id: readUuid(value, 'id'),
+    orderNumber: readString(value, 'orderNumber'),
+    shop: parseOrderShop(value['shop']),
+    status: readStatus(value, 'status'),
+    paymentStatus: readPaymentStatus(value, 'paymentStatus'),
+    fulfilmentType: readFulfilmentType(value, 'fulfilmentType'),
+    itemCount: readInteger(value, 'itemCount', 1),
+    previewImageObjectKey: readNullableString(value, 'previewImageObjectKey'),
+    totals: parseOrderTotals(value['totals']),
+    estimatedDeliveryAt: readNullableDateTime(value, 'estimatedDeliveryAt'),
+    placedAt: readNullableDateTime(value, 'placedAt'),
+    createdAt: readDateTime(value, 'createdAt'),
+  };
+}
+
+export function parseCustomerOrdersPageEnvelope(value: unknown): CustomerOrdersPage {
+  if (!isRecord(value) || value['success'] !== true) {
+    throw new TypeError('Invalid customer order response');
+  }
+  const data = readRecord(value, 'data');
+  const orders = data['orders'];
+  const nextCursor = data['nextCursor'];
+  if (!Array.isArray(orders) || (nextCursor !== null && typeof nextCursor !== 'string')) {
+    throw new TypeError('Invalid customer order response');
+  }
+  return {
+    orders: orders.map(parseCustomerOrderSummary),
+    nextCursor,
   };
 }
 

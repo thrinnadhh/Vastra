@@ -314,11 +314,13 @@ describe('CustomerCheckoutQuoteScreen', () => {
       .mockRejectedValueOnce(new CustomerOrderError('TRANSPORT', null, true))
       .mockResolvedValueOnce({ ...PLACED_ORDER, replayed: true });
     const createIdempotencyKey = jest.fn(() => IDEMPOTENCY_KEY);
+    const onOrderPlaced = jest.fn();
     const { findByRole, findByText } = render(
       <CustomerCheckoutQuoteScreen
         addressId={ADDRESS_ID}
         createIdempotencyKey={createIdempotencyKey}
         now={() => NOW}
+        onOrderPlaced={onOrderPlaced}
         orderClient={{ placeCodOrder }}
         quoteClient={clientFrom(() => Promise.resolve(QUOTE))}
       />,
@@ -332,6 +334,9 @@ describe('CustomerCheckoutQuoteScreen', () => {
     expect(placeCodOrder.mock.calls[0]?.[0].idempotencyKey).toBe(IDEMPOTENCY_KEY);
     expect(placeCodOrder.mock.calls[1]?.[0].idempotencyKey).toBe(IDEMPOTENCY_KEY);
     expect(createIdempotencyKey).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(onOrderPlaced).toHaveBeenCalledWith({ ...PLACED_ORDER, replayed: true });
+    });
   });
 
   it('forces a fresh quote after the backend rejects a stale placement quote', async () => {

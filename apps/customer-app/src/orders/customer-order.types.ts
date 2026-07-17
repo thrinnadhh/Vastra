@@ -98,6 +98,47 @@ export interface CustomerOrderPlacementPort {
   placeCodOrder(input: PlaceCustomerCodOrderInput): Promise<PlacedCustomerCodOrder>;
 }
 
+export type CustomerOrderPaymentStatus =
+  | 'PENDING'
+  | 'AUTHORIZED'
+  | 'CAPTURED'
+  | 'FAILED'
+  | 'PARTIALLY_REFUNDED'
+  | 'REFUNDED'
+  | 'COD_PENDING'
+  | 'COD_COLLECTED';
+
+export type CustomerOrderFulfilmentType = 'DELIVERY' | 'CUSTOMER_PICKUP';
+
+export interface CustomerOrderSummary {
+  readonly id: string;
+  readonly orderNumber: string;
+  readonly shop: CustomerOrderShop;
+  readonly status: CustomerOrderStatus;
+  readonly paymentStatus: CustomerOrderPaymentStatus;
+  readonly fulfilmentType: CustomerOrderFulfilmentType;
+  readonly itemCount: number;
+  readonly previewImageObjectKey: string | null;
+  readonly totals: CustomerOrderTotals;
+  readonly estimatedDeliveryAt: string | null;
+  readonly placedAt: string | null;
+  readonly createdAt: string;
+}
+
+export interface CustomerOrdersPage {
+  readonly orders: readonly CustomerOrderSummary[];
+  readonly nextCursor: string | null;
+}
+
+export interface ListCustomerOrdersInput {
+  readonly cursor?: string;
+  readonly limit?: number;
+}
+
+export interface CustomerOrdersListPort {
+  listOrders(input?: ListCustomerOrdersInput): Promise<CustomerOrdersPage>;
+}
+
 export type CustomerOrderFailureKind =
   | 'TRANSPORT'
   | 'AUTHENTICATION'
