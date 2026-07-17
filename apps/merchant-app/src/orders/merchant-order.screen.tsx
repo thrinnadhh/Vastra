@@ -328,53 +328,72 @@ export function MerchantOrderQueueScreen({
   });
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const operation = useRef(0);
+  const mounted = useRef(true);
+  const requestInFlight = useRef(false);
 
   const load = useCallback(
-    (cursor?: string, append = false) => {
+    (cursor?: string, append = false): Promise<void> => {
+      if (requestInFlight.current) return Promise.resolve();
+      requestInFlight.current = true;
       const operationId = ++operation.current;
       setState((current) => ({ ...current, isLoading: true, failure: null }));
-      void orderClient.listOrders({ ...(cursor === undefined ? {} : { cursor }), limit: 20 }).then(
-        (page) => {
-          if (operation.current === operationId) {
-            setState((current) => ({
-              orders: append ? [...current.orders, ...page.orders] : page.orders,
-              nextCursor: page.nextCursor,
-              isLoading: false,
-              isStale: false,
-              failure: null,
-            }));
-          }
-        },
-        (error: unknown) => {
-          if (operation.current === operationId) {
-            setState((current) => ({
-              ...current,
-              isLoading: false,
-              isStale: current.orders.length > 0,
-              failure: asMerchantError(error),
-            }));
-          }
-        },
-      );
+      return orderClient
+        .listOrders({ ...(cursor === undefined ? {} : { cursor }), limit: 20 })
+        .then(
+          (page) => {
+            if (mounted.current && operation.current === operationId) {
+              setState((current) => ({
+                orders: append ? [...current.orders, ...page.orders] : page.orders,
+                nextCursor: page.nextCursor,
+                isLoading: false,
+                isStale: false,
+                failure: null,
+              }));
+            }
+          },
+          (error: unknown) => {
+            if (mounted.current && operation.current === operationId) {
+              setState((current) => ({
+                ...current,
+                isLoading: false,
+                isStale: current.orders.length > 0,
+                failure: asMerchantError(error),
+              }));
+            }
+          },
+        )
+        .finally(() => {
+          requestInFlight.current = false;
+        });
     },
     [orderClient],
   );
 
   useEffect(() => {
-    void Promise.resolve().then(() => {
-      load();
-    });
-    const timer =
-      pollIntervalMs > 0
-        ? setInterval(() => {
-            load();
-          }, pollIntervalMs)
-        : null;
+    mounted.current = true;
     return () => {
+      mounted.current = false;
       operation.current += 1;
-      if (timer !== null) clearInterval(timer);
     };
-  }, [load, pollIntervalMs]);
+  }, []);
+
+  useEffect(() => {
+    if (selectedOrderId !== null) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const poll = () => {
+      void load().finally(() => {
+        if (!cancelled && pollIntervalMs > 0) {
+          timer = setTimeout(poll, pollIntervalMs);
+        }
+      });
+    };
+    void Promise.resolve().then(poll);
+    return () => {
+      cancelled = true;
+      if (timer !== null) clearTimeout(timer);
+    };
+  }, [load, pollIntervalMs, selectedOrderId]);
 
   const grouped = useMemo(
     () =>
@@ -392,7 +411,6 @@ export function MerchantOrderQueueScreen({
         {...(packingClient === undefined ? {} : { packingClient })}
         onBack={() => {
           setSelectedOrderId(null);
-          load();
         }}
         orderClient={orderClient}
         orderId={selectedOrderId}
@@ -418,7 +436,7 @@ export function MerchantOrderQueueScreen({
           accessibilityLabel="Retry merchant order queue"
           accessibilityRole="button"
           onPress={() => {
-            load();
+            void load();
           }}
           style={styles.primaryAction}
         >
@@ -442,7 +460,7 @@ export function MerchantOrderQueueScreen({
           accessibilityRole="button"
           disabled={state.isLoading}
           onPress={() => {
-            load();
+            void load();
           }}
           style={styles.refreshAction}
         >
@@ -497,7 +515,7 @@ export function MerchantOrderQueueScreen({
           accessibilityRole="button"
           disabled={state.isLoading}
           onPress={() => {
-            load(state.nextCursor ?? undefined, true);
+            void load(state.nextCursor ?? undefined, true);
           }}
           style={styles.secondaryAction}
         >

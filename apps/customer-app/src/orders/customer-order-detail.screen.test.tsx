@@ -140,6 +140,21 @@ describe('CustomerOrderDetailScreen', () => {
     expect(await findByLabelText('Current order status CAPTAIN_SEARCHING')).toBeTruthy();
   });
 
+  it('lets routed detail screens return to their parent order view', async () => {
+    const onBack = jest.fn();
+    const { findByLabelText } = render(
+      <CustomerOrderDetailScreen
+        onBack={onBack}
+        orderClient={clientFrom(() => Promise.resolve(ORDER))}
+        orderId={ORDER.id}
+      />,
+    );
+
+    fireEvent.press(await findByLabelText('Back from customer order details'));
+
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
   it('shows a safe denial state for a cross-customer order id', async () => {
     const { findByRole, findByText, queryByText } = render(
       <CustomerOrderDetailScreen

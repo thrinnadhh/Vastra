@@ -63,19 +63,29 @@ export function MerchantOrderPackingActions({
   const [isLoading, setLoading] = useState(order.status === 'PACKING');
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const busy = useRef(false);
+  const mounted = useRef(true);
   const [failure, setFailure] = useState<MerchantOrderError | null>(null);
   const [barcodes, setBarcodes] = useState<Readonly<Record<string, string>>>({});
   const [readyAttemptKey] = useState(createIdempotencyKey);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const loadPackingList = useCallback(() => {
     setLoading(true);
     setFailure(null);
     void packingClient.getPackingList(order.id).then(
       (list) => {
+        if (!mounted.current) return;
         setPackingList(list);
         setLoading(false);
       },
       (error: unknown) => {
+        if (!mounted.current) return;
         setFailure(asPackingError(error));
         setLoading(false);
       },
@@ -112,12 +122,14 @@ export function MerchantOrderPackingActions({
     setFailure(null);
     void packingClient.startPacking(order.id).then(
       () => {
+        if (!mounted.current) return;
         busy.current = false;
         setBusyAction(null);
         loadPackingList();
         onOrderChanged();
       },
       (error: unknown) => {
+        if (!mounted.current) return;
         busy.current = false;
         setBusyAction(null);
         setFailure(asPackingError(error));
@@ -140,11 +152,13 @@ export function MerchantOrderPackingActions({
         : input;
     void packingClient.verifyPackingItem(order.id, orderItemId, request).then(
       () => {
+        if (!mounted.current) return;
         busy.current = false;
         setBusyAction(null);
         loadPackingList();
       },
       (error: unknown) => {
+        if (!mounted.current) return;
         busy.current = false;
         setBusyAction(null);
         setFailure(asPackingError(error));
@@ -159,11 +173,13 @@ export function MerchantOrderPackingActions({
     setFailure(null);
     void packingClient.markReadyForPickup(order.id, readyAttemptKey).then(
       () => {
+        if (!mounted.current) return;
         busy.current = false;
         setBusyAction(null);
         onOrderChanged();
       },
       (error: unknown) => {
+        if (!mounted.current) return;
         busy.current = false;
         setBusyAction(null);
         setFailure(asPackingError(error));

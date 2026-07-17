@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
@@ -58,9 +58,17 @@ export function MerchantOrderDecisionActions({
   const [note, setNote] = useState('');
   const [isSubmitting, setSubmitting] = useState(false);
   const submitting = useRef(false);
+  const mounted = useRef(true);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [failure, setFailure] = useState<MerchantOrderError | null>(null);
   const [retryAttempt, setRetryAttempt] = useState<DecisionAttempt | null>(null);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const execute = useCallback(
     (attempt: DecisionAttempt) => {
@@ -80,12 +88,14 @@ export function MerchantOrderDecisionActions({
             });
       void request.then(
         () => {
+          if (!mounted.current) return;
           submitting.current = false;
           setSubmitting(false);
           setRetryAttempt(null);
           onDecisionComplete();
         },
         (error: unknown) => {
+          if (!mounted.current) return;
           submitting.current = false;
           setSubmitting(false);
           setFailure(

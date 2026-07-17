@@ -296,7 +296,11 @@ describe('CustomerCheckoutQuoteScreen', () => {
     );
 
     fireEvent.press(await findByRole('button', { name: 'Place COD order for ₹535.00' }));
-    fireEvent.press(await findByRole('button', { name: 'Place COD order for ₹535.00' }));
+    fireEvent.press(
+      await findByRole('button', {
+        name: 'Order placement in progress. Checkout refresh unavailable',
+      }),
+    );
 
     expect(placeCodOrder).toHaveBeenCalledTimes(1);
     await act(async () => {
@@ -328,7 +332,7 @@ describe('CustomerCheckoutQuoteScreen', () => {
 
     fireEvent.press(await findByRole('button', { name: 'Place COD order for ₹535.00' }));
     expect(await findByText('ORDER NOT PLACED')).toBeTruthy();
-    fireEvent.press(await findByRole('button', { name: 'Place COD order for ₹535.00' }));
+    fireEvent.press(await findByRole('button', { name: 'Retry same COD order attempt' }));
 
     expect(placeCodOrder).toHaveBeenCalledTimes(2);
     expect(placeCodOrder.mock.calls[0]?.[0].idempotencyKey).toBe(IDEMPOTENCY_KEY);
@@ -337,6 +341,80 @@ describe('CustomerCheckoutQuoteScreen', () => {
     await waitFor(() => {
       expect(onOrderPlaced).toHaveBeenCalledWith({ ...PLACED_ORDER, replayed: true });
     });
+  });
+
+  it('preserves the placement attempt when its quote expires before the request settles', async () => {
+    jest.useFakeTimers();
+    let currentTime = NOW;
+    let rejectFirstAttempt: ((error: CustomerOrderError) => void) | undefined;
+    const firstAttempt = new Promise<PlacedCustomerCodOrder>((_resolve, reject) => {
+      rejectFirstAttempt = reject;
+    });
+    const placeCodOrder = jest
+      .fn<
+        ReturnType<CustomerOrderPlacementPort['placeCodOrder']>,
+        Parameters<CustomerOrderPlacementPort['placeCodOrder']>
+      >()
+      .mockImplementationOnce(() => firstAttempt)
+      .mockResolvedValueOnce({ ...PLACED_ORDER, replayed: true });
+    const createQuote = jest.fn(() =>
+      Promise.resolve({ ...QUOTE, expiresAt: new Date(NOW + 1_000).toISOString() }),
+    );
+    const createIdempotencyKey = jest.fn(() => IDEMPOTENCY_KEY);
+    const onOrderPlaced = jest.fn();
+
+    try {
+      const { getByRole } = render(
+        <CustomerCheckoutQuoteScreen
+          addressId={ADDRESS_ID}
+          createIdempotencyKey={createIdempotencyKey}
+          now={() => currentTime}
+          onOrderPlaced={onOrderPlaced}
+          orderClient={{ placeCodOrder }}
+          quoteClient={clientFrom(createQuote)}
+        />,
+      );
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      fireEvent.press(getByRole('button', { name: 'Place COD order for ₹535.00' }));
+
+      currentTime = NOW + 1_001;
+      act(() => {
+        jest.advanceTimersByTime(1_001);
+      });
+
+      expect(
+        getByRole('button', {
+          name: 'Order placement in progress. Checkout refresh unavailable',
+        }),
+      ).toBeDisabled();
+      fireEvent.press(
+        getByRole('button', {
+          name: 'Order placement in progress. Checkout refresh unavailable',
+        }),
+      );
+      expect(createQuote).toHaveBeenCalledTimes(1);
+      expect(placeCodOrder).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        rejectFirstAttempt?.(new CustomerOrderError('TRANSPORT', null, true));
+        await expect(firstAttempt).rejects.toBeInstanceOf(CustomerOrderError);
+      });
+      fireEvent.press(getByRole('button', { name: 'Retry same COD order attempt' }));
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(placeCodOrder).toHaveBeenCalledTimes(2);
+      expect(placeCodOrder.mock.calls[0]?.[0].idempotencyKey).toBe(IDEMPOTENCY_KEY);
+      expect(placeCodOrder.mock.calls[1]?.[0].idempotencyKey).toBe(IDEMPOTENCY_KEY);
+      expect(createIdempotencyKey).toHaveBeenCalledTimes(1);
+      expect(onOrderPlaced).toHaveBeenCalledWith({ ...PLACED_ORDER, replayed: true });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('forces a fresh quote after the backend rejects a stale placement quote', async () => {

@@ -34,7 +34,14 @@ export function DefaultCustomerCheckoutQuote({
   );
 
   if (selectedOrderId !== null) {
-    return <DefaultCustomerOrderDetail orderId={selectedOrderId} />;
+    return (
+      <DefaultCustomerOrderDetail
+        onBack={() => {
+          setSelectedOrderId(null);
+        }}
+        orderId={selectedOrderId}
+      />
+    );
   }
 
   if (placedOrder !== null) {

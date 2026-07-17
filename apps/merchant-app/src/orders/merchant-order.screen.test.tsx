@@ -213,6 +213,50 @@ describe('MerchantOrderQueueScreen', () => {
     jest.useRealTimers();
   });
 
+  it('waits for a slow queue request to settle before scheduling the next poll', async () => {
+    jest.useFakeTimers();
+    let resolveFirst:
+      | ((page: { orders: readonly MerchantOrderSummary[]; nextCursor: string | null }) => void)
+      | undefined;
+    const firstRequest = new Promise<{
+      orders: readonly MerchantOrderSummary[];
+      nextCursor: string | null;
+    }>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const client = port();
+    client.listOrders
+      .mockImplementationOnce(() => firstRequest)
+      .mockResolvedValue({ orders: [summary('WAITING_FOR_MERCHANT')], nextCursor: null });
+
+    try {
+      render(<MerchantOrderQueueScreen orderClient={client} pollIntervalMs={1000} />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      act(() => {
+        jest.advanceTimersByTime(5_000);
+      });
+      expect(client.listOrders.mock.calls).toHaveLength(1);
+
+      await act(async () => {
+        resolveFirst?.({ orders: [summary('WAITING_FOR_MERCHANT')], nextCursor: null });
+        await firstRequest;
+      });
+      act(() => {
+        jest.advanceTimersByTime(1_000);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(client.listOrders.mock.calls).toHaveLength(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('preserves another-shop denial as not found in detail', async () => {
     const client = port();
     client.getOrder.mockRejectedValue(

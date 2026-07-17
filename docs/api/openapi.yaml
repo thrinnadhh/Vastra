@@ -2526,24 +2526,26 @@ components:
             requestId: {type: ['string', 'null'], format: uuid}
     MerchantAcceptRequest:
       type: object
+      additionalProperties: false
       required:
       - preparationMinutes
       properties:
         preparationMinutes:
           type: integer
           minimum: 1
-          maximum: 120
+          maximum: 240
     MerchantRejectRequest:
       type: object
+      additionalProperties: false
       required:
-      - issueType
+      - reasonCode
       properties:
         orderItemId:
           type:
           - string
           - 'null'
           format: uuid
-        issueType:
+        reasonCode:
           type: string
           enum:
           - OUT_OF_STOCK
@@ -2560,6 +2562,40 @@ components:
           - string
           - 'null'
           maxLength: 500
+    MerchantOrderDecisionResult:
+      type: object
+      additionalProperties: false
+      required: [orderId, orderNumber, status, alertStatus, merchantPreparationMinutes, acceptedAt, cancelledAt, cancellationReasonCode, cancellationNote, reservationsReleased, replayed]
+      properties:
+        orderId: {type: string, format: uuid}
+        orderNumber: {type: string, minLength: 1}
+        status: {type: string, enum: [MERCHANT_ACCEPTED, CANCELLED]}
+        alertStatus: {type: string, const: ACKNOWLEDGED}
+        merchantPreparationMinutes: {type: ['integer', 'null'], minimum: 1, maximum: 240}
+        acceptedAt: {type: ['string', 'null'], format: date-time}
+        cancelledAt: {type: ['string', 'null'], format: date-time}
+        cancellationReasonCode: {type: ['string', 'null']}
+        cancellationNote: {type: ['string', 'null'], maxLength: 500}
+        reservationsReleased: {type: integer, minimum: 0}
+        replayed: {type: boolean}
+    MerchantOrderDecisionResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          additionalProperties: false
+          required: [order]
+          properties:
+            order: {$ref: '#/components/schemas/MerchantOrderDecisionResult'}
+        meta:
+          type: object
+          additionalProperties: false
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     DeliveryCompleteRequest:
       type: object
       required:
@@ -5281,6 +5317,7 @@ paths:
     post:
       operationId: acceptMerchantOrder
       summary: Accept the complete order
+      description: Accepts an owned WAITING_FOR_MERCHANT order. Repeating the same preparation time safely replays the accepted result; a different preparation time conflicts.
       security: [{bearerAuth: []}]
       tags:
       - Merchant
@@ -5291,20 +5328,17 @@ paths:
         schema:
           type: string
           format: uuid
-      - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [preparationMinutes]
-              properties:
-                preparationMinutes: {type: integer, minimum: 1, maximum: 240}
+            schema: {$ref: '#/components/schemas/MerchantAcceptRequest'}
       responses:
         '200':
-          description: Success
+          description: Order accepted or the identical decision safely replayed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MerchantOrderDecisionResponse'}
         '400':
           description: Bad request
           content:
@@ -5315,10 +5349,19 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Merchant order decision data is internally inconsistent
+          content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
+        '503':
+          description: Merchant order decisions are temporarily unavailable
+          content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
   /merchant/orders/{orderId}/reject:
     post:
       operationId: rejectMerchantOrder
       summary: Reject the complete order
+      description: Rejects an owned WAITING_FOR_MERCHANT order. Repeating the same rejection safely replays the cancelled result; a different rejection payload conflicts.
       security: [{bearerAuth: []}]
       tags:
       - Merchant
@@ -5329,7 +5372,6 @@ paths:
         schema:
           type: string
           format: uuid
-      - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -5338,7 +5380,10 @@ paths:
               $ref: '#/components/schemas/MerchantRejectRequest'
       responses:
         '200':
-          description: Success
+          description: Order rejected or the identical decision safely replayed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MerchantOrderDecisionResponse'}
         '400':
           description: Bad request
           content:
@@ -5349,6 +5394,14 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Merchant order decision data is internally inconsistent
+          content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
+        '503':
+          description: Merchant order decisions are temporarily unavailable
+          content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}
   /merchant/orders/{orderId}/start-packing:
     post:
       operationId: startMerchantOrderPacking

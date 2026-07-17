@@ -18,7 +18,15 @@ export function DefaultCustomerOrders({
   );
 
   if (selectedOrderId !== null) {
-    return <CustomerOrderDetailScreen orderClient={ordersClient} orderId={selectedOrderId} />;
+    return (
+      <CustomerOrderDetailScreen
+        onBack={() => {
+          setSelectedOrderId(null);
+        }}
+        orderClient={ordersClient}
+        orderId={selectedOrderId}
+      />
+    );
   }
 
   return (

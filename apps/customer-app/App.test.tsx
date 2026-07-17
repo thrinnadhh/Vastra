@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { Text as MockText } from 'react-native';
 
 jest.mock('./src/auth/default-customer-session', () => ({
@@ -13,6 +13,10 @@ jest.mock('./src/checkout/default-customer-checkout-quote', () => {
   };
 });
 
+jest.mock('./src/orders/default-customer-orders', () => ({
+  DefaultCustomerOrders: () => <MockText>Authenticated customer orders</MockText>,
+}));
+
 import { CustomerAppContent } from './App';
 
 describe('CustomerAppContent', () => {
@@ -26,5 +30,13 @@ describe('CustomerAppContent', () => {
     const { getByText } = render(<CustomerAppContent addressId="selected-address-id" />);
 
     expect(getByText('selected-address-id')).toBeTruthy();
+  });
+
+  it('makes the authenticated order list reachable from the app shell', () => {
+    const { getByRole, getByText } = render(<CustomerAppContent />);
+
+    fireEvent.press(getByRole('tab', { name: 'My orders' }));
+
+    expect(getByText('Authenticated customer orders')).toBeTruthy();
   });
 });

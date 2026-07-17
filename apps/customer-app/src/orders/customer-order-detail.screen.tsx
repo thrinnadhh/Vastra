@@ -92,12 +92,24 @@ function HistoryEntry({ entry }: { readonly entry: CustomerOrderHistoryEntry }) 
 function OrderDetailContent({
   order,
   onRefresh,
+  onBack,
 }: {
   readonly order: CustomerOrderDetail;
   readonly onRefresh: () => void;
+  readonly onBack?: () => void;
 }) {
   return (
     <ScrollView contentContainerStyle={styles.content}>
+      {onBack === undefined ? null : (
+        <Pressable
+          accessibilityLabel="Back from customer order details"
+          accessibilityRole="button"
+          onPress={onBack}
+          style={styles.backAction}
+        >
+          <Text style={styles.backText}>Back</Text>
+        </Pressable>
+      )}
       <View style={styles.titleRow}>
         <View>
           <Text style={styles.eyebrow}>ORDER</Text>
@@ -180,9 +192,11 @@ function OrderDetailContent({
 function ActiveCustomerOrderDetailScreen({
   orderId,
   orderClient,
+  onBack,
 }: {
   readonly orderId: string;
   readonly orderClient: CustomerOrderDetailPort;
+  readonly onBack?: () => void;
 }) {
   const operation = useRef(0);
   const [state, setState] = useState<DetailState>({
@@ -245,7 +259,13 @@ function ActiveCustomerOrderDetailScreen({
 
   return (
     <CustomerNetworkStateBoundary onRetry={refresh} state={networkState}>
-      {state.order === null ? null : <OrderDetailContent onRefresh={refresh} order={state.order} />}
+      {state.order === null ? null : (
+        <OrderDetailContent
+          {...(onBack === undefined ? {} : { onBack })}
+          onRefresh={refresh}
+          order={state.order}
+        />
+      )}
     </CustomerNetworkStateBoundary>
   );
 }
@@ -253,17 +273,26 @@ function ActiveCustomerOrderDetailScreen({
 export function CustomerOrderDetailScreen({
   orderId,
   orderClient,
+  onBack,
 }: {
   readonly orderId: string;
   readonly orderClient: CustomerOrderDetailPort;
+  readonly onBack?: () => void;
 }) {
   return (
-    <ActiveCustomerOrderDetailScreen key={orderId} orderClient={orderClient} orderId={orderId} />
+    <ActiveCustomerOrderDetailScreen
+      key={orderId}
+      {...(onBack === undefined ? {} : { onBack })}
+      orderClient={orderClient}
+      orderId={orderId}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 28, paddingBottom: 40 },
+  backAction: { alignSelf: 'flex-start', marginBottom: 12, paddingVertical: 8, paddingRight: 16 },
+  backText: { color: '#6C3AA8', fontSize: 15, fontWeight: '700' },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   eyebrow: { color: '#6C3AA8', fontSize: 11, fontWeight: '700', letterSpacing: 1.2 },
   title: { marginTop: 5, color: '#1F2937', fontSize: 24, fontWeight: '700' },

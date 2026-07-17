@@ -136,7 +136,12 @@ function variantLabel(item: CustomerCheckoutQuoteItem): string {
 
 function QuoteNotice({ label, message }: { readonly label: string; readonly message: string }) {
   return (
-    <View accessible accessibilityLabel={`${label}. ${message}`} style={styles.notice}>
+    <View
+      accessible
+      accessibilityLabel={`${label}. ${message}`}
+      accessibilityLiveRegion="polite"
+      style={styles.notice}
+    >
       <Text style={styles.noticeLabel}>{label}</Text>
       <Text style={styles.noticeMessage}>{message}</Text>
     </View>
@@ -181,6 +186,8 @@ function QuoteContent({
   readonly canPlaceOrder: boolean;
 }) {
   const hasPriceChanges = quote.items.some((item) => item.priceChanged);
+  const retrySameAttempt = placement.failure?.retryable === true;
+  const refreshRequired = expired || placement.failure?.kind === 'STALE_QUOTE';
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
@@ -271,7 +278,26 @@ function QuoteContent({
         />
       )}
 
-      {expired || placement.failure?.kind === 'STALE_QUOTE' ? (
+      {placement.isSubmitting ? (
+        <Pressable
+          accessibilityLabel="Order placement in progress. Checkout refresh unavailable"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: true }}
+          disabled
+          style={[styles.primaryAction, styles.disabledAction]}
+        >
+          <Text style={styles.primaryActionText}>Placing order…</Text>
+        </Pressable>
+      ) : retrySameAttempt ? (
+        <Pressable
+          accessibilityLabel="Retry same COD order attempt"
+          accessibilityRole="button"
+          onPress={onPlaceOrder}
+          style={styles.primaryAction}
+        >
+          <Text style={styles.primaryActionText}>Retry same order attempt</Text>
+        </Pressable>
+      ) : refreshRequired ? (
         <Pressable
           accessibilityLabel="Refresh checkout quote"
           accessibilityRole="button"
@@ -284,15 +310,12 @@ function QuoteContent({
         <Pressable
           accessibilityLabel={`Place COD order for ${formatPaiseAsInr(quote.totals.totalPaise)}`}
           accessibilityRole="button"
-          accessibilityState={{ disabled: placement.isSubmitting }}
-          disabled={placement.isSubmitting}
+          accessibilityState={{ disabled: false }}
           onPress={onPlaceOrder}
-          style={[styles.primaryAction, placement.isSubmitting ? styles.disabledAction : null]}
+          style={styles.primaryAction}
         >
           <Text style={styles.primaryActionText}>
-            {placement.isSubmitting
-              ? 'Placing order…'
-              : `Place COD order · ${formatPaiseAsInr(quote.totals.totalPaise)}`}
+            Place COD order · {formatPaiseAsInr(quote.totals.totalPaise)}
           </Text>
         </Pressable>
       ) : (
@@ -321,6 +344,8 @@ function ActiveCustomerCheckoutQuoteScreen({
   const [state, setState] = useState<CheckoutQuoteState>(INITIAL_LOADING_STATE);
   const [clock, setClock] = useState(now);
   const operation = useRef(0);
+  const mounted = useRef(true);
+  const placementOperation = useRef(0);
   const placementInFlight = useRef(false);
   const placementKey = useRef<string | null>(null);
   const [placement, setPlacement] = useState<OrderPlacementState>({
@@ -353,6 +378,9 @@ function ActiveCustomerCheckoutQuoteScreen({
   );
 
   const requestQuote = useCallback(() => {
+    if (placementInFlight.current) {
+      return;
+    }
     placementKey.current = null;
     setPlacement({ isSubmitting: false, failure: null });
     const operationId = ++operation.current;
@@ -364,12 +392,13 @@ function ActiveCustomerCheckoutQuoteScreen({
     if (orderClient === undefined || state.quote === null || placementInFlight.current) {
       return;
     }
-    if (Date.parse(state.quote.expiresAt) <= now()) {
+    if (placementKey.current === null && Date.parse(state.quote.expiresAt) <= now()) {
       setClock(now());
       return;
     }
 
     placementInFlight.current = true;
+    const placementOperationId = ++placementOperation.current;
     const idempotencyKey = placementKey.current ?? createIdempotencyKey();
     placementKey.current = idempotencyKey;
     setPlacement({ isSubmitting: true, failure: null });
@@ -382,12 +411,18 @@ function ActiveCustomerCheckoutQuoteScreen({
       })
       .then(
         (order) => {
+          if (!mounted.current || placementOperation.current !== placementOperationId) {
+            return;
+          }
           placementInFlight.current = false;
           placementKey.current = null;
           setPlacement({ isSubmitting: false, failure: null });
           onOrderPlaced?.(order);
         },
         (error: unknown) => {
+          if (!mounted.current || placementOperation.current !== placementOperationId) {
+            return;
+          }
           placementInFlight.current = false;
           const failure =
             error instanceof CustomerOrderError
@@ -402,10 +437,13 @@ function ActiveCustomerCheckoutQuoteScreen({
   }, [createIdempotencyKey, now, onOrderPlaced, orderClient, state.quote]);
 
   useEffect(() => {
+    mounted.current = true;
     const operationId = ++operation.current;
     runRequest(operationId);
     return () => {
+      mounted.current = false;
       operation.current += 1;
+      placementOperation.current += 1;
     };
   }, [runRequest]);
 
