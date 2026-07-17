@@ -38,6 +38,7 @@ status: implemented
 - Operations-only metrics and activity APIs require an ADMIN account, `operations.manage`, MFA/readiness enforcement, and service-role database functions.
 - Metrics cover creation, send, acknowledgement, expiry, reminders, retries, invalid tokens, and outbox backlog.
 - The physical Android matrix is documented separately; execution requires real devices and production-like Firebase credentials.
+- The metrics and activity response schemas and paths are nested in the canonical OpenAPI contract and validated by the repository checker.
 
 ## Finalization
 
