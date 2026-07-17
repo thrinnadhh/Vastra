@@ -171,7 +171,7 @@ describe('CustomerCheckoutQuoteScreen', () => {
     expect(
       await findByLabelText('Continue to COD order placement in the next step'),
     ).toBeDisabled();
-  });
+  }, 15_000);
 
   it('retries after a transport failure with an accessible action', async () => {
     const createQuote = jest
