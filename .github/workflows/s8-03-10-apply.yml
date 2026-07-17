@@ -39,7 +39,7 @@ jobs:
         shell: bash
         run: |
           cat scripts/.s8-03-10-source.part-* > /tmp/s8-source.b64
-          echo "2400e5de903ec3f4122c2db72975e13b198f02c6ef6830df110b0ea9dc33d084  /tmp/s8-source.b64" | sha256sum -c -
+          echo "1e92dc8a8b5f638a9abb65ddf759dafd33d64a5f0c01a7faf0f05513423926d1  /tmp/s8-source.b64" | sha256sum -c -
           base64 --decode /tmp/s8-source.b64 > /tmp/s8-source.tar.gz
           echo "7c582524063842e078c18647e2fb022b43a48703a381b71278da19303dd99083  /tmp/s8-source.tar.gz" | sha256sum -c -
           test "$(tar -tzf /tmp/s8-source.tar.gz | wc -l)" -eq 30
