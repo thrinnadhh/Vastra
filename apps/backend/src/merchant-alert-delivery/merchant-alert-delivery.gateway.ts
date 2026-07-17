@@ -12,6 +12,16 @@ import {
   type MerchantAlertStopReason,
 } from './merchant-alert-delivery.types';
 
+const OUTBOX_COMPLETION_STATUSES = ['PUBLISHED', 'FAILED', 'DEAD_LETTER'] as const;
+const MERCHANT_ALERT_STATUSES = [
+  'PENDING',
+  'SENT',
+  'DELIVERED',
+  'ACKNOWLEDGED',
+  'EXPIRED',
+  'FAILED',
+] as const;
+
 export class MerchantAlertDeliveryGatewayUnavailableError extends Error {
   public constructor() {
     super('Merchant alert delivery provider unavailable');
@@ -87,12 +97,36 @@ function requireNullableTimestamp(record: Record<string, unknown>, key: string):
 
 function parseStopReason(value: unknown): MerchantAlertStopReason | null {
   if (value === null) return null;
-  if (
-    typeof value === 'string' &&
-    MERCHANT_ALERT_STOP_REASONS.some((candidate) => candidate === value)
-  ) {
-    return value as MerchantAlertStopReason;
+  if (typeof value !== 'string') throw new MerchantAlertDeliveryDataInvalidError();
+
+  for (const candidate of MERCHANT_ALERT_STOP_REASONS) {
+    if (candidate === value) return candidate;
   }
+
+  throw new MerchantAlertDeliveryDataInvalidError();
+}
+
+function parseEventStatus(
+  value: unknown,
+): CompleteMerchantAlertDispatchResult['eventStatus'] {
+  if (typeof value !== 'string') throw new MerchantAlertDeliveryDataInvalidError();
+
+  for (const candidate of OUTBOX_COMPLETION_STATUSES) {
+    if (candidate === value) return candidate;
+  }
+
+  throw new MerchantAlertDeliveryDataInvalidError();
+}
+
+function parseAlertStatus(
+  value: unknown,
+): CompleteMerchantAlertDispatchResult['alertStatus'] {
+  if (typeof value !== 'string') throw new MerchantAlertDeliveryDataInvalidError();
+
+  for (const candidate of MERCHANT_ALERT_STATUSES) {
+    if (candidate === value) return candidate;
+  }
+
   throw new MerchantAlertDeliveryDataInvalidError();
 }
 
@@ -106,8 +140,9 @@ function parseDevice(value: unknown): MerchantAlertDeviceDestination {
 
 function parseClaim(value: unknown): MerchantAlertDispatchClaim {
   if (!isRecord(value)) throw new MerchantAlertDeliveryDataInvalidError();
-  const devicesValue = value['devices'];
-  if (!Array.isArray(devicesValue)) throw new MerchantAlertDeliveryDataInvalidError();
+  const rawDevices: unknown = value['devices'];
+  if (!Array.isArray(rawDevices)) throw new MerchantAlertDeliveryDataInvalidError();
+  const devicesValue: readonly unknown[] = rawDevices;
 
   const deliverable = requireBoolean(value, 'deliverable');
   const stopReason = parseStopReason(value['stopReason']);
@@ -136,25 +171,12 @@ function parseClaim(value: unknown): MerchantAlertDispatchClaim {
 
 function parseCompletion(value: unknown): CompleteMerchantAlertDispatchResult {
   if (!isRecord(value)) throw new MerchantAlertDeliveryDataInvalidError();
-  const eventStatus = value['eventStatus'];
-  const alertStatus = value['alertStatus'];
-
-  if (!['PUBLISHED', 'FAILED', 'DEAD_LETTER'].includes(String(eventStatus))) {
-    throw new MerchantAlertDeliveryDataInvalidError();
-  }
-  if (
-    !['PENDING', 'SENT', 'DELIVERED', 'ACKNOWLEDGED', 'EXPIRED', 'FAILED'].includes(
-      String(alertStatus),
-    )
-  ) {
-    throw new MerchantAlertDeliveryDataInvalidError();
-  }
 
   return {
     eventId: requireString(value, 'eventId'),
     alertId: requireString(value, 'alertId'),
-    eventStatus: eventStatus as CompleteMerchantAlertDispatchResult['eventStatus'],
-    alertStatus: alertStatus as CompleteMerchantAlertDispatchResult['alertStatus'],
+    eventStatus: parseEventStatus(value['eventStatus']),
+    alertStatus: parseAlertStatus(value['alertStatus']),
     successfulDevices: requireNonNegativeInteger(value, 'successfulDevices'),
     failedDevices: requireNonNegativeInteger(value, 'failedDevices'),
     retryAt: requireNullableTimestamp(value, 'retryAt'),
@@ -188,12 +210,14 @@ export class SupabaseMerchantAlertDeliveryGateway implements MerchantAlertDelive
         p_worker_id: workerId,
         p_limit: limit,
       });
-      if (response.error !== null || !Array.isArray(response.data)) {
+      const data: unknown = response.data;
+      if (response.error !== null || !Array.isArray(data)) {
         throw new MerchantAlertDeliveryGatewayUnavailableError();
       }
-      return response.data.map(parseClaim);
+      const records: readonly unknown[] = data;
+      return records.map(parseClaim);
     } catch (error: unknown) {
-      return rethrowGatewayError(error);
+      rethrowGatewayError(error);
     }
   }
 
@@ -218,7 +242,7 @@ export class SupabaseMerchantAlertDeliveryGateway implements MerchantAlertDelive
       if (response.error !== null) throw new MerchantAlertDeliveryGatewayUnavailableError();
       return parseCompletion(response.data);
     } catch (error: unknown) {
-      return rethrowGatewayError(error);
+      rethrowGatewayError(error);
     }
   }
 }
