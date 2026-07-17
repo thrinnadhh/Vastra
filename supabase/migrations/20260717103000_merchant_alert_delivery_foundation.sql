@@ -312,7 +312,7 @@ begin
     raise exception 'merchant alert outbox claim is not owned by worker' using errcode = '55000';
   end if;
 
-  select alert.*, placed_order.*
+  select alert, placed_order
   into alert_row, order_row
   from public.merchant_order_alerts alert
   join public.orders placed_order
@@ -337,6 +337,7 @@ begin
     )
   loop
     if result_row.device_id is null
+      or result_row.outcome is null
       or result_row.outcome not in ('SENT', 'FAILED', 'SKIPPED')
       or result_row.retryable is null
     then
