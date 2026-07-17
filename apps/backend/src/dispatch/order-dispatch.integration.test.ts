@@ -39,8 +39,6 @@ class IntegrationGateway implements OrderDispatchGateway {
   }
 }
 
-const unusedCaptainPresenceGateway = Object.freeze({});
-
 describe('dispatch module and gateway integration', () => {
   let app: INestApplication | undefined;
   let server: Server;
@@ -48,7 +46,7 @@ describe('dispatch module and gateway integration', () => {
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [DispatchModule] })
       .overrideProvider(CAPTAIN_PRESENCE_GATEWAY)
-      .useValue(unusedCaptainPresenceGateway)
+      .useValue(Object.freeze({}))
       .overrideProvider(ORDER_DISPATCH_GATEWAY)
       .useClass(IntegrationGateway)
       .compile();
