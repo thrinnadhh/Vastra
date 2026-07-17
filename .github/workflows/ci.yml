@@ -2,27 +2,29 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: s8-02-finalize-${{ github.ref }}
-  cancel-in-progress: false
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  finalize:
-    name: Finalize S8-02 implementation
+  verify:
+    name: Verify repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
-      - name: Check out Sprint 8 branch
+      - name: Check out repository
         uses: actions/checkout@v7
         with:
-          ref: agent/s8-02-captain-availability-location
-          persist-credentials: true
-          fetch-depth: 0
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -34,39 +36,37 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Verify and apply readable patch
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat tmp/s8-02.patch.part-{00..11} > /tmp/s8-02.patch
-          git apply --check /tmp/s8-02.patch
-          git apply /tmp/s8-02.patch
-          git diff --check
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Resolve workspace lockfile
-        run: pnpm install --no-frozen-lockfile
+      - name: Check formatting
+        run: pnpm format:check
 
-      - name: Format supported touched files
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t files < <(
-            git diff --name-only --diff-filter=ACMR |
-              grep -E '\.(ts|tsx|json|md|ya?ml)$' |
-              grep -v '^pnpm-lock.yaml$'
-          )
-          if (( ${#files[@]} > 0 )); then
-            pnpm exec prettier --write "${files[@]}"
-          fi
-          git diff --check
+      - name: Validate environment templates
+        run: pnpm env:check
 
-      - name: Commit implementation and remove staging files
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf tmp
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "feat(captain): implement S8-02 availability and location"
-          git push origin HEAD:agent/s8-02-captain-availability-location
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.109.1
+
+      - name: Run database tests
+        run: pnpm db:test
+
+      - name: Validate OpenAPI
+        run: pnpm openapi:check
+
+      - name: Build
+        run: pnpm build
