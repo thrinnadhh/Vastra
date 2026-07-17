@@ -312,14 +312,26 @@ begin
     raise exception 'merchant alert outbox claim is not owned by worker' using errcode = '55000';
   end if;
 
-  select alert, placed_order
-  into alert_row, order_row
-  from public.merchant_order_alerts alert
-  join public.orders placed_order
-    on placed_order.id = alert.order_id
-   and placed_order.shop_id = alert.shop_id
+  select placed_order.*
+  into order_row
+  from public.orders placed_order
+  join public.merchant_order_alerts alert
+    on alert.order_id = placed_order.id
+   and alert.shop_id = placed_order.shop_id
   where alert.id = p_alert_id
-  for update of alert, placed_order;
+  for update of placed_order;
+
+  if not found then
+    raise exception 'merchant order alert not found' using errcode = 'P0014';
+  end if;
+
+  select alert.*
+  into alert_row
+  from public.merchant_order_alerts alert
+  where alert.id = p_alert_id
+    and alert.order_id = order_row.id
+    and alert.shop_id = order_row.shop_id
+  for update;
 
   if not found then
     raise exception 'merchant order alert not found' using errcode = 'P0014';
