@@ -28,6 +28,8 @@ function resolvePort(value: string | undefined): number {
 async function bootstrap(port: number): Promise<void> {
   const application = await NestFactory.create(AppModule);
 
+  application.setGlobalPrefix('v1');
+
   await application.listen(port);
 }
 

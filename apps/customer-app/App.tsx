@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   initialWindowMetrics,
   SafeAreaProvider,
@@ -7,51 +8,48 @@ import {
 } from 'react-native-safe-area-context';
 
 import { CustomerSessionApp } from './src/auth/default-customer-session';
-import { CustomerNetworkStateBoundary } from './src/ui/customer-network-state';
-import type { CustomerNetworkScreenState } from './src/ui/customer-network-state.types';
+import { DefaultCustomerCheckoutQuote } from './src/checkout/default-customer-checkout-quote';
+import { DefaultCustomerOrders } from './src/orders/default-customer-orders';
 
-const foundationNetworkState: CustomerNetworkScreenState = {
-  kind: 'SUCCESS',
-  staleReason: null,
-};
+export function CustomerAppContent({ addressId = null }: { readonly addressId?: string | null }) {
+  const [route, setRoute] = useState<'CHECKOUT' | 'ORDERS'>('CHECKOUT');
 
-function retryFoundationScreen(): void {
-  return;
-}
-
-export function CustomerFoundationScreen() {
   return (
-    <CustomerNetworkStateBoundary onRetry={retryFoundationScreen} state={foundationNetworkState}>
-      <View style={styles.screen}>
-        <View accessible accessibilityLabel="Vastra brand mark" style={styles.brandMark}>
-          <Text style={styles.brandLetter}>V</Text>
-        </View>
-
-        <Text style={styles.eyebrow}>CUSTOMER MOBILE</Text>
-
-        <Text accessibilityRole="header" style={styles.title}>
-          Vastra
-        </Text>
-
-        <Text style={styles.description}>A calm foundation for discovering fashion.</Text>
-
-        <View
-          accessible
-          accessibilityLabel="Customer mobile foundation is ready"
-          style={styles.statusCard}
+    <View style={styles.content}>
+      <View accessibilityRole="tablist" style={styles.navigation}>
+        <Pressable
+          accessibilityRole="tab"
+          accessibilityState={{ selected: route === 'CHECKOUT' }}
+          onPress={() => {
+            setRoute('CHECKOUT');
+          }}
+          style={[styles.navigationAction, route === 'CHECKOUT' ? styles.selectedAction : null]}
         >
-          <View style={styles.statusDot} />
-
-          <View style={styles.statusCopy}>
-            <Text style={styles.statusTitle}>Foundation ready</Text>
-
-            <Text style={styles.statusDescription}>
-              The customer experience will be built here.
-            </Text>
-          </View>
-        </View>
+          <Text style={route === 'CHECKOUT' ? styles.selectedText : styles.navigationText}>
+            Checkout
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="tab"
+          accessibilityState={{ selected: route === 'ORDERS' }}
+          onPress={() => {
+            setRoute('ORDERS');
+          }}
+          style={[styles.navigationAction, route === 'ORDERS' ? styles.selectedAction : null]}
+        >
+          <Text style={route === 'ORDERS' ? styles.selectedText : styles.navigationText}>
+            My orders
+          </Text>
+        </Pressable>
       </View>
-    </CustomerNetworkStateBoundary>
+      <View style={styles.route}>
+        {route === 'CHECKOUT' ? (
+          <DefaultCustomerCheckoutQuote addressId={addressId} />
+        ) : (
+          <DefaultCustomerOrders />
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -60,9 +58,8 @@ export default function App() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="dark" />
-
         <CustomerSessionApp>
-          <CustomerFoundationScreen />
+          <CustomerAppContent />
         </CustomerSessionApp>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -70,79 +67,22 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FFF8F2',
-  },
-  screen: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-  },
-  brandMark: {
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
-    borderRadius: 18,
-    backgroundColor: '#8E3B46',
-  },
-  brandLetter: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  eyebrow: {
-    marginBottom: 8,
-    color: '#8E3B46',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.6,
-  },
-  title: {
-    color: '#241B16',
-    fontSize: 48,
-    fontWeight: '700',
-    letterSpacing: -1.5,
-  },
-  description: {
-    maxWidth: 320,
-    marginTop: 12,
-    color: '#665A52',
-    fontSize: 18,
-    lineHeight: 27,
-  },
-  statusCard: {
+  content: { flex: 1 },
+  route: { flex: 1 },
+  navigation: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 48,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#E8DDD5',
-    borderRadius: 20,
+    padding: 8,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E4E7EC',
     backgroundColor: '#FFFFFF',
   },
-  statusDot: {
-    width: 10,
-    height: 10,
-    marginRight: 14,
-    borderRadius: 5,
-    backgroundColor: '#287A55',
-  },
-  statusCopy: {
+  navigationAction: { flex: 1, alignItems: 'center', padding: 12, borderRadius: 10 },
+  selectedAction: { backgroundColor: '#6C3AA8' },
+  navigationText: { color: '#475467', fontSize: 14, fontWeight: '700' },
+  selectedText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  safeArea: {
     flex: 1,
-  },
-  statusTitle: {
-    color: '#241B16',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  statusDescription: {
-    marginTop: 3,
-    color: '#665A52',
-    fontSize: 14,
-    lineHeight: 20,
+    backgroundColor: '#F7F8FA',
   },
 });

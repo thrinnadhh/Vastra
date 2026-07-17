@@ -261,6 +261,12 @@ importers:
       '@expo/metro-runtime':
         specifier: ~57.0.3
         version: 57.0.3(expo@57.0.4)(react-dom@19.2.3)(react-native@0.86.0)(react@19.2.3)
+      '@react-native-async-storage/async-storage':
+        specifier: 2.2.0
+        version: 2.2.0(react-native@0.86.0)
+      '@supabase/supabase-js':
+        specifier: 2.109.0
+        version: 2.109.0
       expo:
         specifier: 57.0.4
         version: 57.0.4(@babel/core@7.29.7)(@expo/metro-runtime@57.0.3)(react-dom@19.2.3)(react-native-web@0.21.2)(react-native@0.86.0)(react@19.2.3)(typescript@5.9.3)
@@ -279,6 +285,9 @@ importers:
       react-native-safe-area-context:
         specifier: ~5.7.0
         version: 5.7.0(react-native@0.86.0)(react@19.2.3)
+      react-native-url-polyfill:
+        specifier: 3.0.0
+        version: 3.0.0(react-native@0.86.0)
       react-native-web:
         specifier: ^0.21.2
         version: 0.21.2(react-dom@19.2.3)(react@19.2.3)
