@@ -143,3 +143,9 @@ Safe independent streams:
 3. Dispatcher orchestration tests against ports.
 
 Integration occurs only after the contracts above are frozen. Multiple agents must not independently edit the same migration, module wiring, or shared types.
+
+## Implementation status
+
+- S7-01 through S7-05 were merged in PR #42.
+- S7-06 through S7-10 are implemented in the second-half branch with durable reminders and expiry, Android notification runtime, foreground acknowledgement and countdown, diagnostics, operations observability, and the physical-device acceptance matrix.
+- Physical Android acceptance remains a release activity and must be recorded on real devices before production sign-off.

@@ -9,6 +9,7 @@ import {
 import type { MerchantAlertDeliveryConfiguration } from './merchant-alert-delivery.configuration';
 import { MERCHANT_ALERT_DELIVERY_CONFIGURATION } from './merchant-alert-delivery.tokens';
 import { MerchantAlertDispatchService } from './merchant-alert-dispatch.service';
+import { MerchantAlertSchedulerService } from './merchant-alert-scheduler.service';
 
 @Injectable()
 export class MerchantAlertDispatchWorker implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -20,6 +21,7 @@ export class MerchantAlertDispatchWorker implements OnApplicationBootstrap, OnAp
     @Inject(MERCHANT_ALERT_DELIVERY_CONFIGURATION)
     private readonly configuration: MerchantAlertDeliveryConfiguration,
     private readonly dispatchService: MerchantAlertDispatchService,
+    private readonly schedulerService: MerchantAlertSchedulerService,
   ) {}
 
   public onApplicationBootstrap(): void {
@@ -42,6 +44,7 @@ export class MerchantAlertDispatchWorker implements OnApplicationBootstrap, OnAp
     this.draining = true;
 
     try {
+      await this.schedulerService.processDue();
       await this.dispatchService.drain();
     } catch (error: unknown) {
       const reason = error instanceof Error ? error.name : 'UNKNOWN_ERROR';
