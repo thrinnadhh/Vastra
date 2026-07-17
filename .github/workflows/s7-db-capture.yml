@@ -1,15 +1,17 @@
 name: S7 Database Capture
 
 on:
-  push:
+  pull_request:
     branches:
-      - feat/s7-01-05-merchant-alert-delivery-foundation
+      - main
+    paths-ignore:
+      - docs/implementation/s7-db-output.txt
 
 permissions:
   contents: write
 
 concurrency:
-  group: s7-db-capture-${{ github.ref }}
+  group: s7-db-capture-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
@@ -19,7 +21,7 @@ jobs:
     timeout-minutes: 18
 
     steps:
-      - name: Check out repository
+      - name: Check out Sprint 7 branch
         uses: actions/checkout@v7
         with:
           ref: feat/s7-01-05-merchant-alert-delivery-foundation
@@ -62,15 +64,21 @@ jobs:
 
           final_status=0
           if run_phase SUPABASE_START supabase start; then
-            if ! run_phase DB_RESET supabase db reset --local; then
-              final_status=$?
-            elif ! run_phase MIGRATION_LIST supabase migration list --local; then
-              final_status=$?
-            elif ! run_phase PGTAP supabase test db --local; then
-              final_status=$?
-            elif ! run_phase CONCURRENCY bash scripts/run-db-concurrency-tests.sh; then
-              final_status=$?
-            elif ! run_phase ADVISORS supabase db advisors --local; then
+            if run_phase DB_RESET supabase db reset --local; then
+              if run_phase MIGRATION_LIST supabase migration list --local; then
+                if run_phase PGTAP supabase test db --local; then
+                  if run_phase CONCURRENCY bash scripts/run-db-concurrency-tests.sh; then
+                    run_phase ADVISORS supabase db advisors --local || final_status=$?
+                  else
+                    final_status=$?
+                  fi
+                else
+                  final_status=$?
+                fi
+              else
+                final_status=$?
+              fi
+            else
               final_status=$?
             fi
             run_phase SUPABASE_STOP supabase stop || true
@@ -80,17 +88,14 @@ jobs:
 
           printf '\nDB_EXIT_CODE=%s\n' "$final_status" >> "$log"
 
-      - name: Format repository
-        run: pnpm format
+      - name: Format database output
+        run: pnpm exec prettier --write docs/implementation/s7-db-output.txt
 
       - name: Commit database output
         shell: bash
         run: |
-          if git diff --quiet; then
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add --all
+          git add docs/implementation/s7-db-output.txt
           git commit -m "chore: capture Sprint 7 database output"
           git push origin HEAD:feat/s7-01-05-merchant-alert-delivery-foundation
