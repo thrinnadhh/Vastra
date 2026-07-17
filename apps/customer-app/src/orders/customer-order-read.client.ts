@@ -1,11 +1,14 @@
 import {
   mapOrderErrorKind,
   parseApiError,
+  parseCustomerOrderDetailEnvelope,
   parseCustomerOrdersPageEnvelope,
+  UUID_PATTERN,
 } from './customer-order.codec';
 import {
   CustomerOrderError,
-  type CustomerOrdersListPort,
+  type CustomerOrderDetail,
+  type CustomerOrderReadPort,
   type CustomerOrdersPage,
   type ListCustomerOrdersInput,
 } from './customer-order.types';
@@ -19,7 +22,7 @@ interface HttpResponse {
 type FetchFunction = (input: string, init: RequestInit) => Promise<HttpResponse>;
 type AccessTokenProvider = () => Promise<string | null>;
 
-export class HttpCustomerOrderReadClient implements CustomerOrdersListPort {
+export class HttpCustomerOrderReadClient implements CustomerOrderReadPort {
   public constructor(
     private readonly apiBaseUrl: string,
     private readonly getAccessToken: AccessTokenProvider,
@@ -50,6 +53,29 @@ export class HttpCustomerOrderReadClient implements CustomerOrdersListPort {
       throw new CustomerOrderError('TRANSPORT', null, true);
     }
     return this.parseResponse(response, parseCustomerOrdersPageEnvelope);
+  }
+
+  public async getOrder(orderId: string): Promise<CustomerOrderDetail> {
+    if (!UUID_PATTERN.test(orderId)) {
+      throw new CustomerOrderError('VALIDATION', 'VALIDATION_ERROR', false);
+    }
+    const accessToken = await this.readAccessToken();
+    let response: HttpResponse;
+    try {
+      response = await this.fetchFunction(
+        `${this.apiBaseUrl}/orders/${encodeURIComponent(orderId)}`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+    } catch {
+      throw new CustomerOrderError('TRANSPORT', null, true);
+    }
+    return this.parseResponse(response, parseCustomerOrderDetailEnvelope);
   }
 
   private async readAccessToken(): Promise<string> {

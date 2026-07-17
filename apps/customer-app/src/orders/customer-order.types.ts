@@ -139,6 +139,54 @@ export interface CustomerOrdersListPort {
   listOrders(input?: ListCustomerOrdersInput): Promise<CustomerOrdersPage>;
 }
 
+export type CustomerOrderHistoryActorRole =
+  'SYSTEM' | 'CUSTOMER' | 'MERCHANT' | 'CAPTAIN' | 'ADMIN';
+
+export interface CustomerOrderHistoryEntry {
+  readonly id: string;
+  readonly previousStatus: CustomerOrderStatus | null;
+  readonly newStatus: CustomerOrderStatus;
+  readonly changedByRole: CustomerOrderHistoryActorRole;
+  readonly reasonCode: string | null;
+  readonly note: string | null;
+  readonly createdAt: string;
+}
+
+export interface CustomerOrderDetail {
+  readonly id: string;
+  readonly orderNumber: string;
+  readonly cartId: string | null;
+  readonly quoteId: string | null;
+  readonly shop: CustomerOrderShop;
+  readonly address: CustomerOrderAddress;
+  readonly status: CustomerOrderStatus;
+  readonly paymentStatus: CustomerOrderPaymentStatus;
+  readonly fulfilmentType: CustomerOrderFulfilmentType;
+  readonly items: readonly CustomerOrderItem[];
+  readonly itemCount: number;
+  readonly totals: CustomerOrderTotals;
+  readonly estimatedDeliveryAt: string | null;
+  readonly customerNote: string | null;
+  readonly cancellationReasonCode: string | null;
+  readonly cancellationNote: string | null;
+  readonly history: readonly CustomerOrderHistoryEntry[];
+  readonly placedAt: string | null;
+  readonly acceptedAt: string | null;
+  readonly readyAt: string | null;
+  readonly pickedUpAt: string | null;
+  readonly deliveredAt: string | null;
+  readonly completedAt: string | null;
+  readonly cancelledAt: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface CustomerOrderDetailPort {
+  getOrder(orderId: string): Promise<CustomerOrderDetail>;
+}
+
+export interface CustomerOrderReadPort extends CustomerOrdersListPort, CustomerOrderDetailPort {}
+
 export type CustomerOrderFailureKind =
   | 'TRANSPORT'
   | 'AUTHENTICATION'

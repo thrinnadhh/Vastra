@@ -3,6 +3,9 @@ import {
   type CustomerOrderAddress,
   type CustomerOrderFailureKind,
   type CustomerOrderFulfilmentType,
+  type CustomerOrderDetail,
+  type CustomerOrderHistoryActorRole,
+  type CustomerOrderHistoryEntry,
   type CustomerOrderItem,
   type CustomerOrderPaymentStatus,
   type CustomerOrderShop,
@@ -39,6 +42,17 @@ export function readString(record: Record<string, unknown>, key: string): string
 export function readUuid(record: Record<string, unknown>, key: string): string {
   const value = readString(record, key);
   if (!UUID_PATTERN.test(value)) {
+    throw new TypeError('Invalid customer order response');
+  }
+  return value;
+}
+
+function readNullableUuid(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key];
+  if (value === null) {
+    return null;
+  }
+  if (typeof value !== 'string' || !UUID_PATTERN.test(value)) {
     throw new TypeError('Invalid customer order response');
   }
   return value;
@@ -284,6 +298,87 @@ export function parseCustomerOrdersPageEnvelope(value: unknown): CustomerOrdersP
     orders: orders.map(parseCustomerOrderSummary),
     nextCursor,
   };
+}
+
+const HISTORY_ACTOR_ROLES: readonly CustomerOrderHistoryActorRole[] = [
+  'SYSTEM',
+  'CUSTOMER',
+  'MERCHANT',
+  'CAPTAIN',
+  'ADMIN',
+];
+
+function parseCustomerOrderHistoryEntry(value: unknown): CustomerOrderHistoryEntry {
+  if (!isRecord(value)) {
+    throw new TypeError('Invalid customer order response');
+  }
+  const id = readString(value, 'id');
+  const previousStatusValue = value['previousStatus'];
+  const changedByRole = value['changedByRole'];
+  if (!/^[1-9][0-9]*$/u.test(id) || !HISTORY_ACTOR_ROLES.some((role) => role === changedByRole)) {
+    throw new TypeError('Invalid customer order response');
+  }
+  return {
+    id,
+    previousStatus: previousStatusValue === null ? null : readStatus(value, 'previousStatus'),
+    newStatus: readStatus(value, 'newStatus'),
+    changedByRole: changedByRole as CustomerOrderHistoryActorRole,
+    reasonCode: readNullableString(value, 'reasonCode'),
+    note: readNullableString(value, 'note'),
+    createdAt: readDateTime(value, 'createdAt'),
+  };
+}
+
+function parseCustomerOrderDetail(value: unknown): CustomerOrderDetail {
+  if (!isRecord(value)) {
+    throw new TypeError('Invalid customer order response');
+  }
+  const items = value['items'];
+  const history = value['history'];
+  if (
+    !Array.isArray(items) ||
+    items.length === 0 ||
+    !Array.isArray(history) ||
+    history.length === 0
+  ) {
+    throw new TypeError('Invalid customer order response');
+  }
+  return {
+    id: readUuid(value, 'id'),
+    orderNumber: readString(value, 'orderNumber'),
+    cartId: readNullableUuid(value, 'cartId'),
+    quoteId: readNullableUuid(value, 'quoteId'),
+    shop: parseOrderShop(value['shop']),
+    address: parseOrderAddress(value['address']),
+    status: readStatus(value, 'status'),
+    paymentStatus: readPaymentStatus(value, 'paymentStatus'),
+    fulfilmentType: readFulfilmentType(value, 'fulfilmentType'),
+    items: items.map(parseOrderItem),
+    itemCount: readInteger(value, 'itemCount', 1),
+    totals: parseOrderTotals(value['totals']),
+    estimatedDeliveryAt: readNullableDateTime(value, 'estimatedDeliveryAt'),
+    customerNote: readNullableString(value, 'customerNote'),
+    cancellationReasonCode: readNullableString(value, 'cancellationReasonCode'),
+    cancellationNote: readNullableString(value, 'cancellationNote'),
+    history: history.map(parseCustomerOrderHistoryEntry),
+    placedAt: readNullableDateTime(value, 'placedAt'),
+    acceptedAt: readNullableDateTime(value, 'acceptedAt'),
+    readyAt: readNullableDateTime(value, 'readyAt'),
+    pickedUpAt: readNullableDateTime(value, 'pickedUpAt'),
+    deliveredAt: readNullableDateTime(value, 'deliveredAt'),
+    completedAt: readNullableDateTime(value, 'completedAt'),
+    cancelledAt: readNullableDateTime(value, 'cancelledAt'),
+    createdAt: readDateTime(value, 'createdAt'),
+    updatedAt: readDateTime(value, 'updatedAt'),
+  };
+}
+
+export function parseCustomerOrderDetailEnvelope(value: unknown): CustomerOrderDetail {
+  if (!isRecord(value) || value['success'] !== true) {
+    throw new TypeError('Invalid customer order response');
+  }
+  const data = readRecord(value, 'data');
+  return parseCustomerOrderDetail(data['order']);
 }
 
 export function parseApiError(value: unknown): { code: string; retryable: boolean } | null {
