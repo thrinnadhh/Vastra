@@ -43,8 +43,14 @@ jobs:
           rm -f docs/implementation/s7-lint-output.txt
           rm -f docs/implementation/s7-lint-fix-trigger.md
 
-      - name: Format repository
-        run: pnpm format
+      - name: Format patched sources
+        run: |
+          pnpm exec prettier --write \
+            apps/merchant-app/src/assets.d.ts \
+            apps/merchant-app/src/alerts/merchant-alert-diagnostics.screen.tsx \
+            apps/merchant-app/src/alerts/merchant-alert-notification.runtime.tsx \
+            apps/merchant-app/src/alerts/merchant-urgent-alert.modal.tsx \
+            apps/merchant-app/src/orders/merchant-order.screen.tsx
 
       - name: Restore CI and commit fixes
         shell: bash
