@@ -3,6 +3,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CustomerNetworkStateBoundary } from '../ui/customer-network-state';
 import { resolveCustomerNetworkState } from '../ui/resolve-customer-network-state';
+import { createCustomerOrderIdempotencyKey } from '../orders/customer-order-placement.client';
+import {
+  CustomerOrderError,
+  type CustomerOrderPlacementPort,
+  type PlacedCustomerCodOrder,
+} from '../orders/customer-order.types';
 import { formatPaiseAsInr } from './format-inr';
 import {
   CustomerCheckoutQuoteError,
@@ -15,12 +21,18 @@ import {
 interface CustomerCheckoutQuoteScreenProps {
   readonly addressId: string | null;
   readonly quoteClient: CustomerCheckoutQuotePort;
+  readonly orderClient?: CustomerOrderPlacementPort;
+  readonly onOrderPlaced?: (order: PlacedCustomerCodOrder) => void;
+  readonly createIdempotencyKey?: () => string;
   readonly now?: () => number;
 }
 
 interface ActiveCheckoutQuoteScreenProps {
   readonly addressId: string;
   readonly quoteClient: CustomerCheckoutQuotePort;
+  readonly orderClient: CustomerOrderPlacementPort | undefined;
+  readonly onOrderPlaced: ((order: PlacedCustomerCodOrder) => void) | undefined;
+  readonly createIdempotencyKey: () => string;
   readonly now: () => number;
 }
 
@@ -28,6 +40,11 @@ interface CheckoutQuoteState {
   readonly quote: CustomerCheckoutQuote | null;
   readonly isLoading: boolean;
   readonly failure: CustomerCheckoutQuoteError | null;
+}
+
+interface OrderPlacementState {
+  readonly isSubmitting: boolean;
+  readonly failure: CustomerOrderError | null;
 }
 
 const INITIAL_LOADING_STATE: CheckoutQuoteState = Object.freeze({
@@ -74,6 +91,30 @@ function failureMessage(kind: CustomerCheckoutQuoteFailureKind): string {
     case 'MALFORMED_RESPONSE':
     case 'UNKNOWN':
       return 'We could not verify checkout totals. Please try again.';
+  }
+}
+
+function placementFailureMessage(error: CustomerOrderError): string {
+  switch (error.kind) {
+    case 'AUTHENTICATION':
+      return 'Your session is no longer available. Sign in again before placing the order.';
+    case 'STALE_QUOTE':
+      return 'Prices, availability, or this quote changed. Refresh checkout before trying again.';
+    case 'TRANSPORT':
+      return 'You appear to be offline. Reconnect and retry; the same order attempt will be reused.';
+    case 'TEMPORARILY_UNAVAILABLE':
+      return 'Order placement is temporarily unavailable. Retry this order attempt.';
+    case 'VALIDATION':
+      return 'The order request is invalid. Refresh checkout and review the selected address.';
+    case 'FORBIDDEN':
+      return 'This account is not allowed to place this order.';
+    case 'CONFLICT':
+      return 'The cart changed while the order was being placed. Refresh checkout.';
+    case 'NOT_FOUND':
+      return 'The cart, quote, or address is no longer available. Refresh checkout.';
+    case 'MALFORMED_RESPONSE':
+    case 'UNKNOWN':
+      return 'The backend did not confirm this order. Retry safely before starting a new attempt.';
   }
 }
 
@@ -128,10 +169,16 @@ function QuoteContent({
   quote,
   expired,
   onRefresh,
+  onPlaceOrder,
+  placement,
+  canPlaceOrder,
 }: {
   readonly quote: CustomerCheckoutQuote;
   readonly expired: boolean;
   readonly onRefresh: () => void;
+  readonly onPlaceOrder: () => void;
+  readonly placement: OrderPlacementState;
+  readonly canPlaceOrder: boolean;
 }) {
   const hasPriceChanges = quote.items.some((item) => item.priceChanged);
 
@@ -213,7 +260,18 @@ function QuoteContent({
         Quote valid until {quoteExpiryLabel(quote.expiresAt)}
       </Text>
 
-      {expired ? (
+      {placement.failure === null ? null : (
+        <QuoteNotice
+          label={
+            placement.failure.kind === 'STALE_QUOTE'
+              ? 'QUOTE MUST BE REFRESHED'
+              : 'ORDER NOT PLACED'
+          }
+          message={placementFailureMessage(placement.failure)}
+        />
+      )}
+
+      {expired || placement.failure?.kind === 'STALE_QUOTE' ? (
         <Pressable
           accessibilityLabel="Refresh checkout quote"
           accessibilityRole="button"
@@ -221,6 +279,21 @@ function QuoteContent({
           style={styles.primaryAction}
         >
           <Text style={styles.primaryActionText}>Refresh quote</Text>
+        </Pressable>
+      ) : canPlaceOrder ? (
+        <Pressable
+          accessibilityLabel={`Place COD order for ${formatPaiseAsInr(quote.totals.totalPaise)}`}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: placement.isSubmitting }}
+          disabled={placement.isSubmitting}
+          onPress={onPlaceOrder}
+          style={[styles.primaryAction, placement.isSubmitting ? styles.disabledAction : null]}
+        >
+          <Text style={styles.primaryActionText}>
+            {placement.isSubmitting
+              ? 'Placing order…'
+              : `Place COD order · ${formatPaiseAsInr(quote.totals.totalPaise)}`}
+          </Text>
         </Pressable>
       ) : (
         <Pressable
@@ -240,11 +313,20 @@ function QuoteContent({
 function ActiveCustomerCheckoutQuoteScreen({
   addressId,
   quoteClient,
+  orderClient,
+  onOrderPlaced,
+  createIdempotencyKey,
   now,
 }: ActiveCheckoutQuoteScreenProps) {
   const [state, setState] = useState<CheckoutQuoteState>(INITIAL_LOADING_STATE);
   const [clock, setClock] = useState(now);
   const operation = useRef(0);
+  const placementInFlight = useRef(false);
+  const placementKey = useRef<string | null>(null);
+  const [placement, setPlacement] = useState<OrderPlacementState>({
+    isSubmitting: false,
+    failure: null,
+  });
 
   const runRequest = useCallback(
     (operationId: number) => {
@@ -271,10 +353,53 @@ function ActiveCustomerCheckoutQuoteScreen({
   );
 
   const requestQuote = useCallback(() => {
+    placementKey.current = null;
+    setPlacement({ isSubmitting: false, failure: null });
     const operationId = ++operation.current;
     setState((current) => ({ ...current, isLoading: true, failure: null }));
     runRequest(operationId);
   }, [runRequest]);
+
+  const placeOrder = useCallback(() => {
+    if (orderClient === undefined || state.quote === null || placementInFlight.current) {
+      return;
+    }
+    if (Date.parse(state.quote.expiresAt) <= now()) {
+      setClock(now());
+      return;
+    }
+
+    placementInFlight.current = true;
+    const idempotencyKey = placementKey.current ?? createIdempotencyKey();
+    placementKey.current = idempotencyKey;
+    setPlacement({ isSubmitting: true, failure: null });
+    void orderClient
+      .placeCodOrder({
+        cartId: state.quote.cartId,
+        quoteId: state.quote.id,
+        addressId: state.quote.address.id,
+        idempotencyKey,
+      })
+      .then(
+        (order) => {
+          placementInFlight.current = false;
+          placementKey.current = null;
+          setPlacement({ isSubmitting: false, failure: null });
+          onOrderPlaced?.(order);
+        },
+        (error: unknown) => {
+          placementInFlight.current = false;
+          const failure =
+            error instanceof CustomerOrderError
+              ? error
+              : new CustomerOrderError('UNKNOWN', null, false);
+          if (failure.kind === 'STALE_QUOTE') {
+            placementKey.current = null;
+          }
+          setPlacement({ isSubmitting: false, failure });
+        },
+      );
+  }, [createIdempotencyKey, now, onOrderPlaced, orderClient, state.quote]);
 
   useEffect(() => {
     const operationId = ++operation.current;
@@ -326,7 +451,14 @@ function ActiveCustomerCheckoutQuoteScreen({
   return (
     <CustomerNetworkStateBoundary onRetry={requestQuote} state={networkState}>
       {state.quote === null ? null : (
-        <QuoteContent expired={expired} onRefresh={requestQuote} quote={state.quote} />
+        <QuoteContent
+          canPlaceOrder={orderClient !== undefined}
+          expired={expired}
+          onPlaceOrder={placeOrder}
+          onRefresh={requestQuote}
+          placement={placement}
+          quote={state.quote}
+        />
       )}
     </CustomerNetworkStateBoundary>
   );
@@ -335,6 +467,9 @@ function ActiveCustomerCheckoutQuoteScreen({
 export function CustomerCheckoutQuoteScreen({
   addressId,
   quoteClient,
+  orderClient,
+  onOrderPlaced,
+  createIdempotencyKey = createCustomerOrderIdempotencyKey,
   now = Date.now,
 }: CustomerCheckoutQuoteScreenProps) {
   if (addressId === null) {
@@ -357,7 +492,10 @@ export function CustomerCheckoutQuoteScreen({
     <ActiveCustomerCheckoutQuoteScreen
       key={addressId}
       addressId={addressId}
+      createIdempotencyKey={createIdempotencyKey}
       now={now}
+      onOrderPlaced={onOrderPlaced}
+      orderClient={orderClient}
       quoteClient={quoteClient}
     />
   );
