@@ -1,0 +1,27 @@
+
+> vastra@0.0.0 lint /home/runner/work/Vastra/Vastra
+> eslint . --max-warnings=0
+
+
+/home/runner/work/Vastra/Vastra/apps/merchant-app/src/alerts/merchant-alert-notification.runtime.tsx
+  319:32  error  Unnecessary conditional, value is always truthy  @typescript-eslint/no-unnecessary-condition
+
+/home/runner/work/Vastra/Vastra/apps/merchant-app/src/alerts/merchant-urgent-alert.modal.tsx
+  34:34  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/runner/work/Vastra/Vastra/apps/merchant-app/src/alerts/merchant-urgent-alert.modal.tsx:34:34
+  32 |   const runtime = useMerchantAlertRuntime();
+  33 |   const alert = runtime.activeAlert;
+> 34 |   const [now, setNow] = useState(Date.now());
+     |                                  ^^^^^^^^^^ Cannot call impure function
+  35 |   const remaining = alert === null ? 0 : merchantAlertSecondsRemaining(alert.expiresAt, now);
+  36 |   const [acknowledging, setAcknowledging] = useState(false);
+  37 |   const [failure, setFailure] = useState(false);  react-hooks/purity
+
+✖ 2 problems (2 errors, 0 warnings)
+
+ ELIFECYCLE  Command failed with exit code 1.
+
+LINT_EXIT_CODE=1
