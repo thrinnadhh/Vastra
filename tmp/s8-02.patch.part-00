@@ -1,0 +1,400 @@
+diff --git a/apps/backend/src/dispatch/captain-presence-http-error.ts b/apps/backend/src/dispatch/captain-presence-http-error.ts
+new file mode 100644
+index 0000000..02a8a0d
+--- /dev/null
++++ b/apps/backend/src/dispatch/captain-presence-http-error.ts
+@@ -0,0 +1,99 @@
++import { HttpException, HttpStatus } from '@nestjs/common';
++
++export type CaptainPresenceErrorCode =
++  | 'DELIVERY_REQUEST_INVALID'
++  | 'CAPTAIN_NOT_ELIGIBLE'
++  | 'DELIVERY_STATE_CONFLICT'
++  | 'CAPTAIN_LOCATION_STALE'
++  | 'IDEMPOTENCY_KEY_REUSED'
++  | 'LOCATION_UPDATE_RATE_LIMITED'
++  | 'DELIVERY_SERVICE_UNAVAILABLE';
++
++interface CaptainPresenceApiErrorBody {
++  readonly success: false;
++  readonly error: {
++    readonly code: CaptainPresenceErrorCode;
++    readonly message: string;
++    readonly details: null;
++    readonly retryable: boolean;
++  };
++  readonly requestId: null;
++}
++
++function createCaptainPresenceException(
++  status: HttpStatus,
++  code: CaptainPresenceErrorCode,
++  message: string,
++  retryable: boolean,
++): HttpException {
++  const response: CaptainPresenceApiErrorBody = {
++    success: false,
++    error: { code, message, details: null, retryable },
++    requestId: null,
++  };
++
++  return new HttpException(response, status);
++}
++
++export function createCaptainPresenceInvalidException(): HttpException {
++  return createCaptainPresenceException(
++    HttpStatus.BAD_REQUEST,
++    'DELIVERY_REQUEST_INVALID',
++    'The captain availability or location request is invalid.',
++    false,
++  );
++}
++
++export function createCaptainNotEligibleException(): HttpException {
++  return createCaptainPresenceException(
++    HttpStatus.FORBIDDEN,
++    'CAPTAIN_NOT_ELIGIBLE',
++    'The captain is not operationally eligible for this action.',
++    false,
++  );
++}
++
++export function createCaptainPresenceStateConflictException(): HttpException {
++  return createCaptainPresenceException(
++    HttpStatus.CONFLICT,
++    'DELIVERY_STATE_CONFLICT',
++    'The current delivery state controls captain availability or location.',
++    false,
++  );
++}
++
++export function createCaptainLocationStaleException(): HttpException {
++  return createCaptainPresenceException(
++    HttpStatus.CONFLICT,
++    'CAPTAIN_LOCATION_STALE',
++    'The captain location is stale, missing, or not accurate enough for dispatch.',
++    false,
++  );
++}
++
++export function createCaptainLocationSampleConflictException(): HttpException {
++  return createCaptainPresenceException(
++    HttpStatus.CONFLICT,
++    'IDEMPOTENCY_KEY_REUSED',
++    'The location sample identifier was already used with another payload.',
++    false,
++  );
++}
++
++export function createCaptainLocationRateLimitedException(): HttpException {
++  return createCaptainPresenceException(
++    HttpStatus.TOO_MANY_REQUESTS,
++    'LOCATION_UPDATE_RATE_LIMITED',
++    'Captain location updates are arriving too frequently.',
++    true,
++  );
++}
++
++export function createCaptainPresenceUnavailableException(): HttpException {
++  return createCaptainPresenceException(
++    HttpStatus.SERVICE_UNAVAILABLE,
++    'DELIVERY_SERVICE_UNAVAILABLE',
++    'Captain availability and location are temporarily unavailable.',
++    true,
++  );
++}
+diff --git a/apps/backend/src/dispatch/captain-presence.controller.ts b/apps/backend/src/dispatch/captain-presence.controller.ts
+new file mode 100644
+index 0000000..a5b6494
+--- /dev/null
++++ b/apps/backend/src/dispatch/captain-presence.controller.ts
+@@ -0,0 +1,39 @@
++import { Body, Controller, HttpCode, HttpStatus, Inject, Put } from '@nestjs/common';
++
++import { AllowAccountTypes } from '../auth/account-types.decorator';
++import type { AuthenticatedRequestContext } from '../auth/auth.types';
++import { CurrentAuthContext } from '../auth/current-auth-context.decorator';
++import { RequireOperationalReadiness } from '../auth/operational-readiness.decorator';
++import { CaptainPresenceService } from './captain-presence.service';
++import type {
++  CaptainAvailabilityResponse,
++  CaptainLocationResponse,
++} from './captain-presence.types';
++
++@Controller('captain/me')
++@AllowAccountTypes('CAPTAIN')
++@RequireOperationalReadiness()
++export class CaptainPresenceController {
++  public constructor(
++    @Inject(CaptainPresenceService)
++    private readonly service: CaptainPresenceService,
++  ) {}
++
++  @Put('availability')
++  @HttpCode(HttpStatus.OK)
++  public setAvailability(
++    @CurrentAuthContext() context: AuthenticatedRequestContext,
++    @Body() body: unknown,
++  ): Promise<CaptainAvailabilityResponse> {
++    return this.service.setAvailability(context, body);
++  }
++
++  @Put('location')
++  @HttpCode(HttpStatus.OK)
++  public updateLocation(
++    @CurrentAuthContext() context: AuthenticatedRequestContext,
++    @Body() body: unknown,
++  ): Promise<CaptainLocationResponse> {
++    return this.service.updateLocation(context, body);
++  }
++}
+diff --git a/apps/backend/src/dispatch/captain-presence.gateway.ts b/apps/backend/src/dispatch/captain-presence.gateway.ts
+new file mode 100644
+index 0000000..a00bb0d
+--- /dev/null
++++ b/apps/backend/src/dispatch/captain-presence.gateway.ts
+@@ -0,0 +1,258 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import {
++  CAPTAIN_AVAILABILITY_STATUSES,
++  type CaptainAvailabilityStatus,
++} from '../auth/operational-readiness.types';
++import type { SupabaseClient } from '../auth/supabase-client.type';
++import { SUPABASE_SERVICE_CLIENT } from '../auth/supabase.tokens';
++import type {
++  CaptainAvailabilitySnapshot,
++  CaptainClientAvailabilityStatus,
++  CaptainLocationSnapshot,
++  UpdateCaptainLocationCommand,
++} from './captain-presence.types';
++
++export interface CaptainPresenceGateway {
++  setAvailability(
++    actorId: string,
++    status: CaptainClientAvailabilityStatus,
++  ): Promise<CaptainAvailabilitySnapshot>;
++
++  updateLocation(command: UpdateCaptainLocationCommand): Promise<CaptainLocationSnapshot>;
++}
++
++export class CaptainPresenceInvalidRequestError extends Error {}
++export class CaptainPresenceNotEligibleError extends Error {}
++export class CaptainPresenceStateConflictError extends Error {}
++export class CaptainPresenceLocationStaleError extends Error {}
++export class CaptainPresenceSampleConflictError extends Error {}
++export class CaptainPresenceRateLimitedError extends Error {}
++export class CaptainPresenceGatewayUnavailableError extends Error {}
++
++const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
++
++function requireRecord(value: unknown): Record<string, unknown> {
++  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
++    throw new CaptainPresenceGatewayUnavailableError();
++  }
++
++  return value as Record<string, unknown>;
++}
++
++function requireString(record: Record<string, unknown>, key: string): string {
++  const value = record[key];
++
++  if (typeof value !== 'string' || value.trim().length === 0) {
++    throw new CaptainPresenceGatewayUnavailableError();
++  }
++
++  return value;
++}
++
++function requireUuid(record: Record<string, unknown>, key: string): string {
++  const value = requireString(record, key);
++
++  if (!UUID_PATTERN.test(value)) {
++    throw new CaptainPresenceGatewayUnavailableError();
++  }
++
++  return value;
++}
++
++function requireTimestamp(record: Record<string, unknown>, key: string): string {
++  const value = requireString(record, key);
++
++  if (Number.isNaN(Date.parse(value))) {
++    throw new CaptainPresenceGatewayUnavailableError();
++  }
++
++  return value;
++}
++
++function requireBoolean(record: Record<string, unknown>, key: string): boolean {
++  const value = record[key];
++
++  if (typeof value !== 'boolean') {
++    throw new CaptainPresenceGatewayUnavailableError();
++  }
++
++  return value;
++}
++
++function requireFiniteNumber(record: Record<string, unknown>, key: string): number {
++  const raw = record[key];
++  const value = typeof raw === 'string' && raw.trim().length > 0 ? Number(raw) : raw;
++
++  if (typeof value !== 'number' || !Number.isFinite(value)) {
++    throw new CaptainPresenceGatewayUnavailableError();
++  }
++
++  return value;
++}
++
++function readNullableUuid(record: Record<string, unknown>, key: string): string | null {
++  const value = record[key];
++
++  if (value === null) {
++    return null;
++  }
++
++  return requireUuid(record, key);
++}
++
++function isAvailabilityStatus(value: unknown): value is CaptainAvailabilityStatus {
++  return (
++    typeof value === 'string' &&
++    CAPTAIN_AVAILABILITY_STATUSES.some((candidate) => candidate === value)
++  );
++}
++
++export function parseCaptainAvailabilitySnapshot(value: unknown): CaptainAvailabilitySnapshot {
++  const record = requireRecord(value);
++  const availabilityStatus = record['availabilityStatus'];
++  const requestedStatus = record['requestedStatus'];
++  const locationValue = record['location'];
++
++  if (
++    !isAvailabilityStatus(availabilityStatus) ||
++    (requestedStatus !== 'OFFLINE' &&
++      requestedStatus !== 'AVAILABLE' &&
++      requestedStatus !== 'ON_BREAK')
++  ) {
++    throw new CaptainPresenceGatewayUnavailableError();
++  }
++
++  let location: CaptainAvailabilitySnapshot['location'] = null;
++
++  if (locationValue !== null) {
++    const locationRecord = requireRecord(locationValue);
++    location = {
++      recordedAt: requireTimestamp(locationRecord, 'recordedAt'),
++      accuracyMeters: requireFiniteNumber(locationRecord, 'accuracyMeters'),
++      fresh: requireBoolean(locationRecord, 'fresh'),
++      activeDeliveryTaskId: readNullableUuid(locationRecord, 'activeDeliveryTaskId'),
++    };
++  }
++
++  return {
++    captainId: requireUuid(record, 'captainId'),
++    requestedStatus,
++    availabilityStatus,
++    changed: requireBoolean(record, 'changed'),
++    dispatchEligible: requireBoolean(record, 'dispatchEligible'),
++    location,
++    changedAt: requireTimestamp(record, 'changedAt'),
++  };
++}
++
++export function parseCaptainLocationSnapshot(value: unknown): CaptainLocationSnapshot {
++  const record = requireRecord(value);
++
++  return {
++    captainId: requireUuid(record, 'captainId'),
++    sampleId: requireUuid(record, 'sampleId'),
++    recordedAt: requireTimestamp(record, 'recordedAt'),
++    acceptedAt: requireTimestamp(record, 'acceptedAt'),
++    accuracyMeters: requireFiniteNumber(record, 'accuracyMeters'),
++    activeDeliveryTaskId: readNullableUuid(record, 'activeDeliveryTaskId'),
++    historySampled: requireBoolean(record, 'historySampled'),
++    replayed: requireBoolean(record, 'replayed'),
++  };
++}
++
++function mapRpcError(error: { readonly code?: string }): Error {
++  switch (error.code) {
++    case 'P0040':
++      return new CaptainPresenceInvalidRequestError();
++    case 'P0041':
++      return new CaptainPresenceNotEligibleError();
++    case 'P0042':
++      return new CaptainPresenceStateConflictError();
++    case 'P0043':
++      return new CaptainPresenceLocationStaleError();
++    case 'P0044':
++      return new CaptainPresenceRateLimitedError();
++    case 'P0045':
++      return new CaptainPresenceSampleConflictError();
++    case undefined:
++      return new CaptainPresenceGatewayUnavailableError();
++    default:
++      return new CaptainPresenceGatewayUnavailableError();
++  }
++}
++
++function isKnownGatewayError(error: unknown): boolean {
++  return (
++    error instanceof CaptainPresenceInvalidRequestError ||
++    error instanceof CaptainPresenceNotEligibleError ||
++    error instanceof CaptainPresenceStateConflictError ||
++    error instanceof CaptainPresenceLocationStaleError ||
++    error instanceof CaptainPresenceSampleConflictError ||
++    error instanceof CaptainPresenceRateLimitedError ||
++    error instanceof CaptainPresenceGatewayUnavailableError
++  );
++}
++
++@Injectable()
++export class SupabaseCaptainPresenceGateway implements CaptainPresenceGateway {
++  public constructor(
++    @Inject(SUPABASE_SERVICE_CLIENT)
++    private readonly client: SupabaseClient,
++  ) {}
++
++  public async setAvailability(
++    actorId: string,
++    status: CaptainClientAvailabilityStatus,
++  ): Promise<CaptainAvailabilitySnapshot> {
++    try {
++      const response = await this.client.rpc('set_captain_availability', {
++        p_actor: actorId,
++        p_requested_status: status,
++      });
++
++      if (response.error !== null) {
++        throw mapRpcError(response.error);
++      }
++
++      return parseCaptainAvailabilitySnapshot(response.data);
++    } catch (error: unknown) {
++      if (isKnownGatewayError(error)) {
++        throw error;
++      }
++
++      throw new CaptainPresenceGatewayUnavailableError();
++    }
++  }
++
++  public async updateLocation(
++    command: UpdateCaptainLocationCommand,
++  ): Promise<CaptainLocationSnapshot> {
++    try {
++      const response = await this.client.rpc('update_captain_current_location', {
++        p_actor: command.actorId,
++        p_sample_id: command.sampleId,
++        p_latitude: command.latitude,
++        p_longitude: command.longitude,
++        p_accuracy_meters: command.accuracyMeters,
++        p_recorded_at: command.recordedAt,
++        p_heading: command.heading,
++        p_speed_mps: command.speedMps,
++        p_battery_percent: command.batteryPercent,
++        p_active_delivery_task_id: command.activeDeliveryTaskId,
++      });
++
