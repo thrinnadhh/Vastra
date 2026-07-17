@@ -3,12 +3,14 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 
 import { formatPaiseAsInr } from './format-inr';
 import { MerchantOrderDecisionActions } from './merchant-order-decision.screen';
+import { MerchantOrderPackingActions } from './merchant-order-packing.screen';
 import {
   groupMerchantOrderStatus,
   MerchantOrderError,
   type MerchantOrderDetail,
   type MerchantOrderDecisionPort,
   type MerchantOrderGroup,
+  type MerchantOrderPackingPort,
   type MerchantOrderReadPort,
   type MerchantOrderSummary,
 } from './merchant-order.types';
@@ -200,11 +202,13 @@ function MerchantOrderDetailScreen({
   orderId,
   orderClient,
   decisionClient,
+  packingClient,
   onBack,
 }: {
   readonly orderId: string;
   readonly orderClient: MerchantOrderReadPort;
   readonly decisionClient?: MerchantOrderDecisionPort;
+  readonly packingClient?: MerchantOrderPackingPort;
   readonly onBack: () => void;
 }) {
   const [order, setOrder] = useState<MerchantOrderDetail | null>(null);
@@ -277,12 +281,23 @@ function MerchantOrderDetailScreen({
     <MerchantOrderDetailView
       failure={failure}
       footer={
-        decisionClient === undefined ? undefined : (
-          <MerchantOrderDecisionActions
-            decisionClient={decisionClient}
-            onDecisionComplete={refresh}
-            order={order}
-          />
+        decisionClient === undefined && packingClient === undefined ? undefined : (
+          <>
+            {decisionClient === undefined ? null : (
+              <MerchantOrderDecisionActions
+                decisionClient={decisionClient}
+                onDecisionComplete={refresh}
+                order={order}
+              />
+            )}
+            {packingClient === undefined ? null : (
+              <MerchantOrderPackingActions
+                onOrderChanged={refresh}
+                order={order}
+                packingClient={packingClient}
+              />
+            )}
+          </>
         )
       }
       isRefreshing={isLoading}
@@ -296,10 +311,12 @@ function MerchantOrderDetailScreen({
 export function MerchantOrderQueueScreen({
   orderClient,
   decisionClient,
+  packingClient,
   pollIntervalMs = 15_000,
 }: {
   readonly orderClient: MerchantOrderReadPort;
   readonly decisionClient?: MerchantOrderDecisionPort;
+  readonly packingClient?: MerchantOrderPackingPort;
   readonly pollIntervalMs?: number;
 }) {
   const [state, setState] = useState<QueueState>({
@@ -372,6 +389,7 @@ export function MerchantOrderQueueScreen({
     return (
       <MerchantOrderDetailScreen
         {...(decisionClient === undefined ? {} : { decisionClient })}
+        {...(packingClient === undefined ? {} : { packingClient })}
         onBack={() => {
           setSelectedOrderId(null);
           load();

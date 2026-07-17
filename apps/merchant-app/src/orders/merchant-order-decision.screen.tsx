@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
@@ -57,13 +57,15 @@ export function MerchantOrderDecisionActions({
   const [reasonCode, setReasonCode] = useState<MerchantRejectionReason | null>(null);
   const [note, setNote] = useState('');
   const [isSubmitting, setSubmitting] = useState(false);
+  const submitting = useRef(false);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [failure, setFailure] = useState<MerchantOrderError | null>(null);
   const [retryAttempt, setRetryAttempt] = useState<DecisionAttempt | null>(null);
 
   const execute = useCallback(
     (attempt: DecisionAttempt) => {
-      if (isSubmitting) return;
+      if (submitting.current) return;
+      submitting.current = true;
       setSubmitting(true);
       setValidationMessage(null);
       setFailure(null);
@@ -78,11 +80,13 @@ export function MerchantOrderDecisionActions({
             });
       void request.then(
         () => {
+          submitting.current = false;
           setSubmitting(false);
           setRetryAttempt(null);
           onDecisionComplete();
         },
         (error: unknown) => {
+          submitting.current = false;
           setSubmitting(false);
           setFailure(
             error instanceof MerchantOrderError
@@ -92,7 +96,7 @@ export function MerchantOrderDecisionActions({
         },
       );
     },
-    [decisionClient, isSubmitting, onDecisionComplete, order.id],
+    [decisionClient, onDecisionComplete, order.id],
   );
 
   if (order.status !== 'WAITING_FOR_MERCHANT') {
@@ -131,6 +135,10 @@ export function MerchantOrderDecisionActions({
     }
     if (note.trim().length > 500) {
       setValidationMessage('Rejection note must be 500 characters or fewer.');
+      return;
+    }
+    if (reasonCode === 'OTHER' && note.trim().length === 0) {
+      setValidationMessage('Add a note when the rejection reason is Other.');
       return;
     }
     execute({ kind: 'REJECT', reasonCode, note: normalizeNote(note) });

@@ -7,6 +7,9 @@ import {
   type MerchantOrderDecisionPort,
   type MerchantOrderDecisionResult,
   type MerchantOrderFailureKind,
+  type MerchantOrderPackingPort,
+  type MerchantOrderReadyResult,
+  type MerchantOrderStartPackingResult,
   type MerchantOrderHistoryEntry,
   type MerchantOrderItem,
   type MerchantOrderPage,
@@ -16,6 +19,11 @@ import {
   type MerchantOrderStatus,
   type MerchantOrderSummary,
   type MerchantOrderTotals,
+  type MerchantPackingItem,
+  type MerchantPackingList,
+  type MerchantPackingVerification,
+  type MerchantPackingVerificationInput,
+  type MerchantPackingVerificationResult,
 } from './merchant-order.types';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -351,7 +359,121 @@ function parseMerchantDecision(value: unknown): MerchantOrderDecisionResult {
   };
 }
 
-export class HttpMerchantOrderClient implements MerchantOrderReadPort, MerchantOrderDecisionPort {
+const PACKING_STATUSES = ['MERCHANT_ACCEPTED', 'PACKING'] as const;
+const FULFILMENT_STATUSES = [
+  'PENDING',
+  'VERIFIED',
+  'PACKED',
+  'HANDED_OVER',
+  'RETURNED',
+  'CANCELLED',
+] as const;
+const VERIFICATION_METHODS = ['BARCODE', 'MANUAL'] as const;
+const VERIFICATION_RESULTS = ['MATCH', 'MISMATCH', 'OVERRIDDEN'] as const;
+
+function readBoolean(record: Record<string, unknown>, key: string): boolean {
+  const value = record[key];
+  return typeof value === 'boolean' ? value : invalidResponse();
+}
+
+function parseStartPacking(value: unknown): MerchantOrderStartPackingResult {
+  const order = readRecord(readEnvelope(value), 'order');
+  if (order['status'] !== 'PACKING') invalidResponse();
+  return {
+    orderId: readUuid(order, 'orderId'),
+    orderNumber: readString(order, 'orderNumber'),
+    status: 'PACKING',
+    replayed: readBoolean(order, 'replayed'),
+  };
+}
+
+function parsePackingVerification(value: unknown): MerchantPackingVerification | null {
+  if (value === null) return null;
+  if (!isRecord(value)) invalidResponse();
+  return {
+    method: readEnum(value, 'method', VERIFICATION_METHODS),
+    result: readEnum(value, 'result', VERIFICATION_RESULTS),
+    scannedBarcode: readNullableString(value, 'scannedBarcode'),
+    verifiedAt: readDateTime(value, 'verifiedAt'),
+  };
+}
+
+function parsePackingItem(value: unknown): MerchantPackingItem {
+  if (!isRecord(value)) invalidResponse();
+  return {
+    orderItemId: readUuid(value, 'orderItemId'),
+    productName: readString(value, 'productName'),
+    sku: readString(value, 'sku'),
+    colour: readNullableString(value, 'colour'),
+    size: readNullableString(value, 'size'),
+    imageObjectKey: readNullableString(value, 'imageObjectKey'),
+    quantity: readInteger(value, 'quantity', 1),
+    fulfilmentStatus: readEnum(value, 'fulfilmentStatus', FULFILMENT_STATUSES),
+    verification: parsePackingVerification(value['verification']),
+  };
+}
+
+function parsePackingList(value: unknown): MerchantPackingList {
+  const packingList = readRecord(readEnvelope(value), 'packingList');
+  const items = packingList['items'];
+  if (!Array.isArray(items) || items.length === 0) invalidResponse();
+  const parsedItems = items.map(parsePackingItem);
+  const totalLines = readInteger(packingList, 'totalLines', 1);
+  const verifiedLines = readInteger(packingList, 'verifiedLines');
+  const allVerified = readBoolean(packingList, 'allVerified');
+  if (
+    parsedItems.length !== totalLines ||
+    verifiedLines > totalLines ||
+    allVerified !== (verifiedLines === totalLines)
+  )
+    invalidResponse();
+  return {
+    orderId: readUuid(packingList, 'orderId'),
+    orderNumber: readString(packingList, 'orderNumber'),
+    status: readEnum(packingList, 'status', PACKING_STATUSES),
+    totalLines,
+    verifiedLines,
+    allVerified,
+    items: parsedItems,
+  };
+}
+
+function parseVerificationResult(value: unknown): MerchantPackingVerificationResult {
+  const verification = readRecord(readEnvelope(value), 'verification');
+  return {
+    orderId: readUuid(verification, 'orderId'),
+    orderItemId: readUuid(verification, 'orderItemId'),
+    fulfilmentStatus: readEnum(verification, 'fulfilmentStatus', FULFILMENT_STATUSES),
+    method: readEnum(verification, 'method', VERIFICATION_METHODS),
+    result: readEnum(verification, 'result', ['MATCH', 'MISMATCH'] as const),
+    scannedBarcode: readNullableString(verification, 'scannedBarcode'),
+    verified: readBoolean(verification, 'verified'),
+    verifiedAt: readDateTime(verification, 'verifiedAt'),
+    totalLines: readInteger(verification, 'totalLines', 1),
+    verifiedLines: readInteger(verification, 'verifiedLines'),
+    allVerified: readBoolean(verification, 'allVerified'),
+    replayed: readBoolean(verification, 'replayed'),
+  };
+}
+
+function parseReady(value: unknown): MerchantOrderReadyResult {
+  const order = readRecord(readEnvelope(value), 'order');
+  if (order['status'] !== 'READY_FOR_PICKUP' || order['allPacked'] !== true) invalidResponse();
+  return {
+    orderId: readUuid(order, 'orderId'),
+    orderNumber: readString(order, 'orderNumber'),
+    status: 'READY_FOR_PICKUP',
+    readyAt: readDateTime(order, 'readyAt'),
+    totalLines: readInteger(order, 'totalLines', 1),
+    packedLines: readInteger(order, 'packedLines', 1),
+    allPacked: true,
+    replayed: readBoolean(order, 'replayed'),
+  };
+}
+
+export class HttpMerchantOrderClient
+  implements MerchantOrderReadPort, MerchantOrderDecisionPort, MerchantOrderPackingPort
+{
   public constructor(
     protected readonly apiBaseUrl: string,
     protected readonly getAccessToken: AccessTokenProvider,
@@ -407,6 +529,50 @@ export class HttpMerchantOrderClient implements MerchantOrderReadPort, MerchantO
       'POST',
       input,
       parseMerchantDecision,
+    );
+  }
+
+  public async startPacking(orderId: string): Promise<MerchantOrderStartPackingResult> {
+    return this.request(
+      `/merchant/orders/${encodeURIComponent(orderId)}/start-packing`,
+      'POST',
+      {},
+      parseStartPacking,
+    );
+  }
+
+  public async getPackingList(orderId: string): Promise<MerchantPackingList> {
+    return this.request(
+      `/merchant/orders/${encodeURIComponent(orderId)}/packing-list`,
+      'GET',
+      undefined,
+      parsePackingList,
+    );
+  }
+
+  public async verifyPackingItem(
+    orderId: string,
+    orderItemId: string,
+    input: MerchantPackingVerificationInput,
+  ): Promise<MerchantPackingVerificationResult> {
+    return this.request(
+      `/merchant/orders/${encodeURIComponent(orderId)}/items/${encodeURIComponent(orderItemId)}/verify`,
+      'POST',
+      input,
+      parseVerificationResult,
+    );
+  }
+
+  public async markReadyForPickup(
+    orderId: string,
+    idempotencyKey: string,
+  ): Promise<MerchantOrderReadyResult> {
+    return this.request(
+      `/merchant/orders/${encodeURIComponent(orderId)}/ready-for-pickup`,
+      'POST',
+      {},
+      parseReady,
+      { 'Idempotency-Key': idempotencyKey },
     );
   }
 

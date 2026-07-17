@@ -241,4 +241,23 @@ describe('MerchantOrderDecisionActions', () => {
     );
     expect(view.getByText('Decision is no longer pending')).toBeTruthy();
   });
+
+  it('requires an audit note for the Other rejection reason', () => {
+    const rejectOrder = jest.fn<
+      ReturnType<MerchantOrderDecisionPort['rejectOrder']>,
+      Parameters<MerchantOrderDecisionPort['rejectOrder']>
+    >();
+    const view = render(
+      <MerchantOrderDecisionActions
+        decisionClient={clients(undefined, rejectOrder)}
+        onDecisionComplete={jest.fn()}
+        order={order()}
+      />,
+    );
+    fireEvent.press(view.getByLabelText('Reject complete merchant order'));
+    fireEvent.press(view.getByLabelText('Select rejection reason OTHER'));
+    fireEvent.press(view.getByLabelText('Confirm merchant order rejection'));
+    expect(view.getByText('Add a note when the rejection reason is Other.')).toBeTruthy();
+    expect(rejectOrder.mock.calls).toHaveLength(0);
+  });
 });

@@ -342,4 +342,162 @@ describe('merchant order HTTP client', () => {
       retryable: false,
     });
   });
+
+  it('integrates start packing and durable packing-list reads', async () => {
+    const responses: unknown[] = [
+      {
+        success: true,
+        data: {
+          order: {
+            orderId: IDS.order,
+            orderNumber: 'VAS-1001',
+            status: 'PACKING',
+            replayed: false,
+          },
+        },
+        meta: { requestId: null },
+      },
+      {
+        success: true,
+        data: {
+          packingList: {
+            orderId: IDS.order,
+            orderNumber: 'VAS-1001',
+            status: 'PACKING',
+            totalLines: 1,
+            verifiedLines: 0,
+            allVerified: false,
+            items: [
+              {
+                orderItemId: IDS.item,
+                productName: 'Blue Kurta',
+                sku: 'KURTA-M-BLUE',
+                colour: 'Blue',
+                size: 'M',
+                imageObjectKey: null,
+                quantity: 1,
+                fulfilmentStatus: 'PENDING',
+                verification: null,
+              },
+            ],
+          },
+        },
+        meta: { requestId: null },
+      },
+    ];
+    const fetchFunction = jest.fn<
+      Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>,
+      [string, RequestInit]
+    >(() =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(responses.shift()) }),
+    );
+    const client = new HttpMerchantOrderClient(
+      'https://api.example.test',
+      () => Promise.resolve('token'),
+      fetchFunction,
+    );
+    await expect(client.startPacking(IDS.order)).resolves.toMatchObject({ status: 'PACKING' });
+    await expect(client.getPackingList(IDS.order)).resolves.toMatchObject({
+      totalLines: 1,
+      verifiedLines: 0,
+      allVerified: false,
+    });
+    expect(fetchFunction.mock.calls.map(([url, init]) => [url, init.method])).toEqual([
+      [`https://api.example.test/merchant/orders/${IDS.order}/start-packing`, 'POST'],
+      [`https://api.example.test/merchant/orders/${IDS.order}/packing-list`, 'GET'],
+    ]);
+  });
+
+  it('records barcode mismatches as authoritative successful verification results', async () => {
+    const fetchFunction = jest.fn<
+      Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>,
+      [string, RequestInit]
+    >(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            success: true,
+            data: {
+              verification: {
+                orderId: IDS.order,
+                orderItemId: IDS.item,
+                fulfilmentStatus: 'PENDING',
+                method: 'BARCODE',
+                result: 'MISMATCH',
+                scannedBarcode: 'WRONG-123',
+                verified: false,
+                verifiedAt: '2026-07-17T02:00:00.000Z',
+                totalLines: 1,
+                verifiedLines: 0,
+                allVerified: false,
+                replayed: false,
+              },
+            },
+            meta: { requestId: null },
+          }),
+      }),
+    );
+    const client = new HttpMerchantOrderClient(
+      'https://api.example.test',
+      () => Promise.resolve('token'),
+      fetchFunction,
+    );
+    await expect(
+      client.verifyPackingItem(IDS.order, IDS.item, { method: 'BARCODE', barcode: 'WRONG-123' }),
+    ).resolves.toMatchObject({ result: 'MISMATCH', verified: false });
+    expect(fetchFunction.mock.calls[0]?.[1].body).toBe(
+      JSON.stringify({ method: 'BARCODE', barcode: 'WRONG-123' }),
+    );
+  });
+
+  it('sends one explicit ready-for-pickup idempotency key', async () => {
+    const idempotencyKey = 'a0000000-0000-4000-8000-000000000001';
+    const fetchFunction = jest.fn<
+      Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>,
+      [string, RequestInit]
+    >(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            success: true,
+            data: {
+              order: {
+                orderId: IDS.order,
+                orderNumber: 'VAS-1001',
+                status: 'READY_FOR_PICKUP',
+                readyAt: '2026-07-17T02:10:00.000Z',
+                totalLines: 1,
+                packedLines: 1,
+                allPacked: true,
+                replayed: false,
+              },
+            },
+            meta: { requestId: null },
+          }),
+      }),
+    );
+    const client = new HttpMerchantOrderClient(
+      'https://api.example.test',
+      () => Promise.resolve('token'),
+      fetchFunction,
+    );
+    await client.markReadyForPickup(IDS.order, idempotencyKey);
+    expect(fetchFunction).toHaveBeenCalledWith(
+      `https://api.example.test/merchant/orders/${IDS.order}/ready-for-pickup`,
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Bearer token',
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: '{}',
+      },
+    );
+  });
 });

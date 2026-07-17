@@ -184,6 +184,85 @@ export interface MerchantOrderDecisionPort {
   ): Promise<MerchantOrderDecisionResult>;
 }
 
+export interface MerchantOrderStartPackingResult {
+  readonly orderId: string;
+  readonly orderNumber: string;
+  readonly status: 'PACKING';
+  readonly replayed: boolean;
+}
+
+export type MerchantPackingFulfilmentStatus =
+  'PENDING' | 'VERIFIED' | 'PACKED' | 'HANDED_OVER' | 'RETURNED' | 'CANCELLED';
+
+export interface MerchantPackingVerification {
+  readonly method: 'BARCODE' | 'MANUAL';
+  readonly result: 'MATCH' | 'MISMATCH' | 'OVERRIDDEN';
+  readonly scannedBarcode: string | null;
+  readonly verifiedAt: string;
+}
+
+export interface MerchantPackingItem {
+  readonly orderItemId: string;
+  readonly productName: string;
+  readonly sku: string;
+  readonly colour: string | null;
+  readonly size: string | null;
+  readonly imageObjectKey: string | null;
+  readonly quantity: number;
+  readonly fulfilmentStatus: MerchantPackingFulfilmentStatus;
+  readonly verification: MerchantPackingVerification | null;
+}
+
+export interface MerchantPackingList {
+  readonly orderId: string;
+  readonly orderNumber: string;
+  readonly status: 'MERCHANT_ACCEPTED' | 'PACKING';
+  readonly totalLines: number;
+  readonly verifiedLines: number;
+  readonly allVerified: boolean;
+  readonly items: readonly MerchantPackingItem[];
+}
+
+export type MerchantPackingVerificationInput =
+  { readonly method: 'MANUAL' } | { readonly method: 'BARCODE'; readonly barcode: string };
+
+export interface MerchantPackingVerificationResult {
+  readonly orderId: string;
+  readonly orderItemId: string;
+  readonly fulfilmentStatus: MerchantPackingFulfilmentStatus;
+  readonly method: 'BARCODE' | 'MANUAL';
+  readonly result: 'MATCH' | 'MISMATCH';
+  readonly scannedBarcode: string | null;
+  readonly verified: boolean;
+  readonly verifiedAt: string;
+  readonly totalLines: number;
+  readonly verifiedLines: number;
+  readonly allVerified: boolean;
+  readonly replayed: boolean;
+}
+
+export interface MerchantOrderReadyResult {
+  readonly orderId: string;
+  readonly orderNumber: string;
+  readonly status: 'READY_FOR_PICKUP';
+  readonly readyAt: string;
+  readonly totalLines: number;
+  readonly packedLines: number;
+  readonly allPacked: true;
+  readonly replayed: boolean;
+}
+
+export interface MerchantOrderPackingPort {
+  startPacking(orderId: string): Promise<MerchantOrderStartPackingResult>;
+  getPackingList(orderId: string): Promise<MerchantPackingList>;
+  verifyPackingItem(
+    orderId: string,
+    orderItemId: string,
+    input: MerchantPackingVerificationInput,
+  ): Promise<MerchantPackingVerificationResult>;
+  markReadyForPickup(orderId: string, idempotencyKey: string): Promise<MerchantOrderReadyResult>;
+}
+
 export type MerchantOrderFailureKind =
   | 'TRANSPORT'
   | 'AUTHENTICATION'
