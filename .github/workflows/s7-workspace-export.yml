@@ -1,0 +1,35 @@
+name: S7 Workspace Export
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    name: Export branch workspace
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Create workspace archive
+        shell: bash
+        run: |
+          tar \
+            --exclude=.git \
+            --exclude=node_modules \
+            --exclude=.turbo \
+            -czf /tmp/vastra-s7-workspace.tar.gz .
+
+      - name: Upload workspace archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: vastra-s7-workspace
+          path: /tmp/vastra-s7-workspace.tar.gz
+          if-no-files-found: error
+          retention-days: 1
