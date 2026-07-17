@@ -58,15 +58,21 @@ function readNullableUuid(record: Record<string, unknown>, key: string): string 
   return requireUuid(value);
 }
 
+function isCaptainClientAvailabilityStatus(
+  value: unknown,
+): value is CaptainClientAvailabilityStatus {
+  return (
+    typeof value === 'string' &&
+    CAPTAIN_CLIENT_AVAILABILITY_STATUSES.some((candidate) => candidate === value)
+  );
+}
+
 export function parseCaptainAvailabilityBody(value: unknown): CaptainClientAvailabilityStatus {
   const record = requireRecord(value);
   rejectUnknownKeys(record, ['status']);
   const status = record['status'];
 
-  if (
-    typeof status !== 'string' ||
-    !CAPTAIN_CLIENT_AVAILABILITY_STATUSES.some((candidate) => candidate === status)
-  ) {
+  if (!isCaptainClientAvailabilityStatus(status)) {
     throw new CaptainPresenceValidationError();
   }
 
