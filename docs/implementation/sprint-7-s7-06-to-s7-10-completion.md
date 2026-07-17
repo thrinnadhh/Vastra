@@ -38,3 +38,10 @@ status: implemented
 - Operations-only metrics and activity APIs require an ADMIN account, `operations.manage`, MFA/readiness enforcement, and service-role database functions.
 - Metrics cover creation, send, acknowledgement, expiry, reminders, retries, invalid tokens, and outbox backlog.
 - The physical Android matrix is documented separately; execution requires real devices and production-like Firebase credentials.
+
+## Finalization
+
+- Expo notification dependencies and the workspace lockfile are synchronized.
+- The custom WAV ringtone is committed as a native build asset.
+- The merchant queue and OpenAPI contracts are integrated and repository-formatted.
+- Automated CI is the merge gate; physical Android evidence remains the production-release gate.
