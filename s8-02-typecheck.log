@@ -1,0 +1,15 @@
+
+> @vastra/backend@0.0.0 typecheck /home/runner/work/Vastra/Vastra/apps/backend
+> tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json
+
+src/dispatch/captain-presence.validation.ts(73,3): error TS2322: Type 'string' is not assignable to type '"OFFLINE" | "AVAILABLE" | "ON_BREAK"'.
+/home/runner/work/Vastra/Vastra/apps/backend:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @vastra/backend@0.0.0 typecheck: `tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json`
+Exit status 2
+
+> @vastra/captain-app@0.0.0 typecheck /home/runner/work/Vastra/Vastra/apps/captain-app
+> tsc --noEmit
+
+
+BACKEND_TYPECHECK_EXIT_CODE=1
+CAPTAIN_TYPECHECK_EXIT_CODE=0
