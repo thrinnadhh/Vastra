@@ -1,0 +1,400 @@
++  getAvailability(): Promise<CaptainAvailabilityStatus>;
++  setAvailability(status: CaptainRequestedAvailabilityStatus): Promise<CaptainAvailabilityResult>;
++  updateLocation(sample: CaptainLocationSample): Promise<CaptainLocationResult>;
++}
++
++export interface CaptainLocationPermissionResult {
++  readonly granted: boolean;
++  readonly canAskAgain: boolean;
++}
++
++export interface CaptainLocationProvider {
++  requestForegroundPermission(): Promise<CaptainLocationPermissionResult>;
++  getCurrentLocation(): Promise<CaptainLocationSample>;
++  watchLocations(
++    listener: (sample: CaptainLocationSample) => void,
++  ): Promise<() => void>;
++}
+diff --git a/apps/captain-app/src/presence/expo-captain-location.provider.ts b/apps/captain-app/src/presence/expo-captain-location.provider.ts
+new file mode 100644
+index 0000000..7b5f09d
+--- /dev/null
++++ b/apps/captain-app/src/presence/expo-captain-location.provider.ts
+@@ -0,0 +1,78 @@
++import * as Location from 'expo-location';
++
++import type {
++  CaptainLocationPermissionResult,
++  CaptainLocationProvider,
++  CaptainLocationSample,
++} from './captain-presence.types';
++
++function createSampleId(): string {
++  const bytes = new Uint8Array(16);
++  const cryptoObject = globalThis.crypto;
++
++  if (cryptoObject?.getRandomValues !== undefined) {
++    cryptoObject.getRandomValues(bytes);
++  } else {
++    for (let index = 0; index < bytes.length; index += 1) {
++      bytes[index] = Math.floor(Math.random() * 256);
++    }
++  }
++
++  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
++  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
++  const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
++
++  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
++}
++
++function mapLocation(location: Location.LocationObject): CaptainLocationSample {
++  return {
++    sampleId: createSampleId(),
++    latitude: location.coords.latitude,
++    longitude: location.coords.longitude,
++    accuracyMeters: location.coords.accuracy ?? 999,
++    recordedAt: new Date(location.timestamp).toISOString(),
++    heading: location.coords.heading ?? null,
++    speedMps: location.coords.speed ?? null,
++    batteryPercent: null,
++    activeDeliveryTaskId: null,
++  };
++}
++
++export class ExpoCaptainLocationProvider implements CaptainLocationProvider {
++  public async requestForegroundPermission(): Promise<CaptainLocationPermissionResult> {
++    const result = await Location.requestForegroundPermissionsAsync();
++
++    return {
++      granted: result.granted,
++      canAskAgain: result.canAskAgain,
++    };
++  }
++
++  public async getCurrentLocation(): Promise<CaptainLocationSample> {
++    return mapLocation(
++      await Location.getCurrentPositionAsync({
++        accuracy: Location.Accuracy.High,
++      }),
++    );
++  }
++
++  public async watchLocations(
++    listener: (sample: CaptainLocationSample) => void,
++  ): Promise<() => void> {
++    const subscription = await Location.watchPositionAsync(
++      {
++        accuracy: Location.Accuracy.High,
++        timeInterval: 10_000,
++        distanceInterval: 25,
++      },
++      (location) => {
++        listener(mapLocation(location));
++      },
++    );
++
++    return () => {
++      subscription.remove();
++    };
++  }
++}
+diff --git a/apps/captain-app/tsconfig.json b/apps/captain-app/tsconfig.json
+index 3cccc02..ec2c689 100644
+--- a/apps/captain-app/tsconfig.json
++++ b/apps/captain-app/tsconfig.json
+@@ -1,10 +1,21 @@
+ {
+-  "extends": ["../../tsconfig.base.json", "expo/tsconfig.base"],
++  "extends": [
++    "../../tsconfig.base.json",
++    "expo/tsconfig.base"
++  ],
+   "compilerOptions": {
+     "strict": true,
+     "noEmit": true,
+     "skipLibCheck": true,
+-    "types": ["jest"]
++    "types": [
++      "jest"
++    ]
+   },
+-  "include": ["App.tsx", "App.test.tsx", "index.ts"]
++  "include": [
++    "App.tsx",
++    "App.test.tsx",
++    "index.ts",
++    "src/**/*.ts",
++    "src/**/*.tsx"
++  ]
+ }
+diff --git a/docs/api/error-codes.md b/docs/api/error-codes.md
+index 954ebc6..50732fc 100644
+--- a/docs/api/error-codes.md
++++ b/docs/api/error-codes.md
+@@ -134,13 +134,22 @@ last_updated: 2026-07-11
+ 
+ | Code | HTTP | Meaning |
+ |---|---:|---|
+-| DELIVERY_NOT_FOUND | 404 | Task missing |
+-| DELIVERY_ALREADY_ASSIGNED | 409 | Another captain accepted |
+-| CAPTAIN_NOT_AVAILABLE | 409 | Captain unavailable |
+-| PICKUP_CODE_INVALID | 400 | Wrong pickup code |
+-| DELIVERY_OTP_INVALID | 400 | Wrong delivery OTP |
+-| LOCATION_REQUIRED | 400 | Location missing |
+-| DELIVERY_COMPLETION_NOT_ALLOWED | 409 | State or actor invalid |
++| DELIVERY_REQUEST_INVALID | 400 | Availability, location, delivery body, reason, or identifier is invalid |
++| CAPTAIN_NOT_ELIGIBLE | 403 | Captain account, approval, device, or operational readiness is insufficient |
++| DELIVERY_ACCESS_DENIED | 403 | Actor cannot access the delivery resource |
++| DELIVERY_TASK_NOT_FOUND | 404 | Task missing or intentionally hidden |
++| DELIVERY_OFFER_NOT_FOUND | 404 | Offer missing or intentionally hidden |
++| DELIVERY_STATE_CONFLICT | 409 | Current order, task, assignment, or custody state rejects the command |
++| DELIVERY_TASK_ALREADY_ASSIGNED | 409 | Another captain accepted the task |
++| CAPTAIN_ALREADY_ASSIGNED | 409 | Captain already owns another active task |
++| CAPTAIN_LOCATION_STALE | 409 | Current captain location is missing, stale, or too inaccurate |
++| COD_AMOUNT_MISMATCH | 409 | Collected COD differs from the authoritative order total |
++| DELIVERY_OFFER_EXPIRED | 410 | Offer can no longer be accepted or rejected |
++| PICKUP_CODE_INVALID | 422 | Wrong pickup code |
++| DELIVERY_OTP_INVALID | 422 | Wrong delivery OTP |
++| DELIVERY_SECRET_LOCKED | 423 | Pickup-code or delivery-OTP attempt limit reached |
++| LOCATION_UPDATE_RATE_LIMITED | 429 | Location writes are arriving more frequently than allowed |
++| DELIVERY_SERVICE_UNAVAILABLE | 503 | Trusted delivery dependency is unavailable |
+ 
+ ## Returns
+ 
+diff --git a/docs/api/openapi.yaml b/docs/api/openapi.yaml
+index 3bee4f4..15da8bb 100644
+--- a/docs/api/openapi.yaml
++++ b/docs/api/openapi.yaml
+@@ -1196,6 +1196,96 @@ components:
+         onboardingStatus: {type: string}
+         kycStatus: {type: string}
+         approvedAt: {type: [string, 'null'], format: date-time}
++    CaptainRequestedAvailabilityStatus:
++      type: string
++      enum: [OFFLINE, AVAILABLE, ON_BREAK]
++    CaptainAvailabilityStatus:
++      type: string
++      enum: [OFFLINE, AVAILABLE, OFFERED, ASSIGNED, AT_PICKUP, DELIVERING, ON_BREAK, SUSPENDED]
++    CaptainAvailabilityLocation:
++      type: object
++      required: [recordedAt, accuracyMeters, fresh, activeDeliveryTaskId]
++      properties:
++        recordedAt: {type: string, format: date-time}
++        accuracyMeters: {type: number, minimum: 0}
++        fresh: {type: boolean}
++        activeDeliveryTaskId: {type: [string, 'null'], format: uuid}
++    SetCaptainAvailabilityRequest:
++      type: object
++      additionalProperties: false
++      required: [status]
++      properties:
++        status: {$ref: '#/components/schemas/CaptainRequestedAvailabilityStatus'}
++    CaptainAvailabilitySnapshot:
++      type: object
++      required: [captainId, requestedStatus, availabilityStatus, changed, dispatchEligible, location, changedAt]
++      properties:
++        captainId: {type: string, format: uuid}
++        requestedStatus: {$ref: '#/components/schemas/CaptainRequestedAvailabilityStatus'}
++        availabilityStatus: {$ref: '#/components/schemas/CaptainAvailabilityStatus'}
++        changed: {type: boolean}
++        dispatchEligible: {type: boolean}
++        location:
++          oneOf:
++          - {$ref: '#/components/schemas/CaptainAvailabilityLocation'}
++          - {type: 'null'}
++        changedAt: {type: string, format: date-time}
++    CaptainAvailabilityResponse:
++      type: object
++      required: [success, data, meta]
++      properties:
++        success: {type: boolean, const: true}
++        data:
++          type: object
++          required: [availability]
++          properties:
++            availability: {$ref: '#/components/schemas/CaptainAvailabilitySnapshot'}
++        meta:
++          type: object
++          required: [requestId]
++          properties:
++            requestId: {type: ['string', 'null'], format: uuid}
++    UpdateCaptainLocationRequest:
++      type: object
++      additionalProperties: false
++      required: [sampleId, latitude, longitude, accuracyMeters, recordedAt]
++      properties:
++        sampleId: {type: string, format: uuid}
++        latitude: {type: number, minimum: -90, maximum: 90}
++        longitude: {type: number, minimum: -180, maximum: 180}
++        accuracyMeters: {type: number, minimum: 0}
++        recordedAt: {type: string, format: date-time}
++        heading: {type: [number, 'null'], minimum: 0, exclusiveMaximum: 360}
++        speedMps: {type: [number, 'null'], minimum: 0}
++        batteryPercent: {type: [integer, 'null'], minimum: 0, maximum: 100}
++        activeDeliveryTaskId: {type: [string, 'null'], format: uuid}
++    CaptainLocationSnapshot:
++      type: object
++      required: [captainId, sampleId, recordedAt, acceptedAt, accuracyMeters, activeDeliveryTaskId, historySampled, replayed]
++      properties:
++        captainId: {type: string, format: uuid}
++        sampleId: {type: string, format: uuid}
++        recordedAt: {type: string, format: date-time}
++        acceptedAt: {type: string, format: date-time}
++        accuracyMeters: {type: number, minimum: 0}
++        activeDeliveryTaskId: {type: [string, 'null'], format: uuid}
++        historySampled: {type: boolean}
++        replayed: {type: boolean}
++    CaptainLocationResponse:
++      type: object
++      required: [success, data, meta]
++      properties:
++        success: {type: boolean, const: true}
++        data:
++          type: object
++          required: [location]
++          properties:
++            location: {$ref: '#/components/schemas/CaptainLocationSnapshot'}
++        meta:
++          type: object
++          required: [requestId]
++          properties:
++            requestId: {type: ['string', 'null'], format: uuid}
+     CaptainRoleProfile:
+       type: object
+       required: [kind, captainCode, kycStatus, availabilityStatus, vehicleType, vehicleNumber,
+@@ -5782,24 +5872,65 @@ paths:
+           content:
+             application/json:
+               schema: {$ref: '#/components/schemas/ApiError'}
+-  /captain/availability/online:
+-    post:
+-      summary: Go online
+-      tags:
+-      - Captain
++  /captain/me/availability:
++    put:
++      operationId: setCaptainAvailability
++      summary: Request an authoritative captain availability state
++      description: Sets OFFLINE, AVAILABLE, or ON_BREAK. AVAILABLE requires a fresh accurate location and an active Android FCM registration. Backend-owned delivery states cannot be overwritten by the client.
++      tags: [Captain]
++      security: [{bearerAuth: []}]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: '#/components/schemas/SetCaptainAvailabilityRequest'}
+       responses:
+         '200':
+-          description: Success
+-        '400':
+-          description: Bad request
++          description: Current authoritative captain availability
+           content:
+             application/json:
+-              schema:
+-                $ref: '#/components/schemas/ApiError'
+-        '401':
+-          description: Unauthorized
+-        '403':
+-          description: Forbidden
++              schema: {$ref: '#/components/schemas/CaptainAvailabilityResponse'}
++        '400': {$ref: '#/components/responses/BadRequest'}
++        '401': {$ref: '#/components/responses/Unauthorized'}
++        '403': {$ref: '#/components/responses/Forbidden'}
++        '409': {$ref: '#/components/responses/Conflict'}
++        '503':
++          description: Captain presence provider is temporarily unavailable
++          content:
++            application/json:
++              schema: {$ref: '#/components/schemas/ApiError'}
++  /captain/me/location:
++    put:
++      operationId: updateCaptainCurrentLocation
++      summary: Submit one deduplicated captain location sample
++      description: Accepts at most one write per five seconds, rejects stale or excessively future samples, and samples durable history at a bounded cadence. sampleId provides safe replay semantics.
++      tags: [Captain]
++      security: [{bearerAuth: []}]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: '#/components/schemas/UpdateCaptainLocationRequest'}
++      responses:
++        '200':
++          description: Accepted or safely replayed captain location sample
++          content:
++            application/json:
++              schema: {$ref: '#/components/schemas/CaptainLocationResponse'}
++        '400': {$ref: '#/components/responses/BadRequest'}
++        '401': {$ref: '#/components/responses/Unauthorized'}
++        '403': {$ref: '#/components/responses/Forbidden'}
++        '409': {$ref: '#/components/responses/Conflict'}
++        '429':
++          description: Captain location updates are too frequent
++          content:
++            application/json:
++              schema: {$ref: '#/components/schemas/ApiError'}
++        '503':
++          description: Captain presence provider is temporarily unavailable
++          content:
++            application/json:
++              schema: {$ref: '#/components/schemas/ApiError'}
+   /captain/delivery-offers:
+     get:
+       summary: List delivery offers
+diff --git a/docs/implementation/sprint-8-captain-availability-location.md b/docs/implementation/sprint-8-captain-availability-location.md
+new file mode 100644
+index 0000000..403ba5f
+--- /dev/null
++++ b/docs/implementation/sprint-8-captain-availability-location.md
+@@ -0,0 +1,138 @@
++---
++ticket: S8-02
++sprint: 8
++status: implemented
++scope: captain-availability-current-location
++---
++
++# Sprint 8 Captain Availability and Current Location
++
++## Decision
++
++S8-02 establishes the authoritative captain presence surface consumed by later dispatch tickets.
++It implements client-requested availability, current-location writes, location freshness, and a
++backend-only dispatch-readiness projection. It does not create delivery offers or assignments.
++
++The captain client may request only:
++
++```text
++OFFLINE
++AVAILABLE
++ON_BREAK
++```
++
++Operational states such as `OFFERED`, `ASSIGNED`, `AT_PICKUP`, `DELIVERING`, and `SUSPENDED`
++remain backend-owned. A client request cannot overwrite package custody or an active assignment.
++
++## HTTP surface
++
++Authenticated, operationally ready captain accounts use:
++
++```text
++PUT /v1/captain/me/availability
++PUT /v1/captain/me/location
++```
++
++Availability is a set-state command and is replay safe. Location writes use a client-generated
++UUID `sampleId`; replaying the same sample and canonical payload returns the stored result, while
++reusing the sample ID with another payload returns `IDEMPOTENCY_KEY_REUSED`.
++
++Mobile clients do not receive direct grants on `captain_profiles`, `captain_current_locations`,
++`captain_location_history`, or the private receipt/readiness structures.
++
++## Availability rules
++
++A captain may enter `AVAILABLE` only when all current prerequisites are true:
++
++- the account and profile are active and of type `CAPTAIN`,
++- captain KYC is `VERIFIED` and approval exists,
++- the captain is not suspended and owns no active forward-delivery task,
