@@ -2,26 +2,29 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: s8-02-lint-fix-${{ github.ref }}
-  cancel-in-progress: false
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  fix:
-    name: Fix S8-02 strict lint
+  verify:
+    name: Verify repository
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
-      - name: Check out Sprint 8 branch
+      - name: Check out repository
         uses: actions/checkout@v7
         with:
-          ref: agent/s8-02-captain-availability-location
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -36,198 +39,34 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Apply and verify strict lint fixes
-        shell: bash
-        run: |
-          set +e
-          : > s8-02-fix.log
-          python3 - <<'PY' >> s8-02-fix.log 2>&1
-          from pathlib import Path
-          import re
+      - name: Check formatting
+        run: pnpm format:check
 
-          def rewrite(path: str, pattern: str, replacement: str, *, flags: int = 0) -> None:
-              file = Path(path)
-              text = file.read_text()
-              updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)
-              print(f"{path}: replacements={count}")
-              if count != 1:
-                  raise SystemExit(f"Expected one replacement in {path}, got {count}")
-              file.write_text(updated)
+      - name: Validate environment templates
+        run: pnpm env:check
 
-          rewrite(
-              "apps/backend/src/dispatch/captain-presence.integration.test.ts",
-              r"function requireHttpServer\(application: INestApplication\): Server \{\n  const server: unknown = application\.getHttpServer\(\);\n  if \(!\(server instanceof Server\)\) throw new TypeError\('Expected Node HTTP server'\);\n  return server;\n\}",
-              """function isHttpServer(value: unknown): value is Server {
-            return value instanceof Server;
-          }
+      - name: Lint
+        run: pnpm lint
 
-          function requireHttpServer(application: INestApplication): Server {
-            const server: unknown = application.getHttpServer();
-            if (!isHttpServer(server)) throw new TypeError('Expected Node HTTP server');
-            return server;
-          }""",
-          )
+      - name: Typecheck
+        run: pnpm typecheck
 
-          service_path = Path("apps/backend/src/dispatch/captain-presence.service.test.ts")
-          service_text = service_path.read_text().replace(
-              "import { HttpException } from '@nestjs/common';\n", "", 1
-          )
-          service_path.write_text(service_text)
-          rewrite(
-              str(service_path),
-              r"function readErrorCode\(error: unknown\): string \| null \{.*?\n\}",
-              """interface HttpExceptionLike {
-            getResponse(): unknown;
-          }
+      - name: Run unit tests
+        run: pnpm test
 
-          function isHttpExceptionLike(value: unknown): value is HttpExceptionLike {
-            if (typeof value !== 'object' || value === null || !('getResponse' in value)) {
-              return false;
-            }
+      - name: Run integration tests
+        run: pnpm test:integration
 
-            return typeof value.getResponse === 'function';
-          }
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.109.1
 
-          function readErrorCode(error: unknown): string | null {
-            if (!isHttpExceptionLike(error)) return null;
-            const response = error.getResponse();
-            if (typeof response !== 'object' || response === null || Array.isArray(response)) return null;
-            const body = response as Record<string, unknown>;
-            const nested = body['error'];
-            if (typeof nested !== 'object' || nested === null || Array.isArray(nested)) return null;
-            const code = (nested as Record<string, unknown>)['code'];
-            return typeof code === 'string' ? code : null;
-          }""",
-              flags=re.S,
-          )
+      - name: Run database tests
+        run: pnpm db:test
 
-          app_path = Path("apps/captain-app/App.test.tsx")
-          app_text = app_path.read_text().replace(
-              "import { act, fireEvent, render, waitFor } from '@testing-library/react-native';",
-              "import { fireEvent, render, waitFor } from '@testing-library/react-native';",
-              1,
-          )
-          app_path.write_text(app_text)
-          rewrite(
-              str(app_path),
-              r"    await act\(async \(\) => \{\n      fireEvent\.press\(view\.getByLabelText\('Go offline from deliveries'\)\);\n    \}\);",
-              "    fireEvent.press(view.getByLabelText('Go offline from deliveries'));",
-          )
+      - name: Validate OpenAPI
+        run: pnpm openapi:check
 
-          rewrite(
-              "apps/captain-app/src/auth/mobile-environment.ts",
-              r"export function readCaptainMobileEnvironment\(\): CaptainMobileEnvironment \{.*?\n\}",
-              """function readProcessEnvironmentValue(key: string): string | undefined {
-            const environment: unknown = process.env;
-
-            if (typeof environment !== 'object' || environment === null) {
-              return undefined;
-            }
-
-            const value = (environment as Record<string, unknown>)[key];
-            return typeof value === 'string' ? value : undefined;
-          }
-
-          export function readCaptainMobileEnvironment(): CaptainMobileEnvironment {
-            return parseCaptainMobileEnvironment({
-              apiBaseUrl: readProcessEnvironmentValue('EXPO_PUBLIC_API_BASE_URL'),
-              supabaseUrl: readProcessEnvironmentValue('EXPO_PUBLIC_SUPABASE_URL'),
-              supabasePublishableKey: readProcessEnvironmentValue(
-                'EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
-              ),
-            });
-          }""",
-              flags=re.S,
-          )
-
-          client_test = Path("apps/captain-app/src/presence/captain-presence.client.test.ts")
-          client_text = client_test.read_text()
-          updated = client_text.replace(
-              "const calls: Array<{ input: string; init: RequestInit }> = [];",
-              "const calls: { input: string; init: RequestInit }[] = [];",
-              1,
-          )
-          print(f"{client_test}: replacements={int(updated != client_text)}")
-          if updated == client_text:
-              raise SystemExit(f"Expected array syntax replacement in {client_test}")
-          client_test.write_text(updated)
-
-          rewrite(
-              "apps/captain-app/src/presence/captain-presence.screen.tsx",
-              r"  useEffect\(\(\) => \{\n    mounted\.current = true;\n    void load\(\);\n\n    return \(\) => \{\n      mounted\.current = false;\n    \};\n  \}, \[load\]\);",
-              """  useEffect(() => {
-            mounted.current = true;
-
-            void client.getAvailability().then(
-              (status) => {
-                if (mounted.current) {
-                  setState({
-                    kind: 'READY',
-                    status,
-                    dispatchEligible: false,
-                    locationRecordedAt: null,
-                  });
-                }
-              },
-              (error: unknown) => {
-                if (mounted.current) {
-                  setState({ kind: 'ERROR', message: describeError(error) });
-                }
-              },
-            );
-
-            return () => {
-              mounted.current = false;
-            };
-          }, [client]);""",
-          )
-
-          rewrite(
-              "apps/captain-app/src/presence/expo-captain-location.provider.ts",
-              r"  const cryptoObject = globalThis\.crypto;\n\n  if \(cryptoObject\?\.getRandomValues !== undefined\) \{\n    cryptoObject\.getRandomValues\(bytes\);\n  \} else \{\n    for \(let index = 0; index < bytes\.length; index \+= 1\) \{\n      bytes\[index\] = Math\.floor\(Math\.random\(\) \* 256\);\n    \}\n  \}",
-              """  for (let index = 0; index < bytes.length; index += 1) {
-              bytes[index] = Math.floor(Math.random() * 256);
-            }""",
-          )
-          PY
-          patch_status=$?
-
-          if [ "$patch_status" -eq 0 ]; then
-            pnpm exec prettier --write \
-              apps/backend/src/dispatch/captain-presence.integration.test.ts \
-              apps/backend/src/dispatch/captain-presence.service.test.ts \
-              apps/captain-app/App.test.tsx \
-              apps/captain-app/src/auth/mobile-environment.ts \
-              apps/captain-app/src/presence/captain-presence.client.test.ts \
-              apps/captain-app/src/presence/captain-presence.screen.tsx \
-              apps/captain-app/src/presence/expo-captain-location.provider.ts \
-              >> s8-02-fix.log 2>&1
-            format_status=$?
-          else
-            format_status=1
-          fi
-
-          if [ "$patch_status" -eq 0 ] && [ "$format_status" -eq 0 ]; then
-            pnpm exec eslint apps/backend/src/dispatch apps/captain-app --max-warnings=0 \
-              >> s8-02-fix.log 2>&1
-            lint_status=$?
-          else
-            lint_status=1
-          fi
-
-          printf '\nPATCH_EXIT_CODE=%s\nFORMAT_EXIT_CODE=%s\nLINT_EXIT_CODE=%s\n' \
-            "$patch_status" "$format_status" "$lint_status" >> s8-02-fix.log
-          git diff --check >> s8-02-fix.log 2>&1
-          exit 0
-
-      - name: Commit fixes and diagnostic result
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -f s8-02-lint.log
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git add -f s8-02-fix.log
-          git commit -m "fix(captain): apply strict S8-02 lint corrections"
-          git push origin HEAD:agent/s8-02-captain-availability-location
+      - name: Build
+        run: pnpm build
