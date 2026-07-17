@@ -3,16 +3,6 @@
 > eslint . --max-warnings=0
 
 
-/home/runner/work/Vastra/Vastra/apps/backend/src/merchant-alert-delivery/fcm-merchant-alert.sender.test.ts
-   44:34  error  Async arrow function has no 'await' expression  @typescript-eslint/require-await
-   55:16  error  Async arrow function has no 'await' expression  @typescript-eslint/require-await
-   64:45  error  Forbidden non-null assertion                    @typescript-eslint/no-non-null-assertion
-   67:17  error  Forbidden non-null assertion                    @typescript-eslint/no-non-null-assertion
-   84:18  error  Async arrow function has no 'await' expression  @typescript-eslint/require-await
-  104:45  error  Forbidden non-null assertion                    @typescript-eslint/no-non-null-assertion
-  117:18  error  Async arrow function has no 'await' expression  @typescript-eslint/require-await
-  126:45  error  Forbidden non-null assertion                    @typescript-eslint/no-non-null-assertion
-
 /home/runner/work/Vastra/Vastra/apps/backend/src/merchant-alert-delivery/fcm-merchant-alert.sender.ts
   182:61  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
   183:71  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
@@ -53,7 +43,7 @@ If a function does not access `this`, it can be annotated with `this: void`  @ty
   33:57  error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
   53:75  error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
 
-✖ 30 problems (30 errors, 0 warnings)
+✖ 22 problems (22 errors, 0 warnings)
 
  ELIFECYCLE  Command failed with exit code 1.
 
