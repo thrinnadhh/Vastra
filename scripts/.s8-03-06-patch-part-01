@@ -1,0 +1,439 @@
+diff --git a/apps/backend/.env.example b/apps/backend/.env.example
+index 47233dd1f1488a37e3d29bb801eeb99a896f1088..8addf4e49443db4b68d5a20cbd13f1a36ba29e2c 100644
+--- a/apps/backend/.env.example
++++ b/apps/backend/.env.example
+@@ -25,4 +25,13 @@ FCM_PROJECT_ID=local-project-placeholder
+ FCM_CLIENT_EMAIL=firebase-admin@example.invalid
+ FCM_PRIVATE_KEY=replace-with-local-private-key
+ 
++DELIVERY_DISPATCH_ENABLED=false
++DELIVERY_DISPATCH_POLL_INTERVAL_MS=5000
++DELIVERY_DISPATCH_DUE_TASK_LIMIT=10
++DELIVERY_DISPATCH_INITIAL_RADIUS_METERS=2000
++DELIVERY_DISPATCH_RADIUS_STEP_METERS=2000
++DELIVERY_DISPATCH_MAX_RADIUS_METERS=8000
++DELIVERY_DISPATCH_CAPTAINS_PER_WAVE=3
++DELIVERY_DISPATCH_OFFER_LIFETIME_SECONDS=30
++
+ MAPS_API_KEY=replace-with-local-maps-secret
+diff --git a/apps/backend/src/dispatch/admin-delivery.controller.ts b/apps/backend/src/dispatch/admin-delivery.controller.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..a6bb3ee3a3a2017994d43256d00c7ef58948496d
+--- /dev/null
++++ b/apps/backend/src/dispatch/admin-delivery.controller.ts
+@@ -0,0 +1,28 @@
++import { Body, Controller, Headers, HttpCode, HttpStatus, Inject, Param, Post } from '@nestjs/common';
++
++import { AllowAccountTypes } from '../auth/account-types.decorator';
++import type { AuthenticatedRequestContext } from '../auth/auth.types';
++import { CurrentAuthContext } from '../auth/current-auth-context.decorator';
++import { RequireOperationalReadiness } from '../auth/operational-readiness.decorator';
++import { RequirePermissions } from '../auth/permissions.decorator';
++import { DeliveryService } from './delivery.service';
++import type { DeliveryMutationResponse } from './delivery.types';
++
++@Controller('admin/delivery-tasks')
++@AllowAccountTypes('ADMIN')
++@RequirePermissions('operations.manage')
++@RequireOperationalReadiness()
++export class AdminDeliveryController {
++  public constructor(@Inject(DeliveryService) private readonly service: DeliveryService) {}
++
++  @Post(':taskId/assign')
++  @HttpCode(HttpStatus.OK)
++  public assign(
++    @CurrentAuthContext() context: AuthenticatedRequestContext,
++    @Param('taskId') taskId: unknown,
++    @Headers('idempotency-key') idempotencyKey: unknown,
++    @Body() body: unknown,
++  ): Promise<DeliveryMutationResponse> {
++    return this.service.adminAssign(context, taskId, idempotencyKey, body);
++  }
++}
+diff --git a/apps/backend/src/dispatch/delivery-dispatch.configuration.test.ts b/apps/backend/src/dispatch/delivery-dispatch.configuration.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..834c3b40b373813b408b4f09efbd6ffcb7176abd
+--- /dev/null
++++ b/apps/backend/src/dispatch/delivery-dispatch.configuration.test.ts
+@@ -0,0 +1,27 @@
++import { describe, expect, it } from 'vitest';
++
++import { loadDeliveryDispatchConfiguration } from './delivery-dispatch.configuration';
++
++describe('delivery dispatch configuration', () => {
++  it('is disabled with frozen MVP defaults', () => {
++    expect(loadDeliveryDispatchConfiguration({})).toStrictEqual({
++      enabled: false,
++      pollIntervalMs: 5000,
++      dueTaskLimit: 10,
++      initialRadiusMeters: 2000,
++      radiusStepMeters: 2000,
++      maxRadiusMeters: 8000,
++      captainsPerWave: 3,
++      offerLifetimeSeconds: 30,
++    });
++  });
++
++  it('rejects invalid configured bounds', () => {
++    expect(() =>
++      loadDeliveryDispatchConfiguration({
++        DELIVERY_DISPATCH_INITIAL_RADIUS_METERS: '9000',
++        DELIVERY_DISPATCH_MAX_RADIUS_METERS: '8000',
++      }),
++    ).toThrow('DELIVERY_DISPATCH_MAX_RADIUS_METERS');
++  });
++});
+diff --git a/apps/backend/src/dispatch/delivery-dispatch.configuration.ts b/apps/backend/src/dispatch/delivery-dispatch.configuration.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..c81ed7e0f98c6b86784189144e0cf37301182513
+--- /dev/null
++++ b/apps/backend/src/dispatch/delivery-dispatch.configuration.ts
+@@ -0,0 +1,86 @@
++export interface DeliveryDispatchConfiguration {
++  readonly enabled: boolean;
++  readonly pollIntervalMs: number;
++  readonly dueTaskLimit: number;
++  readonly initialRadiusMeters: number;
++  readonly radiusStepMeters: number;
++  readonly maxRadiusMeters: number;
++  readonly captainsPerWave: number;
++  readonly offerLifetimeSeconds: number;
++}
++
++function parseBoolean(value: string | undefined): boolean {
++  if (value === undefined || value.trim().length === 0) return false;
++  if (value === 'true') return true;
++  if (value === 'false') return false;
++  throw new Error('Invalid environment configuration: DELIVERY_DISPATCH_ENABLED');
++}
++
++function parseInteger(
++  environment: NodeJS.ProcessEnv,
++  name: string,
++  fallback: number,
++  minimum: number,
++  maximum: number,
++): number {
++  const raw = environment[name]?.trim();
++  if (raw === undefined || raw.length === 0) return fallback;
++  const value = Number(raw);
++  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
++    throw new Error(`Invalid environment configuration: ${name}`);
++  }
++  return value;
++}
++
++export function loadDeliveryDispatchConfiguration(
++  environment: NodeJS.ProcessEnv = process.env,
++): DeliveryDispatchConfiguration {
++  const initialRadiusMeters = parseInteger(
++    environment,
++    'DELIVERY_DISPATCH_INITIAL_RADIUS_METERS',
++    2_000,
++    100,
++    50_000,
++  );
++  const maxRadiusMeters = parseInteger(
++    environment,
++    'DELIVERY_DISPATCH_MAX_RADIUS_METERS',
++    8_000,
++    initialRadiusMeters,
++    100_000,
++  );
++  return {
++    enabled: parseBoolean(environment['DELIVERY_DISPATCH_ENABLED']),
++    pollIntervalMs: parseInteger(
++      environment,
++      'DELIVERY_DISPATCH_POLL_INTERVAL_MS',
++      5_000,
++      1_000,
++      60_000,
++    ),
++    dueTaskLimit: parseInteger(environment, 'DELIVERY_DISPATCH_DUE_TASK_LIMIT', 10, 1, 100),
++    initialRadiusMeters,
++    radiusStepMeters: parseInteger(
++      environment,
++      'DELIVERY_DISPATCH_RADIUS_STEP_METERS',
++      2_000,
++      100,
++      50_000,
++    ),
++    maxRadiusMeters,
++    captainsPerWave: parseInteger(
++      environment,
++      'DELIVERY_DISPATCH_CAPTAINS_PER_WAVE',
++      3,
++      1,
++      20,
++    ),
++    offerLifetimeSeconds: parseInteger(
++      environment,
++      'DELIVERY_DISPATCH_OFFER_LIFETIME_SECONDS',
++      30,
++      10,
++      300,
++    ),
++  };
++}
+diff --git a/apps/backend/src/dispatch/delivery-dispatch.worker.test.ts b/apps/backend/src/dispatch/delivery-dispatch.worker.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..0a41dd49698c41412af1834feae4a507edf59c95
+--- /dev/null
++++ b/apps/backend/src/dispatch/delivery-dispatch.worker.test.ts
+@@ -0,0 +1,44 @@
++import { describe, expect, it } from 'vitest';
++
++import type { DeliveryDispatchConfiguration } from './delivery-dispatch.configuration';
++import { DeliveryDispatchWorker } from './delivery-dispatch.worker';
++import type { DeliveryGateway, DeliveryOfferWaveConfiguration } from './delivery.gateway';
++
++const configuration: DeliveryDispatchConfiguration = {
++  enabled: true,
++  pollIntervalMs: 5000,
++  dueTaskLimit: 10,
++  initialRadiusMeters: 2000,
++  radiusStepMeters: 2000,
++  maxRadiusMeters: 8000,
++  captainsPerWave: 3,
++  offerLifetimeSeconds: 30,
++};
++
++describe('delivery dispatch worker', () => {
++  it('runs due offer waves with the frozen configuration', async () => {
++    const calls: DeliveryOfferWaveConfiguration[] = [];
++    const gateway = {
++      runDueOfferWaves(
++        received: DeliveryOfferWaveConfiguration,
++      ): Promise<readonly never[]> {
++        calls.push(received);
++        return Promise.resolve([] as const);
++      },
++    } as unknown as DeliveryGateway;
++    const worker = new DeliveryDispatchWorker(configuration, gateway);
++
++    await worker.drainOnce();
++
++    expect(calls).toStrictEqual([
++      {
++        limit: 10,
++        initialRadiusMeters: 2000,
++        radiusStepMeters: 2000,
++        maxRadiusMeters: 8000,
++        captainsPerWave: 3,
++        offerLifetimeSeconds: 30,
++      },
++    ]);
++  });
++});
+diff --git a/apps/backend/src/dispatch/delivery-dispatch.worker.ts b/apps/backend/src/dispatch/delivery-dispatch.worker.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..4446c8102041b6561ab835751cdd53a8d92b6ade
+--- /dev/null
++++ b/apps/backend/src/dispatch/delivery-dispatch.worker.ts
+@@ -0,0 +1,66 @@
++import {
++  Inject,
++  Injectable,
++  Logger,
++  type OnApplicationBootstrap,
++  type OnApplicationShutdown,
++} from '@nestjs/common';
++
++import type { DeliveryDispatchConfiguration } from './delivery-dispatch.configuration';
++import type { DeliveryGateway } from './delivery.gateway';
++import { DELIVERY_DISPATCH_CONFIGURATION, DELIVERY_GATEWAY } from './delivery.tokens';
++
++@Injectable()
++export class DeliveryDispatchWorker implements OnApplicationBootstrap, OnApplicationShutdown {
++  private readonly logger = new Logger(DeliveryDispatchWorker.name);
++  private timer: NodeJS.Timeout | null = null;
++  private draining = false;
++
++  public constructor(
++    @Inject(DELIVERY_DISPATCH_CONFIGURATION)
++    private readonly configuration: DeliveryDispatchConfiguration,
++    @Inject(DELIVERY_GATEWAY)
++    private readonly gateway: DeliveryGateway,
++  ) {}
++
++  public onApplicationBootstrap(): void {
++    if (!this.configuration.enabled) {
++      this.logger.log('delivery dispatch worker disabled');
++      return;
++    }
++    void this.drainOnce();
++    this.timer = setInterval(() => void this.drainOnce(), this.configuration.pollIntervalMs);
++    this.timer.unref();
++  }
++
++  public onApplicationShutdown(): void {
++    if (this.timer !== null) clearInterval(this.timer);
++  }
++
++  public async drainOnce(): Promise<void> {
++    if (!this.configuration.enabled || this.draining) return;
++    this.draining = true;
++    try {
++      const results = await this.gateway.runDueOfferWaves({
++        limit: this.configuration.dueTaskLimit,
++        initialRadiusMeters: this.configuration.initialRadiusMeters,
++        radiusStepMeters: this.configuration.radiusStepMeters,
++        maxRadiusMeters: this.configuration.maxRadiusMeters,
++        captainsPerWave: this.configuration.captainsPerWave,
++        offerLifetimeSeconds: this.configuration.offerLifetimeSeconds,
++      });
++      if (results.length > 0) {
++        const created = results.reduce((total, result) => total + result.offersCreated, 0);
++        const expired = results.reduce((total, result) => total + result.offersExpired, 0);
++        this.logger.log(
++          `delivery dispatch tasks=${String(results.length)} offersCreated=${String(created)} offersExpired=${String(expired)}`,
++        );
++      }
++    } catch (error: unknown) {
++      const reason = error instanceof Error ? error.name : 'UNKNOWN_ERROR';
++      this.logger.warn(`delivery dispatch drain failed reason=${reason}`);
++    } finally {
++      this.draining = false;
++    }
++  }
++}
+diff --git a/apps/backend/src/dispatch/delivery-http-error.ts b/apps/backend/src/dispatch/delivery-http-error.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..6a8ba7717ff61081869602a2f3e09c2bb0b0d785
+--- /dev/null
++++ b/apps/backend/src/dispatch/delivery-http-error.ts
+@@ -0,0 +1,134 @@
++import { HttpException, HttpStatus } from '@nestjs/common';
++
++function create(
++  status: HttpStatus,
++  code: string,
++  message: string,
++  retryable: boolean,
++): HttpException {
++  return new HttpException(
++    {
++      success: false,
++      error: { code, message, details: null, retryable },
++      requestId: null,
++    },
++    status,
++  );
++}
++
++export function createDeliveryRequestInvalidException(): HttpException {
++  return create(
++    HttpStatus.BAD_REQUEST,
++    'DELIVERY_REQUEST_INVALID',
++    'The delivery request is invalid.',
++    false,
++  );
++}
++
++export function createDeliveryIdempotencyRequiredException(): HttpException {
++  return create(
++    HttpStatus.BAD_REQUEST,
++    'IDEMPOTENCY_KEY_REQUIRED',
++    'A valid Idempotency-Key is required.',
++    false,
++  );
++}
++
++export function createDeliveryAccessDeniedException(): HttpException {
++  return create(
++    HttpStatus.FORBIDDEN,
++    'DELIVERY_ACCESS_DENIED',
++    'Delivery access is denied.',
++    false,
++  );
++}
++
++export function createCaptainNotEligibleException(): HttpException {
++  return create(
++    HttpStatus.FORBIDDEN,
++    'CAPTAIN_NOT_ELIGIBLE',
++    'The captain is not operationally eligible.',
++    false,
++  );
++}
++
++export function createDeliveryTaskNotFoundException(): HttpException {
++  return create(
++    HttpStatus.NOT_FOUND,
++    'DELIVERY_TASK_NOT_FOUND',
++    'The delivery task was not found.',
++    false,
++  );
++}
++
++export function createDeliveryOfferNotFoundException(): HttpException {
++  return create(
++    HttpStatus.NOT_FOUND,
++    'DELIVERY_OFFER_NOT_FOUND',
++    'The delivery offer was not found.',
++    false,
++  );
++}
++
++export function createDeliveryStateConflictException(): HttpException {
++  return create(
++    HttpStatus.CONFLICT,
++    'DELIVERY_STATE_CONFLICT',
++    'The current delivery state rejects this action.',
++    false,
++  );
++}
++
++export function createDeliveryAlreadyAssignedException(): HttpException {
++  return create(
++    HttpStatus.CONFLICT,
++    'DELIVERY_TASK_ALREADY_ASSIGNED',
++    'Another captain already owns the delivery.',
++    false,
++  );
++}
++
++export function createCaptainAlreadyAssignedException(): HttpException {
++  return create(
++    HttpStatus.CONFLICT,
++    'CAPTAIN_ALREADY_ASSIGNED',
++    'The captain already owns another active delivery.',
++    false,
++  );
++}
++
++export function createDeliveryIdempotencyConflictException(): HttpException {
++  return create(
++    HttpStatus.CONFLICT,
++    'IDEMPOTENCY_KEY_REUSED',
++    'The idempotency key was reused with another request.',
++    false,
++  );
++}
++
++export function createDeliveryOfferExpiredException(): HttpException {
++  return create(
++    HttpStatus.GONE,
++    'DELIVERY_OFFER_EXPIRED',
++    'The delivery offer has expired.',
++    false,
++  );
++}
++
++export function createCaptainNotAtPickupException(): HttpException {
++  return create(
++    HttpStatus.CONFLICT,
++    'CAPTAIN_NOT_AT_PICKUP',
++    'The captain is not close enough to the pickup location.',
++    false,
++  );
++}
++
++export function createDeliveryUnavailableException(): HttpException {
++  return create(
++    HttpStatus.SERVICE_UNAVAILABLE,
++    'DELIVERY_SERVICE_UNAVAILABLE',
++    'Delivery services are temporarily unavailable.',
++    true,
++  );
++}
