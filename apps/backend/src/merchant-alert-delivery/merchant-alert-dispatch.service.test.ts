@@ -1,10 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { MerchantAlertDeliveryConfiguration } from './merchant-alert-delivery.configuration';
 import type {
   CompleteMerchantAlertDispatchCommand,
   CompleteMerchantAlertDispatchResult,
   MerchantAlertDeliveryGateway,
+  MerchantAlertDeviceDestination,
+  MerchantAlertDeviceResult,
   MerchantAlertDispatchClaim,
   MerchantAlertSender,
 } from './merchant-alert-delivery.types';
@@ -23,6 +25,23 @@ const CONFIGURATION: MerchantAlertDeliveryConfiguration = {
   },
 };
 
+const DEVICE_ONE: MerchantAlertDeviceDestination = {
+  deviceId: '50000000-0000-4000-8000-000000000001',
+  pushToken: 'token-one',
+};
+
+const DEVICE_TWO: MerchantAlertDeviceDestination = {
+  deviceId: '50000000-0000-4000-8000-000000000002',
+  pushToken: 'token-two',
+};
+
+interface TestDependencies {
+  readonly gateway: MerchantAlertDeliveryGateway;
+  readonly sender: MerchantAlertSender;
+  readonly completedCommands: CompleteMerchantAlertDispatchCommand[];
+  readonly sendCalls: MerchantAlertDeviceDestination[];
+}
+
 function claim(overrides: Partial<MerchantAlertDispatchClaim> = {}): MerchantAlertDispatchClaim {
   return {
     eventId: '10000000-0000-4000-8000-000000000001',
@@ -38,12 +57,7 @@ function claim(overrides: Partial<MerchantAlertDispatchClaim> = {}): MerchantAle
     eventMaxAttempts: 12,
     deliverable: true,
     stopReason: null,
-    devices: [
-      {
-        deviceId: '50000000-0000-4000-8000-000000000001',
-        pushToken: 'token-one',
-      },
-    ],
+    devices: [DEVICE_ONE],
     ...overrides,
   };
 }
@@ -65,26 +79,48 @@ function completion(
   };
 }
 
-function dependencies(claims: readonly MerchantAlertDispatchClaim[]) {
-  const completeDispatch = vi.fn(async (command: CompleteMerchantAlertDispatchCommand) =>
-    completion(command),
-  );
+function sentResult(destination: MerchantAlertDeviceDestination): MerchantAlertDeviceResult {
+  return {
+    deviceId: destination.deviceId,
+    outcome: 'SENT',
+    providerMessageId: `projects/test/messages/${destination.deviceId}`,
+    failureCode: null,
+    failureReason: null,
+    retryable: false,
+  };
+}
+
+function dependencies(
+  claims: readonly MerchantAlertDispatchClaim[],
+  sendImplementation: MerchantAlertSender['send'] = (_claim, destination) =>
+    Promise.resolve(sentResult(destination)),
+): TestDependencies {
+  const completedCommands: CompleteMerchantAlertDispatchCommand[] = [];
+  const sendCalls: MerchantAlertDeviceDestination[] = [];
+
   const gateway: MerchantAlertDeliveryGateway = {
-    claimDispatches: vi.fn(async () => claims),
-    completeDispatch,
+    claimDispatches: () => Promise.resolve(claims),
+    completeDispatch: (command) => {
+      completedCommands.push(command);
+      return Promise.resolve(completion(command));
+    },
   };
   const sender: MerchantAlertSender = {
-    send: vi.fn(async (_claim, destination) => ({
-      deviceId: destination.deviceId,
-      outcome: 'SENT' as const,
-      providerMessageId: `projects/test/messages/${destination.deviceId}`,
-      failureCode: null,
-      failureReason: null,
-      retryable: false,
-    })),
+    send: (dispatchClaim, destination) => {
+      sendCalls.push(destination);
+      return sendImplementation(dispatchClaim, destination);
+    },
   };
 
-  return { gateway, sender, completeDispatch };
+  return { gateway, sender, completedCommands, sendCalls };
+}
+
+function requireFirstCommand(
+  commands: readonly CompleteMerchantAlertDispatchCommand[],
+): CompleteMerchantAlertDispatchCommand {
+  const command = commands.at(0);
+  if (command === undefined) throw new Error('Expected a completed dispatch command');
+  return command;
 }
 
 describe('MerchantAlertDispatchService', () => {
@@ -94,37 +130,42 @@ describe('MerchantAlertDispatchService', () => {
       stopReason: 'ORDER_NOT_WAITING',
       devices: [],
     });
-    const { gateway, sender, completeDispatch } = dependencies([stoppedClaim]);
-    const service = new MerchantAlertDispatchService(CONFIGURATION, gateway, sender);
+    const test = dependencies([stoppedClaim]);
+    const service = new MerchantAlertDispatchService(
+      CONFIGURATION,
+      test.gateway,
+      test.sender,
+    );
 
     const summary = await service.drain();
 
-    expect(sender.send).not.toHaveBeenCalled();
-    expect(completeDispatch).toHaveBeenCalledWith({
-      workerId: 'worker-one',
-      eventId: stoppedClaim.eventId,
-      alertId: stoppedClaim.alertId,
-      stopReason: 'ORDER_NOT_WAITING',
-      results: [],
-    });
+    expect(test.sendCalls).toHaveLength(0);
+    expect(test.completedCommands).toEqual([
+      {
+        workerId: 'worker-one',
+        eventId: stoppedClaim.eventId,
+        alertId: stoppedClaim.alertId,
+        stopReason: 'ORDER_NOT_WAITING',
+        results: [],
+      },
+    ]);
     expect(summary).toMatchObject({ claimed: 1, published: 1, stopped: 1 });
   });
 
   it('sends every eligible device and completes the durable event once', async () => {
-    const activeClaim = claim({
-      devices: [
-        { deviceId: '50000000-0000-4000-8000-000000000001', pushToken: 'token-one' },
-        { deviceId: '50000000-0000-4000-8000-000000000002', pushToken: 'token-two' },
-      ],
-    });
-    const { gateway, sender, completeDispatch } = dependencies([activeClaim]);
-    const service = new MerchantAlertDispatchService(CONFIGURATION, gateway, sender);
+    const activeClaim = claim({ devices: [DEVICE_ONE, DEVICE_TWO] });
+    const test = dependencies([activeClaim]);
+    const service = new MerchantAlertDispatchService(
+      CONFIGURATION,
+      test.gateway,
+      test.sender,
+    );
 
     const summary = await service.drain();
 
-    expect(sender.send).toHaveBeenCalledTimes(2);
-    expect(completeDispatch).toHaveBeenCalledTimes(1);
-    const command = completeDispatch.mock.calls[0]![0];
+    expect(test.sendCalls).toEqual([DEVICE_ONE, DEVICE_TWO]);
+    expect(test.completedCommands).toHaveLength(1);
+    const command = requireFirstCommand(test.completedCommands);
     expect(command.stopReason).toBeNull();
     expect(command.results).toHaveLength(2);
     expect(command.results.every((result) => result.outcome === 'SENT')).toBe(true);
@@ -133,16 +174,21 @@ describe('MerchantAlertDispatchService', () => {
 
   it('turns an unexpected sender exception into a retryable device result', async () => {
     const activeClaim = claim();
-    const { gateway, sender, completeDispatch } = dependencies([activeClaim]);
-    vi.mocked(sender.send).mockRejectedValueOnce(new Error('do not expose token'));
-    const service = new MerchantAlertDispatchService(CONFIGURATION, gateway, sender);
+    const failingSend: MerchantAlertSender['send'] = () =>
+      Promise.reject(new Error('do not expose token'));
+    const test = dependencies([activeClaim], failingSend);
+    const service = new MerchantAlertDispatchService(
+      CONFIGURATION,
+      test.gateway,
+      test.sender,
+    );
 
     await service.drain();
 
-    const command = completeDispatch.mock.calls[0]![0];
+    const command = requireFirstCommand(test.completedCommands);
     expect(command.results).toEqual([
       {
-        deviceId: activeClaim.devices[0]!.deviceId,
+        deviceId: DEVICE_ONE.deviceId,
         outcome: 'FAILED',
         providerMessageId: null,
         failureCode: 'Error',
