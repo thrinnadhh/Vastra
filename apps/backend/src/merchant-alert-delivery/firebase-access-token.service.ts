@@ -122,7 +122,7 @@ export class FirebaseAccessTokenService implements FcmAccessTokenProvider {
 
     if (!response.ok) {
       throw new FirebaseAccessTokenUnavailableError(
-        `Firebase OAuth exchange failed with status ${response.status}`,
+        `Firebase OAuth exchange failed with status ${String(response.status)}`,
       );
     }
 
