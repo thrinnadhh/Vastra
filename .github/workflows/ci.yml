@@ -38,6 +38,11 @@ jobs:
       - name: Apply source fixes
         run: python3 .github/scripts/s7_mobile_lint_fix.py
 
+      - name: Remove diagnostic files before formatting
+        run: |
+          rm -f docs/implementation/s7-lint-output.txt
+          rm -f docs/implementation/s7-lint-fix-trigger.md
+
       - name: Format repository
         run: pnpm format
 
@@ -49,8 +54,6 @@ jobs:
           rm -f .github/workflows/s7-lint-capture.yml
           rm -f .github/workflows/s7-mobile-lint-fix-push.yml
           rm -f .github/scripts/s7_mobile_lint_fix.py
-          rm -f docs/implementation/s7-lint-output.txt
-          rm -f docs/implementation/s7-lint-fix-trigger.md
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --all
