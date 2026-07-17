@@ -64,7 +64,7 @@ export class MerchantAlertDispatchService {
       const completion = await this.processClaim(claim);
       summary = addCompletion(summary, completion);
       this.logger.log(
-        `merchant-alert event=${completion.eventId} alert=${completion.alertId} status=${completion.eventStatus} sent=${completion.successfulDevices} failed=${completion.failedDevices} stopped=${completion.stopped}`,
+        `merchant-alert event=${completion.eventId} alert=${completion.alertId} status=${completion.eventStatus} sent=${String(completion.successfulDevices)} failed=${String(completion.failedDevices)} stopped=${String(completion.stopped)}`,
       );
     }
 
