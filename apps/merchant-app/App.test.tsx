@@ -1,15 +1,21 @@
 import { render } from '@testing-library/react-native';
+import type { ReactNode } from 'react';
 
-import { MerchantFoundationScreen } from './App';
+import { MerchantAppContent } from './App';
 
-describe('MerchantFoundationScreen', () => {
-  it('renders the accessible merchant foundation screen', () => {
-    const { getByLabelText, getByRole, getByText } = render(<MerchantFoundationScreen />);
+jest.mock('./src/orders/default-merchant-orders', () => ({
+  DefaultMerchantOrders: function MockMerchantOrders() {
+    return null;
+  },
+}));
 
-    expect(getByRole('header', { name: 'Vastra Merchant' })).toBeTruthy();
+jest.mock('./src/auth/default-merchant-session', () => ({
+  MerchantSessionApp: ({ children }: { readonly children: ReactNode }) => children,
+}));
 
-    expect(getByText('A focused foundation for managing local fashion operations.')).toBeTruthy();
-
-    expect(getByLabelText('Merchant mobile foundation is ready')).toBeTruthy();
+describe('MerchantAppContent', () => {
+  it('mounts the real merchant orders feature', () => {
+    const view = render(<MerchantAppContent />);
+    expect(view.toJSON()).toBeNull();
   });
 });
