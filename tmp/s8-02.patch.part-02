@@ -1,0 +1,400 @@
++      return {
++        success: true,
++        data: { location },
++        meta: { requestId: null },
++      };
++    } catch (error: unknown) {
++      return this.rethrow(error);
++    }
++  }
++
++  private rethrow(error: unknown): never {
++    if (
++      error instanceof CaptainPresenceValidationError ||
++      error instanceof CaptainPresenceInvalidRequestError
++    ) {
++      throw createCaptainPresenceInvalidException();
++    }
++
++    if (error instanceof CaptainPresenceNotEligibleError) {
++      throw createCaptainNotEligibleException();
++    }
++
++    if (error instanceof CaptainPresenceStateConflictError) {
++      throw createCaptainPresenceStateConflictException();
++    }
++
++    if (error instanceof CaptainPresenceLocationStaleError) {
++      throw createCaptainLocationStaleException();
++    }
++
++    if (error instanceof CaptainPresenceSampleConflictError) {
++      throw createCaptainLocationSampleConflictException();
++    }
++
++    if (error instanceof CaptainPresenceRateLimitedError) {
++      throw createCaptainLocationRateLimitedException();
++    }
++
++    if (error instanceof CaptainPresenceGatewayUnavailableError) {
++      throw createCaptainPresenceUnavailableException();
++    }
++
++    throw error;
++  }
++}
+diff --git a/apps/backend/src/dispatch/captain-presence.tokens.ts b/apps/backend/src/dispatch/captain-presence.tokens.ts
+new file mode 100644
+index 0000000..7ff6689
+--- /dev/null
++++ b/apps/backend/src/dispatch/captain-presence.tokens.ts
+@@ -0,0 +1 @@
++export const CAPTAIN_PRESENCE_GATEWAY = Symbol('CAPTAIN_PRESENCE_GATEWAY');
+diff --git a/apps/backend/src/dispatch/captain-presence.types.ts b/apps/backend/src/dispatch/captain-presence.types.ts
+new file mode 100644
+index 0000000..9ee67d8
+--- /dev/null
++++ b/apps/backend/src/dispatch/captain-presence.types.ts
+@@ -0,0 +1,76 @@
++import type { CaptainAvailabilityStatus } from '../auth/operational-readiness.types';
++
++export const CAPTAIN_CLIENT_AVAILABILITY_STATUSES = [
++  'OFFLINE',
++  'AVAILABLE',
++  'ON_BREAK',
++] as const;
++
++export type CaptainClientAvailabilityStatus =
++  (typeof CAPTAIN_CLIENT_AVAILABILITY_STATUSES)[number];
++
++export interface SetCaptainAvailabilityCommand {
++  readonly actorId: string;
++  readonly requestedStatus: CaptainClientAvailabilityStatus;
++}
++
++export interface CaptainAvailabilityLocationSnapshot {
++  readonly recordedAt: string;
++  readonly accuracyMeters: number;
++  readonly fresh: boolean;
++  readonly activeDeliveryTaskId: string | null;
++}
++
++export interface CaptainAvailabilitySnapshot {
++  readonly captainId: string;
++  readonly requestedStatus: CaptainClientAvailabilityStatus;
++  readonly availabilityStatus: CaptainAvailabilityStatus;
++  readonly changed: boolean;
++  readonly dispatchEligible: boolean;
++  readonly location: CaptainAvailabilityLocationSnapshot | null;
++  readonly changedAt: string;
++}
++
++export interface UpdateCaptainLocationCommand {
++  readonly actorId: string;
++  readonly sampleId: string;
++  readonly latitude: number;
++  readonly longitude: number;
++  readonly accuracyMeters: number;
++  readonly recordedAt: string;
++  readonly heading: number | null;
++  readonly speedMps: number | null;
++  readonly batteryPercent: number | null;
++  readonly activeDeliveryTaskId: string | null;
++}
++
++export interface CaptainLocationSnapshot {
++  readonly captainId: string;
++  readonly sampleId: string;
++  readonly recordedAt: string;
++  readonly acceptedAt: string;
++  readonly accuracyMeters: number;
++  readonly activeDeliveryTaskId: string | null;
++  readonly historySampled: boolean;
++  readonly replayed: boolean;
++}
++
++export interface CaptainAvailabilityResponse {
++  readonly success: true;
++  readonly data: {
++    readonly availability: CaptainAvailabilitySnapshot;
++  };
++  readonly meta: {
++    readonly requestId: null;
++  };
++}
++
++export interface CaptainLocationResponse {
++  readonly success: true;
++  readonly data: {
++    readonly location: CaptainLocationSnapshot;
++  };
++  readonly meta: {
++    readonly requestId: null;
++  };
++}
+diff --git a/apps/backend/src/dispatch/captain-presence.validation.test.ts b/apps/backend/src/dispatch/captain-presence.validation.test.ts
+new file mode 100644
+index 0000000..2967f1b
+--- /dev/null
++++ b/apps/backend/src/dispatch/captain-presence.validation.test.ts
+@@ -0,0 +1,63 @@
++import { describe, expect, it } from 'vitest';
++
++import {
++  CaptainPresenceValidationError,
++  parseCaptainAvailabilityBody,
++  parseCaptainLocationBody,
++} from './captain-presence.validation';
++
++const ACTOR_ID = '10000000-0000-4000-8000-000000000001';
++const SAMPLE_ID = '20000000-0000-4000-8000-000000000001';
++
++function validLocation(): Record<string, unknown> {
++  return {
++    sampleId: SAMPLE_ID,
++    latitude: 13.6288,
++    longitude: 79.4192,
++    accuracyMeters: 12,
++    recordedAt: '2026-07-17T10:00:00.000Z',
++    heading: 45,
++    speedMps: 3.5,
++    batteryPercent: 80,
++    activeDeliveryTaskId: null,
++  };
++}
++
++describe('captain presence validation', () => {
++  it('accepts only client-controlled availability states', () => {
++    expect(parseCaptainAvailabilityBody({ status: 'AVAILABLE' })).toBe('AVAILABLE');
++    expect(() => parseCaptainAvailabilityBody({ status: 'ASSIGNED' })).toThrow(
++      CaptainPresenceValidationError,
++    );
++    expect(() => parseCaptainAvailabilityBody({ status: 'OFFLINE', extra: true })).toThrow(
++      CaptainPresenceValidationError,
++    );
++  });
++
++  it('parses a bounded location sample', () => {
++    expect(parseCaptainLocationBody(ACTOR_ID, validLocation())).toEqual({
++      actorId: ACTOR_ID,
++      sampleId: SAMPLE_ID,
++      latitude: 13.6288,
++      longitude: 79.4192,
++      accuracyMeters: 12,
++      recordedAt: '2026-07-17T10:00:00.000Z',
++      heading: 45,
++      speedMps: 3.5,
++      batteryPercent: 80,
++      activeDeliveryTaskId: null,
++    });
++  });
++
++  it('rejects invalid coordinates and sensor metadata', () => {
++    expect(() =>
++      parseCaptainLocationBody(ACTOR_ID, { ...validLocation(), latitude: 91 }),
++    ).toThrow(CaptainPresenceValidationError);
++    expect(() =>
++      parseCaptainLocationBody(ACTOR_ID, { ...validLocation(), accuracyMeters: -1 }),
++    ).toThrow(CaptainPresenceValidationError);
++    expect(() =>
++      parseCaptainLocationBody(ACTOR_ID, { ...validLocation(), batteryPercent: 101 }),
++    ).toThrow(CaptainPresenceValidationError);
++  });
++});
+diff --git a/apps/backend/src/dispatch/captain-presence.validation.ts b/apps/backend/src/dispatch/captain-presence.validation.ts
+new file mode 100644
+index 0000000..dc5f210
+--- /dev/null
++++ b/apps/backend/src/dispatch/captain-presence.validation.ts
+@@ -0,0 +1,142 @@
++import {
++  CAPTAIN_CLIENT_AVAILABILITY_STATUSES,
++  type CaptainClientAvailabilityStatus,
++  type UpdateCaptainLocationCommand,
++} from './captain-presence.types';
++
++const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
++
++export class CaptainPresenceValidationError extends Error {}
++
++function requireRecord(value: unknown): Record<string, unknown> {
++  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
++    throw new CaptainPresenceValidationError();
++  }
++
++  return value as Record<string, unknown>;
++}
++
++function rejectUnknownKeys(record: Record<string, unknown>, allowedKeys: readonly string[]): void {
++  if (Object.keys(record).some((key) => !allowedKeys.includes(key))) {
++    throw new CaptainPresenceValidationError();
++  }
++}
++
++function requireUuid(value: unknown): string {
++  if (typeof value !== 'string' || !UUID_PATTERN.test(value)) {
++    throw new CaptainPresenceValidationError();
++  }
++
++  return value;
++}
++
++function requireFiniteNumber(value: unknown): number {
++  if (typeof value !== 'number' || !Number.isFinite(value)) {
++    throw new CaptainPresenceValidationError();
++  }
++
++  return value;
++}
++
++function readNullableFiniteNumber(record: Record<string, unknown>, key: string): number | null {
++  const value = record[key];
++
++  if (value === undefined || value === null) {
++    return null;
++  }
++
++  return requireFiniteNumber(value);
++}
++
++function readNullableUuid(record: Record<string, unknown>, key: string): string | null {
++  const value = record[key];
++
++  if (value === undefined || value === null) {
++    return null;
++  }
++
++  return requireUuid(value);
++}
++
++export function parseCaptainAvailabilityBody(value: unknown): CaptainClientAvailabilityStatus {
++  const record = requireRecord(value);
++  rejectUnknownKeys(record, ['status']);
++  const status = record['status'];
++
++  if (
++    typeof status !== 'string' ||
++    !CAPTAIN_CLIENT_AVAILABILITY_STATUSES.some((candidate) => candidate === status)
++  ) {
++    throw new CaptainPresenceValidationError();
++  }
++
++  return status;
++}
++
++export function parseCaptainLocationBody(
++  actorId: string,
++  value: unknown,
++): UpdateCaptainLocationCommand {
++  const record = requireRecord(value);
++  rejectUnknownKeys(record, [
++    'sampleId',
++    'latitude',
++    'longitude',
++    'accuracyMeters',
++    'recordedAt',
++    'heading',
++    'speedMps',
++    'batteryPercent',
++    'activeDeliveryTaskId',
++  ]);
++
++  const latitude = requireFiniteNumber(record['latitude']);
++  const longitude = requireFiniteNumber(record['longitude']);
++  const accuracyMeters = requireFiniteNumber(record['accuracyMeters']);
++  const heading = readNullableFiniteNumber(record, 'heading');
++  const speedMps = readNullableFiniteNumber(record, 'speedMps');
++  const batteryValue = record['batteryPercent'];
++  const activeDeliveryTaskId = readNullableUuid(record, 'activeDeliveryTaskId');
++  const recordedAt = record['recordedAt'];
++  let batteryPercent: number | null = null;
++
++  if (batteryValue !== undefined && batteryValue !== null) {
++    if (
++      typeof batteryValue !== 'number' ||
++      !Number.isInteger(batteryValue) ||
++      batteryValue < 0 ||
++      batteryValue > 100
++    ) {
++      throw new CaptainPresenceValidationError();
++    }
++
++    batteryPercent = batteryValue;
++  }
++
++  if (
++    latitude < -90 ||
++    latitude > 90 ||
++    longitude < -180 ||
++    longitude > 180 ||
++    accuracyMeters < 0 ||
++    (heading !== null && (heading < 0 || heading >= 360)) ||
++    (speedMps !== null && speedMps < 0) ||
++    typeof recordedAt !== 'string' ||
++    Number.isNaN(Date.parse(recordedAt))
++  ) {
++    throw new CaptainPresenceValidationError();
++  }
++
++  return {
++    actorId,
++    sampleId: requireUuid(record['sampleId']),
++    latitude,
++    longitude,
++    accuracyMeters,
++    recordedAt,
++    heading,
++    speedMps,
++    batteryPercent,
++    activeDeliveryTaskId,
++  };
++}
+diff --git a/apps/backend/src/dispatch/dispatch.module.ts b/apps/backend/src/dispatch/dispatch.module.ts
+index c29af04..c58a3fc 100644
+--- a/apps/backend/src/dispatch/dispatch.module.ts
++++ b/apps/backend/src/dispatch/dispatch.module.ts
+@@ -1,11 +1,18 @@
+ import { Module } from '@nestjs/common';
+ 
++import { CaptainPresenceController } from './captain-presence.controller';
++import { SupabaseCaptainPresenceGateway } from './captain-presence.gateway';
++import { CaptainPresenceService } from './captain-presence.service';
++import { CAPTAIN_PRESENCE_GATEWAY } from './captain-presence.tokens';
+ import { SupabaseOrderDispatchGateway } from './order-dispatch.gateway';
+ import { OrderDispatchService } from './order-dispatch.service';
+ import { ORDER_DISPATCH_GATEWAY } from './order-dispatch.tokens';
+ 
+ @Module({
++  controllers: [CaptainPresenceController],
+   providers: [
++    CaptainPresenceService,
++    { provide: CAPTAIN_PRESENCE_GATEWAY, useClass: SupabaseCaptainPresenceGateway },
+     OrderDispatchService,
+     { provide: ORDER_DISPATCH_GATEWAY, useClass: SupabaseOrderDispatchGateway },
+   ],
+diff --git a/apps/captain-app/App.test.tsx b/apps/captain-app/App.test.tsx
+index cffd741..cb52084 100644
+--- a/apps/captain-app/App.test.tsx
++++ b/apps/captain-app/App.test.tsx
+@@ -1,15 +1,130 @@
+-import { render } from '@testing-library/react-native';
++import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+ 
+-import { CaptainFoundationScreen } from './App';
++import { CaptainPresenceScreen } from './src/presence/captain-presence.screen';
++import type {
++  CaptainAvailabilityResult,
++  CaptainAvailabilityStatus,
++  CaptainLocationProvider,
++  CaptainLocationResult,
++  CaptainLocationSample,
++  CaptainPresencePort,
++  CaptainRequestedAvailabilityStatus,
++} from './src/presence/captain-presence.types';
+ 
+-describe('CaptainFoundationScreen', () => {
+-  it('renders the accessible captain foundation screen', () => {
+-    const { getByLabelText, getByRole, getByText } = render(<CaptainFoundationScreen />);
++const SAMPLE: CaptainLocationSample = {
++  sampleId: '20000000-0000-4000-8000-000000000001',
++  latitude: 13.6288,
