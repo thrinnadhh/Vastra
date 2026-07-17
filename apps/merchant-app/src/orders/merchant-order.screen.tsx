@@ -313,11 +313,17 @@ export function MerchantOrderQueueScreen({
   decisionClient,
   packingClient,
   pollIntervalMs = 15_000,
+  requestedOrderId = null,
+  onRequestedOrderHandled,
+  onOpenAlertDiagnostics,
 }: {
   readonly orderClient: MerchantOrderReadPort;
   readonly decisionClient?: MerchantOrderDecisionPort;
   readonly packingClient?: MerchantOrderPackingPort;
   readonly pollIntervalMs?: number;
+  readonly requestedOrderId?: string | null;
+  readonly onRequestedOrderHandled?: () => void;
+  readonly onOpenAlertDiagnostics?: () => void;
 }) {
   const [state, setState] = useState<QueueState>({
     orders: [],
@@ -376,6 +382,12 @@ export function MerchantOrderQueueScreen({
       operation.current += 1;
     };
   }, []);
+
+  useEffect(() => {
+    if (requestedOrderId === null) return;
+    setSelectedOrderId(requestedOrderId);
+    onRequestedOrderHandled?.();
+  }, [onRequestedOrderHandled, requestedOrderId]);
 
   useEffect(() => {
     if (selectedOrderId !== null) return;
@@ -455,17 +467,29 @@ export function MerchantOrderQueueScreen({
             Incoming queue
           </Text>
         </View>
-        <Pressable
-          accessibilityLabel="Refresh merchant order queue"
-          accessibilityRole="button"
-          disabled={state.isLoading}
-          onPress={() => {
-            void load();
-          }}
-          style={styles.refreshAction}
-        >
-          <Text style={styles.refreshText}>{state.isLoading ? 'Refreshing…' : 'Refresh'}</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          {onOpenAlertDiagnostics === undefined ? null : (
+            <Pressable
+              accessibilityLabel="Open merchant alert diagnostics"
+              accessibilityRole="button"
+              onPress={onOpenAlertDiagnostics}
+              style={styles.setupAction}
+            >
+              <Text style={styles.setupText}>Alert setup</Text>
+            </Pressable>
+          )}
+          <Pressable
+            accessibilityLabel="Refresh merchant order queue"
+            accessibilityRole="button"
+            disabled={state.isLoading}
+            onPress={() => {
+              void load();
+            }}
+            style={styles.refreshAction}
+          >
+            <Text style={styles.refreshText}>{state.isLoading ? 'Refreshing…' : 'Refresh'}</Text>
+          </Pressable>
+        </View>
       </View>
 
       {state.isStale && state.failure !== null ? (
@@ -603,6 +627,15 @@ const styles = StyleSheet.create({
   itemCopy: { flex: 1 },
   note: { marginTop: 10, color: '#7B3440', fontSize: 14, lineHeight: 20 },
   link: { marginBottom: 16, color: '#8E3B46', fontSize: 16, fontWeight: '800' },
+  headerActions: { alignItems: 'flex-end', gap: 8 },
+  setupAction: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#8E3B46',
+    borderRadius: 12,
+  },
+  setupText: { color: '#8E3B46', fontSize: 12, fontWeight: '800' },
   refreshAction: {
     paddingHorizontal: 12,
     paddingVertical: 9,

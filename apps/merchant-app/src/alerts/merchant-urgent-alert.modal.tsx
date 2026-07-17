@@ -85,10 +85,7 @@ export function MerchantUrgentAlertModal({
     };
 
     void verifyAuthoritativeState();
-    const timer = setInterval(
-      () => void verifyAuthoritativeState(),
-      authoritativePollIntervalMs,
-    );
+    const timer = setInterval(() => void verifyAuthoritativeState(), authoritativePollIntervalMs);
     return () => {
       cancelled = true;
       clearInterval(timer);

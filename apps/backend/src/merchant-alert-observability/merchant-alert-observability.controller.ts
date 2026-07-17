@@ -20,7 +20,9 @@ export class MerchantAlertObservabilityController {
   ) {}
 
   @Get('metrics')
-  public getMetrics(@Query('windowMinutes') windowMinutes: unknown): Promise<MerchantAlertMetricsResponse> {
+  public getMetrics(
+    @Query('windowMinutes') windowMinutes: unknown,
+  ): Promise<MerchantAlertMetricsResponse> {
     return this.service.getMetrics(windowMinutes);
   }
 

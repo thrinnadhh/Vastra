@@ -18,7 +18,10 @@ export function parseMetricsWindow(value: unknown): number {
   return parseInteger(value, 60, 5, 10080);
 }
 
-export function parseActivityQuery(limitValue: unknown, beforeValue: unknown): {
+export function parseActivityQuery(
+  limitValue: unknown,
+  beforeValue: unknown,
+): {
   readonly limit: number;
   readonly before: string | null;
 } {

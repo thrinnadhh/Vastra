@@ -21,7 +21,10 @@ function StatusRow({
         <Text style={styles.rowTitle}>{label}</Text>
         <Text style={styles.rowDetail}>{detail}</Text>
       </View>
-      <Text accessibilityLabel={`${label}: ${ready ? 'ready' : 'needs attention'}`} style={ready ? styles.ready : styles.attention}>
+      <Text
+        accessibilityLabel={`${label}: ${ready ? 'ready' : 'needs attention'}`}
+        style={ready ? styles.ready : styles.attention}
+      >
         {ready ? 'READY' : 'CHECK'}
       </Text>
     </View>
@@ -53,7 +56,11 @@ export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: ()
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <Pressable accessibilityLabel="Back to merchant orders" accessibilityRole="button" onPress={onBack}>
+      <Pressable
+        accessibilityLabel="Back to merchant orders"
+        accessibilityRole="button"
+        onPress={onBack}
+      >
         <Text style={styles.back}>‹ Orders</Text>
       </Pressable>
       <Text style={styles.eyebrow}>ALERT DIAGNOSTICS</Text>
@@ -61,17 +68,46 @@ export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: ()
         New-order ringtone setup
       </Text>
       <Text style={styles.description}>
-        Check the exact Android path used for urgent Vastra orders. Battery optimisation and manufacturer background restrictions must still be reviewed in device settings.
+        Check the exact Android path used for urgent Vastra orders. Battery optimisation and
+        manufacturer background restrictions must still be reviewed in device settings.
       </Text>
 
       <View style={styles.card}>
-        <StatusRow label="Physical Android device" ready={diagnostics.physicalDevice} detail="FCM tokens are unavailable on emulators and web." />
-        <StatusRow label="Notification permission" ready={diagnostics.permissionGranted} detail="Android 13+ requires explicit permission." />
-        <StatusRow label="Urgent order channel" ready={diagnostics.channelReady} detail="Channel: vastra_urgent_orders, maximum importance." />
-        <StatusRow label="Custom ringtone" ready={diagnostics.customSoundReady} detail="Bundled sound: vastra_new_order.wav." />
-        <StatusRow label="Strong vibration" ready={diagnostics.vibrationReady} detail="The urgent channel uses a repeated vibration pattern." />
-        <StatusRow label="Native FCM token" ready={diagnostics.pushTokenReady} detail="The device token is read from Android, not Expo Push Service." />
-        <StatusRow label="Backend registration" ready={diagnostics.backendRegistrationReady} detail="The active merchant device is registered through /me/devices." />
+        <StatusRow
+          label="Physical Android device"
+          ready={diagnostics.physicalDevice}
+          detail="FCM tokens are unavailable on emulators and web."
+        />
+        <StatusRow
+          label="Notification permission"
+          ready={diagnostics.permissionGranted}
+          detail="Android 13+ requires explicit permission."
+        />
+        <StatusRow
+          label="Urgent order channel"
+          ready={diagnostics.channelReady}
+          detail="Channel: vastra_urgent_orders, maximum importance."
+        />
+        <StatusRow
+          label="Custom ringtone"
+          ready={diagnostics.customSoundReady}
+          detail="Bundled sound: vastra_new_order.wav."
+        />
+        <StatusRow
+          label="Strong vibration"
+          ready={diagnostics.vibrationReady}
+          detail="The urgent channel uses a repeated vibration pattern."
+        />
+        <StatusRow
+          label="Native FCM token"
+          ready={diagnostics.pushTokenReady}
+          detail="The device token is read from Android, not Expo Push Service."
+        />
+        <StatusRow
+          label="Backend registration"
+          ready={diagnostics.backendRegistrationReady}
+          detail="The active merchant device is registered through /me/devices."
+        />
       </View>
 
       {diagnostics.failureReason === null ? null : (
@@ -96,7 +132,9 @@ export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: ()
         onPress={() => void testRingtone()}
         style={[styles.secondary, testing ? styles.disabled : null]}
       >
-        <Text style={styles.secondaryText}>{testing ? 'Testing…' : 'Test ringtone & notification'}</Text>
+        <Text style={styles.secondaryText}>
+          {testing ? 'Testing…' : 'Test ringtone & notification'}
+        </Text>
       </Pressable>
       {testFailure === null ? null : (
         <Text accessibilityLiveRegion="assertive" style={styles.testFailure}>
@@ -114,10 +152,19 @@ export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: ()
 
       <View style={styles.guidance}>
         <Text style={styles.guidanceTitle}>Background delivery checklist</Text>
-        <Text style={styles.guidanceCopy}>• Allow notifications and sound for Vastra Merchant.</Text>
-        <Text style={styles.guidanceCopy}>• Keep the urgent order channel enabled at high importance.</Text>
-        <Text style={styles.guidanceCopy}>• Exclude the app from aggressive battery optimisation where the device manufacturer requires it.</Text>
-        <Text style={styles.guidanceCopy}>• Confirm alerts in foreground, background, killed-app, and locked-screen states.</Text>
+        <Text style={styles.guidanceCopy}>
+          • Allow notifications and sound for Vastra Merchant.
+        </Text>
+        <Text style={styles.guidanceCopy}>
+          • Keep the urgent order channel enabled at high importance.
+        </Text>
+        <Text style={styles.guidanceCopy}>
+          • Exclude the app from aggressive battery optimisation where the device manufacturer
+          requires it.
+        </Text>
+        <Text style={styles.guidanceCopy}>
+          • Confirm alerts in foreground, background, killed-app, and locked-screen states.
+        </Text>
       </View>
     </ScrollView>
   );
@@ -130,7 +177,14 @@ const styles = StyleSheet.create({
   title: { marginTop: 7, color: '#241B16', fontSize: 29, fontWeight: '900' },
   description: { marginTop: 10, color: '#665A52', fontSize: 15, lineHeight: 22 },
   card: { marginTop: 22, padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1E8E2' },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1E8E2',
+  },
   rowCopy: { flex: 1 },
   rowTitle: { color: '#241B16', fontSize: 15, fontWeight: '800' },
   rowDetail: { marginTop: 3, color: '#665A52', fontSize: 12, lineHeight: 17 },
@@ -139,9 +193,22 @@ const styles = StyleSheet.create({
   warning: { marginTop: 18, padding: 15, borderRadius: 16, backgroundColor: '#FFF1D6' },
   warningTitle: { color: '#6A4812', fontWeight: '900' },
   warningCopy: { marginTop: 4, color: '#6A4812', lineHeight: 20 },
-  primary: { marginTop: 20, padding: 15, borderRadius: 15, alignItems: 'center', backgroundColor: '#8E3B46' },
+  primary: {
+    marginTop: 20,
+    padding: 15,
+    borderRadius: 15,
+    alignItems: 'center',
+    backgroundColor: '#8E3B46',
+  },
   primaryText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
-  secondary: { marginTop: 12, padding: 15, borderWidth: 1, borderColor: '#8E3B46', borderRadius: 15, alignItems: 'center' },
+  secondary: {
+    marginTop: 12,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#8E3B46',
+    borderRadius: 15,
+    alignItems: 'center',
+  },
   secondaryText: { color: '#8E3B46', fontSize: 15, fontWeight: '900' },
   testFailure: { marginTop: 12, color: '#9E1C2F', textAlign: 'center' },
   linkButton: { marginTop: 14, alignItems: 'center' },

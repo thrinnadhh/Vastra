@@ -21,7 +21,9 @@ export class MerchantAlertSchedulerService {
     private readonly gateway: MerchantAlertSchedulerGateway,
   ) {}
 
-  public async processDue(limit = this.configuration.batchSize): Promise<MerchantAlertScheduleSummary> {
+  public async processDue(
+    limit = this.configuration.batchSize,
+  ): Promise<MerchantAlertScheduleSummary> {
     const summary = await this.gateway.processDueAlerts(this.configuration.workerId, limit);
     if (summary.processed > 0) {
       this.logger.log(

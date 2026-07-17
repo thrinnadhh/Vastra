@@ -5,18 +5,12 @@
     "version": "0.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "platforms": [
-      "ios",
-      "android",
-      "web"
-    ],
+    "platforms": ["ios", "android", "web"],
     "plugins": [
       [
         "expo-notifications",
         {
-          "sounds": [
-            "./assets/sounds/vastra_new_order.wav"
-          ],
+          "sounds": ["./assets/sounds/vastra_new_order.wav"],
           "defaultChannel": "vastra_urgent_orders"
         }
       ],
@@ -28,9 +22,7 @@
     "android": {
       "predictiveBackGestureEnabled": false,
       "package": "in.vastra.merchant",
-      "permissions": [
-        "POST_NOTIFICATIONS"
-      ]
+      "permissions": ["POST_NOTIFICATIONS"]
     },
     "web": {
       "bundler": "metro"

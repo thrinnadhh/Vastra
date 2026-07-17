@@ -40,7 +40,10 @@ export interface MerchantAlertDeliveryActivity {
 
 export interface MerchantAlertObservabilityGateway {
   getMetrics(windowMinutes: number): Promise<MerchantAlertDeliveryMetrics>;
-  listActivity(limit: number, before: string | null): Promise<readonly MerchantAlertDeliveryActivity[]>;
+  listActivity(
+    limit: number,
+    before: string | null,
+  ): Promise<readonly MerchantAlertDeliveryActivity[]>;
 }
 
 export interface MerchantAlertMetricsResponse {
