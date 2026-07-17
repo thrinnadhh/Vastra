@@ -1196,6 +1196,96 @@ components:
         onboardingStatus: {type: string}
         kycStatus: {type: string}
         approvedAt: {type: [string, 'null'], format: date-time}
+    CaptainRequestedAvailabilityStatus:
+      type: string
+      enum: [OFFLINE, AVAILABLE, ON_BREAK]
+    CaptainAvailabilityStatus:
+      type: string
+      enum: [OFFLINE, AVAILABLE, OFFERED, ASSIGNED, AT_PICKUP, DELIVERING, ON_BREAK, SUSPENDED]
+    CaptainAvailabilityLocation:
+      type: object
+      required: [recordedAt, accuracyMeters, fresh, activeDeliveryTaskId]
+      properties:
+        recordedAt: {type: string, format: date-time}
+        accuracyMeters: {type: number, minimum: 0}
+        fresh: {type: boolean}
+        activeDeliveryTaskId: {type: [string, 'null'], format: uuid}
+    SetCaptainAvailabilityRequest:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: {$ref: '#/components/schemas/CaptainRequestedAvailabilityStatus'}
+    CaptainAvailabilitySnapshot:
+      type: object
+      required: [captainId, requestedStatus, availabilityStatus, changed, dispatchEligible, location, changedAt]
+      properties:
+        captainId: {type: string, format: uuid}
+        requestedStatus: {$ref: '#/components/schemas/CaptainRequestedAvailabilityStatus'}
+        availabilityStatus: {$ref: '#/components/schemas/CaptainAvailabilityStatus'}
+        changed: {type: boolean}
+        dispatchEligible: {type: boolean}
+        location:
+          oneOf:
+          - {$ref: '#/components/schemas/CaptainAvailabilityLocation'}
+          - {type: 'null'}
+        changedAt: {type: string, format: date-time}
+    CaptainAvailabilityResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [availability]
+          properties:
+            availability: {$ref: '#/components/schemas/CaptainAvailabilitySnapshot'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    UpdateCaptainLocationRequest:
+      type: object
+      additionalProperties: false
+      required: [sampleId, latitude, longitude, accuracyMeters, recordedAt]
+      properties:
+        sampleId: {type: string, format: uuid}
+        latitude: {type: number, minimum: -90, maximum: 90}
+        longitude: {type: number, minimum: -180, maximum: 180}
+        accuracyMeters: {type: number, minimum: 0}
+        recordedAt: {type: string, format: date-time}
+        heading: {type: [number, 'null'], minimum: 0, exclusiveMaximum: 360}
+        speedMps: {type: [number, 'null'], minimum: 0}
+        batteryPercent: {type: [integer, 'null'], minimum: 0, maximum: 100}
+        activeDeliveryTaskId: {type: [string, 'null'], format: uuid}
+    CaptainLocationSnapshot:
+      type: object
+      required: [captainId, sampleId, recordedAt, acceptedAt, accuracyMeters, activeDeliveryTaskId, historySampled, replayed]
+      properties:
+        captainId: {type: string, format: uuid}
+        sampleId: {type: string, format: uuid}
+        recordedAt: {type: string, format: date-time}
+        acceptedAt: {type: string, format: date-time}
+        accuracyMeters: {type: number, minimum: 0}
+        activeDeliveryTaskId: {type: [string, 'null'], format: uuid}
+        historySampled: {type: boolean}
+        replayed: {type: boolean}
+    CaptainLocationResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [location]
+          properties:
+            location: {$ref: '#/components/schemas/CaptainLocationSnapshot'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     CaptainRoleProfile:
       type: object
       required: [kind, captainCode, kycStatus, availabilityStatus, vehicleType, vehicleNumber,
@@ -5782,24 +5872,65 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ApiError'}
-  /captain/availability/online:
-    post:
-      summary: Go online
-      tags:
-      - Captain
+  /captain/me/availability:
+    put:
+      operationId: setCaptainAvailability
+      summary: Request an authoritative captain availability state
+      description: Sets OFFLINE, AVAILABLE, or ON_BREAK. AVAILABLE requires a fresh accurate location and an active Android FCM registration. Backend-owned delivery states cannot be overwritten by the client.
+      tags: [Captain]
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SetCaptainAvailabilityRequest'}
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Current authoritative captain availability
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/CaptainAvailabilityResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503':
+          description: Captain presence provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+  /captain/me/location:
+    put:
+      operationId: updateCaptainCurrentLocation
+      summary: Submit one deduplicated captain location sample
+      description: Accepts at most one write per five seconds, rejects stale or excessively future samples, and samples durable history at a bounded cadence. sampleId provides safe replay semantics.
+      tags: [Captain]
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateCaptainLocationRequest'}
+      responses:
+        '200':
+          description: Accepted or safely replayed captain location sample
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CaptainLocationResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '429':
+          description: Captain location updates are too frequent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Captain presence provider is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
   /captain/delivery-offers:
     get:
       summary: List delivery offers

@@ -134,13 +134,22 @@ last_updated: 2026-07-11
 
 | Code | HTTP | Meaning |
 |---|---:|---|
-| DELIVERY_NOT_FOUND | 404 | Task missing |
-| DELIVERY_ALREADY_ASSIGNED | 409 | Another captain accepted |
-| CAPTAIN_NOT_AVAILABLE | 409 | Captain unavailable |
-| PICKUP_CODE_INVALID | 400 | Wrong pickup code |
-| DELIVERY_OTP_INVALID | 400 | Wrong delivery OTP |
-| LOCATION_REQUIRED | 400 | Location missing |
-| DELIVERY_COMPLETION_NOT_ALLOWED | 409 | State or actor invalid |
+| DELIVERY_REQUEST_INVALID | 400 | Availability, location, delivery body, reason, or identifier is invalid |
+| CAPTAIN_NOT_ELIGIBLE | 403 | Captain account, approval, device, or operational readiness is insufficient |
+| DELIVERY_ACCESS_DENIED | 403 | Actor cannot access the delivery resource |
+| DELIVERY_TASK_NOT_FOUND | 404 | Task missing or intentionally hidden |
+| DELIVERY_OFFER_NOT_FOUND | 404 | Offer missing or intentionally hidden |
+| DELIVERY_STATE_CONFLICT | 409 | Current order, task, assignment, or custody state rejects the command |
+| DELIVERY_TASK_ALREADY_ASSIGNED | 409 | Another captain accepted the task |
+| CAPTAIN_ALREADY_ASSIGNED | 409 | Captain already owns another active task |
+| CAPTAIN_LOCATION_STALE | 409 | Current captain location is missing, stale, or too inaccurate |
+| COD_AMOUNT_MISMATCH | 409 | Collected COD differs from the authoritative order total |
+| DELIVERY_OFFER_EXPIRED | 410 | Offer can no longer be accepted or rejected |
+| PICKUP_CODE_INVALID | 422 | Wrong pickup code |
+| DELIVERY_OTP_INVALID | 422 | Wrong delivery OTP |
+| DELIVERY_SECRET_LOCKED | 423 | Pickup-code or delivery-OTP attempt limit reached |
+| LOCATION_UPDATE_RATE_LIMITED | 429 | Location writes are arriving more frequently than allowed |
+| DELIVERY_SERVICE_UNAVAILABLE | 503 | Trusted delivery dependency is unavailable |
 
 ## Returns
 

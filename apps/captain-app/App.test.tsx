@@ -1,15 +1,130 @@
-import { render } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
-import { CaptainFoundationScreen } from './App';
+import { CaptainPresenceScreen } from './src/presence/captain-presence.screen';
+import type {
+  CaptainAvailabilityResult,
+  CaptainAvailabilityStatus,
+  CaptainLocationProvider,
+  CaptainLocationResult,
+  CaptainLocationSample,
+  CaptainPresencePort,
+  CaptainRequestedAvailabilityStatus,
+} from './src/presence/captain-presence.types';
 
-describe('CaptainFoundationScreen', () => {
-  it('renders the accessible captain foundation screen', () => {
-    const { getByLabelText, getByRole, getByText } = render(<CaptainFoundationScreen />);
+const SAMPLE: CaptainLocationSample = {
+  sampleId: '20000000-0000-4000-8000-000000000001',
+  latitude: 13.6288,
+  longitude: 79.4192,
+  accuracyMeters: 12,
+  recordedAt: '2026-07-17T10:00:00.000Z',
+  heading: null,
+  speedMps: null,
+  batteryPercent: null,
+  activeDeliveryTaskId: null,
+};
 
-    expect(getByRole('header', { name: 'Vastra Captain' })).toBeTruthy();
+class FakePresenceClient implements CaptainPresencePort {
+  public status: CaptainAvailabilityStatus = 'OFFLINE';
+  public updates: CaptainLocationSample[] = [];
 
-    expect(getByText('A dependable foundation for local delivery operations.')).toBeTruthy();
+  public getAvailability(): Promise<CaptainAvailabilityStatus> {
+    return Promise.resolve(this.status);
+  }
 
-    expect(getByLabelText('Captain mobile foundation is ready')).toBeTruthy();
+  public setAvailability(
+    status: CaptainRequestedAvailabilityStatus,
+  ): Promise<CaptainAvailabilityResult> {
+    this.status = status;
+    return Promise.resolve({
+      availabilityStatus: status,
+      dispatchEligible: status === 'AVAILABLE',
+      changed: true,
+      locationFresh: status === 'AVAILABLE',
+      locationRecordedAt: status === 'AVAILABLE' ? '2026-07-17T10:00:01.000Z' : null,
+    });
+  }
+
+  public updateLocation(sample: CaptainLocationSample): Promise<CaptainLocationResult> {
+    this.updates.push(sample);
+    return Promise.resolve({
+      sampleId: sample.sampleId,
+      acceptedAt: '2026-07-17T10:00:01.000Z',
+      replayed: false,
+    });
+  }
+}
+
+class FakeLocationProvider implements CaptainLocationProvider {
+  public permissionGranted = true;
+  public watchListener: ((sample: CaptainLocationSample) => void) | null = null;
+
+  public requestForegroundPermission(): Promise<{ granted: boolean; canAskAgain: boolean }> {
+    return Promise.resolve({ granted: this.permissionGranted, canAskAgain: true });
+  }
+
+  public getCurrentLocation(): Promise<CaptainLocationSample> {
+    return Promise.resolve(SAMPLE);
+  }
+
+  public watchLocations(listener: (sample: CaptainLocationSample) => void): Promise<() => void> {
+    this.watchListener = listener;
+    return Promise.resolve(() => {
+      this.watchListener = null;
+    });
+  }
+}
+
+describe('CaptainPresenceScreen', () => {
+  it('submits a fresh location before going online', async () => {
+    const client = new FakePresenceClient();
+    const location = new FakeLocationProvider();
+    const view = render(<CaptainPresenceScreen client={client} locationProvider={location} />);
+
+    await waitFor(() => {
+      expect(view.getByLabelText('Go online for deliveries')).toBeTruthy();
+    });
+
+    fireEvent.press(view.getByLabelText('Go online for deliveries'));
+
+    await waitFor(() => {
+      expect(view.getByLabelText('Captain availability AVAILABLE')).toBeTruthy();
+    });
+    expect(client.updates).toEqual([SAMPLE]);
+  });
+
+  it('explains why location permission is required', async () => {
+    const client = new FakePresenceClient();
+    const location = new FakeLocationProvider();
+    location.permissionGranted = false;
+    const view = render(<CaptainPresenceScreen client={client} locationProvider={location} />);
+
+    await waitFor(() => {
+      expect(view.getByLabelText('Go online for deliveries')).toBeTruthy();
+    });
+    fireEvent.press(view.getByLabelText('Go online for deliveries'));
+
+    expect(
+      await view.findByText('Location permission is required to receive nearby delivery offers.'),
+    ).toBeTruthy();
+    expect(client.updates).toHaveLength(0);
+  });
+
+  it('stops offer eligibility when the captain goes offline', async () => {
+    const client = new FakePresenceClient();
+    client.status = 'AVAILABLE';
+    const location = new FakeLocationProvider();
+    const view = render(<CaptainPresenceScreen client={client} locationProvider={location} />);
+
+    await waitFor(() => {
+      expect(view.getByLabelText('Go offline from deliveries')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.press(view.getByLabelText('Go offline from deliveries'));
+    });
+
+    await waitFor(() => {
+      expect(view.getByLabelText('Captain availability OFFLINE')).toBeTruthy();
+    });
   });
 });

@@ -6,5 +6,5 @@
     "skipLibCheck": true,
     "types": ["jest"]
   },
-  "include": ["App.tsx", "App.test.tsx", "index.ts"]
+  "include": ["App.tsx", "App.test.tsx", "index.ts", "src/**/*.ts", "src/**/*.tsx"]
 }
