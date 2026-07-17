@@ -80,12 +80,29 @@ export function CaptainPresenceScreen({ client, locationProvider }: CaptainPrese
 
   useEffect(() => {
     mounted.current = true;
-    void load();
+
+    void client.getAvailability().then(
+      (status) => {
+        if (mounted.current) {
+          setState({
+            kind: 'READY',
+            status,
+            dispatchEligible: false,
+            locationRecordedAt: null,
+          });
+        }
+      },
+      (error: unknown) => {
+        if (mounted.current) {
+          setState({ kind: 'ERROR', message: describeError(error) });
+        }
+      },
+    );
 
     return () => {
       mounted.current = false;
     };
-  }, [load]);
+  }, [client]);
 
   const sendLocation = useCallback(
     (sample: CaptainLocationSample): void => {

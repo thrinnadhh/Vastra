@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '../auth/supabase-client.type';
-import { HttpException } from '@nestjs/common';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { AuthenticatedRequestContext } from '../auth/auth.types';
@@ -81,8 +80,20 @@ class StubGateway implements CaptainPresenceGateway {
   }
 }
 
+interface HttpExceptionLike {
+  getResponse(): unknown;
+}
+
+function isHttpExceptionLike(value: unknown): value is HttpExceptionLike {
+  if (typeof value !== 'object' || value === null || !('getResponse' in value)) {
+    return false;
+  }
+
+  return typeof value.getResponse === 'function';
+}
+
 function readErrorCode(error: unknown): string | null {
-  if (!(error instanceof HttpException)) return null;
+  if (!isHttpExceptionLike(error)) return null;
   const response = error.getResponse();
   if (typeof response !== 'object' || response === null || Array.isArray(response)) return null;
   const body = response as Record<string, unknown>;

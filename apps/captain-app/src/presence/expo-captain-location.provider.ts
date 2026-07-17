@@ -8,14 +8,8 @@ import type {
 
 function createSampleId(): string {
   const bytes = new Uint8Array(16);
-  const cryptoObject = globalThis.crypto;
-
-  if (cryptoObject?.getRandomValues !== undefined) {
-    cryptoObject.getRandomValues(bytes);
-  } else {
-    for (let index = 0; index < bytes.length; index += 1) {
-      bytes[index] = Math.floor(Math.random() * 256);
-    }
+  for (let index = 0; index < bytes.length; index += 1) {
+    bytes[index] = Math.floor(Math.random() * 256);
   }
 
   bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;

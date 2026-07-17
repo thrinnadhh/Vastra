@@ -56,10 +56,21 @@ export function parseCaptainMobileEnvironment(
   };
 }
 
+function readProcessEnvironmentValue(key: string): string | undefined {
+  const environment: unknown = process.env;
+
+  if (typeof environment !== 'object' || environment === null) {
+    return undefined;
+  }
+
+  const value = (environment as Record<string, unknown>)[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
 export function readCaptainMobileEnvironment(): CaptainMobileEnvironment {
   return parseCaptainMobileEnvironment({
-    apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
-    supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-    supabasePublishableKey: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    apiBaseUrl: readProcessEnvironmentValue('EXPO_PUBLIC_API_BASE_URL'),
+    supabaseUrl: readProcessEnvironmentValue('EXPO_PUBLIC_SUPABASE_URL'),
+    supabasePublishableKey: readProcessEnvironmentValue('EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY'),
   });
 }

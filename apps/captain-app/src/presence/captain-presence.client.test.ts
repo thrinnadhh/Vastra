@@ -12,7 +12,7 @@ function jsonResponse(status: number, body: unknown): Response {
 
 describe('HttpCaptainPresenceClient', () => {
   it('uses the frozen availability endpoint', async () => {
-    const calls: Array<{ input: string; init: RequestInit }> = [];
+    const calls: { input: string; init: RequestInit }[] = [];
     const client = new HttpCaptainPresenceClient(
       'https://api.example.test/v1',
       () => Promise.resolve(TOKEN),

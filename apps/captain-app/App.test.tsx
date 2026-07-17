@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { CaptainPresenceScreen } from './src/presence/captain-presence.screen';
 import type {
@@ -119,9 +119,7 @@ describe('CaptainPresenceScreen', () => {
       expect(view.getByLabelText('Go offline from deliveries')).toBeTruthy();
     });
 
-    await act(async () => {
-      fireEvent.press(view.getByLabelText('Go offline from deliveries'));
-    });
+    fireEvent.press(view.getByLabelText('Go offline from deliveries'));
 
     await waitFor(() => {
       expect(view.getByLabelText('Captain availability OFFLINE')).toBeTruthy();

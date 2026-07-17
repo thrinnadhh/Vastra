@@ -1,0 +1,18 @@
+apps/backend/src/dispatch/captain-presence.integration.test.ts: replacements=1
+apps/backend/src/dispatch/captain-presence.service.test.ts: replacements=1
+apps/captain-app/App.test.tsx: replacements=1
+apps/captain-app/src/auth/mobile-environment.ts: replacements=1
+apps/captain-app/src/presence/captain-presence.client.test.ts: replacements=1
+apps/captain-app/src/presence/captain-presence.screen.tsx: replacements=1
+apps/captain-app/src/presence/expo-captain-location.provider.ts: replacements=1
+[90mapps/backend/src/dispatch/captain-presence.integration.test.ts[39m 119ms (unchanged)
+[90mapps/backend/src/dispatch/captain-presence.service.test.ts[39m 34ms (unchanged)
+[90mapps/captain-app/App.test.tsx[39m 36ms (unchanged)
+apps/captain-app/src/auth/mobile-environment.ts 21ms
+[90mapps/captain-app/src/presence/captain-presence.client.test.ts[39m 14ms (unchanged)
+apps/captain-app/src/presence/captain-presence.screen.tsx 92ms
+[90mapps/captain-app/src/presence/expo-captain-location.provider.ts[39m 18ms (unchanged)
+
+PATCH_EXIT_CODE=0
+FORMAT_EXIT_CODE=0
+LINT_EXIT_CODE=0
