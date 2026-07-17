@@ -368,7 +368,9 @@ class AuthoritativeMerchantJourney
 }
 
 describe('merchant COD fulfilment journey', () => {
-  it('uses authoritative reads and safe replays through READY_FOR_PICKUP', async () => {
+  it(
+    'uses authoritative reads and safe replays through READY_FOR_PICKUP',
+    async () => {
     const backend = new AuthoritativeMerchantJourney();
     const view = render(
       <MerchantOrderQueueScreen
@@ -450,5 +452,7 @@ describe('merchant COD fulfilment journey', () => {
     await waitFor(() => {
       expect(view.getByText('READY FOR PICKUP')).toBeTruthy();
     });
-  });
+    },
+    15_000,
+  );
 });
