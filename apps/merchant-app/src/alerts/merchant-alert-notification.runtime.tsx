@@ -316,7 +316,7 @@ export function MerchantAlertRuntimeProvider({
 
     try {
       const response = Notifications.getLastNotificationResponse();
-      if (response !== null && mounted.current) {
+      if (response !== null) {
         setActiveAlert(activePayloadOrNull(readNotificationPayload(response.notification)));
       }
     } catch {
