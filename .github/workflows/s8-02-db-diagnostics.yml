@@ -1,0 +1,53 @@
+name: S8-02 database diagnostics
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  capture-database-failure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: latest
+
+      - name: Capture database output
+        id: database
+        shell: bash
+        run: |
+          set +e
+          bash scripts/run-db-tests.sh > s8-02-db-full.log 2>&1
+          status=$?
+          tail -n 500 s8-02-db-full.log > s8-02-db-tail.log
+          printf '%s\n' "$status" > s8-02-db-exit-code.txt
+          exit 0
+
+      - name: Upload database diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: s8-02-db-diagnostics
+          path: |
+            s8-02-db-tail.log
+            s8-02-db-exit-code.txt
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Preserve database result
+        shell: bash
+        run: |
+          status="$(cat s8-02-db-exit-code.txt)"
+          if [[ "$status" -ne 0 ]]; then
+            echo "Database diagnostics captured with exit code $status."
+            exit "$status"
+          fi
