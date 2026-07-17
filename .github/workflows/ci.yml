@@ -2,25 +2,29 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: s7-trusted-mobile-lint-fix-${{ github.event.pull_request.number }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  fix:
-    name: Apply Sprint 7 mobile lint fixes
+  verify:
+    name: Verify repository
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 30
 
     steps:
-      - name: Check out Sprint 7 branch
+      - name: Check out repository
         uses: actions/checkout@v7
         with:
-          ref: feat/s7-06-10-merchant-alert-runtime
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -35,33 +39,34 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Apply source fixes
-        run: python3 .github/scripts/s7_mobile_lint_fix.py
+      - name: Check formatting
+        run: pnpm format:check
 
-      - name: Remove diagnostic files before formatting
-        run: |
-          rm -f docs/implementation/s7-lint-output.txt
-          rm -f docs/implementation/s7-lint-fix-trigger.md
+      - name: Validate environment templates
+        run: pnpm env:check
 
-      - name: Format patched sources
-        run: |
-          pnpm exec prettier --write \
-            apps/merchant-app/src/assets.d.ts \
-            apps/merchant-app/src/alerts/merchant-alert-diagnostics.screen.tsx \
-            apps/merchant-app/src/alerts/merchant-alert-notification.runtime.tsx \
-            apps/merchant-app/src/alerts/merchant-urgent-alert.modal.tsx \
-            apps/merchant-app/src/orders/merchant-order.screen.tsx
+      - name: Lint
+        run: pnpm lint
 
-      - name: Restore CI and commit fixes
-        shell: bash
-        run: |
-          git fetch origin main --depth=1
-          git checkout origin/main -- .github/workflows/ci.yml
-          rm -f .github/workflows/s7-lint-capture.yml
-          rm -f .github/workflows/s7-mobile-lint-fix-push.yml
-          rm -f .github/scripts/s7_mobile_lint_fix.py
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add --all
-          git commit -m "fix(merchant): satisfy urgent alert lint contracts"
-          git push origin HEAD:feat/s7-06-10-merchant-alert-runtime
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.109.1
+
+      - name: Run database tests
+        run: pnpm db:test
+
+      - name: Validate OpenAPI
+        run: pnpm openapi:check
+
+      - name: Build
+        run: pnpm build

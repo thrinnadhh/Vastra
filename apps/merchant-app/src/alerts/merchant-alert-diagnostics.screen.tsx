@@ -1,10 +1,10 @@
 import { useAudioPlayer } from 'expo-audio';
+
+import ringtoneSource from '../../assets/sounds/vastra_new_order.wav';
 import { useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useMerchantAlertRuntime } from './merchant-alert-notification.runtime';
-
-const RINGTONE = require('../../assets/sounds/vastra_new_order.wav') as number;
 
 function StatusRow({
   label,
@@ -35,7 +35,7 @@ export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: ()
   const runtime = useMerchantAlertRuntime();
   const [testing, setTesting] = useState(false);
   const [testFailure, setTestFailure] = useState<string | null>(null);
-  const player = useAudioPlayer(RINGTONE, { downloadFirst: true });
+  const player = useAudioPlayer(ringtoneSource, { downloadFirst: true });
   const diagnostics = runtime.diagnostics;
 
   const testRingtone = async (): Promise<void> => {
@@ -43,7 +43,6 @@ export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: ()
     setTesting(true);
     setTestFailure(null);
     try {
-      player.loop = false;
       await player.seekTo(0);
       player.play();
       await runtime.testNotification();

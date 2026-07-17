@@ -1,4 +1,6 @@
 import { useAudioPlayer } from 'expo-audio';
+
+import ringtoneSource from '../../assets/sounds/vastra_new_order.wav';
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -10,12 +12,10 @@ import {
 import type { MerchantOrderAlertClient } from './merchant-order-alert.client';
 import { useMerchantAlertRuntime } from './merchant-alert-notification.runtime';
 
-const RINGTONE = require('../../assets/sounds/vastra_new_order.wav') as number;
-
 function formatCountdown(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
   const remaining = seconds % 60;
-  return `${minutes}:${remaining.toString().padStart(2, '0')}`;
+  return `${String(minutes)}:${String(remaining).padStart(2, '0')}`;
 }
 
 export function MerchantUrgentAlertModal({
@@ -31,41 +31,48 @@ export function MerchantUrgentAlertModal({
 }) {
   const runtime = useMerchantAlertRuntime();
   const alert = runtime.activeAlert;
-  const [remaining, setRemaining] = useState(() =>
-    alert === null ? 0 : merchantAlertSecondsRemaining(alert.expiresAt),
-  );
+  const [now, setNow] = useState(Date.now());
+  const remaining = alert === null ? 0 : merchantAlertSecondsRemaining(alert.expiresAt, now);
   const [acknowledging, setAcknowledging] = useState(false);
   const [failure, setFailure] = useState(false);
-  const player = useAudioPlayer(RINGTONE, { downloadFirst: true });
+  const player = useAudioPlayer(ringtoneSource, { downloadFirst: true });
 
   useEffect(() => {
-    player.loop = true;
-    if (alert !== null && merchantAlertSecondsRemaining(alert.expiresAt) > 0) {
-      player.play();
-    } else {
+    if (alert === null || merchantAlertSecondsRemaining(alert.expiresAt) === 0) {
       player.pause();
       void player.seekTo(0);
+      return;
     }
+
+    const replay = () => {
+      void player.seekTo(0).then(() => {
+        player.play();
+      });
+    };
+    replay();
+    const timer = setInterval(replay, 1_100);
     return () => {
+      clearInterval(timer);
       player.pause();
       void player.seekTo(0);
     };
   }, [alert, player]);
 
   useEffect(() => {
-    if (alert === null) {
-      setRemaining(0);
-      return;
-    }
-    const update = () => {
-      const next = merchantAlertSecondsRemaining(alert.expiresAt);
-      setRemaining(next);
-      if (next === 0) void runtime.clearActiveAlert();
+    if (alert === null) return;
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1_000);
+    return () => {
+      clearInterval(timer);
     };
-    update();
-    const timer = setInterval(update, 1_000);
-    return () => clearInterval(timer);
-  }, [alert, runtime]);
+  }, [alert]);
+
+  useEffect(() => {
+    if (alert !== null && remaining === 0) {
+      void runtime.clearActiveAlert();
+    }
+  }, [alert, remaining, runtime]);
 
   useEffect(() => {
     if (alert === null) return;

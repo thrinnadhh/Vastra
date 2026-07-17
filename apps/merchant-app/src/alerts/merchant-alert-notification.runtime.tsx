@@ -314,13 +314,14 @@ export function MerchantAlertRuntimeProvider({
       );
     });
 
-    void Notifications.getLastNotificationResponseAsync()
-      .then((response) => {
-        if (response !== null && mounted.current) {
-          setActiveAlert(activePayloadOrNull(readNotificationPayload(response.notification)));
-        }
-      })
-      .catch(() => undefined);
+    try {
+      const response = Notifications.getLastNotificationResponse();
+      if (response !== null && mounted.current) {
+        setActiveAlert(activePayloadOrNull(readNotificationPayload(response.notification)));
+      }
+    } catch {
+      // A missing cached response must not block the authenticated merchant runtime.
+    }
 
     return () => {
       mounted.current = false;

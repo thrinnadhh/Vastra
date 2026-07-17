@@ -383,14 +383,10 @@ export function MerchantOrderQueueScreen({
     };
   }, []);
 
-  useEffect(() => {
-    if (requestedOrderId === null) return;
-    setSelectedOrderId(requestedOrderId);
-    onRequestedOrderHandled?.();
-  }, [onRequestedOrderHandled, requestedOrderId]);
+  const activeOrderId = requestedOrderId ?? selectedOrderId;
 
   useEffect(() => {
-    if (selectedOrderId !== null) return;
+    if (activeOrderId !== null) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     const poll = () => {
@@ -405,7 +401,7 @@ export function MerchantOrderQueueScreen({
       cancelled = true;
       if (timer !== null) clearTimeout(timer);
     };
-  }, [load, pollIntervalMs, selectedOrderId]);
+  }, [activeOrderId, load, pollIntervalMs]);
 
   const grouped = useMemo(
     () =>
@@ -416,16 +412,17 @@ export function MerchantOrderQueueScreen({
     [state.orders],
   );
 
-  if (selectedOrderId !== null) {
+  if (activeOrderId !== null) {
     return (
       <MerchantOrderDetailScreen
         {...(decisionClient === undefined ? {} : { decisionClient })}
         {...(packingClient === undefined ? {} : { packingClient })}
         onBack={() => {
           setSelectedOrderId(null);
+          if (requestedOrderId !== null) onRequestedOrderHandled?.();
         }}
         orderClient={orderClient}
-        orderId={selectedOrderId}
+        orderId={activeOrderId}
       />
     );
   }
