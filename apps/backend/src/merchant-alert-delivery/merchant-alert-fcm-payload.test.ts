@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
-import type { MerchantAlertDispatchClaim } from './merchant-alert-delivery.types';
+import type {
+  MerchantAlertDeviceDestination,
+  MerchantAlertDispatchClaim,
+} from './merchant-alert-delivery.types';
 import {
   buildMerchantAlertFcmRequest,
   MERCHANT_URGENT_ORDER_CHANNEL_ID,
 } from './merchant-alert-fcm-payload';
+
+const DESTINATION: MerchantAlertDeviceDestination = {
+  deviceId: '50000000-0000-4000-8000-000000000001',
+  pushToken: 'fcm-token-one',
+};
 
 const CLAIM: MerchantAlertDispatchClaim = {
   eventId: '10000000-0000-4000-8000-000000000001',
@@ -20,17 +28,12 @@ const CLAIM: MerchantAlertDispatchClaim = {
   eventMaxAttempts: 12,
   deliverable: true,
   stopReason: null,
-  devices: [
-    {
-      deviceId: '50000000-0000-4000-8000-000000000001',
-      pushToken: 'fcm-token-one',
-    },
-  ],
+  devices: [DESTINATION],
 };
 
 describe('buildMerchantAlertFcmRequest', () => {
   it('creates a private, high-priority Android order alert', () => {
-    const request = buildMerchantAlertFcmRequest(CLAIM, CLAIM.devices[0]!);
+    const request = buildMerchantAlertFcmRequest(CLAIM, DESTINATION);
 
     expect(request.message.android.priority).toBe('high');
     expect(request.message.android.notification.channel_id).toBe(MERCHANT_URGENT_ORDER_CHANNEL_ID);
@@ -50,7 +53,7 @@ describe('buildMerchantAlertFcmRequest', () => {
   });
 
   it('does not put merchant credentials or customer contact data in the payload', () => {
-    const serialized = JSON.stringify(buildMerchantAlertFcmRequest(CLAIM, CLAIM.devices[0]!));
+    const serialized = JSON.stringify(buildMerchantAlertFcmRequest(CLAIM, DESTINATION));
 
     expect(serialized).not.toContain('private_key');
     expect(serialized).not.toContain('client_email');
