@@ -88,9 +88,6 @@ jobs:
 
           printf '\nDB_EXIT_CODE=%s\n' "$final_status" >> "$log"
 
-      - name: Format database output
-        run: pnpm exec prettier --write docs/implementation/s7-db-output.txt
-
       - name: Commit database output
         shell: bash
         run: |
