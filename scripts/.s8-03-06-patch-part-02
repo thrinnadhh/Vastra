@@ -1,0 +1,336 @@
++export function createDeliveryAccessDeniedException(): HttpException {
++  return create(
++    HttpStatus.FORBIDDEN,
++    'DELIVERY_ACCESS_DENIED',
++    'Delivery access is denied.',
++    false,
++  );
++}
++
++export function createCaptainNotEligibleException(): HttpException {
++  return create(
++    HttpStatus.FORBIDDEN,
++    'CAPTAIN_NOT_ELIGIBLE',
++    'The captain is not operationally eligible.',
++    false,
++  );
++}
++
++export function createDeliveryTaskNotFoundException(): HttpException {
++  return create(
++    HttpStatus.NOT_FOUND,
++    'DELIVERY_TASK_NOT_FOUND',
++    'The delivery task was not found.',
++    false,
++  );
++}
++
++export function createDeliveryOfferNotFoundException(): HttpException {
++  return create(
++    HttpStatus.NOT_FOUND,
++    'DELIVERY_OFFER_NOT_FOUND',
++    'The delivery offer was not found.',
++    false,
++  );
++}
++
++export function createDeliveryStateConflictException(): HttpException {
++  return create(
++    HttpStatus.CONFLICT,
++    'DELIVERY_STATE_CONFLICT',
++    'The current delivery state rejects this action.',
++    false,
++  );
++}
++
++export function createDeliveryAlreadyAssignedException(): HttpException {
++  return create(
++    HttpStatus.CONFLICT,
++    'DELIVERY_TASK_ALREADY_ASSIGNED',
++    'Another captain already owns the delivery.',
++    false,
++  );
++}
++
++export function createCaptainAlreadyAssignedException(): HttpException {
++  return create(
++    HttpStatus.CONFLICT,
++    'CAPTAIN_ALREADY_ASSIGNED',
++    'The captain already owns another active delivery.',
++    false,
++  );
++}
++
++export function createDeliveryIdempotencyConflictException(): HttpException {
++  return create(
++    HttpStatus.CONFLICT,
++    'IDEMPOTENCY_KEY_REUSED',
++    'The idempotency key was reused with another request.',
++    false,
++  );
++}
++
++export function createDeliveryOfferExpiredException(): HttpException {
++  return create(
++    HttpStatus.GONE,
++    'DELIVERY_OFFER_EXPIRED',
++    'The delivery offer has expired.',
++    false,
++  );
++}
++
++export function createCaptainNotAtPickupException(): HttpException {
++  return create(
++    HttpStatus.CONFLICT,
++    'CAPTAIN_NOT_AT_PICKUP',
++    'The captain is not close enough to the pickup location.',
++    false,
++  );
++}
++
++export function createDeliveryUnavailableException(): HttpException {
++  return create(
++    HttpStatus.SERVICE_UNAVAILABLE,
++    'DELIVERY_SERVICE_UNAVAILABLE',
++    'Delivery services are temporarily unavailable.',
++    true,
++  );
++}
+diff --git a/apps/backend/src/dispatch/delivery-secret.controller.ts b/apps/backend/src/dispatch/delivery-secret.controller.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..8cb6f0cf1d7cb811480b39f2f8aad5297cefe8e3
+--- /dev/null
++++ b/apps/backend/src/dispatch/delivery-secret.controller.ts
+@@ -0,0 +1,40 @@
++import { Controller, Get, Header, Inject, Param } from '@nestjs/common';
++
++import { AllowAccountTypes } from '../auth/account-types.decorator';
++import type { AuthenticatedRequestContext } from '../auth/auth.types';
++import { CurrentAuthContext } from '../auth/current-auth-context.decorator';
++import { RequireOperationalReadiness } from '../auth/operational-readiness.decorator';
++import { DeliveryService } from './delivery.service';
++import type { DeliverySecretResponse } from './delivery.types';
++
++@Controller('merchant/orders')
++@AllowAccountTypes('MERCHANT')
++@RequireOperationalReadiness()
++export class MerchantDeliverySecretController {
++  public constructor(@Inject(DeliveryService) private readonly service: DeliveryService) {}
++
++  @Get(':orderId/pickup-code')
++  @Header('Cache-Control', 'no-store')
++  public issuePickupCode(
++    @CurrentAuthContext() context: AuthenticatedRequestContext,
++    @Param('orderId') orderId: unknown,
++  ): Promise<DeliverySecretResponse> {
++    return this.service.issuePickupCode(context, orderId);
++  }
++}
++
++@Controller('customer/orders')
++@AllowAccountTypes('CUSTOMER')
++@RequireOperationalReadiness()
++export class CustomerDeliverySecretController {
++  public constructor(@Inject(DeliveryService) private readonly service: DeliveryService) {}
++
++  @Get(':orderId/delivery-otp')
++  @Header('Cache-Control', 'no-store')
++  public issueDeliveryOtp(
++    @CurrentAuthContext() context: AuthenticatedRequestContext,
++    @Param('orderId') orderId: unknown,
++  ): Promise<DeliverySecretResponse> {
++    return this.service.issueDeliveryOtp(context, orderId);
++  }
++}
+diff --git a/apps/backend/src/dispatch/delivery.controller.ts b/apps/backend/src/dispatch/delivery.controller.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..0727661e13bd7fbd419b91815a426a0c27ca1333
+--- /dev/null
++++ b/apps/backend/src/dispatch/delivery.controller.ts
+@@ -0,0 +1,74 @@
++import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Inject, Param, Post } from '@nestjs/common';
++
++import { AllowAccountTypes } from '../auth/account-types.decorator';
++import type { AuthenticatedRequestContext } from '../auth/auth.types';
++import { CurrentAuthContext } from '../auth/current-auth-context.decorator';
++import { RequireOperationalReadiness } from '../auth/operational-readiness.decorator';
++import { DeliveryService } from './delivery.service';
++import type {
++  CaptainDeliveryResponse,
++  DeliveryMutationResponse,
++  DeliveryOffersResponse,
++  DeliveryRejectionResponse,
++} from './delivery.types';
++
++@Controller('captain')
++@AllowAccountTypes('CAPTAIN')
++@RequireOperationalReadiness()
++export class DeliveryController {
++  public constructor(@Inject(DeliveryService) private readonly service: DeliveryService) {}
++
++  @Get('delivery-offers')
++  public listOffers(
++    @CurrentAuthContext() context: AuthenticatedRequestContext,
++  ): Promise<DeliveryOffersResponse> {
++    return this.service.listOffers(context);
++  }
++
++  @Post('delivery-offers/:assignmentId/accept')
++  @HttpCode(HttpStatus.OK)
++  public acceptOffer(
++    @CurrentAuthContext() context: AuthenticatedRequestContext,
++    @Param('assignmentId') assignmentId: unknown,
++    @Headers('idempotency-key') idempotencyKey: unknown,
++  ): Promise<DeliveryMutationResponse> {
++    return this.service.acceptOffer(context, assignmentId, idempotencyKey);
++  }
++
++  @Post('delivery-offers/:assignmentId/reject')
++  @HttpCode(HttpStatus.OK)
++  public rejectOffer(
++    @CurrentAuthContext() context: AuthenticatedRequestContext,
++    @Param('assignmentId') assignmentId: unknown,
++    @Headers('idempotency-key') idempotencyKey: unknown,
++    @Body() body: unknown,
++  ): Promise<DeliveryRejectionResponse> {
++    return this.service.rejectOffer(context, assignmentId, idempotencyKey, body);
++  }
++
++  @Get('deliveries/active')
++  public getActive(
++    @CurrentAuthContext() context: AuthenticatedRequestContext,
++  ): Promise<CaptainDeliveryResponse> {
++    return this.service.getActive(context);
++  }
++
++  @Get('deliveries/:taskId')
++  public getTask(
++    @CurrentAuthContext() context: AuthenticatedRequestContext,
++    @Param('taskId') taskId: unknown,
++  ): Promise<CaptainDeliveryResponse> {
++    return this.service.getTask(context, taskId);
++  }
++
++  @Post('deliveries/:taskId/arrive-pickup')
++  @HttpCode(HttpStatus.OK)
++  public arrivePickup(
++    @CurrentAuthContext() context: AuthenticatedRequestContext,
++    @Param('taskId') taskId: unknown,
++    @Headers('idempotency-key') idempotencyKey: unknown,
++    @Body() body: unknown,
++  ): Promise<DeliveryMutationResponse> {
++    return this.service.arrivePickup(context, taskId, idempotencyKey, body);
++  }
++}
+diff --git a/apps/backend/src/dispatch/delivery.gateway.test.ts b/apps/backend/src/dispatch/delivery.gateway.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..710c58c28fa821b1a3742c6d9b0bc35b801a8349
+--- /dev/null
++++ b/apps/backend/src/dispatch/delivery.gateway.test.ts
+@@ -0,0 +1,59 @@
++import { describe, expect, it } from 'vitest';
++
++import { DeliveryGatewayUnavailableError, parseCaptainDeliverySnapshot } from './delivery.gateway';
++
++const TASK_ID = '10000000-0000-4000-8000-000000000001';
++const ORDER_ID = '20000000-0000-4000-8000-000000000001';
++const ASSIGNMENT_ID = '30000000-0000-4000-8000-000000000001';
++
++const valid = {
++  taskId: TASK_ID,
++  orderId: ORDER_ID,
++  taskType: 'FORWARD_DELIVERY',
++  taskStatus: 'OFFERED',
++  assignmentId: ASSIGNMENT_ID,
++  assignmentStatus: 'OFFERED',
++  offeredEarningPaise: 4500,
++  offerExpiresAt: '2026-07-17T12:00:30.000Z',
++  pickupDistanceMeters: 850,
++  pickup: {
++    shopId: '40000000-0000-4000-8000-000000000001',
++    shopName: 'Vastra Test Shop',
++    label: 'Store',
++    line1: '1 Main Road',
++    line2: null,
++    landmark: null,
++    area: 'Tirupati',
++    city: 'Tirupati',
++    state: 'Andhra Pradesh',
++    postalCode: '517501',
++    countryCode: 'IN',
++    latitude: 13.6288,
++    longitude: 79.4192,
++  },
++  dropArea: { area: 'Renigunta Road', city: 'Tirupati' },
++  assignedAt: null,
++  arrivedPickupAt: null,
++  scheduledAt: '2026-07-17T12:00:00.000Z',
++  updatedAt: '2026-07-17T12:00:00.000Z',
++};
++
++describe('delivery gateway parser', () => {
++  it('maps a safe captain delivery payload', () => {
++    expect(parseCaptainDeliverySnapshot(valid)).toMatchObject({
++      taskId: TASK_ID,
++      assignmentId: ASSIGNMENT_ID,
++      taskStatus: 'OFFERED',
++      pickup: { shopName: 'Vastra Test Shop' },
++    });
++  });
++
++  it('rejects secrets and invalid task states through strict payload parsing', () => {
++    expect(() => parseCaptainDeliverySnapshot({ ...valid, taskStatus: 'COMPLETED' })).toThrow(
++      DeliveryGatewayUnavailableError,
++    );
++    expect(() => parseCaptainDeliverySnapshot({ ...valid, assignmentId: 'bad' })).toThrow(
++      DeliveryGatewayUnavailableError,
++    );
++  });
++});
+diff --git a/apps/backend/src/dispatch/delivery.gateway.ts b/apps/backend/src/dispatch/delivery.gateway.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..5eacb6eaf36d7c8ccfa9fe102278ce802948f1e7
+--- /dev/null
++++ b/apps/backend/src/dispatch/delivery.gateway.ts
+@@ -0,0 +1,345 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import type { SupabaseClient } from '../auth/supabase-client.type';
++import { SUPABASE_SERVICE_CLIENT } from '../auth/supabase.tokens';
++import type {
++  AdminAssignInput,
++  ArrivePickupInput,
++  CaptainDeliverySnapshot,
++  DeliveryOfferRejectionResult,
++  DeliveryOfferWaveResult,
++  DeliverySecretResult,
++} from './delivery.types';
++
++export interface DeliveryGateway {
++  listOffers(actorId: string): Promise<readonly CaptainDeliverySnapshot[]>;
++  getActive(actorId: string): Promise<CaptainDeliverySnapshot | null>;
++  getTask(actorId: string, taskId: string): Promise<CaptainDeliverySnapshot | null>;
++  acceptOffer(actorId: string, assignmentId: string, idempotencyKey: string): Promise<CaptainDeliverySnapshot>;
++  rejectOffer(actorId: string, assignmentId: string, reason: string, idempotencyKey: string): Promise<DeliveryOfferRejectionResult>;
++  arrivePickup(input: ArrivePickupInput): Promise<CaptainDeliverySnapshot>;
++  issuePickupCode(actorId: string, orderId: string): Promise<DeliverySecretResult>;
++  issueDeliveryOtp(actorId: string, orderId: string): Promise<DeliverySecretResult>;
++  adminAssign(input: AdminAssignInput): Promise<CaptainDeliverySnapshot>;
++  runDueOfferWaves(configuration: DeliveryOfferWaveConfiguration): Promise<readonly DeliveryOfferWaveResult[]>;
++}
++
++export interface DeliveryOfferWaveConfiguration {
++  readonly limit: number;
++  readonly initialRadiusMeters: number;
++  readonly radiusStepMeters: number;
++  readonly maxRadiusMeters: number;
++  readonly captainsPerWave: number;
++  readonly offerLifetimeSeconds: number;
++}
++
++export class DeliveryRequestInvalidError extends Error {}
++export class DeliveryAccessDeniedError extends Error {}
++export class DeliveryTaskNotFoundError extends Error {}
++export class DeliveryOfferNotFoundError extends Error {}
++export class DeliveryStateConflictError extends Error {}
++export class DeliveryAlreadyAssignedError extends Error {}
