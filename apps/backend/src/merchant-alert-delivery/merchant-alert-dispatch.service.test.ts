@@ -131,11 +131,7 @@ describe('MerchantAlertDispatchService', () => {
       devices: [],
     });
     const test = dependencies([stoppedClaim]);
-    const service = new MerchantAlertDispatchService(
-      CONFIGURATION,
-      test.gateway,
-      test.sender,
-    );
+    const service = new MerchantAlertDispatchService(CONFIGURATION, test.gateway, test.sender);
 
     const summary = await service.drain();
 
@@ -155,11 +151,7 @@ describe('MerchantAlertDispatchService', () => {
   it('sends every eligible device and completes the durable event once', async () => {
     const activeClaim = claim({ devices: [DEVICE_ONE, DEVICE_TWO] });
     const test = dependencies([activeClaim]);
-    const service = new MerchantAlertDispatchService(
-      CONFIGURATION,
-      test.gateway,
-      test.sender,
-    );
+    const service = new MerchantAlertDispatchService(CONFIGURATION, test.gateway, test.sender);
 
     const summary = await service.drain();
 
@@ -177,11 +169,7 @@ describe('MerchantAlertDispatchService', () => {
     const failingSend: MerchantAlertSender['send'] = () =>
       Promise.reject(new Error('do not expose token'));
     const test = dependencies([activeClaim], failingSend);
-    const service = new MerchantAlertDispatchService(
-      CONFIGURATION,
-      test.gateway,
-      test.sender,
-    );
+    const service = new MerchantAlertDispatchService(CONFIGURATION, test.gateway, test.sender);
 
     await service.drain();
 

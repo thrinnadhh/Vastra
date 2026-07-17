@@ -3,48 +3,4 @@
 > eslint . --max-warnings=0
 
 
-/home/runner/work/Vastra/Vastra/apps/backend/src/merchant-alert-delivery/fcm-merchant-alert.sender.ts
-  182:61  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
-  183:71  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
-
-/home/runner/work/Vastra/Vastra/apps/backend/src/merchant-alert-delivery/firebase-access-token.service.ts
-  125:55  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
-
-/home/runner/work/Vastra/Vastra/apps/backend/src/merchant-alert-delivery/merchant-alert-delivery.configuration.ts
-  92:28  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
-
-/home/runner/work/Vastra/Vastra/apps/backend/src/merchant-alert-delivery/merchant-alert-dispatch.service.test.ts
-   69:88  error  Async arrow function has no 'await' expression                                                                                                                                                                                                                                                                                              @typescript-eslint/require-await
-   73:37  error  Async arrow function has no 'await' expression                                                                                                                                                                                                                                                                                              @typescript-eslint/require-await
-   77:45  error  Async arrow function has no 'await' expression                                                                                                                                                                                                                                                                                              @typescript-eslint/require-await
-   78:7   error  Unsafe assignment of an `any` value                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unsafe-assignment
-   78:29  error  Unsafe member access .deviceId on an `any` value                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unsafe-member-access
-   80:52  error  Invalid type "any" of template literal expression                                                                                                                                                                                                                                                                                           @typescript-eslint/restrict-template-expressions
-   80:64  error  Unsafe member access .deviceId on an `any` value                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unsafe-member-access
-  102:12  error  A method that is not declared with `this: void` may cause unintentional scoping of `this` when separated from its object.
-Consider using an arrow function or explicitly `.bind()`ing the method to avoid calling the method with an unintended `this` value. 
-If a function does not access `this`, it can be annotated with `this: void`  @typescript-eslint/unbound-method
-  125:12  error  A method that is not declared with `this: void` may cause unintentional scoping of `this` when separated from its object.
-Consider using an arrow function or explicitly `.bind()`ing the method to avoid calling the method with an unintended `this` value. 
-If a function does not access `this`, it can be annotated with `this: void`  @typescript-eslint/unbound-method
-  127:21  error  Forbidden non-null assertion                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-non-null-assertion
-  137:15  error  A method that is not declared with `this: void` may cause unintentional scoping of `this` when separated from its object.
-Consider using an arrow function or explicitly `.bind()`ing the method to avoid calling the method with an unintended `this` value. 
-If a function does not access `this`, it can be annotated with `this: void`  @typescript-eslint/unbound-method
-  142:21  error  Forbidden non-null assertion                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-non-null-assertion
-  145:19  error  Forbidden non-null assertion                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-non-null-assertion
-
-/home/runner/work/Vastra/Vastra/apps/backend/src/merchant-alert-delivery/merchant-alert-dispatch.service.ts
-  67:121  error  Invalid type "number" of template literal expression   @typescript-eslint/restrict-template-expressions
-  67:160  error  Invalid type "number" of template literal expression   @typescript-eslint/restrict-template-expressions
-  67:196  error  Invalid type "boolean" of template literal expression  @typescript-eslint/restrict-template-expressions
-
-/home/runner/work/Vastra/Vastra/apps/backend/src/merchant-alert-delivery/merchant-alert-fcm-payload.test.ts
-  33:57  error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
-  53:75  error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
-
-✖ 22 problems (22 errors, 0 warnings)
-
- ELIFECYCLE  Command failed with exit code 1.
-
-LINT_EXIT_CODE=1
+LINT_EXIT_CODE=0
