@@ -6,7 +6,7 @@ import {
 } from 'react-native-safe-area-context';
 
 import { CaptainSessionApp } from './src/auth/default-captain-session';
-import { AuthenticatedCaptainPresenceScreen } from './src/presence/captain-presence.screen';
+import { CaptainOperationsScreen } from './src/captain-operations.screen';
 
 export default function App() {
   return (
@@ -14,7 +14,7 @@ export default function App() {
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF8F2' }}>
         <StatusBar style="dark" />
         <CaptainSessionApp>
-          <AuthenticatedCaptainPresenceScreen />
+          <CaptainOperationsScreen />
         </CaptainSessionApp>
       </SafeAreaView>
     </SafeAreaProvider>

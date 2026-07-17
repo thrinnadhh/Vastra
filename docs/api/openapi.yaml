@@ -76,6 +76,11 @@ components:
       content:
         application/json:
           schema: {$ref: '#/components/schemas/ApiError'}
+    ServiceUnavailable:
+      description: Service is temporarily unavailable
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ApiError'}
   schemas:
     ApiError:
       type: object
@@ -2686,22 +2691,164 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    DeliveryLocationInput:
+      type: object
+      additionalProperties: false
+      required: [latitude, longitude, accuracyMeters, recordedAt]
+      properties:
+        latitude: {type: number, minimum: -90, maximum: 90}
+        longitude: {type: number, minimum: -180, maximum: 180}
+        accuracyMeters: {type: number, minimum: 0}
+        recordedAt: {type: string, format: date-time}
+    DeliveryOptionalLocationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        location:
+          oneOf:
+          - {$ref: '#/components/schemas/DeliveryLocationInput'}
+          - {type: 'null'}
+    DeliveryArrivePickupRequest:
+      type: object
+      additionalProperties: false
+      required: [location]
+      properties:
+        location: {$ref: '#/components/schemas/DeliveryLocationInput'}
+    DeliveryVerifyPickupRequest:
+      type: object
+      additionalProperties: false
+      required: [pickupCode]
+      properties:
+        pickupCode: {type: string, pattern: '^[0-9]{6}$'}
+    DeliveryRejectOfferRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          enum: [TOO_FAR, VEHICLE_ISSUE, SHIFT_ENDING, LOW_BATTERY, OTHER]
     DeliveryCompleteRequest:
       type: object
-      required:
-      - deliveryOtp
+      additionalProperties: false
+      required: [collectedAmountPaise, deliveryOtp]
       properties:
-        deliveryOtp:
+        collectedAmountPaise: {type: integer, minimum: 0}
+        deliveryOtp: {type: string, pattern: '^[0-9]{6}$'}
+        location:
+          oneOf:
+          - {$ref: '#/components/schemas/DeliveryLocationInput'}
+          - {type: 'null'}
+    DeliveryProblemRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
           type: string
-          pattern: ^[0-9]{4,8}$
-        codCollectedPaise:
-          type: integer
-          minimum: 0
-        proofMethod:
+          enum: [CUSTOMER_UNAVAILABLE, INVALID_ADDRESS, CUSTOMER_REFUSED, PACKAGE_DAMAGED, PAYMENT_NOT_AVAILABLE, SAFETY_CONCERN, VEHICLE_ISSUE, OTHER]
+        note: {type: ['string', 'null'], maxLength: 500}
+        evidenceObjectKey: {type: ['string', 'null'], maxLength: 1024}
+        location:
+          oneOf:
+          - {$ref: '#/components/schemas/DeliveryLocationInput'}
+          - {type: 'null'}
+    DeliveryReleaseRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
           type: string
-          enum:
-          - OTP
-          - ADMIN_OVERRIDE
+          enum: [VEHICLE_ISSUE, PERSONAL_EMERGENCY, CANNOT_REACH_STORE, MERCHANT_UNAVAILABLE, APP_OR_NAVIGATION_FAILURE, OTHER]
+        note: {type: ['string', 'null'], maxLength: 500}
+        location:
+          oneOf:
+          - {$ref: '#/components/schemas/DeliveryLocationInput'}
+          - {type: 'null'}
+    AdminDeliveryAssignRequest:
+      type: object
+      additionalProperties: false
+      required: [captainId]
+      properties:
+        captainId: {type: string, format: uuid}
+    AdminDeliveryOverrideRequest:
+      type: object
+      additionalProperties: false
+      required: [collectedAmountPaise, reason]
+      properties:
+        collectedAmountPaise: {type: integer, minimum: 0}
+        reason: {type: string, minLength: 10, maxLength: 500}
+    DeliveryAddressSnapshot:
+      type: object
+      additionalProperties: false
+      required: [label, recipientName, phoneNumber, line1, line2, landmark, area, city, state, postalCode, countryCode, location]
+      properties:
+        label: {type: ['string', 'null']}
+        recipientName: {type: ['string', 'null']}
+        phoneNumber: {type: ['string', 'null']}
+        line1: {type: string}
+        line2: {type: ['string', 'null']}
+        landmark: {type: ['string', 'null']}
+        area: {type: string}
+        city: {type: string}
+        state: {type: string}
+        postalCode: {type: string}
+        countryCode: {type: string}
+        location:
+          type: object
+          additionalProperties: false
+          required: [latitude, longitude]
+          properties:
+            latitude: {type: number, minimum: -90, maximum: 90}
+            longitude: {type: number, minimum: -180, maximum: 180}
+    CaptainDeliverySnapshot:
+      type: object
+      additionalProperties: false
+      required: [taskId, orderId, orderNumber, taskStatus, orderStatus, assignmentId, assignmentStatus, offeredEarningPaise, pickupDistanceMeters, offeredAt, expiresAt, assignedAt, pickup, drop, totalPaise, paymentStatus, replayed]
+      properties:
+        taskId: {type: string, format: uuid}
+        orderId: {type: string, format: uuid}
+        orderNumber: {type: string}
+        taskStatus: {type: string, enum: [OFFERED, ASSIGNED, AT_PICKUP, PICKED_UP, IN_TRANSIT, AT_DROP]}
+        orderStatus: {type: string, enum: [CAPTAIN_SEARCHING, CAPTAIN_ASSIGNED, CAPTAIN_AT_STORE, PICKED_UP, OUT_FOR_DELIVERY, CAPTAIN_AT_CUSTOMER]}
+        assignmentId: {type: string, format: uuid}
+        assignmentStatus: {type: string, enum: [OFFERED, ACCEPTED]}
+        offeredEarningPaise: {type: integer, minimum: 0}
+        pickupDistanceMeters: {type: ['number', 'null'], minimum: 0}
+        offeredAt: {type: string, format: date-time}
+        expiresAt: {type: string, format: date-time}
+        assignedAt: {type: ['string', 'null'], format: date-time}
+        pickup: {$ref: '#/components/schemas/DeliveryAddressSnapshot'}
+        drop: {$ref: '#/components/schemas/DeliveryAddressSnapshot'}
+        totalPaise: {type: integer, minimum: 0}
+        paymentStatus: {type: string, enum: [COD_PENDING, COD_COLLECTED]}
+        replayed: {type: boolean}
+    DeliveryTrackingSnapshot:
+      type: object
+      additionalProperties: false
+      required: [orderId, deliveryTaskId, orderNumber, orderStatus, taskStatus, captain, location, estimatedArrivalAt, updatedAt]
+      properties:
+        orderId: {type: string, format: uuid}
+        deliveryTaskId: {type: string, format: uuid}
+        orderNumber: {type: string}
+        orderStatus: {type: string}
+        taskStatus: {type: string}
+        captain: {type: ['object', 'null']}
+        location: {type: ['object', 'null']}
+        estimatedArrivalAt: {type: ['string', 'null'], format: date-time}
+        updatedAt: {type: string, format: date-time}
+    DeliveryApiResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data: {type: object, additionalProperties: true}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     CustomerFavouriteShop:
       type: object
       required: [id, name, slug, logoObjectKey, coverImageObjectKey, operationalStatus, acceptsOnlineOrders, ratingAverage, ratingCount, followerCount, favouritedAt]
@@ -5933,106 +6080,439 @@ paths:
               schema: {$ref: '#/components/schemas/ApiError'}
   /captain/delivery-offers:
     get:
-      summary: List delivery offers
-      tags:
-      - Captain
+      operationId: listCaptainDeliveryOffers
+      summary: List unexpired forward-delivery offers owned by the captain
+      tags: [Captain]
+      security: [{bearerAuth: []}]
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Delivery offers
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /captain/delivery-offers/{offerId}/accept:
+              schema: {$ref: '#/components/schemas/DeliveryApiResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /captain/delivery-offers/{assignmentId}/accept:
     post:
-      summary: Accept delivery offer
-      tags:
-      - Captain
+      operationId: acceptCaptainDeliveryOffer
+      summary: Exclusively accept an unexpired delivery offer
+      tags: [Captain]
+      security: [{bearerAuth: []}]
       parameters:
-      - name: offerId
+      - name: assignmentId
         in: path
         required: true
-        schema:
-          type: string
-          format: uuid
+        schema: {type: string, format: uuid}
       - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Offer accepted or safely replayed
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /captain/deliveries/{deliveryId}/confirm-pickup:
+              schema: {$ref: '#/components/schemas/DeliveryApiResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '410': {description: Delivery offer expired, content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /captain/delivery-offers/{assignmentId}/reject:
     post:
-      summary: Confirm pickup
-      tags:
-      - Captain
+      operationId: rejectCaptainDeliveryOffer
+      summary: Reject an unexpired delivery offer
+      tags: [Captain]
+      security: [{bearerAuth: []}]
       parameters:
-      - name: deliveryId
+      - name: assignmentId
         in: path
         required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/IdempotencyKey'
-      responses:
-        '200':
-          description: Success
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /captain/deliveries/{deliveryId}/complete:
-    post:
-      summary: Complete delivery
-      tags:
-      - Captain
-      parameters:
-      - name: deliveryId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+        schema: {type: string, format: uuid}
       - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/DeliveryCompleteRequest'
+            schema: {$ref: '#/components/schemas/DeliveryRejectOfferRequest'}
       responses:
-        '200':
-          description: Success
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+        '200': {description: Offer rejected or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '410': {description: Delivery offer expired, content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /captain/deliveries/active:
+    get:
+      operationId: getCaptainActiveDelivery
+      summary: Read the captain's accepted active delivery
+      tags: [Captain]
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Active delivery or null, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /captain/deliveries/{taskId}:
+    get:
+      operationId: getCaptainDelivery
+      summary: Read an offered or assigned delivery visible to the captain
+      tags: [Captain]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Delivery details, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /captain/deliveries/{taskId}/arrive-pickup:
+    post:
+      operationId: arriveCaptainAtPickup
+      summary: Declare geofenced arrival at the merchant
+      tags: [Captain]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DeliveryArrivePickupRequest'}
+      responses:
+        '200': {description: Arrival recorded, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /captain/deliveries/{taskId}/verify-pickup:
+    post:
+      operationId: verifyCaptainPickupCode
+      summary: Verify the merchant pickup code and transfer package custody
+      tags: [Captain]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DeliveryVerifyPickupRequest'}
+      responses:
+        '200': {description: Pickup verified, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {description: Pickup code invalid, content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}}
+        '423': {description: Pickup verification locked, content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /captain/deliveries/{taskId}/depart-pickup:
+    post:
+      operationId: departCaptainPickup
+      summary: Start the customer-delivery leg
+      tags: [Captain]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DeliveryOptionalLocationRequest'}
+      responses:
+        '200': {description: Delivery is in transit, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /captain/deliveries/{taskId}/arrive-drop:
+    post:
+      operationId: arriveCaptainAtCustomer
+      summary: Declare arrival at the customer
+      tags: [Captain]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DeliveryOptionalLocationRequest'}
+      responses:
+        '200': {description: Customer arrival recorded, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /captain/deliveries/{taskId}/complete:
+    post:
+      operationId: completeCaptainCodDelivery
+      summary: Atomically collect exact COD, verify OTP, and complete delivery
+      tags: [Captain]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DeliveryCompleteRequest'}
+      responses:
+        '200': {description: Delivery completed or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {description: Delivery OTP invalid, content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}}
+        '423': {description: OTP verification locked, content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /captain/deliveries/{taskId}/report-problem:
+    post:
+      operationId: reportCaptainDeliveryProblem
+      summary: Append an immutable operational problem report
+      tags: [Captain]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DeliveryProblemRequest'}
+      responses:
+        '200': {description: Problem recorded, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /captain/deliveries/{taskId}/release:
+    post:
+      operationId: releaseCaptainDeliveryBeforePickup
+      summary: Release an assigned task before verified pickup
+      tags: [Captain]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DeliveryReleaseRequest'}
+      responses:
+        '200': {description: Task returned to captain search, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /customer/orders/{orderId}/tracking:
+    get:
+      operationId: getCustomerOrderTracking
+      summary: Read privacy-reduced live delivery tracking for an owned order
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Delivery tracking, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /customer/orders/{orderId}/delivery-otp:
+    get:
+      operationId: getCustomerDeliveryOtp
+      summary: Read or rotate the active delivery OTP after pickup
+      tags: [Customer]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Active OTP, headers: {Cache-Control: {schema: {type: string}}}, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /merchant/orders/{orderId}/pickup-code:
+    get:
+      operationId: getMerchantPickupCode
+      summary: Read or rotate the pickup code for an owned shop order
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Active pickup code, headers: {Cache-Control: {schema: {type: string}}}, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /merchant/orders/{orderId}/delivery:
+    get:
+      operationId: getMerchantOrderDelivery
+      summary: Read delivery status for an owned shop order
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Merchant delivery summary, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/delivery-tasks/{taskId}:
+    get:
+      operationId: getAdminDeliveryTask
+      summary: Read the operational delivery timeline
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Operational task view, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/delivery-tasks/{taskId}/assign:
+    post:
+      operationId: assignAdminDeliveryTask
+      summary: Manually assign a searching task to an eligible captain
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDeliveryAssignRequest'}
+      responses:
+        '200': {description: Task assigned, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/delivery-tasks/{taskId}/delivery-override:
+    post:
+      operationId: overrideAdminDeliveryOtp
+      summary: Complete exact-COD delivery through an audited MFA-protected OTP override
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminDeliveryOverrideRequest'}
+      responses:
+        '200': {description: Delivery completed with audited OTP override, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/delivery-tasks/{taskId}/release:
+    post:
+      operationId: releaseAdminDeliveryTask
+      summary: Audited pre-pickup release and reassignment fallback
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DeliveryReleaseRequest'}
+      responses:
+        '200': {description: Task released, content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryApiResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/dashboard:
     get:
       summary: Get admin dashboard
