@@ -52,7 +52,5 @@ export interface CaptainLocationPermissionResult {
 export interface CaptainLocationProvider {
   requestForegroundPermission(): Promise<CaptainLocationPermissionResult>;
   getCurrentLocation(): Promise<CaptainLocationSample>;
-  watchLocations(
-    listener: (sample: CaptainLocationSample) => void,
-  ): Promise<() => void>;
+  watchLocations(listener: (sample: CaptainLocationSample) => void): Promise<() => void>;
 }

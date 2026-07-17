@@ -44,10 +44,7 @@ export class CaptainPresenceService {
   ): Promise<CaptainAvailabilityResponse> {
     try {
       const requestedStatus = parseCaptainAvailabilityBody(body);
-      const availability = await this.gateway.setAvailability(
-        context.actor.id,
-        requestedStatus,
-      );
+      const availability = await this.gateway.setAvailability(context.actor.id, requestedStatus);
 
       return {
         success: true,

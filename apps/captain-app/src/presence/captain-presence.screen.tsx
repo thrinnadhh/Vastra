@@ -1,17 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useCaptainApiSession } from '../auth/captain-api-session';
-import {
-  CaptainPresenceApiError,
-  HttpCaptainPresenceClient,
-} from './captain-presence.client';
+import { CaptainPresenceApiError, HttpCaptainPresenceClient } from './captain-presence.client';
 import { ExpoCaptainLocationProvider } from './expo-captain-location.provider';
 import type {
   CaptainAvailabilityStatus,
@@ -59,10 +50,7 @@ function isClientControlled(status: CaptainAvailabilityStatus): boolean {
   return status === 'OFFLINE' || status === 'AVAILABLE' || status === 'ON_BREAK';
 }
 
-export function CaptainPresenceScreen({
-  client,
-  locationProvider,
-}: CaptainPresenceScreenProps) {
+export function CaptainPresenceScreen({ client, locationProvider }: CaptainPresenceScreenProps) {
   const [state, setState] = useState<ScreenState>({ kind: 'LOADING' });
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -117,8 +105,10 @@ export function CaptainPresenceScreen({
         } catch (error: unknown) {
           if (
             mounted.current &&
-            !(error instanceof CaptainPresenceApiError &&
-              error.code === 'LOCATION_UPDATE_RATE_LIMITED')
+            !(
+              error instanceof CaptainPresenceApiError &&
+              error.code === 'LOCATION_UPDATE_RATE_LIMITED'
+            )
           ) {
             setNotice(describeError(error));
           }
@@ -138,20 +128,22 @@ export function CaptainPresenceScreen({
     let active = true;
     let stopWatching: (() => void) | undefined;
 
-    void locationProvider.watchLocations((sample) => {
-      if (active) sendLocation(sample);
-    }).then(
-      (stop) => {
-        if (active) {
-          stopWatching = stop;
-        } else {
-          stop();
-        }
-      },
-      (error: unknown) => {
-        if (active && mounted.current) setNotice(describeError(error));
-      },
-    );
+    void locationProvider
+      .watchLocations((sample) => {
+        if (active) sendLocation(sample);
+      })
+      .then(
+        (stop) => {
+          if (active) {
+            stopWatching = stop;
+          } else {
+            stop();
+          }
+        },
+        (error: unknown) => {
+          if (active && mounted.current) setNotice(describeError(error));
+        },
+      );
 
     return () => {
       active = false;

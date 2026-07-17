@@ -50,9 +50,9 @@ describe('captain presence validation', () => {
   });
 
   it('rejects invalid coordinates and sensor metadata', () => {
-    expect(() =>
-      parseCaptainLocationBody(ACTOR_ID, { ...validLocation(), latitude: 91 }),
-    ).toThrow(CaptainPresenceValidationError);
+    expect(() => parseCaptainLocationBody(ACTOR_ID, { ...validLocation(), latitude: 91 })).toThrow(
+      CaptainPresenceValidationError,
+    );
     expect(() =>
       parseCaptainLocationBody(ACTOR_ID, { ...validLocation(), accuracyMeters: -1 }),
     ).toThrow(CaptainPresenceValidationError);

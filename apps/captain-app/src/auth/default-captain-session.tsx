@@ -4,10 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { HttpCurrentAccountClient } from './current-account-client';
 import { CaptainSessionRoot } from './captain-session-root';
-import {
-  CaptainMobileEnvironmentError,
-  readCaptainMobileEnvironment,
-} from './mobile-environment';
+import { CaptainMobileEnvironmentError, readCaptainMobileEnvironment } from './mobile-environment';
 import { SessionRestorationService } from './session-restoration.service';
 import {
   createCaptainSupabaseClient,

@@ -30,9 +30,7 @@ export function CaptainApiSessionProvider({
   );
 
   return (
-    <CaptainApiSessionContext.Provider value={value}>
-      {children}
-    </CaptainApiSessionContext.Provider>
+    <CaptainApiSessionContext.Provider value={value}>{children}</CaptainApiSessionContext.Provider>
   );
 }
 

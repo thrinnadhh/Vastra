@@ -1,13 +1,8 @@
 import type { CaptainAvailabilityStatus } from '../auth/operational-readiness.types';
 
-export const CAPTAIN_CLIENT_AVAILABILITY_STATUSES = [
-  'OFFLINE',
-  'AVAILABLE',
-  'ON_BREAK',
-] as const;
+export const CAPTAIN_CLIENT_AVAILABILITY_STATUSES = ['OFFLINE', 'AVAILABLE', 'ON_BREAK'] as const;
 
-export type CaptainClientAvailabilityStatus =
-  (typeof CAPTAIN_CLIENT_AVAILABILITY_STATUSES)[number];
+export type CaptainClientAvailabilityStatus = (typeof CAPTAIN_CLIENT_AVAILABILITY_STATUSES)[number];
 
 export interface SetCaptainAvailabilityCommand {
   readonly actorId: string;

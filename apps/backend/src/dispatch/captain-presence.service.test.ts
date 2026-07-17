@@ -128,8 +128,8 @@ describe('CaptainPresenceService', () => {
   ])('maps gateway failures to stable delivery errors', async (error, code) => {
     gateway.error = error;
 
-    await expect(
-      service.setAvailability(context, { status: 'AVAILABLE' }),
-    ).rejects.toSatisfy((candidate: unknown) => readErrorCode(candidate) === code);
+    await expect(service.setAvailability(context, { status: 'AVAILABLE' })).rejects.toSatisfy(
+      (candidate: unknown) => readErrorCode(candidate) === code,
+    );
   });
 });

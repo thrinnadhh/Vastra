@@ -106,10 +106,7 @@ describe('captain presence integration', () => {
     gateway = new IntegrationGateway();
     const module = await Test.createTestingModule({
       controllers: [CaptainPresenceController],
-      providers: [
-        CaptainPresenceService,
-        { provide: CAPTAIN_PRESENCE_GATEWAY, useValue: gateway },
-      ],
+      providers: [CaptainPresenceService, { provide: CAPTAIN_PRESENCE_GATEWAY, useValue: gateway }],
     }).compile();
 
     const application = module.createNestApplication();
