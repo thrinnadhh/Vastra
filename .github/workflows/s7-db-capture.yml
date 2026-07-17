@@ -1,24 +1,22 @@
-name: S7 Database Capture
+name: S7 Database Fix
 
 on:
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - docs/implementation/s7-db-output.txt
 
 permissions:
   contents: write
 
 concurrency:
-  group: s7-db-capture-${{ github.event.pull_request.number }}
+  group: s7-db-fix-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  database:
-    name: Capture database phases
+  fix:
+    name: Apply database fix
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 5
 
     steps:
       - name: Check out Sprint 7 branch
@@ -26,73 +24,70 @@ jobs:
         with:
           ref: feat/s7-01-05-merchant-alert-delivery-foundation
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 20.20.2
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Set up Supabase CLI
-        uses: supabase/setup-cli@v3
-        with:
-          version: 2.109.1
-
-      - name: Capture database phases
+      - name: Replace invalid composite assignment
         shell: bash
         run: |
-          log=docs/implementation/s7-db-output.txt
-          : > "$log"
+          python3 - <<'PY'
+          from pathlib import Path
 
-          run_phase() {
-            local name="$1"
-            shift
-            printf '\n===== %s =====\n' "$name" >> "$log"
-            set +e
-            timeout --kill-after=30s 300s "$@" >> "$log" 2>&1
-            local status=$?
-            set -e
-            printf '\n%s_EXIT_CODE=%s\n' "$name" "$status" >> "$log"
-            return "$status"
-          }
+          path = Path(
+              'supabase/migrations/'
+              '20260717103000_merchant_alert_delivery_foundation.sql'
+          )
+          text = path.read_text()
+          old = """  select alert, placed_order
+            into alert_row, order_row
+            from public.merchant_order_alerts alert
+            join public.orders placed_order
+              on placed_order.id = alert.order_id
+             and placed_order.shop_id = alert.shop_id
+            where alert.id = p_alert_id
+            for update of alert, placed_order;
 
-          final_status=0
-          if run_phase SUPABASE_START supabase start; then
-            if run_phase DB_RESET supabase db reset --local; then
-              if run_phase MIGRATION_LIST supabase migration list --local; then
-                if run_phase PGTAP supabase test db --local; then
-                  if run_phase CONCURRENCY bash scripts/run-db-concurrency-tests.sh; then
-                    run_phase ADVISORS supabase db advisors --local || final_status=$?
-                  else
-                    final_status=$?
-                  fi
-                else
-                  final_status=$?
-                fi
-              else
-                final_status=$?
-              fi
-            else
-              final_status=$?
-            fi
-            run_phase SUPABASE_STOP supabase stop || true
-          else
-            final_status=$?
-          fi
+            if not found then
+              raise exception 'merchant order alert not found' using errcode = 'P0014';
+            end if;
+          """
+          new = """  select placed_order.*
+            into order_row
+            from public.orders placed_order
+            join public.merchant_order_alerts alert
+              on alert.order_id = placed_order.id
+             and alert.shop_id = placed_order.shop_id
+            where alert.id = p_alert_id
+            for update of placed_order;
 
-          printf '\nDB_EXIT_CODE=%s\n' "$final_status" >> "$log"
+            if not found then
+              raise exception 'merchant order alert not found' using errcode = 'P0014';
+            end if;
 
-      - name: Commit database output
+            select alert.*
+            into alert_row
+            from public.merchant_order_alerts alert
+            where alert.id = p_alert_id
+              and alert.order_id = order_row.id
+              and alert.shop_id = order_row.shop_id
+            for update;
+
+            if not found then
+              raise exception 'merchant order alert not found' using errcode = 'P0014';
+            end if;
+          """
+          if old not in text:
+              raise SystemExit('Expected composite assignment block was not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Remove temporary diagnostics
+        run: |
+          rm -f docs/implementation/s7-db-output.txt
+          rm -f .github/workflows/s7-db-capture.yml
+
+      - name: Commit database fix
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/implementation/s7-db-output.txt
-          git commit -m "chore: capture Sprint 7 database output"
+          git add --all
+          git commit -m "fix(alerts): lock delivery rows explicitly"
           git push origin HEAD:feat/s7-01-05-merchant-alert-delivery-foundation
