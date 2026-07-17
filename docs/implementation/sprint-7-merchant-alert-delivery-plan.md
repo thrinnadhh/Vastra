@@ -1,7 +1,7 @@
 ---
 ticket: S7-01
 sprint: 7
-status: frozen
+status: implemented
 ---
 
 # Sprint 7 Merchant Alert Delivery Plan
