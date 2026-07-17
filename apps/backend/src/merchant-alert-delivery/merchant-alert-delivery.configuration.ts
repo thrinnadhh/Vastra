@@ -89,7 +89,7 @@ export function loadMerchantAlertDeliveryConfiguration(
     workerId:
       configuredWorkerId !== undefined && configuredWorkerId.length > 0
         ? configuredWorkerId
-        : `${hostname()}:${process.pid}`,
+        : `${hostname()}:${String(process.pid)}`,
     pollIntervalMs: parseInteger(
       environment,
       'MERCHANT_ALERT_DELIVERY_POLL_INTERVAL_MS',
