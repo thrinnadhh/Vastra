@@ -16,7 +16,7 @@ jobs:
   database:
     name: Capture database output
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
       - name: Check out repository
@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          pnpm db:test > docs/implementation/s7-db-output.txt 2>&1
+          timeout 420s pnpm db:test > docs/implementation/s7-db-output.txt 2>&1
           status=$?
           set -e
           printf '\nDB_EXIT_CODE=%s\n' "$status" >> docs/implementation/s7-db-output.txt
