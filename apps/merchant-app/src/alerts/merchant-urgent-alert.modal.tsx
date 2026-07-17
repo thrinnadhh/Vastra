@@ -31,8 +31,9 @@ export function MerchantUrgentAlertModal({
 }) {
   const runtime = useMerchantAlertRuntime();
   const alert = runtime.activeAlert;
-  const [now, setNow] = useState(Date.now());
-  const remaining = alert === null ? 0 : merchantAlertSecondsRemaining(alert.expiresAt, now);
+  const [now, setNow] = useState<number | null>(null);
+  const remaining =
+    alert === null || now === null ? null : merchantAlertSecondsRemaining(alert.expiresAt, now);
   const [acknowledging, setAcknowledging] = useState(false);
   const [failure, setFailure] = useState(false);
   const player = useAudioPlayer(ringtoneSource, { downloadFirst: true });
@@ -60,10 +61,13 @@ export function MerchantUrgentAlertModal({
 
   useEffect(() => {
     if (alert === null) return;
-    const timer = setInterval(() => {
+    const update = () => {
       setNow(Date.now());
-    }, 1_000);
+    };
+    const initialTimer = setTimeout(update, 0);
+    const timer = setInterval(update, 1_000);
     return () => {
+      clearTimeout(initialTimer);
       clearInterval(timer);
     };
   }, [alert]);
@@ -103,7 +107,9 @@ export function MerchantUrgentAlertModal({
     () =>
       alert === null
         ? 'No urgent merchant alert'
-        : `Urgent new order ${alert.orderNumber}. ${String(remaining)} seconds remaining`,
+        : remaining === null
+          ? `Urgent new order ${alert.orderNumber}. Countdown loading`
+          : `Urgent new order ${alert.orderNumber}. ${String(remaining)} seconds remaining`,
     [alert, remaining],
   );
 
@@ -126,6 +132,8 @@ export function MerchantUrgentAlertModal({
     }
   };
 
+  const actionDisabled = acknowledging || remaining === null || remaining === 0;
+
   return (
     <Modal animationType="fade" onRequestClose={() => undefined} transparent visible>
       <View accessibilityLabel={accessibilityLabel} accessible style={styles.backdrop}>
@@ -140,7 +148,7 @@ export function MerchantUrgentAlertModal({
           <View style={styles.countdownCard}>
             <Text style={styles.countdownLabel}>Response window</Text>
             <Text accessibilityLiveRegion="polite" style={styles.countdownValue}>
-              {formatCountdown(remaining)}
+              {remaining === null ? '—:—' : formatCountdown(remaining)}
             </Text>
           </View>
           {failure ? (
@@ -151,9 +159,9 @@ export function MerchantUrgentAlertModal({
           <Pressable
             accessibilityLabel={`Acknowledge and open order ${alert.orderNumber}`}
             accessibilityRole="button"
-            disabled={acknowledging || remaining === 0}
+            disabled={actionDisabled}
             onPress={() => void acknowledgeAndOpen()}
-            style={[styles.primary, acknowledging || remaining === 0 ? styles.disabled : null]}
+            style={[styles.primary, actionDisabled ? styles.disabled : null]}
           >
             <Text style={styles.primaryText}>
               {acknowledging ? 'Acknowledging…' : 'Acknowledge & review order'}
