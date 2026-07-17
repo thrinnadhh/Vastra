@@ -179,8 +179,9 @@ export class FcmMerchantAlertSender implements MerchantAlertSender {
     }
 
     const error = parseFcmError(payload);
-    const code = error.errorCode ?? error.status ?? `HTTP_${response.status}`;
-    const reason = error.message ?? `FCM request failed with status ${response.status}`;
+    const status = String(response.status);
+    const code = error.errorCode ?? error.status ?? `HTTP_${status}`;
+    const reason = error.message ?? `FCM request failed with status ${status}`;
     return failureResult(
       destination.deviceId,
       code,
