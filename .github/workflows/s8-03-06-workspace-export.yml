@@ -20,12 +20,12 @@ jobs:
       - name: Package workspace
         shell: bash
         run: |
-          tar --exclude=.git --exclude=node_modules -czf s8-03-06-workspace.tar.gz .
+          tar --exclude=.git --exclude=node_modules -czf /tmp/s8-03-06-workspace.tar.gz .
 
       - name: Upload workspace
         uses: actions/upload-artifact@v4
         with:
           name: s8-03-06-workspace
-          path: s8-03-06-workspace.tar.gz
+          path: /tmp/s8-03-06-workspace.tar.gz
           if-no-files-found: error
           retention-days: 1
