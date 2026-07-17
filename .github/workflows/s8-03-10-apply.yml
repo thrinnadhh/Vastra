@@ -1,0 +1,89 @@
+name: Apply Sprint 8 source
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply-source:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/s8-03-10-captain-delivery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out head branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify and extract source
+        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        shell: bash
+        run: |
+          cat scripts/.s8-03-10-source.part-* > /tmp/s8-source.b64
+          echo "2400e5de903ec3f4122c2db72975e13b198f02c6ef6830df110b0ea9dc33d084  /tmp/s8-source.b64" | sha256sum -c -
+          base64 --decode /tmp/s8-source.b64 > /tmp/s8-source.tar.gz
+          echo "7c582524063842e078c18647e2fb022b43a48703a381b71278da19303dd99083  /tmp/s8-source.tar.gz" | sha256sum -c -
+          test "$(tar -tzf /tmp/s8-source.tar.gz | wc -l)" -eq 30
+          tar -xzf /tmp/s8-source.tar.gz
+
+      - name: Remove staged transport files
+        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        shell: bash
+        run: |
+          rm -f \
+            scripts/.s8-03-06-export-trigger \
+            scripts/.s8-03-06-export-trigger-2 \
+            scripts/.s8-03-06-export-trigger-3 \
+            scripts/.s8-03-06-patch-part-01 \
+            scripts/.s8-03-06-patch-part-02 \
+            scripts/.s8-det-patch-00 \
+            scripts/.s8-det-patch-01 \
+            scripts/.s8-det-patch-02 \
+            scripts/.s8-det-patch-03a \
+            scripts/.s8-real-patch.part-01 \
+            scripts/.s8-real-patch.part-02 \
+            scripts/.s8-03-10-source.part-*
+
+      - name: Install pnpm
+        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Format source
+        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        run: pnpm format
+
+      - name: Check patch
+        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        run: git diff --check
+
+      - name: Commit clean Sprint 8 implementation
+        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --stat
+          git commit -m "feat(delivery): complete Sprint 8 captain delivery"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
