@@ -1,0 +1,45 @@
+
+/home/runner/work/Vastra/Vastra/apps/backend/src/dispatch/captain-presence.integration.test.ts
+  74:3  error  Unsafe return of type `Server<any, any>` from function with return type `Server<typeof IncomingMessage, typeof ServerResponse>`  @typescript-eslint/no-unsafe-return
+
+/home/runner/work/Vastra/Vastra/apps/backend/src/dispatch/captain-presence.service.test.ts
+  87:39  error  Unnecessary conditional, the types have no overlap  @typescript-eslint/no-unnecessary-condition
+
+/home/runner/work/Vastra/Vastra/apps/captain-app/App.test.tsx
+  122:24  error  Async arrow function has no 'await' expression  @typescript-eslint/require-await
+
+/home/runner/work/Vastra/Vastra/apps/captain-app/src/auth/mobile-environment.ts
+  61:5  error  Unsafe assignment of an `any` value  @typescript-eslint/no-unsafe-assignment
+  62:5  error  Unsafe assignment of an `any` value  @typescript-eslint/no-unsafe-assignment
+  63:5  error  Unsafe assignment of an `any` value  @typescript-eslint/no-unsafe-assignment
+
+/home/runner/work/Vastra/Vastra/apps/captain-app/src/presence/captain-presence.client.test.ts
+  15:18  error  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+/home/runner/work/Vastra/Vastra/apps/captain-app/src/presence/captain-presence.screen.tsx
+  83:10  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/runner/work/Vastra/Vastra/apps/captain-app/src/presence/captain-presence.screen.tsx:83:10
+  81 |   useEffect(() => {
+  82 |     mounted.current = true;
+> 83 |     void load();
+     |          ^^^^ Avoid calling setState() directly within an effect
+  84 |
+  85 |     return () => {
+  86 |       mounted.current = false;  react-hooks/set-state-in-effect
+
+/home/runner/work/Vastra/Vastra/apps/captain-app/src/presence/expo-captain-location.provider.ts
+  13:7   error  Unnecessary conditional, the types have no overlap  @typescript-eslint/no-unnecessary-condition
+  13:19  error  Unnecessary optional chain on a non-nullish value   @typescript-eslint/no-unnecessary-condition
+
+✖ 10 problems (10 errors, 0 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
+
+LINT_EXIT_CODE=1
