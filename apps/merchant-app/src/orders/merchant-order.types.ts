@@ -141,6 +141,49 @@ export interface MerchantOrderReadPort {
   getOrder(orderId: string): Promise<MerchantOrderDetail>;
 }
 
+export const MERCHANT_REJECTION_REASONS = [
+  'OUT_OF_STOCK',
+  'SIZE_UNAVAILABLE',
+  'COLOUR_UNAVAILABLE',
+  'DAMAGED_ITEM',
+  'INVENTORY_MISMATCH',
+  'ITEM_NOT_FOUND',
+  'SHOP_BUSY',
+  'SHOP_CLOSING',
+  'OTHER',
+] as const;
+
+export type MerchantRejectionReason = (typeof MERCHANT_REJECTION_REASONS)[number];
+
+export interface MerchantOrderDecisionResult {
+  readonly orderId: string;
+  readonly orderNumber: string;
+  readonly status: 'MERCHANT_ACCEPTED' | 'CANCELLED';
+  readonly alertStatus: 'ACKNOWLEDGED';
+  readonly merchantPreparationMinutes: number | null;
+  readonly acceptedAt: string | null;
+  readonly cancelledAt: string | null;
+  readonly cancellationReasonCode: string | null;
+  readonly cancellationNote: string | null;
+  readonly reservationsReleased: number;
+  readonly replayed: boolean;
+}
+
+export interface MerchantOrderDecisionPort {
+  acceptOrder(
+    orderId: string,
+    input: { readonly preparationMinutes: number },
+  ): Promise<MerchantOrderDecisionResult>;
+  rejectOrder(
+    orderId: string,
+    input: {
+      readonly reasonCode: MerchantRejectionReason;
+      readonly orderItemId: string | null;
+      readonly note: string | null;
+    },
+  ): Promise<MerchantOrderDecisionResult>;
+}
+
 export type MerchantOrderFailureKind =
   | 'TRANSPORT'
   | 'AUTHENTICATION'

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { formatPaiseAsInr } from './format-inr';
+import { MerchantOrderDecisionActions } from './merchant-order-decision.screen';
 import {
   groupMerchantOrderStatus,
   MerchantOrderError,
   type MerchantOrderDetail,
+  type MerchantOrderDecisionPort,
   type MerchantOrderGroup,
   type MerchantOrderReadPort,
   type MerchantOrderSummary,
@@ -197,10 +199,12 @@ export function MerchantOrderDetailView({
 function MerchantOrderDetailScreen({
   orderId,
   orderClient,
+  decisionClient,
   onBack,
 }: {
   readonly orderId: string;
   readonly orderClient: MerchantOrderReadPort;
+  readonly decisionClient?: MerchantOrderDecisionPort;
   readonly onBack: () => void;
 }) {
   const [order, setOrder] = useState<MerchantOrderDetail | null>(null);
@@ -272,6 +276,15 @@ function MerchantOrderDetailScreen({
   return (
     <MerchantOrderDetailView
       failure={failure}
+      footer={
+        decisionClient === undefined ? undefined : (
+          <MerchantOrderDecisionActions
+            decisionClient={decisionClient}
+            onDecisionComplete={refresh}
+            order={order}
+          />
+        )
+      }
       isRefreshing={isLoading}
       onBack={onBack}
       onRefresh={refresh}
@@ -282,9 +295,11 @@ function MerchantOrderDetailScreen({
 
 export function MerchantOrderQueueScreen({
   orderClient,
+  decisionClient,
   pollIntervalMs = 15_000,
 }: {
   readonly orderClient: MerchantOrderReadPort;
+  readonly decisionClient?: MerchantOrderDecisionPort;
   readonly pollIntervalMs?: number;
 }) {
   const [state, setState] = useState<QueueState>({
@@ -356,6 +371,7 @@ export function MerchantOrderQueueScreen({
   if (selectedOrderId !== null) {
     return (
       <MerchantOrderDetailScreen
+        {...(decisionClient === undefined ? {} : { decisionClient })}
         onBack={() => {
           setSelectedOrderId(null);
           load();

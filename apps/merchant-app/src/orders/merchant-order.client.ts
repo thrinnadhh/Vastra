@@ -4,11 +4,14 @@ import {
   type MerchantOrderAddress,
   type MerchantOrderAlert,
   type MerchantOrderDetail,
+  type MerchantOrderDecisionPort,
+  type MerchantOrderDecisionResult,
   type MerchantOrderFailureKind,
   type MerchantOrderHistoryEntry,
   type MerchantOrderItem,
   type MerchantOrderPage,
   type MerchantOrderReadPort,
+  type MerchantRejectionReason,
   type MerchantOrderShop,
   type MerchantOrderStatus,
   type MerchantOrderSummary,
@@ -318,7 +321,37 @@ export function mapMerchantErrorKind(code: string, status: number): MerchantOrde
   return 'UNKNOWN';
 }
 
-export class HttpMerchantOrderClient implements MerchantOrderReadPort {
+function parseMerchantDecision(value: unknown): MerchantOrderDecisionResult {
+  const order = readRecord(readEnvelope(value), 'order');
+  const status = readEnum(order, 'status', ['MERCHANT_ACCEPTED', 'CANCELLED'] as const);
+  const preparation = order['merchantPreparationMinutes'];
+  const replayed = order['replayed'];
+  if (
+    (preparation !== null &&
+      (typeof preparation !== 'number' ||
+        !Number.isSafeInteger(preparation) ||
+        preparation < 1 ||
+        preparation > 240)) ||
+    typeof replayed !== 'boolean' ||
+    order['alertStatus'] !== 'ACKNOWLEDGED'
+  )
+    invalidResponse();
+  return {
+    orderId: readUuid(order, 'orderId'),
+    orderNumber: readString(order, 'orderNumber'),
+    status,
+    alertStatus: 'ACKNOWLEDGED',
+    merchantPreparationMinutes: preparation,
+    acceptedAt: readNullableDateTime(order, 'acceptedAt'),
+    cancelledAt: readNullableDateTime(order, 'cancelledAt'),
+    cancellationReasonCode: readNullableString(order, 'cancellationReasonCode'),
+    cancellationNote: readNullableString(order, 'cancellationNote'),
+    reservationsReleased: readInteger(order, 'reservationsReleased'),
+    replayed,
+  };
+}
+
+export class HttpMerchantOrderClient implements MerchantOrderReadPort, MerchantOrderDecisionPort {
   public constructor(
     protected readonly apiBaseUrl: string,
     protected readonly getAccessToken: AccessTokenProvider,
@@ -346,6 +379,34 @@ export class HttpMerchantOrderClient implements MerchantOrderReadPort {
       'GET',
       undefined,
       parseMerchantOrderDetail,
+    );
+  }
+
+  public async acceptOrder(
+    orderId: string,
+    input: { readonly preparationMinutes: number },
+  ): Promise<MerchantOrderDecisionResult> {
+    return this.request(
+      `/merchant/orders/${encodeURIComponent(orderId)}/accept`,
+      'POST',
+      input,
+      parseMerchantDecision,
+    );
+  }
+
+  public async rejectOrder(
+    orderId: string,
+    input: {
+      readonly reasonCode: MerchantRejectionReason;
+      readonly orderItemId: string | null;
+      readonly note: string | null;
+    },
+  ): Promise<MerchantOrderDecisionResult> {
+    return this.request(
+      `/merchant/orders/${encodeURIComponent(orderId)}/reject`,
+      'POST',
+      input,
+      parseMerchantDecision,
     );
   }
 

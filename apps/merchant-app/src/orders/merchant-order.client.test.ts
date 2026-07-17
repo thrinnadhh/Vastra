@@ -221,4 +221,125 @@ describe('merchant order HTTP client', () => {
       }),
     ).toThrow('Invalid merchant order response');
   });
+
+  it('accepts with validated preparation time and no invented idempotency header', async () => {
+    const fetchFunction = jest.fn<
+      Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>,
+      [string, RequestInit]
+    >(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            success: true,
+            data: {
+              order: {
+                orderId: IDS.order,
+                orderNumber: 'VAS-1001',
+                status: 'MERCHANT_ACCEPTED',
+                alertStatus: 'ACKNOWLEDGED',
+                merchantPreparationMinutes: 45,
+                acceptedAt: '2026-07-17T01:10:00.000Z',
+                cancelledAt: null,
+                cancellationReasonCode: null,
+                cancellationNote: null,
+                reservationsReleased: 0,
+                replayed: false,
+              },
+            },
+            meta: { requestId: null },
+          }),
+      }),
+    );
+    const client = new HttpMerchantOrderClient(
+      'https://api.example.test',
+      () => Promise.resolve('token'),
+      fetchFunction,
+    );
+    await expect(client.acceptOrder(IDS.order, { preparationMinutes: 45 })).resolves.toMatchObject({
+      status: 'MERCHANT_ACCEPTED',
+      merchantPreparationMinutes: 45,
+    });
+    expect(fetchFunction).toHaveBeenCalledWith(
+      `https://api.example.test/merchant/orders/${IDS.order}/accept`,
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Bearer token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ preparationMinutes: 45 }),
+      },
+    );
+  });
+
+  it('rejects the complete order using the backend reasonCode contract', async () => {
+    const fetchFunction = jest.fn<
+      Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>,
+      [string, RequestInit]
+    >(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            success: true,
+            data: {
+              order: {
+                orderId: IDS.order,
+                orderNumber: 'VAS-1001',
+                status: 'CANCELLED',
+                alertStatus: 'ACKNOWLEDGED',
+                merchantPreparationMinutes: null,
+                acceptedAt: null,
+                cancelledAt: '2026-07-17T01:10:00.000Z',
+                cancellationReasonCode: 'SHOP_BUSY',
+                cancellationNote: 'Closing early',
+                reservationsReleased: 1,
+                replayed: false,
+              },
+            },
+            meta: { requestId: null },
+          }),
+      }),
+    );
+    const client = new HttpMerchantOrderClient(
+      'https://api.example.test',
+      () => Promise.resolve('token'),
+      fetchFunction,
+    );
+    await expect(
+      client.rejectOrder(IDS.order, {
+        reasonCode: 'SHOP_BUSY',
+        orderItemId: null,
+        note: 'Closing early',
+      }),
+    ).resolves.toMatchObject({ status: 'CANCELLED', reservationsReleased: 1 });
+    expect(fetchFunction.mock.calls[0]?.[1].body).toBe(
+      JSON.stringify({ reasonCode: 'SHOP_BUSY', orderItemId: null, note: 'Closing early' }),
+    );
+  });
+
+  it('maps stale transitions so the UI can force an authoritative refresh', async () => {
+    const client = new HttpMerchantOrderClient(
+      'https://api.example.test',
+      () => Promise.resolve('token'),
+      () =>
+        Promise.resolve({
+          ok: false,
+          status: 409,
+          json: () =>
+            Promise.resolve({
+              success: false,
+              error: { code: 'MERCHANT_ORDER_INVALID_STATE', retryable: false },
+            }),
+        }),
+    );
+    await expect(client.acceptOrder(IDS.order, { preparationMinutes: 30 })).rejects.toMatchObject({
+      kind: 'INVALID_STATE',
+      retryable: false,
+    });
+  });
 });

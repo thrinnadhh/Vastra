@@ -10,5 +10,5 @@ export function DefaultMerchantOrders() {
     () => new HttpMerchantOrderClient(session.apiBaseUrl, () => session.getAccessToken()),
     [session],
   );
-  return <MerchantOrderQueueScreen orderClient={orderClient} />;
+  return <MerchantOrderQueueScreen decisionClient={orderClient} orderClient={orderClient} />;
 }
