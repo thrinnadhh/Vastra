@@ -2,26 +2,29 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: s8-02-format-${{ github.ref }}
-  cancel-in-progress: false
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  format:
-    name: Format S8-02 implementation
+  verify:
+    name: Verify repository
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
-      - name: Check out Sprint 8 branch
+      - name: Check out repository
         uses: actions/checkout@v7
         with:
-          ref: agent/s8-02-captain-availability-location
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -36,20 +39,34 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Apply canonical formatting
-        run: pnpm format
+      - name: Check formatting
+        run: pnpm format:check
 
-      - name: Commit formatter changes
-        shell: bash
-        run: |
-          set -euo pipefail
-          git diff --check
-          if git diff --quiet; then
-            echo "No formatter changes were required."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "style(captain): format S8-02 implementation"
-          git push origin HEAD:agent/s8-02-captain-availability-location
+      - name: Validate environment templates
+        run: pnpm env:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.109.1
+
+      - name: Run database tests
+        run: pnpm db:test
+
+      - name: Validate OpenAPI
+        run: pnpm openapi:check
+
+      - name: Build
+        run: pnpm build
