@@ -1,0 +1,382 @@
++select ok(
++  not has_function_privilege(
++    'anon',
++    'public.set_captain_availability(uuid,public.captain_availability_status)',
++    'EXECUTE'
++  ),
++  'anon cannot set captain availability'
++);
++select ok(
++  not has_function_privilege(
++    'authenticated',
++    'public.update_captain_current_location(uuid,uuid,double precision,double precision,numeric,timestamp with time zone,numeric,numeric,smallint,uuid)',
++    'EXECUTE'
++  ),
++  'authenticated cannot write captain location directly'
++);
++select ok(
++  has_function_privilege(
++    'service_role',
++    'public.set_captain_availability(uuid,public.captain_availability_status)',
++    'EXECUTE'
++  ),
++  'service role can set captain availability'
++);
++select ok(
++  has_function_privilege(
++    'service_role',
++    'public.update_captain_current_location(uuid,uuid,double precision,double precision,numeric,timestamp with time zone,numeric,numeric,smallint,uuid)',
++    'EXECUTE'
++  ),
++  'service role can write captain location'
++);
++select ok(
++  not has_table_privilege('authenticated', 'private.captain_location_update_receipts', 'SELECT'),
++  'location receipts remain backend private'
++);
++select ok(
++  has_table_privilege('service_role', 'private.captain_dispatch_readiness', 'SELECT'),
++  'service role can read dispatch readiness'
++);
++
++insert into auth.users (
++  id,
++  aud,
++  role,
++  email,
++  encrypted_password,
++  email_confirmed_at,
++  raw_app_meta_data,
++  raw_user_meta_data,
++  created_at,
++  updated_at
++)
++values
++  (
++    'fa100000-0000-4000-8000-000000000001',
++    'authenticated',
++    'authenticated',
++    'captain-ready@example.test',
++    crypt('local-test-only', gen_salt('bf')),
++    now(),
++    '{}',
++    '{}',
++    now(),
++    now()
++  ),
++  (
++    'fa100000-0000-4000-8000-000000000002',
++    'authenticated',
++    'authenticated',
++    'captain-pending@example.test',
++    crypt('local-test-only', gen_salt('bf')),
++    now(),
++    '{}',
++    '{}',
++    now(),
++    now()
++  );
++
++insert into public.profiles (id, account_type, full_name, status)
++values
++  ('fa100000-0000-4000-8000-000000000001', 'CAPTAIN', 'Ready Captain', 'ACTIVE'),
++  ('fa100000-0000-4000-8000-000000000002', 'CAPTAIN', 'Pending Captain', 'ACTIVE');
++
++insert into public.captain_profiles (
++  user_id,
++  captain_code,
++  kyc_status,
++  availability_status,
++  vehicle_type,
++  approved_at
++)
++values
++  (
++    'fa100000-0000-4000-8000-000000000001',
++    'CAP-S802-READY',
++    'VERIFIED',
++    'OFFLINE',
++    'BIKE',
++    now()
++  ),
++  (
++    'fa100000-0000-4000-8000-000000000002',
++    'CAP-S802-PENDING',
++    'PENDING',
++    'OFFLINE',
++    'BIKE',
++    null
++  );
++
++insert into public.user_devices (
++  id,
++  user_id,
++  device_fingerprint,
++  platform,
++  push_provider,
++  push_token,
++  app_name,
++  notification_enabled,
++  last_seen_at
++)
++values (
++  'fa200000-0000-4000-8000-000000000001',
++  'fa100000-0000-4000-8000-000000000001',
++  'captain-s802-android',
++  'ANDROID',
++  'FCM',
++  'captain-s802-token',
++  'CAPTAIN',
++  true,
++  now()
++);
++
++select throws_ok(
++  $$select public.set_captain_availability(
++    'fa100000-0000-4000-8000-000000000001',
++    'AVAILABLE'
++  )$$,
++  'P0043',
++  'captain location is not dispatch eligible',
++  'captain cannot become available without a fresh accurate location'
++);
++
++create temporary table first_location (value jsonb not null);
++insert into first_location
++select public.update_captain_current_location(
++  'fa100000-0000-4000-8000-000000000001',
++  'fa300000-0000-4000-8000-000000000001',
++  13.6288,
++  79.4192,
++  12,
++  transaction_timestamp(),
++  45,
++  2.5,
++  88,
++  null
++);
++
++select is(
++  (select value ->> 'sampleId' from first_location),
++  'fa300000-0000-4000-8000-000000000001',
++  'location result preserves sample identifier'
++);
++select is(
++  (select (value ->> 'historySampled')::boolean from first_location),
++  true,
++  'first location creates durable history'
++);
++select is(
++  (select (value ->> 'replayed')::boolean from first_location),
++  false,
++  'first location is not a replay'
++);
++select is(
++  (
++    select count(*)
++    from public.captain_location_history
++    where captain_id = 'fa100000-0000-4000-8000-000000000001'
++  ),
++  1::bigint,
++  'one durable history row is recorded'
++);
++
++create temporary table replay_location (value jsonb not null);
++insert into replay_location
++select public.update_captain_current_location(
++  'fa100000-0000-4000-8000-000000000001',
++  'fa300000-0000-4000-8000-000000000001',
++  13.6288,
++  79.4192,
++  12,
++  (select recorded_at from public.captain_current_locations where captain_id = 'fa100000-0000-4000-8000-000000000001'),
++  45,
++  2.5,
++  88,
++  null
++);
++select is(
++  (select (value ->> 'replayed')::boolean from replay_location),
++  true,
++  'same sample safely replays'
++);
++select is(
++  (
++    select count(*)
++    from public.captain_location_history
++    where captain_id = 'fa100000-0000-4000-8000-000000000001'
++  ),
++  1::bigint,
++  'sample replay creates no history duplicate'
++);
++
++select throws_ok(
++  $$select public.update_captain_current_location(
++    'fa100000-0000-4000-8000-000000000001',
++    'fa300000-0000-4000-8000-000000000001',
++    13.6290,
++    79.4194,
++    12,
++    transaction_timestamp(),
++    45,
++    2.5,
++    88,
++    null
++  )$$,
++  'P0045',
++  'location sample identifier was reused',
++  'same sample with another payload conflicts'
++);
++
++select throws_ok(
++  $$select public.update_captain_current_location(
++    'fa100000-0000-4000-8000-000000000001',
++    'fa300000-0000-4000-8000-000000000002',
++    13.6290,
++    79.4194,
++    12,
++    transaction_timestamp() - interval '1 minute',
++    null,
++    null,
++    null,
++    null
++  )$$,
++  'P0043',
++  'captain location sample is stale',
++  'older client timestamp cannot replace current location'
++);
++
++select throws_ok(
++  $$select public.update_captain_current_location(
++    'fa100000-0000-4000-8000-000000000001',
++    'fa300000-0000-4000-8000-000000000003',
++    13.6290,
++    79.4194,
++    12,
++    transaction_timestamp() + interval '1 second',
++    null,
++    null,
++    null,
++    null
++  )$$,
++  'P0044',
++  'captain location update is rate limited',
++  'new samples are rate limited to one accepted write per five seconds'
++);
++
++create temporary table available_result (value jsonb not null);
++insert into available_result
++select public.set_captain_availability(
++  'fa100000-0000-4000-8000-000000000001',
++  'AVAILABLE'
++);
++select is(
++  (select value ->> 'availabilityStatus' from available_result),
++  'AVAILABLE',
++  'fresh captain can become available'
++);
++select is(
++  (select (value ->> 'dispatchEligible')::boolean from available_result),
++  true,
++  'available response confirms dispatch eligibility'
++);
++select is(
++  (
++    select count(*)
++    from public.outbox_events
++    where event_type = 'captain.availability.changed'
++      and aggregate_id = 'fa100000-0000-4000-8000-000000000001'
++  ),
++  1::bigint,
++  'availability change emits one transactional event'
++);
++
++create temporary table available_replay (value jsonb not null);
++insert into available_replay
++select public.set_captain_availability(
++  'fa100000-0000-4000-8000-000000000001',
++  'AVAILABLE'
++);
++select is(
++  (select (value ->> 'changed')::boolean from available_replay),
++  false,
++  'same availability state safely replays'
++);
++select is(
++  (
++    select count(*)
++    from public.outbox_events
++    where event_type = 'captain.availability.changed'
++      and aggregate_id = 'fa100000-0000-4000-8000-000000000001'
++  ),
++  1::bigint,
++  'set-state replay creates no event duplicate'
++);
++select ok(
++  (
++    select dispatch_eligible
++    from private.captain_dispatch_readiness
++    where captain_id = 'fa100000-0000-4000-8000-000000000001'
++  ),
++  'dispatch readiness exposes the eligible captain'
++);
++
++create temporary table break_result (value jsonb not null);
++insert into break_result
++select public.set_captain_availability(
++  'fa100000-0000-4000-8000-000000000001',
++  'ON_BREAK'
++);
++select is(
++  (select value ->> 'availabilityStatus' from break_result),
++  'ON_BREAK',
++  'captain can take a break without an active task'
++);
++select is(
++  (
++    select dispatch_eligible
++    from private.captain_dispatch_readiness
++    where captain_id = 'fa100000-0000-4000-8000-000000000001'
++  ),
++  false,
++  'captain on break is excluded from dispatch'
++);
++
++select throws_ok(
++  $$select public.update_captain_current_location(
++    'fa100000-0000-4000-8000-000000000002',
++    'fa300000-0000-4000-8000-000000000004',
++    13.6288,
++    79.4192,
++    10,
++    transaction_timestamp(),
++    null,
++    null,
++    null,
++    null
++  )$$,
++  'P0041',
++  'captain is not operationally eligible',
++  'unapproved captain cannot publish location'
++);
++
++select throws_ok(
++  $$select public.update_captain_current_location(
++    'fa100000-0000-4000-8000-000000000001',
++    'fa300000-0000-4000-8000-000000000005',
++    91,
++    79.4192,
++    10,
++    transaction_timestamp(),
++    null,
++    null,
++    null,
++    null
++  )$$,
++  'P0040',
++  'captain location request is invalid',
++  'invalid latitude is rejected'
++);
++
++select * from finish();
++rollback;
