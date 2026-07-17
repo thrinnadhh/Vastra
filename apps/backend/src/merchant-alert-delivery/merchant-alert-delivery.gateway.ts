@@ -106,9 +106,7 @@ function parseStopReason(value: unknown): MerchantAlertStopReason | null {
   throw new MerchantAlertDeliveryDataInvalidError();
 }
 
-function parseEventStatus(
-  value: unknown,
-): CompleteMerchantAlertDispatchResult['eventStatus'] {
+function parseEventStatus(value: unknown): CompleteMerchantAlertDispatchResult['eventStatus'] {
   if (typeof value !== 'string') throw new MerchantAlertDeliveryDataInvalidError();
 
   for (const candidate of OUTBOX_COMPLETION_STATUSES) {
@@ -118,9 +116,7 @@ function parseEventStatus(
   throw new MerchantAlertDeliveryDataInvalidError();
 }
 
-function parseAlertStatus(
-  value: unknown,
-): CompleteMerchantAlertDispatchResult['alertStatus'] {
+function parseAlertStatus(value: unknown): CompleteMerchantAlertDispatchResult['alertStatus'] {
   if (typeof value !== 'string') throw new MerchantAlertDeliveryDataInvalidError();
 
   for (const candidate of MERCHANT_ALERT_STATUSES) {
