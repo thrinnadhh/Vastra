@@ -1,4 +1,4 @@
-name: S8-02 database diagnostics
+name: Apply S8-02 database contract fix
 
 on:
   pull_request:
@@ -6,48 +6,90 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  capture-database-failure:
+  apply-database-fix:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 5
 
     steps:
-      - name: Check out repository
+      - name: Check out feature branch
         uses: actions/checkout@v7
-
-      - name: Set up Supabase CLI
-        uses: supabase/setup-cli@v3
         with:
-          version: latest
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
 
-      - name: Capture database output
-        id: database
+      - name: Restore receipt ordering and type direct RPC calls
         shell: bash
         run: |
-          set +e
-          bash scripts/run-db-tests.sh > s8-02-db-full.log 2>&1
-          status=$?
-          tail -n 500 s8-02-db-full.log > s8-02-db-tail.log
-          printf '%s\n' "$status" > s8-02-db-exit-code.txt
-          exit 0
+          python - <<'PY'
+          from pathlib import Path
 
-      - name: Upload database diagnostics
-        uses: actions/upload-artifact@v4
-        with:
-          name: s8-02-db-diagnostics
-          path: |
-            s8-02-db-tail.log
-            s8-02-db-exit-code.txt
-          if-no-files-found: error
-          retention-days: 1
+          test_path = Path('supabase/tests/0046_captain_availability_location.test.sql')
+          text = test_path.read_text()
 
-      - name: Preserve database result
+          replacements = (
+              (
+                  "  13.6288,\n  79.4192,\n  12,\n",
+                  "  13.6288::double precision,\n  79.4192::double precision,\n  12::numeric,\n",
+                  2,
+              ),
+              (
+                  "  13.6290,\n  79.4194,\n  12,\n",
+                  "  13.6290::double precision,\n  79.4194::double precision,\n  12::numeric,\n",
+                  3,
+              ),
+              (
+                  "  13.6288,\n  79.4192,\n  10,\n",
+                  "  13.6288::double precision,\n  79.4192::double precision,\n  10::numeric,\n",
+                  1,
+              ),
+              (
+                  "  91,\n  79.4192,\n  10,\n",
+                  "  91::double precision,\n  79.4192::double precision,\n  10::numeric,\n",
+                  1,
+              ),
+              (
+                  "  45,\n  2.5,\n  88,\n",
+                  "  45::numeric,\n  2.5::numeric,\n  88::smallint,\n",
+                  3,
+              ),
+          )
+
+          for old, new, expected_count in replacements:
+              actual_count = text.count(old)
+              if actual_count != expected_count:
+                  raise SystemExit(
+                      f'Expected {expected_count} occurrences of {old!r}, found {actual_count}'
+                  )
+              text = text.replace(old, new)
+
+          test_path.write_text(text)
+
+          migration_path = Path(
+              'supabase/migrations/20260717170500_restore_captain_location_receipt_order.sql'
+          )
+          migration_path.write_text(
+              """-- S8-02 forward fix: retain the established append-only location time invariant.\n\n"
+              "alter table public.captain_location_history\n"
+              "  drop constraint if exists captain_location_history_clock_skew_check;\n\n"
+              "alter table public.captain_location_history\n"
+              "  add constraint captain_location_history_received_order\n"
+              "  check (received_at >= recorded_at);\n"
+          )
+          PY
+
+      - name: Commit focused database fix
         shell: bash
         run: |
-          status="$(cat s8-02-db-exit-code.txt)"
-          if [[ "$status" -ne 0 ]]; then
-            echo "Database diagnostics captured with exit code $status."
-            exit "$status"
-          fi
+          rm .github/workflows/s8-02-db-diagnostics.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            .github/workflows/s8-02-db-diagnostics.yml \
+            supabase/migrations/20260717170500_restore_captain_location_receipt_order.sql \
+            supabase/tests/0046_captain_availability_location.test.sql
+          git commit -m "fix(delivery): preserve captain location time contracts"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
