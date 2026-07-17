@@ -50,7 +50,10 @@ function createServiceAccountAssertion(
   return `${unsignedAssertion}.${signature}`;
 }
 
-function parseTokenResponse(value: unknown): { readonly accessToken: string; readonly expiresIn: number } {
+function parseTokenResponse(value: unknown): {
+  readonly accessToken: string;
+  readonly expiresIn: number;
+} {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new FirebaseAccessTokenUnavailableError();
   }

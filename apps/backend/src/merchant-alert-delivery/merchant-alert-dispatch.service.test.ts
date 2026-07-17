@@ -23,9 +23,7 @@ const CONFIGURATION: MerchantAlertDeliveryConfiguration = {
   },
 };
 
-function claim(
-  overrides: Partial<MerchantAlertDispatchClaim> = {},
-): MerchantAlertDispatchClaim {
+function claim(overrides: Partial<MerchantAlertDispatchClaim> = {}): MerchantAlertDispatchClaim {
   return {
     eventId: '10000000-0000-4000-8000-000000000001',
     alertId: '20000000-0000-4000-8000-000000000001',
@@ -68,8 +66,8 @@ function completion(
 }
 
 function dependencies(claims: readonly MerchantAlertDispatchClaim[]) {
-  const completeDispatch = vi.fn(
-    async (command: CompleteMerchantAlertDispatchCommand) => completion(command),
+  const completeDispatch = vi.fn(async (command: CompleteMerchantAlertDispatchCommand) =>
+    completion(command),
   );
   const gateway: MerchantAlertDeliveryGateway = {
     claimDispatches: vi.fn(async () => claims),

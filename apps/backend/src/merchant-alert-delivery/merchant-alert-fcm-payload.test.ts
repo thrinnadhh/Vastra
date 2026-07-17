@@ -33,9 +33,7 @@ describe('buildMerchantAlertFcmRequest', () => {
     const request = buildMerchantAlertFcmRequest(CLAIM, CLAIM.devices[0]!);
 
     expect(request.message.android.priority).toBe('high');
-    expect(request.message.android.notification.channel_id).toBe(
-      MERCHANT_URGENT_ORDER_CHANNEL_ID,
-    );
+    expect(request.message.android.notification.channel_id).toBe(MERCHANT_URGENT_ORDER_CHANNEL_ID);
     expect(request.message.android.notification.sound).toBe('vastra_new_order');
     expect(request.message.android.notification.notification_priority).toBe('PRIORITY_MAX');
     expect(request.message.android.notification.visibility).toBe('PRIVATE');

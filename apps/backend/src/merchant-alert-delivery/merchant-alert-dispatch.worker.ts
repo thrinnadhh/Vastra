@@ -11,9 +11,7 @@ import { MERCHANT_ALERT_DELIVERY_CONFIGURATION } from './merchant-alert-delivery
 import { MerchantAlertDispatchService } from './merchant-alert-dispatch.service';
 
 @Injectable()
-export class MerchantAlertDispatchWorker
-  implements OnApplicationBootstrap, OnApplicationShutdown
-{
+export class MerchantAlertDispatchWorker implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger = new Logger(MerchantAlertDispatchWorker.name);
   private timer: NodeJS.Timeout | null = null;
   private draining = false;
@@ -31,10 +29,7 @@ export class MerchantAlertDispatchWorker
     }
 
     void this.drainOnce();
-    this.timer = setInterval(
-      () => void this.drainOnce(),
-      this.configuration.pollIntervalMs,
-    );
+    this.timer = setInterval(() => void this.drainOnce(), this.configuration.pollIntervalMs);
     this.timer.unref();
   }
 
