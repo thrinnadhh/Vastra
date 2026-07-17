@@ -14,9 +14,9 @@ concurrency:
 
 jobs:
   database:
-    name: Capture database output
+    name: Capture database phases
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
 
     steps:
       - name: Check out repository
@@ -42,14 +42,43 @@ jobs:
         with:
           version: 2.109.1
 
-      - name: Capture database result
+      - name: Capture database phases
         shell: bash
         run: |
-          set +e
-          timeout 420s pnpm db:test > docs/implementation/s7-db-output.txt 2>&1
-          status=$?
-          set -e
-          printf '\nDB_EXIT_CODE=%s\n' "$status" >> docs/implementation/s7-db-output.txt
+          log=docs/implementation/s7-db-output.txt
+          : > "$log"
+
+          run_phase() {
+            local name="$1"
+            shift
+            printf '\n===== %s =====\n' "$name" >> "$log"
+            set +e
+            timeout --kill-after=30s 300s "$@" >> "$log" 2>&1
+            local status=$?
+            set -e
+            printf '\n%s_EXIT_CODE=%s\n' "$name" "$status" >> "$log"
+            return "$status"
+          }
+
+          final_status=0
+          if run_phase SUPABASE_START supabase start; then
+            if ! run_phase DB_RESET supabase db reset --local; then
+              final_status=$?
+            elif ! run_phase MIGRATION_LIST supabase migration list --local; then
+              final_status=$?
+            elif ! run_phase PGTAP supabase test db --local; then
+              final_status=$?
+            elif ! run_phase CONCURRENCY bash scripts/run-db-concurrency-tests.sh; then
+              final_status=$?
+            elif ! run_phase ADVISORS supabase db advisors --local; then
+              final_status=$?
+            fi
+            run_phase SUPABASE_STOP supabase stop || true
+          else
+            final_status=$?
+          fi
+
+          printf '\nDB_EXIT_CODE=%s\n' "$final_status" >> "$log"
 
       - name: Format repository
         run: pnpm format
