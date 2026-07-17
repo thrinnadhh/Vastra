@@ -2,25 +2,29 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: s7-trusted-openapi-fix-${{ github.event.pull_request.number }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  fix:
-    name: Fix Sprint 7 OpenAPI placement
+  verify:
+    name: Verify repository
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 30
 
     steps:
-      - name: Check out Sprint 7 branch
+      - name: Check out repository
         uses: actions/checkout@v7
         with:
-          ref: feat/s7-06-10-merchant-alert-runtime
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -35,47 +39,34 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Reindent OpenAPI additions
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
+      - name: Check formatting
+        run: pnpm format:check
 
-          path = Path('docs/api/openapi.yaml')
-          text = path.read_text()
+      - name: Validate environment templates
+        run: pnpm env:check
 
-          schema_start = text.index('MerchantAlertDeliveryMetrics:\n')
-          schema_end = text.index('security:\n', schema_start)
-          schema_block = text[schema_start:schema_end]
-          schema_block = ''.join(
-              ('    ' + line if line.strip() else line)
-              for line in schema_block.splitlines(keepends=True)
-          )
-          text = text[:schema_start] + schema_block + text[schema_end:]
+      - name: Lint
+        run: pnpm lint
 
-          path_start = text.index('/admin/merchant-alerts/metrics:\n')
-          path_block = text[path_start:]
-          path_block = ''.join(
-              ('  ' + line if line.strip() else line)
-              for line in path_block.splitlines(keepends=True)
-          )
-          text = text[:path_start] + path_block
-          path.write_text(text)
-          PY
+      - name: Typecheck
+        run: pnpm typecheck
 
-      - name: Format OpenAPI contract
-        run: pnpm exec prettier --write docs/api/openapi.yaml
+      - name: Run unit tests
+        run: pnpm test
 
-      - name: Validate OpenAPI contract
+      - name: Run integration tests
+        run: pnpm test:integration
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.109.1
+
+      - name: Run database tests
+        run: pnpm db:test
+
+      - name: Validate OpenAPI
         run: pnpm openapi:check
 
-      - name: Restore CI and commit fix
-        shell: bash
-        run: |
-          git fetch origin main --depth=1
-          git checkout origin/main -- .github/workflows/ci.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/api/openapi.yaml .github/workflows/ci.yml
-          git commit -m "fix(api): nest merchant alert observability contract"
-          git push origin HEAD:feat/s7-06-10-merchant-alert-runtime
+      - name: Build
+        run: pnpm build
