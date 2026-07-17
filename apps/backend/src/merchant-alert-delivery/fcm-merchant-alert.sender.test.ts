@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FcmMerchantAlertSender } from './fcm-merchant-alert.sender';
 import type { FcmAccessTokenProvider } from './firebase-access-token.service';
 import type { MerchantAlertDeliveryConfiguration } from './merchant-alert-delivery.configuration';
-import type { MerchantAlertDispatchClaim } from './merchant-alert-delivery.types';
+import type {
+  MerchantAlertDeviceDestination,
+  MerchantAlertDispatchClaim,
+} from './merchant-alert-delivery.types';
 
 const CONFIGURATION: MerchantAlertDeliveryConfiguration = {
   enabled: true,
@@ -16,6 +19,11 @@ const CONFIGURATION: MerchantAlertDeliveryConfiguration = {
     clientEmail: 'firebase-admin@example.test',
     privateKey: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
   },
+};
+
+const DESTINATION: MerchantAlertDeviceDestination = {
+  deviceId: '50000000-0000-4000-8000-000000000001',
+  pushToken: 'token-one',
 };
 
 const CLAIM: MerchantAlertDispatchClaim = {
@@ -32,16 +40,11 @@ const CLAIM: MerchantAlertDispatchClaim = {
   eventMaxAttempts: 12,
   deliverable: true,
   stopReason: null,
-  devices: [
-    {
-      deviceId: '50000000-0000-4000-8000-000000000001',
-      pushToken: 'token-one',
-    },
-  ],
+  devices: [DESTINATION],
 };
 
 const ACCESS_TOKEN_PROVIDER: FcmAccessTokenProvider = {
-  getAccessToken: vi.fn(async () => 'short-lived-access-token'),
+  getAccessToken: vi.fn(() => Promise.resolve('short-lived-access-token')),
 };
 
 afterEach(() => {
@@ -51,20 +54,21 @@ afterEach(() => {
 
 describe('FcmMerchantAlertSender', () => {
   it('returns the provider message name after a successful HTTP v1 send', async () => {
-    const fetchMock = vi.fn(
-      async () =>
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
         new Response(JSON.stringify({ name: 'projects/vastra-test/messages/message-one' }), {
           status: 200,
           headers: { 'content-type': 'application/json' },
         }),
+      ),
     );
     vi.stubGlobal('fetch', fetchMock);
     const sender = new FcmMerchantAlertSender(CONFIGURATION, ACCESS_TOKEN_PROVIDER);
 
-    const result = await sender.send(CLAIM, CLAIM.devices[0]!);
+    const result = await sender.send(CLAIM, DESTINATION);
 
     expect(result).toEqual({
-      deviceId: CLAIM.devices[0]!.deviceId,
+      deviceId: DESTINATION.deviceId,
       outcome: 'SENT',
       providerMessageId: 'projects/vastra-test/messages/message-one',
       failureCode: null,
@@ -80,8 +84,8 @@ describe('FcmMerchantAlertSender', () => {
   it('classifies an unregistered token as permanent so the database can revoke it', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(
-        async () =>
+      vi.fn(() =>
+        Promise.resolve(
           new Response(
             JSON.stringify({
               error: {
@@ -97,11 +101,12 @@ describe('FcmMerchantAlertSender', () => {
             }),
             { status: 404, headers: { 'content-type': 'application/json' } },
           ),
+        ),
       ),
     );
     const sender = new FcmMerchantAlertSender(CONFIGURATION, ACCESS_TOKEN_PROVIDER);
 
-    const result = await sender.send(CLAIM, CLAIM.devices[0]!);
+    const result = await sender.send(CLAIM, DESTINATION);
 
     expect(result).toMatchObject({
       outcome: 'FAILED',
@@ -113,17 +118,18 @@ describe('FcmMerchantAlertSender', () => {
   it('classifies provider unavailability as retryable', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(
-        async () =>
+      vi.fn(() =>
+        Promise.resolve(
           new Response(
             JSON.stringify({ error: { status: 'UNAVAILABLE', message: 'Try again later' } }),
             { status: 503, headers: { 'content-type': 'application/json' } },
           ),
+        ),
       ),
     );
     const sender = new FcmMerchantAlertSender(CONFIGURATION, ACCESS_TOKEN_PROVIDER);
 
-    const result = await sender.send(CLAIM, CLAIM.devices[0]!);
+    const result = await sender.send(CLAIM, DESTINATION);
 
     expect(result).toMatchObject({
       outcome: 'FAILED',
