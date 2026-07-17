@@ -1,6 +1,0 @@
-
-> vastra@0.0.0 lint /home/runner/work/Vastra/Vastra
-> eslint . --max-warnings=0
-
-
-LINT_EXIT_CODE=0
