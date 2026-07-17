@@ -45,3 +45,7 @@ status: implemented
 - The custom WAV ringtone is committed as a native build asset.
 - The merchant queue and OpenAPI contracts are integrated and repository-formatted.
 - Automated CI is the merge gate; physical Android evidence remains the production-release gate.
+
+## Automated verification gate
+
+The repository pipeline must pass dependency installation, formatting, environment validation, lint, typecheck, unit tests, integration tests, Supabase migrations and pgTAP tests, concurrency checks, OpenAPI validation, and production builds before this draft is ready for review.
