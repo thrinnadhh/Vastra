@@ -24,12 +24,22 @@ OTP login
 ## 2. Go online
 
 ```text
-Request location permission
-→ Validate approved account
-→ Submit current location
-→ Set AVAILABLE
-→ Subscribe to delivery offers
+Restore an authenticated CAPTAIN session
+→ Request foreground location permission
+→ Submit a high-accuracy location sample with sampleId
+→ Backend validates approval, Android push registration, freshness, and accuracy
+→ PUT /v1/captain/me/availability with AVAILABLE
+→ Begin foreground location updates every 10 seconds
+→ Later dispatch waves may select the captain while readiness remains true
 ```
+
+Captain-controlled states are `OFFLINE`, `AVAILABLE`, and `ON_BREAK`. Delivery-owned states such
+as `OFFERED`, `ASSIGNED`, `AT_PICKUP`, and `DELIVERING` cannot be overwritten by the client.
+A location older than 120 seconds or less accurate than 100 metres makes the captain ineligible
+for new offers even if the stored availability value remains `AVAILABLE`.
+
+S8-02 uses foreground location only. Background active-delivery tracking is introduced with the
+customer tracking workflow, not by the availability screen.
 
 ## 3. Delivery offer
 

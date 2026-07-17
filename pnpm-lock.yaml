@@ -136,9 +136,18 @@ importers:
       '@expo/metro-runtime':
         specifier: ~57.0.3
         version: 57.0.3(expo@57.0.4)(react-dom@19.2.3)(react-native@0.86.0)(react@19.2.3)
+      '@react-native-async-storage/async-storage':
+        specifier: 2.2.0
+        version: 2.2.0(react-native@0.86.0)
+      '@supabase/supabase-js':
+        specifier: 2.109.0
+        version: 2.109.0
       expo:
         specifier: 57.0.4
         version: 57.0.4(@babel/core@7.29.7)(@expo/metro-runtime@57.0.3)(react-dom@19.2.3)(react-native-web@0.21.2)(react-native@0.86.0)(react@19.2.3)(typescript@5.9.3)
+      expo-location:
+        specifier: ~57.0.2
+        version: 57.0.5(expo@57.0.4)(typescript@5.9.3)
       expo-status-bar:
         specifier: ~57.0.0
         version: 57.0.0(expo@57.0.4)(react-native@0.86.0)(react@19.2.3)
@@ -154,6 +163,9 @@ importers:
       react-native-safe-area-context:
         specifier: ~5.7.0
         version: 5.7.0(react-native@0.86.0)(react@19.2.3)
+      react-native-url-polyfill:
+        specifier: 3.0.0
+        version: 3.0.0(react-native@0.86.0)
       react-native-web:
         specifier: ^0.21.2
         version: 0.21.2(react-dom@19.2.3)(react@19.2.3)
@@ -1757,7 +1769,7 @@ packages:
   /@expo/image-utils@0.11.1(typescript@5.9.3):
     resolution: {integrity: sha512-0JueH4vdgAZQmhlSYFvTQzt4b4NO5cnByDuApw7bMUIjhwLRnT46Ki3ritMrzJMQaO2lLK2flInZbsZbOuy8nw==}
     dependencies:
-      '@expo/require-utils': 57.0.1(typescript@5.9.3)
+      '@expo/require-utils': 57.0.3(typescript@5.9.3)
       '@expo/spawn-async': 1.8.0
       chalk: 4.1.2
       getenv: 2.0.0
@@ -1781,7 +1793,6 @@ packages:
     transitivePeerDependencies:
       - supports-color
       - typescript
-    dev: false
 
   /@expo/inline-modules@0.1.2(typescript@5.9.3):
     resolution: {integrity: sha512-wc5wH4ND647Ne/6A/ESuelcqOQUEvK8MYjjvbp5wcl59dECk7juh0cFOJjAWkpc4pLTcvqXBSRcUDpGWm5XNWg==}
@@ -1942,7 +1953,7 @@ packages:
       '@expo/config': 57.0.3(typescript@5.9.3)
       '@expo/config-plugins': 57.0.3(typescript@5.9.3)
       '@expo/config-types': 57.0.1
-      '@expo/image-utils': 0.11.1(typescript@5.9.3)
+      '@expo/image-utils': 0.11.3(typescript@5.9.3)
       '@expo/json-file': 11.0.0
       '@react-native/normalize-colors': 0.86.0
       debug: 4.4.3
@@ -1982,7 +1993,6 @@ packages:
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
-    dev: false
 
   /@expo/router-server@57.0.2(@expo/metro-runtime@57.0.3)(expo-constants@57.0.3)(expo-font@57.0.0)(expo-server@57.0.0)(expo@57.0.4)(react-dom@19.2.3)(react@19.2.3):
     resolution: {integrity: sha512-hu9qhnq2PKuwMXIoRMAa2+HUeqSut9HwiQf3a62tfGTIxPN3rKUZ10TozEEB+Pd/7WIa238sXMS5v1YhTuC9gA==}
@@ -5943,6 +5953,18 @@ packages:
     dependencies:
       expo: 57.0.4(@babel/core@7.29.7)(@expo/metro-runtime@57.0.3)(react-dom@19.2.3)(react-native-web@0.21.2)(react-native@0.86.0)(react@19.2.3)(typescript@5.9.3)
       react: 19.2.3
+
+  /expo-location@57.0.5(expo@57.0.4)(typescript@5.9.3):
+    resolution: {integrity: sha512-mwsbiZ9yusGS76MEKfKZpwmeYVYK860x3y3kkhor0p5RjKt0UEHiRkvLEIlPgl1jf0xuzY5++NDSHs1HxefSAw==}
+    peerDependencies:
+      expo: '*'
+    dependencies:
+      '@expo/image-utils': 0.11.3(typescript@5.9.3)
+      expo: 57.0.4(@babel/core@7.29.7)(@expo/metro-runtime@57.0.3)(react-dom@19.2.3)(react-native-web@0.21.2)(react-native@0.86.0)(react@19.2.3)(typescript@5.9.3)
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
+    dev: false
 
   /expo-modules-autolinking@57.0.5(typescript@5.9.3):
     resolution: {integrity: sha512-Vv2PVeEUN0/VW19ItkVA8LxAuH8SV8cjui0MKhJxCKrNyCAGGZU6sRsBJciYXR4uVxuXWKiepGW6E3k/c+Ytdg==}

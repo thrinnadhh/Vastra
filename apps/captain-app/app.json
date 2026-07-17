@@ -6,7 +6,15 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "platforms": ["ios", "android", "web"],
-    "plugins": ["expo-status-bar"],
+    "plugins": [
+      "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Vastra uses your location while you are online to find nearby delivery pickups."
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": false
     },
