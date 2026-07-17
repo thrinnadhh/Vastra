@@ -5,6 +5,7 @@ import { CatalogueModule } from './catalogue/catalogue.module';
 import { DispatchModule } from './dispatch/dispatch.module';
 import { HealthModule } from './health/health.module';
 import { MeModule } from './me/me.module';
+import { MerchantAlertDeliveryModule } from './merchant-alert-delivery/merchant-alert-delivery.module';
 import { OrdersModule } from './orders/orders.module';
 import { WardrobeModule } from './wardrobe/wardrobe.module';
 
@@ -15,6 +16,7 @@ import { WardrobeModule } from './wardrobe/wardrobe.module';
     DispatchModule,
     HealthModule,
     MeModule,
+    MerchantAlertDeliveryModule,
     OrdersModule,
     WardrobeModule,
   ],
