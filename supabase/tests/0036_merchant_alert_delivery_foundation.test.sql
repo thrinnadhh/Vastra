@@ -5,7 +5,7 @@ with schema extensions;
 
 set local search_path = extensions, public;
 
-select plan(16);
+select plan(17);
 
 select has_type(
   'public',
@@ -54,6 +54,27 @@ select ok(
     where oid = 'public.merchant_alert_delivery_attempts'::regclass
   ),
   'delivery attempts enforce row level security'
+);
+
+select ok(
+  exists (
+    select 1
+    from pg_policy policy
+    join pg_class relation
+      on relation.oid = policy.polrelid
+    join pg_namespace namespace
+      on namespace.oid = relation.relnamespace
+    where namespace.nspname = 'public'
+      and relation.relname = 'merchant_alert_delivery_attempts'
+      and policy.polname = 'merchant_alert_delivery_attempts_service_role_access'
+      and cardinality(policy.polroles) = 1
+      and (
+        select oid
+        from pg_roles
+        where rolname = 'service_role'
+      ) = any(policy.polroles)
+  ),
+  'delivery attempts have an explicit service-role-only policy'
 );
 
 select ok(
