@@ -24,8 +24,18 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
+      - name: Detect source payload
+        id: payload
+        shell: bash
+        run: |
+          if test -f scripts/.s8-03-10-source.part-00; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Verify and extract source
-        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        if: ${{ steps.payload.outputs.present == 'true' }}
         shell: bash
         run: |
           cat scripts/.s8-03-10-source.part-* > /tmp/s8-source.b64
@@ -36,7 +46,7 @@ jobs:
           tar -xzf /tmp/s8-source.tar.gz
 
       - name: Remove staged transport files
-        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        if: ${{ steps.payload.outputs.present == 'true' }}
         shell: bash
         run: |
           rm -f \
@@ -54,11 +64,11 @@ jobs:
             scripts/.s8-03-10-source.part-*
 
       - name: Install pnpm
-        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        if: ${{ steps.payload.outputs.present == 'true' }}
         uses: pnpm/action-setup@v6
 
       - name: Set up Node.js
-        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        if: ${{ steps.payload.outputs.present == 'true' }}
         uses: actions/setup-node@v6
         with:
           node-version: 20.20.2
@@ -66,19 +76,19 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        if: ${{ steps.payload.outputs.present == 'true' }}
         run: pnpm install --frozen-lockfile
 
       - name: Format source
-        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        if: ${{ steps.payload.outputs.present == 'true' }}
         run: pnpm format
 
       - name: Check patch
-        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        if: ${{ steps.payload.outputs.present == 'true' }}
         run: git diff --check
 
       - name: Commit clean Sprint 8 implementation
-        if: ${{ hashFiles('scripts/.s8-03-10-source.part-00') != '' }}
+        if: ${{ steps.payload.outputs.present == 'true' }}
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
