@@ -55,12 +55,18 @@ export class PaymentProcessingService {
       if (typeof rawIdempotencyKey !== 'string' || !UUID_PATTERN.test(rawIdempotencyKey)) {
         throw new BadRequestException();
       }
-      if (typeof body !== 'object' || body === null || Array.isArray(body))
+      if (typeof body !== 'object' || body === null || Array.isArray(body)) {
         throw new BadRequestException();
+      }
       const noteValue = (body as Record<string, unknown>)['note'];
-      const note = noteValue === undefined || noteValue === null ? null : String(noteValue).trim();
-      if (note !== null && (note.length === 0 || note.length > 1000))
+      let note: string | null = null;
+      if (noteValue !== undefined && noteValue !== null) {
+        if (typeof noteValue !== 'string') throw new BadRequestException();
+        note = noteValue.trim();
+      }
+      if (note !== null && (note.length === 0 || note.length > 1000)) {
         throw new BadRequestException();
+      }
       return this.success(
         await this.gateway.retryFailedEvent(
           context.actor.id,
