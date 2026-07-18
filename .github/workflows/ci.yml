@@ -18,7 +18,7 @@ jobs:
   verify:
     name: Verify repository
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Check out repository
@@ -26,38 +26,47 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Validate environment templates
+        run: pnpm env:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v3
         with:
           version: 2.109.1
 
-      - name: Start Supabase
-        run: supabase start
+      - name: Run database tests
+        run: pnpm db:test
 
-      - name: Reset database and apply migrations
-        run: supabase db reset --local
+      - name: Validate OpenAPI
+        run: pnpm openapi:check
 
-      - name: Run legacy pgTAP contract 0011
-        run: supabase test db supabase/tests/0011_operations_foundations.test.sql --local
-
-      - name: Run legacy pgTAP contract 0013
-        run: supabase test db supabase/tests/0013_hardening.test.sql --local
-
-      - name: Run legacy pgTAP contract 0014
-        run: supabase test db supabase/tests/0014_product_image_management.test.sql --local
-
-      - name: Run legacy pgTAP contract 0017
-        run: supabase test db supabase/tests/0017_merchant_inventory_adjustments.test.sql --local
-
-      - name: Run legacy pgTAP contract 0018
-        run: supabase test db supabase/tests/0018_inventory_barcode_lookup.test.sql --local
-
-      - name: Run legacy pgTAP contract 0019
-        run: supabase test db supabase/tests/0019_merchant_offline_sales.test.sql --local
-
-      - name: Run legacy pgTAP contract 0020
-        run: supabase test db supabase/tests/0020_customer_inventory_reservations.test.sql --local
-
-      - name: Stop Supabase
-        if: always()
-        run: supabase stop
+      - name: Build
+        run: pnpm build
