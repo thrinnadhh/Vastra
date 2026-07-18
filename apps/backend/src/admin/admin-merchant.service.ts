@@ -7,10 +7,7 @@ import type {
   AdminMerchantTargetStatus,
 } from './admin-merchant.gateway';
 import { ADMIN_MERCHANT_GATEWAY } from './admin.tokens';
-import {
-  ADMIN_MUTATION_REASON_CODES,
-  type AdminMutationReasonCode,
-} from './admin.types';
+import { ADMIN_MUTATION_REASON_CODES, type AdminMutationReasonCode } from './admin.types';
 
 export class AdminMerchantRequestInvalidError extends Error {}
 export class AdminMerchantNotFoundError extends Error {}

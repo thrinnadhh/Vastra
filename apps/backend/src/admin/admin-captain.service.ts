@@ -11,10 +11,7 @@ import type {
   AdminCaptainTargetStatus,
 } from './admin-captain.gateway';
 import { ADMIN_CAPTAIN_GATEWAY } from './admin.tokens';
-import {
-  ADMIN_MUTATION_REASON_CODES,
-  type AdminMutationReasonCode,
-} from './admin.types';
+import { ADMIN_MUTATION_REASON_CODES, type AdminMutationReasonCode } from './admin.types';
 
 export class AdminCaptainRequestInvalidError extends Error {}
 export class AdminCaptainNotFoundError extends Error {}

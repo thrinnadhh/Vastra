@@ -21,7 +21,9 @@ import { AdminMerchantService } from './admin-merchant.service';
 @AllowAccountTypes('ADMIN')
 @RequireOperationalReadiness()
 export class AdminMerchantController {
-  public constructor(@Inject(AdminMerchantService) private readonly service: AdminMerchantService) {}
+  public constructor(
+    @Inject(AdminMerchantService) private readonly service: AdminMerchantService,
+  ) {}
 
   @Get(':merchantId')
   @RequirePermissions('admin.merchants.read')

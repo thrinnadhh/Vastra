@@ -20,10 +20,8 @@ const CONTEXT = { actor: { id: ACTOR_ID } } as AuthenticatedRequestContext;
 
 class GatewayStub implements AdminCaptainGateway {
   public input:
-    | AdminCaptainMutationInput
-    | AdminCaptainStatusInput
-    | AdminCaptainAvailabilityInput
-    | null = null;
+    AdminCaptainMutationInput | AdminCaptainStatusInput | AdminCaptainAvailabilityInput | null =
+    null;
   public get() {
     return Promise.resolve({ captain: { id: CAPTAIN_ID } });
   }
@@ -45,7 +43,14 @@ describe('AdminCaptainService', () => {
   it('requires idempotency for captain mutations', async () => {
     const service = new AdminCaptainService(new GatewayStub());
     await expect(
-      service.setStatus(CONTEXT, CAPTAIN_ID, null, null, { reasonCode: 'SAFETY_INCIDENT' }, 'SUSPENDED'),
+      service.setStatus(
+        CONTEXT,
+        CAPTAIN_ID,
+        null,
+        null,
+        { reasonCode: 'SAFETY_INCIDENT' },
+        'SUSPENDED',
+      ),
     ).rejects.toBeInstanceOf(AdminCaptainIdempotencyKeyRequiredError);
   });
 

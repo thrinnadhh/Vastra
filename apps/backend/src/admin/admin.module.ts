@@ -9,11 +9,7 @@ import { AdminCaptainService } from './admin-captain.service';
 import { AdminMerchantController } from './admin-merchant.controller';
 import { SupabaseAdminMerchantGateway } from './admin-merchant.gateway';
 import { AdminMerchantService } from './admin-merchant.service';
-import {
-  ADMIN_AUDIT_GATEWAY,
-  ADMIN_CAPTAIN_GATEWAY,
-  ADMIN_MERCHANT_GATEWAY,
-} from './admin.tokens';
+import { ADMIN_AUDIT_GATEWAY, ADMIN_CAPTAIN_GATEWAY, ADMIN_MERCHANT_GATEWAY } from './admin.tokens';
 
 @Module({
   controllers: [AdminAuditController, AdminMerchantController, AdminCaptainController],

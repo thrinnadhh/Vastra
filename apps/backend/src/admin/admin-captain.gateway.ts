@@ -99,9 +99,7 @@ export class SupabaseAdminCaptainGateway implements AdminCaptainGateway {
     });
   }
 
-  public releaseActiveAssignment(
-    input: AdminCaptainMutationInput,
-  ): Promise<AdminCaptainSnapshot> {
+  public releaseActiveAssignment(input: AdminCaptainMutationInput): Promise<AdminCaptainSnapshot> {
     return this.rpc('admin_release_captain_assignment', {
       p_actor_id: input.actorId,
       p_captain_id: input.captainId,

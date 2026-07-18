@@ -42,14 +42,7 @@ export class AdminCaptainController {
     @Headers('x-request-id') requestId: unknown,
     @Body() body: unknown,
   ) {
-    return this.service.setStatus(
-      context,
-      captainId,
-      idempotencyKey,
-      requestId,
-      body,
-      'SUSPENDED',
-    );
+    return this.service.setStatus(context, captainId, idempotencyKey, requestId, body, 'SUSPENDED');
   }
 
   @Post(':captainId/restore')
@@ -62,14 +55,7 @@ export class AdminCaptainController {
     @Headers('x-request-id') requestId: unknown,
     @Body() body: unknown,
   ) {
-    return this.service.setStatus(
-      context,
-      captainId,
-      idempotencyKey,
-      requestId,
-      body,
-      'ACTIVE',
-    );
+    return this.service.setStatus(context, captainId, idempotencyKey, requestId, body, 'ACTIVE');
   }
 
   @Post(':captainId/correct-availability')
@@ -82,13 +68,7 @@ export class AdminCaptainController {
     @Headers('x-request-id') requestId: unknown,
     @Body() body: unknown,
   ) {
-    return this.service.correctAvailability(
-      context,
-      captainId,
-      idempotencyKey,
-      requestId,
-      body,
-    );
+    return this.service.correctAvailability(context, captainId, idempotencyKey, requestId, body);
   }
 
   @Post(':captainId/release-active-assignment')

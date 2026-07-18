@@ -1,14 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AuthenticatedRequestContext } from '../auth/auth.types';
-import type {
-  AdminMerchantGateway,
-  AdminMerchantMutationInput,
-} from './admin-merchant.gateway';
-import {
-  AdminMerchantRequestInvalidError,
-  AdminMerchantService,
-} from './admin-merchant.service';
+import type { AdminMerchantGateway, AdminMerchantMutationInput } from './admin-merchant.gateway';
+import { AdminMerchantRequestInvalidError, AdminMerchantService } from './admin-merchant.service';
 
 const CONTEXT = {
   actor: { id: '10000000-0000-4000-8000-000000000001' },
