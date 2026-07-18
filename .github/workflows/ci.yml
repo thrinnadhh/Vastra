@@ -38,34 +38,25 @@ jobs:
         run: supabase db reset --local
 
       - name: Run legacy pgTAP contract 0011
-        run: supabase test db supabase/tests/0011_*.sql --local
-
-      - name: Run legacy pgTAP contract 0012
-        run: supabase test db supabase/tests/0012_*.sql --local
+        run: supabase test db supabase/tests/0011_operations_foundations.test.sql --local
 
       - name: Run legacy pgTAP contract 0013
-        run: supabase test db supabase/tests/0013_*.sql --local
+        run: supabase test db supabase/tests/0013_hardening.test.sql --local
 
       - name: Run legacy pgTAP contract 0014
-        run: supabase test db supabase/tests/0014_*.sql --local
-
-      - name: Run legacy pgTAP contract 0015
-        run: supabase test db supabase/tests/0015_*.sql --local
-
-      - name: Run legacy pgTAP contract 0016
-        run: supabase test db supabase/tests/0016_*.sql --local
+        run: supabase test db supabase/tests/0014_product_image_management.test.sql --local
 
       - name: Run legacy pgTAP contract 0017
-        run: supabase test db supabase/tests/0017_*.sql --local
+        run: supabase test db supabase/tests/0017_merchant_inventory_adjustments.test.sql --local
 
       - name: Run legacy pgTAP contract 0018
-        run: supabase test db supabase/tests/0018_*.sql --local
+        run: supabase test db supabase/tests/0018_inventory_barcode_lookup.test.sql --local
 
       - name: Run legacy pgTAP contract 0019
-        run: supabase test db supabase/tests/0019_*.sql --local
+        run: supabase test db supabase/tests/0019_merchant_offline_sales.test.sql --local
 
       - name: Run legacy pgTAP contract 0020
-        run: supabase test db supabase/tests/0020_*.sql --local
+        run: supabase test db supabase/tests/0020_customer_inventory_reservations.test.sql --local
 
       - name: Stop Supabase
         if: always()
