@@ -2,7 +2,7 @@
 project: Vastra
 version: 1.1
 status: Frozen MVP
-last_updated: 2026-07-11
+last_updated: 2026-07-17
 ---
 
 # API Error Codes
@@ -143,6 +143,7 @@ last_updated: 2026-07-11
 | DELIVERY_TASK_ALREADY_ASSIGNED | 409 | Another captain accepted the task |
 | CAPTAIN_ALREADY_ASSIGNED | 409 | Captain already owns another active task |
 | CAPTAIN_LOCATION_STALE | 409 | Current captain location is missing, stale, or too inaccurate |
+| CAPTAIN_NOT_AT_PICKUP | 409 | Assigned captain is outside the merchant pickup geofence |
 | COD_AMOUNT_MISMATCH | 409 | Collected COD differs from the authoritative order total |
 | DELIVERY_OFFER_EXPIRED | 410 | Offer can no longer be accepted or rejected |
 | PICKUP_CODE_INVALID | 422 | Wrong pickup code |
@@ -174,7 +175,8 @@ last_updated: 2026-07-11
 | Code | HTTP | Meaning |
 |---|---:|---|
 | IDEMPOTENCY_KEY_REQUIRED | 400 | Missing key |
-| IDEMPOTENCY_CONFLICT | 409 | Same key, different request |
+| IDEMPOTENCY_CONFLICT | 409 | Legacy same-key conflict |
+| IDEMPOTENCY_KEY_REUSED | 409 | Idempotency key was reused with a different delivery command |
 | EXTERNAL_SERVICE_UNAVAILABLE | 503 | Provider unavailable |
 | INTERNAL_ERROR | 500 | Unexpected error |
 | MAINTENANCE_MODE | 503 | Temporarily unavailable |

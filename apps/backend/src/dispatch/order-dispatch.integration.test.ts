@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { SupabaseClient } from '../auth/supabase-client.type';
 import { CAPTAIN_PRESENCE_GATEWAY } from './captain-presence.tokens';
+import { DELIVERY_GATEWAY } from './delivery.tokens';
 import { DispatchModule } from './dispatch.module';
 import {
   type OrderDispatchGateway,
@@ -46,6 +47,8 @@ describe('dispatch module and gateway integration', () => {
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [DispatchModule] })
       .overrideProvider(CAPTAIN_PRESENCE_GATEWAY)
+      .useValue(Object.freeze({}))
+      .overrideProvider(DELIVERY_GATEWAY)
       .useValue(Object.freeze({}))
       .overrideProvider(ORDER_DISPATCH_GATEWAY)
       .useClass(IntegrationGateway)
