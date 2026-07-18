@@ -14,33 +14,28 @@ select ok(to_regprocedure('public.report_delivery_problem(uuid,uuid,text,text,te
 select ok(to_regprocedure('public.release_delivery_task(uuid,uuid,text,text,boolean,uuid,double precision,double precision,numeric,timestamp with time zone)') is not null, 'pre-pickup release exists');
 select ok(to_regprocedure('public.run_delivery_dispatch_cycle(text,integer,integer,integer,integer,integer,integer,integer)') is not null, 'dispatch wave worker exists');
 
-
-select like(
+select ok(
   pg_get_functiondef(
     'public.run_delivery_dispatch_cycle(text,integer,integer,integer,integer,integer,integer,integer)'::regprocedure
-  ),
-  '%start_order_dispatch%',
+  ) like '%start_order_dispatch%',
   'dispatch cycle starts READY_FOR_PICKUP orders idempotently'
 );
-select like(
+select ok(
   pg_get_functiondef(
     'public.run_delivery_dispatch_cycle(text,integer,integer,integer,integer,integer,integer,integer)'::regprocedure
-  ),
-  '%delivery.offer.expired%',
+  ) like '%delivery.offer.expired%',
   'dispatch cycle emits durable offer-expiry events'
 );
-select like(
+select ok(
   pg_get_functiondef(
     'public.respond_delivery_offer(uuid,uuid,text,text,uuid)'::regprocedure
-  ),
-  '%availability_status%AVAILABLE%OFFERED%',
+  ) like '%availability_status%AVAILABLE%OFFERED%',
   'offered captains remain eligible to accept their own offer'
 );
-select like(
+select ok(
   pg_get_functiondef(
     'public.release_delivery_task(uuid,uuid,text,text,boolean,uuid,double precision,double precision,numeric,timestamp with time zone)'::regprocedure
-  ),
-  '%pickup_code_hash%null%',
+  ) like '%pickup_code_hash%null%',
   'pre-pickup release invalidates the previous merchant handover code'
 );
 
