@@ -2,27 +2,29 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: s9-10-format
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  format:
-    name: Format S9-10 hardening
+  verify:
+    name: Verify repository
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
-      - name: Check out S9-10 branch
+      - name: Check out repository
         uses: actions/checkout@v7
         with:
-          ref: feat/s9-10-admin-hardening
-          fetch-depth: 0
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -37,18 +39,34 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Format S9-10 files
-        run: pnpm format
+      - name: Check formatting
+        run: pnpm format:check
 
-      - name: Restore normal CI and commit formatting
-        shell: bash
-        run: |
-          git checkout origin/main -- .github/workflows/ci.yml
-          if git diff --quiet; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add --all
-          git commit -m "chore: format S9-10 hardening"
-          git push origin HEAD:feat/s9-10-admin-hardening
+      - name: Validate environment templates
+        run: pnpm env:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.109.1
+
+      - name: Run database tests
+        run: pnpm db:test
+
+      - name: Validate OpenAPI
+        run: pnpm openapi:check
+
+      - name: Build
+        run: pnpm build

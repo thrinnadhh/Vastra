@@ -15,7 +15,11 @@ import { OPERATIONAL_READINESS_GATEWAY } from '../auth/operational-readiness.tok
 import type { AuthenticationGateway, TokenVerificationResult } from '../auth/supabase.gateway';
 import { AUTHENTICATION_GATEWAY } from '../auth/supabase.tokens';
 import type { AdminDashboardGateway } from './admin-dashboard.gateway';
-import type { AdminOperationInput, AdminOrderOperationsGateway, AdminResetVerificationInput } from './admin-order-operations.gateway';
+import type {
+  AdminOperationInput,
+  AdminOrderOperationsGateway,
+  AdminResetVerificationInput,
+} from './admin-order-operations.gateway';
 import { AdminModule } from './admin.module';
 import { ADMIN_DASHBOARD_GATEWAY, ADMIN_ORDER_OPERATIONS_GATEWAY } from './admin.tokens';
 
