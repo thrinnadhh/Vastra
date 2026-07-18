@@ -1,0 +1,14 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public;
+select no_plan();
+select has_table('public','captain_cod_ledger','captain COD liability ledger exists');
+select has_trigger('public','captain_cod_ledger','prevent_captain_cod_ledger_mutation','COD ledger is append-only');
+select has_index('public','captain_payout_items','captain_payout_items_one_earning_idx','earning can enter one payout only');
+select ok(to_regprocedure('public.admin_reconcile_cod_collection(uuid,uuid,bigint,uuid,text)') is not null,'COD reconciliation command exists');
+select ok(to_regprocedure('public.admin_create_captain_payout(uuid,uuid,date,date,uuid,text)') is not null,'captain payout creation exists');
+select ok(not has_function_privilege('authenticated','public.admin_create_captain_payout(uuid,uuid,date,date,uuid,text)','EXECUTE'),'clients cannot create payouts');
+select ok(has_function_privilege('service_role','public.admin_create_captain_payout(uuid,uuid,date,date,uuid,text)','EXECUTE'),'service role can create payouts');
+select ok(pg_get_functiondef('public.admin_create_captain_payout(uuid,uuid,date,date,uuid,text)'::regprocedure) like '%FINANCE_COD_NOT_RECONCILED%','unreconciled COD blocks payouts');
+select * from finish();
+rollback;
