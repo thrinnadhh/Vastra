@@ -170,7 +170,7 @@ function parseWebhookEvent(input: VerifyProviderWebhookInput): VerifiedProviderP
     },
   };
   const mapping = mappings[type];
-  if (mapping === undefined || mapping.status !== paymentStatus) {
+  if (mapping?.status !== paymentStatus) {
     throw new PaymentWebhookPayloadInvalidError();
   }
   return {
