@@ -15,9 +15,10 @@ export const serverEnvSchema = commonEnvSchema.extend({
   SUPABASE_PUBLISHABLE_KEY: z.string().min(16),
   SUPABASE_SERVICE_ROLE_KEY: secretSchema,
 
-  PAYMENT_PROVIDER: z.enum(['cashfree', 'razorpay']),
+  PAYMENT_PROVIDER: z.literal('cashfree'),
+  PAYMENT_API_VERSION: z.literal('2025-01-01').default('2025-01-01'),
+  PAYMENT_CLIENT_ID: z.string().min(8),
   PAYMENT_SECRET_KEY: secretSchema,
-  PAYMENT_WEBHOOK_SECRET: secretSchema,
 
   SMS_PROVIDER: z.enum(['msg91', 'twilio']),
   SMS_API_KEY: secretSchema,
