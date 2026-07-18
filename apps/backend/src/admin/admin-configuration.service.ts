@@ -9,10 +9,7 @@ import {
   type AdminSettingScopeType,
 } from './admin-configuration.types';
 import { ADMIN_CONFIGURATION_GATEWAY } from './admin.tokens';
-import {
-  ADMIN_MUTATION_REASON_CODES,
-  type AdminMutationReasonCode,
-} from './admin.types';
+import { ADMIN_MUTATION_REASON_CODES, type AdminMutationReasonCode } from './admin.types';
 
 export class AdminConfigurationRequestInvalidError extends Error {}
 
