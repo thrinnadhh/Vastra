@@ -1,1 +1,1 @@
-Trigger unit-test diagnostics using the existing PR CI workflow.
+Trigger database-test diagnostics using the existing PR CI workflow.
