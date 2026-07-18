@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -24,8 +24,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
         with:
-          ref: agent/s9-admin-foundation
-          fetch-depth: 0
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -40,21 +39,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Format Sprint 9 foundation
-        run: pnpm format
-
-      - name: Commit formatting
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add --all
-          git commit -m "chore: format Sprint 9 foundation"
-          git push origin HEAD:agent/s9-admin-foundation
-
       - name: Check formatting
         run: pnpm format:check
 
@@ -62,7 +46,25 @@ jobs:
         run: pnpm env:check
 
       - name: Lint
-        run: pnpm lint
+        id: lint
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm lint 2>&1 | tee /tmp/s9-foundation-lint.log
+
+      - name: Upload failed lint report
+        if: steps.lint.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: s9-foundation-lint
+          path: /tmp/s9-foundation-lint.log
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Stop after failed lint
+        if: steps.lint.outcome == 'failure'
+        run: exit 1
 
       - name: Typecheck
         run: pnpm typecheck
