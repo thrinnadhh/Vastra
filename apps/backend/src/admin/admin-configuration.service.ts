@@ -85,10 +85,16 @@ export class AdminConfigurationService {
     ) {
       throw new AdminConfigurationRequestInvalidError();
     }
+    const normalizedExpectedVersion =
+      expectedVersion === undefined || expectedVersion === null ? null : expectedVersion;
     const rawNote = record['note'];
-    const note = rawNote === undefined || rawNote === null ? null : String(rawNote).trim();
-    if (note !== null && (note.length === 0 || note.length > 1000)) {
-      throw new AdminConfigurationRequestInvalidError();
+    let note: string | null = null;
+    if (rawNote !== undefined && rawNote !== null) {
+      if (typeof rawNote !== 'string') throw new AdminConfigurationRequestInvalidError();
+      note = rawNote.trim();
+      if (note.length === 0 || note.length > 1000) {
+        throw new AdminConfigurationRequestInvalidError();
+      }
     }
     return this.gateway.update({
       actorId: context.actor.id,
@@ -96,7 +102,7 @@ export class AdminConfigurationService {
       value: record['value'],
       scopeType: scope.scopeType,
       scopeId: scope.scopeId,
-      expectedVersion: expectedVersion === undefined ? null : (expectedVersion as number | null),
+      expectedVersion: normalizedExpectedVersion,
       reasonCode: reasonCode as AdminMutationReasonCode,
       note,
       requestId,

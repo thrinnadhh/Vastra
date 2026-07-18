@@ -30,7 +30,11 @@ function requireRecord(value: unknown): Record<string, unknown> {
 function parseSetting(value: unknown): AdminOperationalSetting {
   const record = requireRecord(value);
   const version = record['version'];
+  const scopeId = record['scope_id'];
   if (typeof version !== 'number' || !Number.isSafeInteger(version) || version < 1) {
+    throw new AdminConfigurationGatewayUnavailableError();
+  }
+  if (scopeId !== null && typeof scopeId !== 'string') {
     throw new AdminConfigurationGatewayUnavailableError();
   }
   return {
@@ -39,7 +43,7 @@ function parseSetting(value: unknown): AdminOperationalSetting {
     value: record['setting_value'],
     valueType: String(record['value_type']) as AdminOperationalSetting['valueType'],
     scopeType: String(record['scope_type']) as AdminOperationalSetting['scopeType'],
-    scopeId: record['scope_id'] === null ? null : String(record['scope_id']),
+    scopeId,
     version,
     updatedBy: String(record['updated_by']),
     updatedAt: String(record['updated_at']),
