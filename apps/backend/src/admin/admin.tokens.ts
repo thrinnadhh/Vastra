@@ -1,0 +1,1 @@
+export const ADMIN_AUDIT_GATEWAY = Symbol('ADMIN_AUDIT_GATEWAY');
