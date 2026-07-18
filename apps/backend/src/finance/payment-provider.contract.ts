@@ -38,6 +38,7 @@ export interface VerifyProviderWebhookInput {
   readonly signature: string;
   readonly timestamp: string;
   readonly version: string;
+  readonly idempotencyKey: string;
 }
 
 export interface VerifiedProviderPaymentEvent {
@@ -45,7 +46,7 @@ export interface VerifiedProviderPaymentEvent {
   readonly providerEventId: string;
   readonly eventType: 'PAYMENT_SUCCESS' | 'PAYMENT_FAILED' | 'PAYMENT_USER_DROPPED';
   readonly providerOrderId: string;
-  readonly providerPaymentId: string | null;
+  readonly providerPaymentId: string;
   readonly amountPaise: number;
   readonly currency: FinanceCurrency;
   readonly occurredAt: string;

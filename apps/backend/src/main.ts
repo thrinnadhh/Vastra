@@ -26,7 +26,7 @@ function resolvePort(value: string | undefined): number {
 }
 
 async function bootstrap(port: number): Promise<void> {
-  const application = await NestFactory.create(AppModule);
+  const application = await NestFactory.create(AppModule, { rawBody: true });
 
   application.setGlobalPrefix('v1');
 
