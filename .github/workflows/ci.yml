@@ -62,8 +62,27 @@ jobs:
         with:
           version: 2.109.1
 
-      - name: Run database tests
-        run: pnpm db:test
+      - name: Start Supabase
+        run: supabase start
+
+      - name: Reset database and apply migrations
+        run: supabase db reset --local
+
+      - name: Verify migration history
+        run: supabase migration list --local
+
+      - name: Run pgTAP contracts
+        run: supabase test db --local
+
+      - name: Run database concurrency tests
+        run: bash scripts/run-db-concurrency-tests.sh
+
+      - name: Run database advisors
+        run: supabase db advisors --local
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop
 
       - name: Validate OpenAPI
         run: pnpm openapi:check
