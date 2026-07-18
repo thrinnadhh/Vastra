@@ -13,3 +13,5 @@ webhook_version: 2025-01-01
 Verified payment success, failed and user-dropped events are inserted into `payment_events` with processing status `RECEIVED`. Duplicate delivery of the same payload returns the existing receipt. Reuse of the same event identity with different data is rejected.
 
 This ticket intentionally does not update `payments` or `orders`. S10-04 owns authoritative event processing, stale-transition handling, payment recovery and merchant notification.
+
+Normal repository CI is the mandatory merge gate for signature verification, raw-body handling and durable event ingestion.
