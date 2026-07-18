@@ -37,8 +37,12 @@ export class OperationalReadinessService {
       case 'CAPTAIN':
         await this.assertCaptainReady(context);
         return;
-      case 'CUSTOMER':
       case 'ADMIN':
+        // Administrator readiness is established by the active profile,
+        // AAL2 enforcement and domain permissions. Admins do not own a
+        // merchant or captain operational profile to evaluate here.
+        return;
+      case 'CUSTOMER':
         throw createAccountTypeForbiddenException();
     }
   }
