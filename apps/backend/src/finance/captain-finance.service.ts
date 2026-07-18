@@ -37,7 +37,12 @@ export class CaptainFinanceService {
     rawLimit: unknown,
   ): Promise<CaptainFinanceResponse<readonly CaptainFinanceRecord[]>> {
     try {
-      const status = rawStatus === undefined || rawStatus === '' ? null : String(rawStatus);
+      let status: string | null = null;
+      if (rawStatus !== undefined && rawStatus !== null && rawStatus !== '') {
+        if (typeof rawStatus !== 'string') throw new CaptainFinanceValidationError();
+        status = rawStatus.trim();
+        if (status.length === 0) status = null;
+      }
       if (
         status !== null &&
         !['COLLECTED', 'DEPOSIT_PENDING', 'DEPOSITED', 'RECONCILED', 'DISPUTED'].includes(status)
@@ -45,8 +50,9 @@ export class CaptainFinanceService {
         throw new CaptainFinanceValidationError();
       }
       const limit = rawLimit === undefined ? 25 : Number(rawLimit);
-      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
+      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
         throw new CaptainFinanceValidationError();
+      }
       return this.success(await this.gateway.listCod(status, limit));
     } catch (error: unknown) {
       return this.rethrowMapped(error);
@@ -133,8 +139,9 @@ export class CaptainFinanceService {
   }
 
   private rethrowMapped(error: unknown): never {
-    if (error instanceof CaptainFinanceValidationError)
+    if (error instanceof CaptainFinanceValidationError) {
       throw new BadRequestException('Captain finance request is invalid');
+    }
     if (
       error instanceof CaptainFinanceStateConflictError ||
       error instanceof CaptainFinanceIdempotencyConflictError ||
@@ -142,10 +149,12 @@ export class CaptainFinanceService {
     ) {
       throw new ConflictException('Captain finance conflicts with current state');
     }
-    if (error instanceof CaptainFinanceNotFoundError)
+    if (error instanceof CaptainFinanceNotFoundError) {
       throw new NotFoundException('Captain finance record was not found');
-    if (error instanceof CaptainFinanceGatewayUnavailableError)
+    }
+    if (error instanceof CaptainFinanceGatewayUnavailableError) {
       throw new ServiceUnavailableException('Captain finance service is unavailable');
+    }
     throw error;
   }
 }
