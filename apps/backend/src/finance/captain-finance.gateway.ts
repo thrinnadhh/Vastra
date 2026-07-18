@@ -10,8 +10,16 @@ import type {
 
 export interface CaptainFinanceGateway {
   listCod(status: string | null, limit: number): Promise<readonly CaptainFinanceRecord[]>;
-  reconcileCod(actorId: string, collectionId: string, input: ReconcileCodInput): Promise<CaptainFinanceRecord>;
-  getPayoutEligibility(captainId: string, periodStart: string, periodEnd: string): Promise<CaptainFinanceRecord>;
+  reconcileCod(
+    actorId: string,
+    collectionId: string,
+    input: ReconcileCodInput,
+  ): Promise<CaptainFinanceRecord>;
+  getPayoutEligibility(
+    captainId: string,
+    periodStart: string,
+    periodEnd: string,
+  ): Promise<CaptainFinanceRecord>;
   createPayout(actorId: string, input: CreateCaptainPayoutInput): Promise<CaptainFinanceRecord>;
   getPayout(payoutId: string): Promise<CaptainFinanceRecord | null>;
 }
@@ -37,15 +45,20 @@ export class SupabaseCaptainFinanceGateway implements CaptainFinanceGateway {
   ) {}
 
   private mapError(message: string): never {
-    if (message.includes('FINANCE_IDEMPOTENCY_CONFLICT')) throw new CaptainFinanceIdempotencyConflictError();
+    if (message.includes('FINANCE_IDEMPOTENCY_CONFLICT'))
+      throw new CaptainFinanceIdempotencyConflictError();
     if (message.includes('FINANCE_COD_NOT_RECONCILED')) throw new CaptainFinanceNotEligibleError();
     if (message.includes('FINANCE_PAYOUT_NOT_ELIGIBLE')) throw new CaptainFinanceNotEligibleError();
-    if (message.includes('FINANCE_PAYMENT_STATE_CONFLICT')) throw new CaptainFinanceStateConflictError();
+    if (message.includes('FINANCE_PAYMENT_STATE_CONFLICT'))
+      throw new CaptainFinanceStateConflictError();
     if (message.includes('FINANCE_PAYMENT_NOT_FOUND')) throw new CaptainFinanceNotFoundError();
     throw new CaptainFinanceGatewayUnavailableError();
   }
 
-  public async listCod(status: string | null, limit: number): Promise<readonly CaptainFinanceRecord[]> {
+  public async listCod(
+    status: string | null,
+    limit: number,
+  ): Promise<readonly CaptainFinanceRecord[]> {
     const { data, error } = await this.client.rpc('admin_list_cod_collections', {
       p_status: status,
       p_limit: limit,
@@ -55,7 +68,11 @@ export class SupabaseCaptainFinanceGateway implements CaptainFinanceGateway {
     return data.map(requireRecord);
   }
 
-  public async reconcileCod(actorId: string, collectionId: string, input: ReconcileCodInput): Promise<CaptainFinanceRecord> {
+  public async reconcileCod(
+    actorId: string,
+    collectionId: string,
+    input: ReconcileCodInput,
+  ): Promise<CaptainFinanceRecord> {
     const { data, error } = await this.client.rpc('admin_reconcile_cod_collection', {
       p_actor_id: actorId,
       p_collection_id: collectionId,
@@ -67,7 +84,11 @@ export class SupabaseCaptainFinanceGateway implements CaptainFinanceGateway {
     return requireRecord(data);
   }
 
-  public async getPayoutEligibility(captainId: string, periodStart: string, periodEnd: string): Promise<CaptainFinanceRecord> {
+  public async getPayoutEligibility(
+    captainId: string,
+    periodStart: string,
+    periodEnd: string,
+  ): Promise<CaptainFinanceRecord> {
     const { data, error } = await this.client.rpc('get_captain_payout_eligibility', {
       p_captain_id: captainId,
       p_period_start: periodStart,
@@ -77,7 +98,10 @@ export class SupabaseCaptainFinanceGateway implements CaptainFinanceGateway {
     return requireRecord(data);
   }
 
-  public async createPayout(actorId: string, input: CreateCaptainPayoutInput): Promise<CaptainFinanceRecord> {
+  public async createPayout(
+    actorId: string,
+    input: CreateCaptainPayoutInput,
+  ): Promise<CaptainFinanceRecord> {
     const { data, error } = await this.client.rpc('admin_create_captain_payout', {
       p_actor_id: actorId,
       p_captain_id: input.captainId,
