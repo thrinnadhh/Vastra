@@ -14,15 +14,17 @@ export class AdminDashboardService {
     private readonly gateway: AdminDashboardGateway,
   ) {}
 
-  public getSummary(_context: AuthenticatedRequestContext): Promise<AdminDashboardSummary> {
+  public getSummary(context: AuthenticatedRequestContext): Promise<AdminDashboardSummary> {
+    void context;
     return this.gateway.getSummary();
   }
 
   public search(
-    _context: AuthenticatedRequestContext,
+    context: AuthenticatedRequestContext,
     rawQuery: unknown,
     rawLimit: unknown,
   ): Promise<readonly AdminSearchResult[]> {
+    void context;
     if (typeof rawQuery !== 'string') throw new AdminSearchQueryInvalidError();
     const query = rawQuery.trim();
     if (query.length < 2 || query.length > 120) throw new AdminSearchQueryInvalidError();
