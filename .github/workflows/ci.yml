@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -24,71 +24,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Apply final Sprint 8 lint corrections
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/s8-03-10-captain-delivery'
-        shell: bash
-        run: |
-          python3 <<'PY'
-          from pathlib import Path
-
-          path = Path('apps/captain-app/src/delivery/captain-delivery.screen.tsx')
-          text = path.read_text()
-
-          old_effect = """    let stop: (() => void) | undefined;
-    const lifecycle = { cancelled: false };
-    void locationProvider.requestForegroundPermission().then(async (permission) => {
-      if (!permission.granted || lifecycle.cancelled) return;
-      stop = await locationProvider.watchLocations((sample) => {
-        void presenceClient
-          .updateLocation({ ...sample, activeDeliveryTaskId: active.taskId })
-          .catch(() => undefined);
-      });
-      if (lifecycle.cancelled) stop();
-    });
-    return () => {
-      lifecycle.cancelled = true;
-      stop?.();
-    };
-"""
-          new_effect = """    const subscription = locationProvider.requestForegroundPermission().then(async (permission) => {
-      if (!permission.granted) return undefined;
-      return locationProvider.watchLocations((sample) => {
-        void presenceClient
-          .updateLocation({ ...sample, activeDeliveryTaskId: active.taskId })
-          .catch(() => undefined);
-      });
-    });
-    return () => {
-      void subscription.then((stopWatching) => {
-        stopWatching?.();
-      });
-    };
-"""
-
-          old_arrival = """      : run(async () =>
-          client.arrivePickup(active.taskId, (await location(true))!, createIdempotencyKey()),
-        );
-"""
-          new_arrival = """      : run(async () => {
-          const currentLocation = await location(true);
-          if (currentLocation === null) {
-            throw new Error('Location is required to confirm store arrival.');
-          }
-          return client.arrivePickup(active.taskId, currentLocation, createIdempotencyKey());
-        });
-"""
-
-          for old, new in ((old_effect, new_effect), (old_arrival, new_arrival)):
-              if old not in text:
-                  raise SystemExit(f'Expected snippet not found: {old[:100]!r}')
-              text = text.replace(old, new, 1)
-
-          path.write_text(text)
-          PY
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -103,10 +39,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Format Sprint 8 final corrections
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/s8-03-10-captain-delivery'
-        run: pnpm format
-
       - name: Check formatting
         run: pnpm format:check
 
@@ -115,20 +47,6 @@ jobs:
 
       - name: Lint
         run: pnpm lint
-
-      - name: Commit final Sprint 8 lint fixes
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/s8-03-10-captain-delivery'
-        shell: bash
-        run: |
-          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
-          rm -f .github/workflows/s8-lint-finalize.yml
-          rm -f scripts/.s8-lint-finalize-trigger
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git diff --cached --stat
-          git commit -m "fix(delivery): clear remaining Sprint 8 lint errors"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
 
       - name: Typecheck
         run: pnpm typecheck
