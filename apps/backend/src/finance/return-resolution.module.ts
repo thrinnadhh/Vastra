@@ -6,10 +6,7 @@ import { AdminReturnDecisionService } from './admin-return-decision.service';
 import { MerchantReturnController } from './merchant-return.controller';
 import { SupabaseMerchantReturnGateway } from './merchant-return.gateway';
 import { MerchantReturnService } from './merchant-return.service';
-import {
-  ADMIN_RETURN_DECISION_GATEWAY,
-  MERCHANT_RETURN_GATEWAY,
-} from './return-resolution.tokens';
+import { ADMIN_RETURN_DECISION_GATEWAY, MERCHANT_RETURN_GATEWAY } from './return-resolution.tokens';
 
 @Module({
   controllers: [MerchantReturnController, AdminReturnDecisionController],

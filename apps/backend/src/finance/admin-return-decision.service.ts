@@ -15,10 +15,7 @@ import {
   AdminReturnDecisionNotFoundError,
   AdminReturnDecisionStateConflictError,
 } from './admin-return-decision.gateway';
-import type {
-  AdminReturnRecord,
-  AdminReturnResponse,
-} from './admin-return-decision.types';
+import type { AdminReturnRecord, AdminReturnResponse } from './admin-return-decision.types';
 import {
   AdminReturnDecisionValidationError,
   parseAdminReturnDecision,

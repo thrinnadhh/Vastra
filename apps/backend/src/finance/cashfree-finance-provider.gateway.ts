@@ -149,12 +149,7 @@ export class CashfreeFinanceProviderGateway extends CashfreePaymentProviderGatew
     } catch {
       throw new PaymentProviderResponseInvalidError();
     }
-    return parseSnapshot(
-      payload,
-      input.internalRefundId,
-      input.amountPaise,
-      input.providerOrderId,
-    );
+    return parseSnapshot(payload, input.internalRefundId, input.amountPaise, input.providerOrderId);
   }
 
   public override async fetchRefund(

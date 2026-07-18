@@ -2,10 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import type { SupabaseClient } from '../auth/supabase-client.type';
 import { SUPABASE_SERVICE_CLIENT } from '../auth/supabase.tokens';
-import type {
-  RefundExecutionCommandInput,
-  RefundExecutionRecord,
-} from './refund-execution.types';
+import type { RefundExecutionCommandInput, RefundExecutionRecord } from './refund-execution.types';
 
 export interface RefundExecutionGateway {
   list(status: string | null, limit: number): Promise<readonly RefundExecutionRecord[]>;
@@ -105,10 +102,7 @@ export class SupabaseRefundExecutionGateway implements RefundExecutionGateway {
     return requireRecord(data);
   }
 
-  public async markRetrying(
-    actorId: string,
-    refundId: string,
-  ): Promise<RefundExecutionRecord> {
+  public async markRetrying(actorId: string, refundId: string): Promise<RefundExecutionRecord> {
     const { data, error } = await this.client.rpc('mark_refund_retrying', {
       p_actor_id: actorId,
       p_refund_id: refundId,

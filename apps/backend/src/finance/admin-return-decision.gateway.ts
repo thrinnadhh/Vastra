@@ -2,10 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import type { SupabaseClient } from '../auth/supabase-client.type';
 import { SUPABASE_SERVICE_CLIENT } from '../auth/supabase.tokens';
-import type {
-  AdminReturnDecisionInput,
-  AdminReturnRecord,
-} from './admin-return-decision.types';
+import type { AdminReturnDecisionInput, AdminReturnRecord } from './admin-return-decision.types';
 
 export interface AdminReturnDecisionGateway {
   list(status: string | null, limit: number): Promise<readonly AdminReturnRecord[]>;
@@ -52,10 +49,7 @@ export class SupabaseAdminReturnDecisionGateway implements AdminReturnDecisionGa
     throw new AdminReturnDecisionGatewayUnavailableError();
   }
 
-  public async list(
-    status: string | null,
-    limit: number,
-  ): Promise<readonly AdminReturnRecord[]> {
+  public async list(status: string | null, limit: number): Promise<readonly AdminReturnRecord[]> {
     const { data, error } = await this.client.rpc('list_admin_returns', {
       p_status: status,
       p_limit: limit,

@@ -21,10 +21,7 @@ import {
   RefundExecutionNotFoundError,
   RefundExecutionStateConflictError,
 } from './refund-execution.gateway';
-import type {
-  RefundExecutionRecord,
-  RefundExecutionResponse,
-} from './refund-execution.types';
+import type { RefundExecutionRecord, RefundExecutionResponse } from './refund-execution.types';
 import {
   RefundExecutionValidationError,
   parseRefundExecutionCommand,

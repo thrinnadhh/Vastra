@@ -1,16 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AuthenticatedRequestContext } from '../auth/auth.types';
-import type {
-  PaymentProviderGateway,
-  ProviderRefundSnapshot,
-} from './payment-provider.contract';
+import type { PaymentProviderGateway, ProviderRefundSnapshot } from './payment-provider.contract';
 import type { RefundExecutionGateway } from './refund-execution.gateway';
 import { RefundExecutionService } from './refund-execution.service';
-import type {
-  RefundExecutionCommandInput,
-  RefundExecutionRecord,
-} from './refund-execution.types';
+import type { RefundExecutionCommandInput, RefundExecutionRecord } from './refund-execution.types';
 
 const CONTEXT = {
   actor: { id: '10000000-0000-4000-8000-000000000001' },
