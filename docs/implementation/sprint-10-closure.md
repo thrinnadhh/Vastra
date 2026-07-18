@@ -38,4 +38,6 @@ The closure test matrix checks both the application transition contracts and the
 
 Cashfree refund creation and lookup use the same merchant refund identity for timeout-safe reconciliation.
 
+The database gate resets the local Supabase stack before executing all migrations, pgTAP contracts, concurrency tests, and advisors.
+
 The repository CI remains the merge gate for formatting, environment validation, lint, typecheck, unit and integration tests, Supabase migrations and pgTAP, OpenAPI validation, and production build.
