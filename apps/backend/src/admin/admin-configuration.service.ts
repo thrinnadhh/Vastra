@@ -85,8 +85,7 @@ export class AdminConfigurationService {
     ) {
       throw new AdminConfigurationRequestInvalidError();
     }
-    const normalizedExpectedVersion =
-      expectedVersion === undefined || expectedVersion === null ? null : expectedVersion;
+    const normalizedExpectedVersion = expectedVersion ?? null;
     const rawNote = record['note'];
     let note: string | null = null;
     if (rawNote !== undefined && rawNote !== null) {
