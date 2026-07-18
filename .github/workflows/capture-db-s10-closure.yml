@@ -1,0 +1,41 @@
+name: Capture Sprint 10 database report
+
+on:
+  push:
+    branches:
+      - agent/s10-08-12-finance-closure
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/s10-08-12-finance-closure
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.109.1
+      - name: Capture database diagnostics
+        run: pnpm db:test > docs/implementation/s10-db-report.txt 2>&1 || true
+      - name: Publish report and remove helper
+        run: |
+          rm .github/workflows/capture-db-s10-closure.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(finance): capture Sprint 10 database diagnostics"
+          git push origin HEAD:agent/s10-08-12-finance-closure
