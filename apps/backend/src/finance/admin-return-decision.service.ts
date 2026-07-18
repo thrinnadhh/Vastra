@@ -49,10 +49,13 @@ export class AdminReturnDecisionService {
     rawLimit: unknown,
   ): Promise<AdminReturnResponse<readonly AdminReturnRecord[]>> {
     try {
-      const status =
-        rawStatus === undefined || rawStatus === null || rawStatus === ''
-          ? null
-          : String(rawStatus).trim().toUpperCase();
+      let status: string | null = null;
+      if (rawStatus !== undefined && rawStatus !== null && rawStatus !== '') {
+        if (typeof rawStatus !== 'string') {
+          throw new AdminReturnDecisionValidationError();
+        }
+        status = rawStatus.trim().toUpperCase();
+      }
       if (status !== null && !ALLOWED_STATUSES.has(status)) {
         throw new AdminReturnDecisionValidationError();
       }
