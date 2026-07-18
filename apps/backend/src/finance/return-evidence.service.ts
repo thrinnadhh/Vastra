@@ -97,12 +97,7 @@ export class ReturnEvidenceService {
         throw new ReturnEvidenceNotFoundError();
       }
       return this.success(
-        await this.gateway.finalize(
-          context.actor.id,
-          returnId,
-          input.objectKey,
-          input.description,
-        ),
+        await this.gateway.finalize(context.actor.id, returnId, input.objectKey, input.description),
       );
     } catch (error: unknown) {
       return this.rethrowMapped(error);
@@ -123,11 +118,13 @@ export class ReturnEvidenceService {
         evidenceId,
       );
       if (objectKey === null) throw new ReturnEvidenceNotFoundError();
-      const signedReadUrl = await this.gateway.createSignedReadUrl(
+      const signedReadUrl = await this.gateway.createSignedReadUrl(objectKey, READ_URL_TTL_SECONDS);
+      return this.success({
+        evidenceId,
         objectKey,
-        READ_URL_TTL_SECONDS,
-      );
-      return this.success({ evidenceId, objectKey, signedReadUrl, expiresInSeconds: READ_URL_TTL_SECONDS });
+        signedReadUrl,
+        expiresInSeconds: READ_URL_TTL_SECONDS,
+      });
     } catch (error: unknown) {
       return this.rethrowMapped(error);
     }

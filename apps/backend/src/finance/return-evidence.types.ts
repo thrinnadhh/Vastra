@@ -1,8 +1,4 @@
-export const RETURN_EVIDENCE_UPLOAD_TYPES = [
-  'CUSTOMER_PHOTO',
-  'VIDEO',
-  'DOCUMENT',
-] as const;
+export const RETURN_EVIDENCE_UPLOAD_TYPES = ['CUSTOMER_PHOTO', 'VIDEO', 'DOCUMENT'] as const;
 
 export type ReturnEvidenceUploadType = (typeof RETURN_EVIDENCE_UPLOAD_TYPES)[number];
 

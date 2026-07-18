@@ -79,7 +79,10 @@ function parseIntent(value: unknown): ReturnEvidenceUploadIntent {
     intentId: requireString(record, 'intentId'),
     returnId: requireString(record, 'returnId'),
     objectKey: requireString(record, 'objectKey'),
-    evidenceType: requireString(record, 'evidenceType') as ReturnEvidenceUploadIntent['evidenceType'],
+    evidenceType: requireString(
+      record,
+      'evidenceType',
+    ) as ReturnEvidenceUploadIntent['evidenceType'],
     mimeType: requireString(record, 'mimeType') as ReturnEvidenceUploadIntent['mimeType'],
     sizeBytes: requireNumber(record, 'sizeBytes'),
     expiresAt: requireString(record, 'expiresAt'),
@@ -153,10 +156,12 @@ export class SupabaseReturnEvidenceGateway implements ReturnEvidenceGateway {
     if (separatorIndex < 1 || separatorIndex === objectKey.length - 1) {
       throw new ReturnEvidenceGatewayUnavailableError();
     }
-    const response = await this.client.storage.from(RETURN_EVIDENCE_BUCKET).list(
-      objectKey.slice(0, separatorIndex),
-      { limit: 10, search: objectKey.slice(separatorIndex + 1) },
-    );
+    const response = await this.client.storage
+      .from(RETURN_EVIDENCE_BUCKET)
+      .list(objectKey.slice(0, separatorIndex), {
+        limit: 10,
+        search: objectKey.slice(separatorIndex + 1),
+      });
     if (response.data === null) throw new ReturnEvidenceGatewayUnavailableError();
     return response.data.some((entry) => entry.name === objectKey.slice(separatorIndex + 1));
   }
