@@ -22,12 +22,6 @@ export class PaymentWebhookController {
     @Headers('x-webhook-version') version: unknown,
     @Headers('x-idempotency-key') idempotencyKey: unknown,
   ) {
-    return this.service.ingest(
-      request.rawBody,
-      signature,
-      timestamp,
-      version,
-      idempotencyKey,
-    );
+    return this.service.ingest(request.rawBody, signature, timestamp, version, idempotencyKey);
   }
 }

@@ -146,10 +146,7 @@ function parseWebhookEvent(input: VerifyProviderWebhookInput): VerifiedProviderP
   if (orderCurrency !== 'INR' || paymentCurrency !== 'INR') {
     throw new PaymentWebhookPayloadInvalidError();
   }
-  const orderAmount = parseAmount(
-    order['order_amount'],
-    new PaymentWebhookPayloadInvalidError(),
-  );
+  const orderAmount = parseAmount(order['order_amount'], new PaymentWebhookPayloadInvalidError());
   const paymentAmount = parseAmount(
     payment['payment_amount'],
     new PaymentWebhookPayloadInvalidError(),
