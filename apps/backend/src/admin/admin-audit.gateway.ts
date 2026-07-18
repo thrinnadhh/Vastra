@@ -2,11 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import type { SupabaseClient } from '../auth/supabase-client.type';
 import { SUPABASE_SERVICE_CLIENT } from '../auth/supabase.tokens';
-import type {
-  AdminAuditEntry,
-  AdminMutationReasonCode,
-  AdminResourceType,
-} from './admin.types';
+import type { AdminAuditEntry, AdminMutationReasonCode, AdminResourceType } from './admin.types';
 
 export interface RecordAdminAuditInput {
   readonly actorId: string;
