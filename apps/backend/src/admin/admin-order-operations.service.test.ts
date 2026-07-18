@@ -39,13 +39,13 @@ class GatewayStub implements AdminOrderOperationsGateway {
 }
 
 describe('AdminOrderOperationsService', () => {
-  it('requires a UUID idempotency key for every mutation', async () => {
+  it('requires a UUID idempotency key for every mutation', () => {
     const service = new AdminOrderOperationsService(new GatewayStub());
-    await expect(
+    expect(() =>
       service.cancelOrder(CONTEXT, RESOURCE_ID, undefined, null, {
         reasonCode: 'OPERATIONAL_RECOVERY',
       }),
-    ).rejects.toBeInstanceOf(AdminOrderOperationIdempotencyKeyRequiredError);
+    ).toThrow(AdminOrderOperationIdempotencyKeyRequiredError);
   });
 
   it('derives the actor and parses a bounded mutation reason', async () => {
@@ -64,13 +64,13 @@ describe('AdminOrderOperationsService', () => {
     });
   });
 
-  it('rejects unsupported verification reset kinds', async () => {
+  it('rejects unsupported verification reset kinds', () => {
     const service = new AdminOrderOperationsService(new GatewayStub());
-    await expect(
+    expect(() =>
       service.resetVerification(CONTEXT, RESOURCE_ID, KEY, null, {
         reasonCode: 'OPERATIONAL_RECOVERY',
         verificationKind: 'RAW_SECRET',
       }),
-    ).rejects.toBeInstanceOf(AdminOrderOperationRequestInvalidError);
+    ).toThrow(AdminOrderOperationRequestInvalidError);
   });
 });
