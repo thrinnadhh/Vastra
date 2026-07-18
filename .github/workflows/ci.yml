@@ -71,14 +71,43 @@ jobs:
       - name: Verify migration history
         run: supabase migration list --local
 
-      - name: Run S10-08 pgTAP contracts
-        run: supabase test db supabase/tests/0065_sprint10_admin_return_decision.test.sql --local
+      - name: Run legacy pgTAP contracts 0001-0020
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=()
+          for number in $(seq -w 1 20); do
+            files+=(supabase/tests/00${number}_*.sql)
+          done
+          supabase test db "${files[@]}" --local
 
-      - name: Run S10-09 pgTAP contracts
-        run: supabase test db supabase/tests/0066_sprint10_refund_execution.test.sql --local
+      - name: Run legacy pgTAP contracts 0021-0040
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=()
+          for number in $(seq -w 21 40); do
+            files+=(supabase/tests/00${number}_*.sql)
+          done
+          supabase test db "${files[@]}" --local
 
-      - name: Run S10-12 pgTAP contracts
-        run: supabase test db supabase/tests/0067_sprint10_finance_closure.test.sql --local
+      - name: Run legacy pgTAP contracts 0041-0064
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=()
+          for number in $(seq -w 41 64); do
+            files+=(supabase/tests/00${number}_*.sql)
+          done
+          supabase test db "${files[@]}" --local
+
+      - name: Run Sprint 10 closure pgTAP contracts
+        run: >-
+          supabase test db
+          supabase/tests/0065_sprint10_admin_return_decision.test.sql
+          supabase/tests/0066_sprint10_refund_execution.test.sql
+          supabase/tests/0067_sprint10_finance_closure.test.sql
+          --local
 
       - name: Stop Supabase
         if: always()
