@@ -37,22 +37,22 @@ jobs:
       - name: Reset database and apply migrations
         run: supabase db reset --local
 
-      - name: Run legacy pgTAP contracts 0001-0010
+      - name: Run legacy pgTAP contracts 0011-0015
         shell: bash
         run: |
           shopt -s nullglob
           files=()
-          for number in $(seq -w 1 10); do
+          for number in $(seq -w 11 15); do
             files+=(supabase/tests/00${number}_*.sql)
           done
           supabase test db "${files[@]}" --local
 
-      - name: Run legacy pgTAP contracts 0011-0020
+      - name: Run legacy pgTAP contracts 0016-0020
         shell: bash
         run: |
           shopt -s nullglob
           files=()
-          for number in $(seq -w 11 20); do
+          for number in $(seq -w 16 20); do
             files+=(supabase/tests/00${number}_*.sql)
           done
           supabase test db "${files[@]}" --local
