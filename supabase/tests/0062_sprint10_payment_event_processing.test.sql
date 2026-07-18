@@ -1,0 +1,13 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path = extensions, public;
+select no_plan();
+select ok(to_regprocedure('public.process_verified_payment_events(integer)') is not null, 'payment processor RPC exists');
+select ok(to_regprocedure('public.admin_retry_payment_event(uuid,bigint,uuid,text)') is not null, 'payment retry RPC exists');
+select ok(not has_function_privilege('authenticated', 'public.process_verified_payment_events(integer)', 'EXECUTE'), 'clients cannot process financial events');
+select ok(has_function_privilege('service_role', 'public.process_verified_payment_events(integer)', 'EXECUTE'), 'service role can process verified events');
+select ok(pg_get_functiondef('private.apply_verified_payment_event(bigint)'::regprocedure) like '%for update%', 'processor locks authoritative rows');
+select ok(pg_get_functiondef('private.apply_verified_payment_event(bigint)'::regprocedure) like '%release_inventory_reservation%', 'failed payment releases owned reservations');
+select ok(pg_get_functiondef('private.apply_verified_payment_event(bigint)'::regprocedure) like '%WAITING_FOR_MERCHANT%', 'capture activates merchant fulfilment');
+select * from finish();
+rollback;
