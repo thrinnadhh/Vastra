@@ -76,5 +76,5 @@ export interface PaymentProviderGateway {
   fetchOrder(providerOrderId: string): Promise<ProviderOrderSnapshot>;
   verifyWebhook(input: VerifyProviderWebhookInput): VerifiedProviderPaymentEvent;
   createRefund(input: CreateProviderRefundInput): Promise<ProviderRefundSnapshot>;
-  fetchRefund(providerOrderId: string, providerRefundId: string): Promise<ProviderRefundSnapshot>;
+  fetchRefund(providerOrderId: string, internalRefundId: string): Promise<ProviderRefundSnapshot>;
 }
