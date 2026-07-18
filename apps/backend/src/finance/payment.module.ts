@@ -4,12 +4,20 @@ import { CashfreePaymentProviderGateway } from './cashfree-payment-provider.gate
 import { CustomerPaymentController } from './customer-payment.controller';
 import { SupabaseCustomerPaymentGateway } from './customer-payment.gateway';
 import { CustomerPaymentService } from './customer-payment.service';
-import { CUSTOMER_PAYMENT_GATEWAY, PAYMENT_PROVIDER_GATEWAY } from './payment.tokens';
+import { PaymentWebhookController } from './payment-webhook.controller';
+import { SupabasePaymentWebhookGateway } from './payment-webhook.gateway';
+import { PaymentWebhookService } from './payment-webhook.service';
+import {
+  CUSTOMER_PAYMENT_GATEWAY,
+  PAYMENT_PROVIDER_GATEWAY,
+  PAYMENT_WEBHOOK_GATEWAY,
+} from './payment.tokens';
 
 @Module({
-  controllers: [CustomerPaymentController],
+  controllers: [CustomerPaymentController, PaymentWebhookController],
   providers: [
     CustomerPaymentService,
+    PaymentWebhookService,
     {
       provide: CUSTOMER_PAYMENT_GATEWAY,
       useClass: SupabaseCustomerPaymentGateway,
@@ -18,7 +26,17 @@ import { CUSTOMER_PAYMENT_GATEWAY, PAYMENT_PROVIDER_GATEWAY } from './payment.to
       provide: PAYMENT_PROVIDER_GATEWAY,
       useClass: CashfreePaymentProviderGateway,
     },
+    {
+      provide: PAYMENT_WEBHOOK_GATEWAY,
+      useClass: SupabasePaymentWebhookGateway,
+    },
   ],
-  exports: [CUSTOMER_PAYMENT_GATEWAY, PAYMENT_PROVIDER_GATEWAY, CustomerPaymentService],
+  exports: [
+    CUSTOMER_PAYMENT_GATEWAY,
+    PAYMENT_PROVIDER_GATEWAY,
+    PAYMENT_WEBHOOK_GATEWAY,
+    CustomerPaymentService,
+    PaymentWebhookService,
+  ],
 })
 export class PaymentModule {}

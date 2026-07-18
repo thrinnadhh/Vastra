@@ -1,3 +1,5 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
+
 import { Injectable } from '@nestjs/common';
 
 import {
@@ -19,6 +21,8 @@ import type {
 export class PaymentProviderUnavailableError extends Error {}
 export class PaymentProviderResponseInvalidError extends Error {}
 export class PaymentProviderOperationNotImplementedError extends Error {}
+export class PaymentWebhookSignatureInvalidError extends Error {}
+export class PaymentWebhookPayloadInvalidError extends Error {}
 
 function requireEnvironment(name: string): string {
   const value = process.env[name];
@@ -35,10 +39,25 @@ function requireRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function requireWebhookRecord(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new PaymentWebhookPayloadInvalidError();
+  }
+  return value as Record<string, unknown>;
+}
+
 function requireString(record: Record<string, unknown>, key: string): string {
   const value = record[key];
   if (typeof value !== 'string' || value.trim().length === 0) {
     throw new PaymentProviderResponseInvalidError();
+  }
+  return value.trim();
+}
+
+function requireWebhookString(record: Record<string, unknown>, key: string): string {
+  const value = record[key];
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new PaymentWebhookPayloadInvalidError();
   }
   return value.trim();
 }
@@ -50,14 +69,18 @@ function parseProviderReference(record: Record<string, unknown>): string {
   throw new PaymentProviderResponseInvalidError();
 }
 
-function parseAmountPaise(record: Record<string, unknown>): number {
-  const value = record['order_amount'];
-  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
-    throw new PaymentProviderResponseInvalidError();
+function parseAmount(value: unknown, error: Error): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) throw error;
+  const scaled = value * 100;
+  const paise = Math.round(scaled);
+  if (!Number.isSafeInteger(paise) || paise < 1 || Math.abs(scaled - paise) > 0.000_001) {
+    throw error;
   }
-  const paise = Math.round(value * 100);
-  if (!Number.isSafeInteger(paise) || paise < 1) throw new PaymentProviderResponseInvalidError();
   return paise;
+}
+
+function parseAmountPaise(record: Record<string, unknown>): number {
+  return parseAmount(record['order_amount'], new PaymentProviderResponseInvalidError());
 }
 
 function optionalString(record: Record<string, unknown>, key: string): string | null {
@@ -73,6 +96,97 @@ function cashfreeRoot(): string {
   return process.env['NODE_ENV'] === 'production'
     ? 'https://api.cashfree.com'
     : 'https://sandbox.cashfree.com';
+}
+
+function verifyCashfreeSignature(input: VerifyProviderWebhookInput): void {
+  if (input.version !== CASHFREE_API_VERSION) throw new PaymentWebhookPayloadInvalidError();
+  if (!/^\d{10,16}$/u.test(input.timestamp)) throw new PaymentWebhookPayloadInvalidError();
+  if (input.idempotencyKey.length < 16 || input.idempotencyKey.length > 256) {
+    throw new PaymentWebhookPayloadInvalidError();
+  }
+  const expected = createHmac('sha256', requireEnvironment('PAYMENT_SECRET_KEY'))
+    .update(input.timestamp)
+    .update(input.rawBody)
+    .digest();
+  let received: Buffer;
+  try {
+    received = Buffer.from(input.signature, 'base64');
+  } catch {
+    throw new PaymentWebhookSignatureInvalidError();
+  }
+  if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
+    throw new PaymentWebhookSignatureInvalidError();
+  }
+}
+
+function parseWebhookPaymentId(value: unknown): string {
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value > 0) return String(value);
+  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
+  throw new PaymentWebhookPayloadInvalidError();
+}
+
+function parseWebhookEvent(input: VerifyProviderWebhookInput): VerifiedProviderPaymentEvent {
+  let payload: unknown;
+  try {
+    payload = JSON.parse(input.rawBody) as unknown;
+  } catch {
+    throw new PaymentWebhookPayloadInvalidError();
+  }
+  const root = requireWebhookRecord(payload);
+  const type = requireWebhookString(root, 'type');
+  const eventTime = requireWebhookString(root, 'event_time');
+  if (Number.isNaN(Date.parse(eventTime))) throw new PaymentWebhookPayloadInvalidError();
+  const data = requireWebhookRecord(root['data']);
+  const order = requireWebhookRecord(data['order']);
+  const payment = requireWebhookRecord(data['payment']);
+  const providerOrderId = requireWebhookString(order, 'order_id');
+  const providerPaymentId = parseWebhookPaymentId(payment['cf_payment_id']);
+  const orderCurrency = requireWebhookString(order, 'order_currency');
+  const paymentCurrency = requireWebhookString(payment, 'payment_currency');
+  if (orderCurrency !== 'INR' || paymentCurrency !== 'INR') {
+    throw new PaymentWebhookPayloadInvalidError();
+  }
+  const orderAmount = parseAmount(
+    order['order_amount'],
+    new PaymentWebhookPayloadInvalidError(),
+  );
+  const paymentAmount = parseAmount(
+    payment['payment_amount'],
+    new PaymentWebhookPayloadInvalidError(),
+  );
+  if (orderAmount !== paymentAmount) throw new PaymentWebhookPayloadInvalidError();
+  const paymentStatus = requireWebhookString(payment, 'payment_status');
+  const mappings: Readonly<
+    Record<
+      string,
+      {
+        readonly status: string;
+        readonly eventType: VerifiedProviderPaymentEvent['eventType'];
+      }
+    >
+  > = {
+    PAYMENT_SUCCESS_WEBHOOK: { status: 'SUCCESS', eventType: 'PAYMENT_SUCCESS' },
+    PAYMENT_FAILED_WEBHOOK: { status: 'FAILED', eventType: 'PAYMENT_FAILED' },
+    PAYMENT_USER_DROPPED_WEBHOOK: {
+      status: 'USER_DROPPED',
+      eventType: 'PAYMENT_USER_DROPPED',
+    },
+  };
+  const mapping = mappings[type];
+  if (mapping === undefined || mapping.status !== paymentStatus) {
+    throw new PaymentWebhookPayloadInvalidError();
+  }
+  return {
+    provider: FINANCE_PROVIDER,
+    providerEventId: input.idempotencyKey,
+    eventType: mapping.eventType,
+    providerOrderId,
+    providerPaymentId,
+    amountPaise: paymentAmount,
+    currency: 'INR',
+    occurredAt: eventTime,
+    payload: root,
+  };
 }
 
 @Injectable()
@@ -167,8 +281,8 @@ export class CashfreePaymentProviderGateway implements PaymentProviderGateway {
   }
 
   public verifyWebhook(input: VerifyProviderWebhookInput): VerifiedProviderPaymentEvent {
-    void input;
-    throw new PaymentProviderOperationNotImplementedError();
+    verifyCashfreeSignature(input);
+    return parseWebhookEvent(input);
   }
 
   public createRefund(input: CreateProviderRefundInput): Promise<ProviderRefundSnapshot> {
