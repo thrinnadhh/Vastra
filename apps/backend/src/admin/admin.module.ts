@@ -22,11 +22,6 @@ import { ADMIN_AUDIT_GATEWAY, ADMIN_DASHBOARD_GATEWAY } from './admin.tokens';
     AdminAuditService,
     AdminDashboardService,
   ],
-  exports: [
-    ADMIN_AUDIT_GATEWAY,
-    ADMIN_DASHBOARD_GATEWAY,
-    AdminAuditService,
-    AdminDashboardService,
-  ],
+  exports: [ADMIN_AUDIT_GATEWAY, ADMIN_DASHBOARD_GATEWAY, AdminAuditService, AdminDashboardService],
 })
 export class AdminModule {}

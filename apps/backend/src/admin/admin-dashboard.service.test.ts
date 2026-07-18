@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { AuthenticatedRequestContext } from '../auth/auth.types';
 import type { AdminDashboardGateway } from './admin-dashboard.gateway';
-import {
-  AdminDashboardService,
-  AdminSearchQueryInvalidError,
-} from './admin-dashboard.service';
+import { AdminDashboardService, AdminSearchQueryInvalidError } from './admin-dashboard.service';
 
 const CONTEXT = {} as AuthenticatedRequestContext;
 
