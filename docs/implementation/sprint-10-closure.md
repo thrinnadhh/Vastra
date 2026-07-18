@@ -34,4 +34,6 @@ Sprint 10 is closed with the complete MVP finance lifecycle:
 
 ## Verification
 
+The closure test matrix checks both the application transition contracts and the service-role-only database command surface.
+
 The repository CI remains the merge gate for formatting, environment validation, lint, typecheck, unit and integration tests, Supabase migrations and pgTAP, OpenAPI validation, and production build.
