@@ -75,13 +75,13 @@ describe('AdminCaseService', () => {
     });
   });
 
-  it('requires idempotency for case mutations', async () => {
+  it('requires idempotency for case mutations', () => {
     const service = new AdminCaseService(new GatewayStub());
-    await expect(
+    expect(() =>
       service.escalate(CONTEXT, CASE_ID, undefined, null, {
         reasonCode: 'SAFETY_INCIDENT',
       }),
-    ).rejects.toBeInstanceOf(AdminCaseIdempotencyKeyRequiredError);
+    ).toThrow(AdminCaseIdempotencyKeyRequiredError);
   });
 
   it('rejects unsupported classifications', () => {
