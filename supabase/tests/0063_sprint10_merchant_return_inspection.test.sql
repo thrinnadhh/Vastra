@@ -1,0 +1,13 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public;
+select no_plan();
+select has_table('private','return_command_receipts','merchant return command receipts exist');
+select ok(to_regprocedure('public.merchant_receive_return(uuid,uuid,uuid,text)') is not null,'merchant receipt RPC exists');
+select ok(to_regprocedure('public.merchant_submit_return_inspection(uuid,uuid,jsonb,uuid)') is not null,'merchant inspection RPC exists');
+select ok(not has_function_privilege('authenticated','public.merchant_submit_return_inspection(uuid,uuid,jsonb,uuid)','EXECUTE'),'clients cannot bypass backend inspection');
+select ok(has_function_privilege('service_role','public.merchant_submit_return_inspection(uuid,uuid,jsonb,uuid)','EXECUTE'),'service role can submit inspection');
+select ok(pg_get_functiondef('public.merchant_submit_return_inspection(uuid,uuid,jsonb,uuid)'::regprocedure) like '%inspection_status=''PENDING''%','inspection is immutable after submission');
+select ok(pg_get_functiondef('public.merchant_submit_return_inspection(uuid,uuid,jsonb,uuid)'::regprocedure) like '%jsonb_array_length(p_items)%','all returned items must be inspected atomically');
+select * from finish();
+rollback;
