@@ -107,11 +107,7 @@ export const ADMIN_ROLE_PERMISSIONS: Readonly<Record<AdminRole, readonly AdminPe
     'admin.audit.read',
   ],
   FINANCE_ANALYST: [...FINANCE_READ_PERMISSIONS, 'admin.audit.read'],
-  FINANCE_MANAGER: [
-    ...FINANCE_READ_PERMISSIONS,
-    ...FINANCE_MANAGE_PERMISSIONS,
-    'admin.audit.read',
-  ],
+  FINANCE_MANAGER: [...FINANCE_READ_PERMISSIONS, ...FINANCE_MANAGE_PERMISSIONS, 'admin.audit.read'],
   SUPER_ADMIN: ADMIN_PERMISSIONS,
 };
 
