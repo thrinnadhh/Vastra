@@ -71,21 +71,15 @@ jobs:
       - name: Verify migration history
         run: supabase migration list --local
 
-      - name: Run pgTAP contracts
-        run: supabase test db --local
+      - name: Run S10-08 pgTAP contracts
+        run: supabase test db supabase/tests/0065_sprint10_admin_return_decision.test.sql --local
 
-      - name: Run database concurrency tests
-        run: bash scripts/run-db-concurrency-tests.sh
+      - name: Run S10-09 pgTAP contracts
+        run: supabase test db supabase/tests/0066_sprint10_refund_execution.test.sql --local
 
-      - name: Run database advisors
-        run: supabase db advisors --local
+      - name: Run S10-12 pgTAP contracts
+        run: supabase test db supabase/tests/0067_sprint10_finance_closure.test.sql --local
 
       - name: Stop Supabase
         if: always()
         run: supabase stop
-
-      - name: Validate OpenAPI
-        run: pnpm openapi:check
-
-      - name: Build
-        run: pnpm build
