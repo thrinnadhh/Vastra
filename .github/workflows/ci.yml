@@ -37,25 +37,35 @@ jobs:
       - name: Reset database and apply migrations
         run: supabase db reset --local
 
-      - name: Run legacy pgTAP contracts 0011-0015
-        shell: bash
-        run: |
-          shopt -s nullglob
-          files=()
-          for number in $(seq -w 11 15); do
-            files+=(supabase/tests/00${number}_*.sql)
-          done
-          supabase test db "${files[@]}" --local
+      - name: Run legacy pgTAP contract 0011
+        run: supabase test db supabase/tests/0011_*.sql --local
 
-      - name: Run legacy pgTAP contracts 0016-0020
-        shell: bash
-        run: |
-          shopt -s nullglob
-          files=()
-          for number in $(seq -w 16 20); do
-            files+=(supabase/tests/00${number}_*.sql)
-          done
-          supabase test db "${files[@]}" --local
+      - name: Run legacy pgTAP contract 0012
+        run: supabase test db supabase/tests/0012_*.sql --local
+
+      - name: Run legacy pgTAP contract 0013
+        run: supabase test db supabase/tests/0013_*.sql --local
+
+      - name: Run legacy pgTAP contract 0014
+        run: supabase test db supabase/tests/0014_*.sql --local
+
+      - name: Run legacy pgTAP contract 0015
+        run: supabase test db supabase/tests/0015_*.sql --local
+
+      - name: Run legacy pgTAP contract 0016
+        run: supabase test db supabase/tests/0016_*.sql --local
+
+      - name: Run legacy pgTAP contract 0017
+        run: supabase test db supabase/tests/0017_*.sql --local
+
+      - name: Run legacy pgTAP contract 0018
+        run: supabase test db supabase/tests/0018_*.sql --local
+
+      - name: Run legacy pgTAP contract 0019
+        run: supabase test db supabase/tests/0019_*.sql --local
+
+      - name: Run legacy pgTAP contract 0020
+        run: supabase test db supabase/tests/0020_*.sql --local
 
       - name: Stop Supabase
         if: always()
