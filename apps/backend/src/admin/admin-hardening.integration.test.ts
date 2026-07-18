@@ -167,9 +167,13 @@ class IntegrationOrderOperationsGateway implements AdminOrderOperationsGateway {
   }
 }
 
+function isHttpServer(value: unknown): value is Server {
+  return value instanceof Server;
+}
+
 function requireHttpServer(application: INestApplication): Server {
   const server: unknown = application.getHttpServer();
-  if (!(server instanceof Server)) throw new TypeError('Expected a Node HTTP server');
+  if (!isHttpServer(server)) throw new TypeError('Expected a Node HTTP server');
   return server;
 }
 

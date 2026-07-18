@@ -34,6 +34,8 @@ const ADMIN_CONTROLLERS = [
   AdminCaseController,
 ] as const;
 
+const GET_REQUEST_METHOD: number = RequestMethod.GET;
+
 function readMetadata(key: string | symbol, target: object): unknown {
   return Reflect.getMetadata(key, target) as unknown;
 }
@@ -62,27 +64,28 @@ describe('Sprint 9 admin module contracts', () => {
       expect(readMetadata(ALLOWED_ACCOUNT_TYPES_METADATA, controller)).toStrictEqual(['ADMIN']);
       expect(readMetadata(OPERATIONAL_READINESS_METADATA, controller)).toBe(true);
 
-      for (const methodName of Object.getOwnPropertyNames(controller.prototype)) {
+      const prototype: object = controller.prototype;
+      for (const methodName of Object.getOwnPropertyNames(prototype)) {
         if (methodName === 'constructor') continue;
-        const descriptor = Object.getOwnPropertyDescriptor(controller.prototype, methodName);
-        const handler = descriptor?.value;
-        if (typeof handler !== 'function') continue;
+        const descriptor = Object.getOwnPropertyDescriptor(prototype, methodName);
+        const rawHandler: unknown = descriptor?.value;
+        if (typeof rawHandler !== 'function') continue;
 
-        const requestMethod = readMetadata(METHOD_METADATA, handler);
+        const requestMethod = readMetadata(METHOD_METADATA, rawHandler);
         if (typeof requestMethod !== 'number') continue;
 
         const permissions = requirePermissions(
-          readMetadata(REQUIRED_PERMISSIONS_METADATA, handler),
+          readMetadata(REQUIRED_PERMISSIONS_METADATA, rawHandler),
         );
         expect(permissions.length).toBeGreaterThan(0);
 
         for (const permission of permissions) {
           expect(ADMIN_PERMISSIONS).toContain(permission);
-          if (requestMethod === RequestMethod.GET) {
-            expect(permission.endsWith('.read') || permission === 'operations.read').toBe(true);
-          } else {
-            expect(permission.endsWith('.manage') || permission === 'operations.manage').toBe(true);
-          }
+          const matchesRequestMethod =
+            requestMethod === GET_REQUEST_METHOD
+              ? permission.endsWith('.read') || permission === 'operations.read'
+              : permission.endsWith('.manage') || permission === 'operations.manage';
+          expect(matchesRequestMethod).toBe(true);
         }
       }
     }
