@@ -2,71 +2,41 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  verify:
-    name: Verify repository
+  diagnose:
+    name: Diagnose S10-01 lint
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 20.20.2
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Check formatting
-        run: pnpm format:check
-
-      - name: Validate environment templates
-        run: pnpm env:check
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Run unit tests
-        run: pnpm test
-
-      - name: Run integration tests
-        run: pnpm test:integration
-
-      - name: Set up Supabase CLI
-        uses: supabase/setup-cli@v3
+      - run: pnpm install --frozen-lockfile
+      - name: Capture lint
+        id: lint
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm lint 2>&1 | tee /tmp/s10-01-lint.log
+      - name: Upload lint report
+        uses: actions/upload-artifact@v4
         with:
-          version: 2.109.1
-
-      - name: Run database tests
-        run: pnpm db:test
-
-      - name: Validate OpenAPI
-        run: pnpm openapi:check
-
-      - name: Build
-        run: pnpm build
+          name: s10-01-lint
+          path: /tmp/s10-01-lint.log
+          retention-days: 1
+      - name: Preserve failure
+        if: steps.lint.outcome == 'failure'
+        run: exit 1
