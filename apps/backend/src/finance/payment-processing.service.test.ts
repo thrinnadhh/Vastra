@@ -4,7 +4,9 @@ import type { AuthenticatedRequestContext } from '../auth/auth.types';
 import type { PaymentProcessingGateway } from './payment-processing.gateway';
 import { PaymentProcessingService } from './payment-processing.service';
 
-const CONTEXT = { actor: { id: '10000000-0000-4000-8000-000000000001' } } as AuthenticatedRequestContext;
+const CONTEXT = {
+  actor: { id: '10000000-0000-4000-8000-000000000001' },
+} as AuthenticatedRequestContext;
 
 class GatewayStub implements PaymentProcessingGateway {
   public limit = 0;
@@ -12,7 +14,12 @@ class GatewayStub implements PaymentProcessingGateway {
     this.limit = limit;
     return Promise.resolve({ selected: 2, processed: 1, ignored: 1, failed: 0 });
   }
-  public retryFailedEvent(actorId: string, eventId: number, idempotencyKey: string, note: string | null) {
+  public retryFailedEvent(
+    actorId: string,
+    eventId: number,
+    idempotencyKey: string,
+    note: string | null,
+  ) {
     void actorId;
     void idempotencyKey;
     void note;
@@ -35,12 +42,9 @@ describe('PaymentProcessingService', () => {
 
   it('requeues one failed event with a UUID command identity', async () => {
     const service = new PaymentProcessingService(new GatewayStub());
-    const result = await service.retry(
-      CONTEXT,
-      '42',
-      '30000000-0000-4000-8000-000000000001',
-      { note: 'Provider outage recovered' },
-    );
+    const result = await service.retry(CONTEXT, '42', '30000000-0000-4000-8000-000000000001', {
+      note: 'Provider outage recovered',
+    });
     expect(result.data.eventId).toBe('42');
   });
 });

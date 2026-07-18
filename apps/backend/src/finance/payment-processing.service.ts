@@ -31,7 +31,9 @@ export class PaymentProcessingService {
     private readonly gateway: PaymentProcessingGateway,
   ) {}
 
-  public async process(rawLimit: unknown): Promise<PaymentProcessingResponse<PaymentProcessingSummary>> {
+  public async process(
+    rawLimit: unknown,
+  ): Promise<PaymentProcessingResponse<PaymentProcessingSummary>> {
     try {
       const limit = rawLimit === undefined ? 25 : Number(rawLimit);
       if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new BadRequestException();
@@ -53,10 +55,12 @@ export class PaymentProcessingService {
       if (typeof rawIdempotencyKey !== 'string' || !UUID_PATTERN.test(rawIdempotencyKey)) {
         throw new BadRequestException();
       }
-      if (typeof body !== 'object' || body === null || Array.isArray(body)) throw new BadRequestException();
+      if (typeof body !== 'object' || body === null || Array.isArray(body))
+        throw new BadRequestException();
       const noteValue = (body as Record<string, unknown>)['note'];
       const note = noteValue === undefined || noteValue === null ? null : String(noteValue).trim();
-      if (note !== null && (note.length === 0 || note.length > 1000)) throw new BadRequestException();
+      if (note !== null && (note.length === 0 || note.length > 1000))
+        throw new BadRequestException();
       return this.success(
         await this.gateway.retryFailedEvent(
           context.actor.id,

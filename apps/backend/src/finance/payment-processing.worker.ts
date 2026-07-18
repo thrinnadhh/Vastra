@@ -16,7 +16,10 @@ export class PaymentProcessingWorker implements OnApplicationBootstrap, OnApplic
   public constructor(private readonly service: PaymentProcessingService) {}
 
   public onApplicationBootstrap(): void {
-    if (process.env['NODE_ENV'] === 'test' || process.env['PAYMENT_EVENT_PROCESSOR_ENABLED'] === 'false') {
+    if (
+      process.env['NODE_ENV'] === 'test' ||
+      process.env['PAYMENT_EVENT_PROCESSOR_ENABLED'] === 'false'
+    ) {
       return;
     }
     void this.drainOnce();
