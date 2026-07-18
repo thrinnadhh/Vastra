@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  FINANCE_AUDIT_RESOURCE_TYPES,
   FINANCE_LOCK_ORDER,
+  FINANCE_MUTATION_REASON_CODES,
   PAYMENT_ATTEMPT_STATUSES,
   PAYMENT_STATUS_TRANSITIONS,
   REFUND_STATUSES,
@@ -59,5 +61,12 @@ describe('Sprint 10 finance contracts', () => {
       'CAPTAIN_EARNING',
       'CAPTAIN_PAYOUT',
     ]);
+  });
+
+  it('freezes finance audit resources and mutation reasons', () => {
+    expect(FINANCE_AUDIT_RESOURCE_TYPES).toContain('RETURN_REQUEST');
+    expect(FINANCE_AUDIT_RESOURCE_TYPES).toContain('MERCHANT_SETTLEMENT');
+    expect(FINANCE_MUTATION_REASON_CODES).toContain('SETTLEMENT_CYCLE');
+    expect(FINANCE_MUTATION_REASON_CODES).toContain('COD_RECONCILIATION');
   });
 });
