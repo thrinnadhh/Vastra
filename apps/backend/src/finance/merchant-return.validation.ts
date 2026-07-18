@@ -75,13 +75,15 @@ export function parseMerchantReturnInspection(
       throw new MerchantReturnValidationError();
     }
     const evidenceValue = item['evidenceObjectKey'];
-    const evidenceObjectKey =
-      evidenceValue === undefined || evidenceValue === null || evidenceValue === ''
-        ? null
-        : String(evidenceValue).trim();
+    let evidenceObjectKey: string | null = null;
+    if (evidenceValue !== undefined && evidenceValue !== null && evidenceValue !== '') {
+      if (typeof evidenceValue !== 'string') throw new MerchantReturnValidationError();
+      evidenceObjectKey = evidenceValue.trim();
+    }
     if (
       evidenceObjectKey !== null &&
-      (evidenceObjectKey.length > 500 ||
+      (evidenceObjectKey.length === 0 ||
+        evidenceObjectKey.length > 500 ||
         evidenceObjectKey.includes('..') ||
         evidenceObjectKey.endsWith('/'))
     ) {
