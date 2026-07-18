@@ -22,7 +22,9 @@ class GatewayStub implements AdminOrderInvestigationGateway {
 describe('AdminOrderInvestigationService', () => {
   it('rejects malformed identifiers before querying the database', async () => {
     const service = new AdminOrderInvestigationService(new GatewayStub());
-    await expect(service.get(CONTEXT, 'not-an-id')).rejects.toBeInstanceOf(AdminOrderIdInvalidError);
+    await expect(service.get(CONTEXT, 'not-an-id')).rejects.toBeInstanceOf(
+      AdminOrderIdInvalidError,
+    );
   });
 
   it('returns a stable not-found error for missing orders', async () => {
