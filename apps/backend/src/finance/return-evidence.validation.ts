@@ -63,7 +63,7 @@ export function parseCreateReturnEvidenceUploadInput(
     (evidenceType === 'DOCUMENT' && mimeType === 'application/pdf');
   if (!validShape) throw new ReturnEvidenceValidationError();
   return {
-    evidenceType: evidenceType as ReturnEvidenceUploadType,
+    evidenceType,
     mimeType: mimeType as ReturnEvidenceMimeType,
     sizeBytes,
   };
