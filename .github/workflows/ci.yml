@@ -5,22 +5,17 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-
-concurrency:
-  group: s10-lint-fix-captain-finance
-  cancel-in-progress: true
+  contents: read
 
 jobs:
-  fix:
-    name: Fix S10-11 lint
+  diagnose:
+    name: Diagnose S10-11 lint
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: feat/s10-11-captain-finance
-          fetch-depth: 0
+          persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
@@ -28,14 +23,17 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec eslint . --fix
-      - run: pnpm lint
-      - name: Restore normal CI and commit lint fixes
+      - name: Capture lint report
+        id: lint
+        continue-on-error: true
         shell: bash
         run: |
-          git checkout origin/main -- .github/workflows/ci.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add --all
-          git commit -m "fix: satisfy S10-11 lint"
-          git push origin HEAD:feat/s10-11-captain-finance
+          set -o pipefail
+          pnpm lint 2>&1 | tee /tmp/s10-11-lint.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s10-11-lint
+          path: /tmp/s10-11-lint.log
+          retention-days: 1
+      - if: steps.lint.outcome == 'failure'
+        run: exit 1
