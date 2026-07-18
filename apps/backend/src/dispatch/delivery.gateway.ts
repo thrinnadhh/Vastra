@@ -426,6 +426,8 @@ function mapRpcError(error: { readonly code?: string }): Error {
       return new DeliverySecretLockedError();
     case 'P0064':
       return new CodAmountMismatchError();
+    case undefined:
+      return new DeliveryGatewayUnavailableError();
     default:
       return new DeliveryGatewayUnavailableError();
   }

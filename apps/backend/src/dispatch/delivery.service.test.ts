@@ -13,18 +13,14 @@ import {
 } from './delivery.gateway';
 import { DeliveryService } from './delivery.service';
 import type {
-  AdminAssignInput,
-  AdminDeliveryOverrideInput,
   AdminReleaseInput,
   ArrivePickupInput,
   CaptainDeliverySnapshot,
   CompleteDeliveryInput,
   DeliveryCompletionSnapshot,
   DeliveryDispatchCycleResult,
-  DeliveryLifecycleLocationInput,
   DeliveryOfferRejectionReason,
   DeliveryOfferRejectionResult,
-  DeliveryOfferWaveConfiguration,
   DeliveryProblemSnapshot,
   DeliveryReleaseSnapshot,
   DeliverySecretResult,
@@ -170,10 +166,10 @@ class StubGateway implements DeliveryGateway {
     this.verification = input;
     return this.result(snapshot('PICKED_UP'));
   }
-  public departPickup(_input: DeliveryLifecycleLocationInput): Promise<CaptainDeliverySnapshot> {
+  public departPickup(): Promise<CaptainDeliverySnapshot> {
     return this.result(snapshot('IN_TRANSIT'));
   }
-  public arriveDrop(_input: DeliveryLifecycleLocationInput): Promise<CaptainDeliverySnapshot> {
+  public arriveDrop(): Promise<CaptainDeliverySnapshot> {
     return this.result(snapshot('AT_DROP'));
   }
   public complete(input: CompleteDeliveryInput): Promise<DeliveryCompletionSnapshot> {
@@ -249,21 +245,19 @@ class StubGateway implements DeliveryGateway {
       updatedAt: '2026-07-17T10:30:00.000Z',
     });
   }
-  public adminAssign(_input: AdminAssignInput): Promise<CaptainDeliverySnapshot> {
+  public adminAssign(): Promise<CaptainDeliverySnapshot> {
     return this.result(snapshot());
   }
   public adminRelease(input: AdminReleaseInput): Promise<DeliveryReleaseSnapshot> {
     return this.release({ ...input, location: null });
   }
-  public adminOverride(_input: AdminDeliveryOverrideInput): Promise<DeliveryCompletionSnapshot> {
+  public adminOverride(): Promise<DeliveryCompletionSnapshot> {
     return this.complete({} as CompleteDeliveryInput);
   }
   public getAdminTask(): Promise<DeliveryTrackingSnapshot> {
     return this.result(tracking);
   }
-  public runDispatchCycle(
-    _configuration: DeliveryOfferWaveConfiguration,
-  ): Promise<DeliveryDispatchCycleResult> {
+  public runDispatchCycle(): Promise<DeliveryDispatchCycleResult> {
     return this.result({
       workerId: 'worker',
       dispatchesStarted: 0,

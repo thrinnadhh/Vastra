@@ -52,7 +52,7 @@ function response(body: unknown, ok = true): Response {
 
 describe('HttpCaptainDeliveryClient', () => {
   it('parses captain offers and sends bearer authentication', async () => {
-    const calls: Array<readonly [string, RequestInit]> = [];
+    const calls: (readonly [string, RequestInit])[] = [];
     const client = new HttpCaptainDeliveryClient(
       'https://api.example.test/v1',
       () => Promise.resolve('token'),
@@ -101,7 +101,7 @@ describe('HttpCaptainDeliveryClient', () => {
   });
 
   it('sends exact COD and OTP completion without exposing them in the URL', async () => {
-    const calls: Array<readonly [string, RequestInit]> = [];
+    const calls: (readonly [string, RequestInit])[] = [];
     const client = new HttpCaptainDeliveryClient(
       'https://api.example.test/v1',
       () => Promise.resolve('token'),
@@ -136,7 +136,9 @@ describe('HttpCaptainDeliveryClient', () => {
       null,
       '50000000-0000-4000-8000-000000000001',
     );
-    expect(calls[0]?.[0]).toEndWith(`/captain/deliveries/${DELIVERY.taskId}/complete`);
+    expect(calls[0]?.[0]).toBe(
+      `https://api.example.test/v1/captain/deliveries/${DELIVERY.taskId}/complete`,
+    );
     expect(calls[0]?.[1].body).toBe(
       JSON.stringify({ collectedAmountPaise: 149900, deliveryOtp: '654321', location: null }),
     );

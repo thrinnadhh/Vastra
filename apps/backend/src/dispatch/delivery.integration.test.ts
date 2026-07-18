@@ -12,18 +12,12 @@ import type { DeliveryGateway } from './delivery.gateway';
 import { DeliveryService } from './delivery.service';
 import { DELIVERY_GATEWAY } from './delivery.tokens';
 import type {
-  AdminAssignInput,
-  AdminDeliveryOverrideInput,
   AdminReleaseInput,
-  ArrivePickupInput,
   CaptainDeliverySnapshot,
-  CompleteDeliveryInput,
   DeliveryCompletionSnapshot,
   DeliveryDispatchCycleResult,
-  DeliveryLifecycleLocationInput,
   DeliveryOfferRejectionReason,
   DeliveryOfferRejectionResult,
-  DeliveryOfferWaveConfiguration,
   DeliveryProblemSnapshot,
   DeliveryReleaseSnapshot,
   DeliverySecretResult,
@@ -31,7 +25,6 @@ import type {
   MerchantDeliverySnapshot,
   ReleaseDeliveryInput,
   ReportDeliveryProblemInput,
-  VerifyPickupInput,
 } from './delivery.types';
 
 const ACTOR_ID = '10000000-0000-4000-8000-000000000001';
@@ -105,6 +98,17 @@ function delivery(status: CaptainDeliverySnapshot['taskStatus']): CaptainDeliver
   };
 }
 
+function requireRecord(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('Expected response record');
+  }
+  return value as Record<string, unknown>;
+}
+
+function responseData(body: unknown): Record<string, unknown> {
+  return requireRecord(requireRecord(body)['data']);
+}
+
 const tracking: DeliveryTrackingSnapshot = {
   orderId: ORDER_ID,
   deliveryTaskId: TASK_ID,
@@ -150,19 +154,19 @@ class Gateway implements DeliveryGateway {
       replayed: false,
     });
   }
-  public arrivePickup(_input: ArrivePickupInput): Promise<CaptainDeliverySnapshot> {
+  public arrivePickup(): Promise<CaptainDeliverySnapshot> {
     return Promise.resolve(delivery('AT_PICKUP'));
   }
-  public verifyPickup(_input: VerifyPickupInput): Promise<CaptainDeliverySnapshot> {
+  public verifyPickup(): Promise<CaptainDeliverySnapshot> {
     return Promise.resolve(delivery('PICKED_UP'));
   }
-  public departPickup(_input: DeliveryLifecycleLocationInput): Promise<CaptainDeliverySnapshot> {
+  public departPickup(): Promise<CaptainDeliverySnapshot> {
     return Promise.resolve(delivery('IN_TRANSIT'));
   }
-  public arriveDrop(_input: DeliveryLifecycleLocationInput): Promise<CaptainDeliverySnapshot> {
+  public arriveDrop(): Promise<CaptainDeliverySnapshot> {
     return Promise.resolve(delivery('AT_DROP'));
   }
-  public complete(_input: CompleteDeliveryInput): Promise<DeliveryCompletionSnapshot> {
+  public complete(): Promise<DeliveryCompletionSnapshot> {
     return Promise.resolve({
       taskId: TASK_ID,
       orderId: ORDER_ID,
@@ -210,21 +214,19 @@ class Gateway implements DeliveryGateway {
   public getMerchantDelivery(): Promise<MerchantDeliverySnapshot> {
     throw new Error('not used');
   }
-  public adminAssign(_input: AdminAssignInput): Promise<CaptainDeliverySnapshot> {
+  public adminAssign(): Promise<CaptainDeliverySnapshot> {
     return Promise.resolve(delivery('ASSIGNED'));
   }
   public adminRelease(input: AdminReleaseInput): Promise<DeliveryReleaseSnapshot> {
     return this.release({ ...input, location: null });
   }
-  public adminOverride(_input: AdminDeliveryOverrideInput): Promise<DeliveryCompletionSnapshot> {
-    return this.complete({} as CompleteDeliveryInput);
+  public adminOverride(): Promise<DeliveryCompletionSnapshot> {
+    return this.complete();
   }
   public getAdminTask(): Promise<DeliveryTrackingSnapshot> {
     return Promise.resolve(tracking);
   }
-  public runDispatchCycle(
-    _configuration: DeliveryOfferWaveConfiguration,
-  ): Promise<DeliveryDispatchCycleResult> {
+  public runDispatchCycle(): Promise<DeliveryDispatchCycleResult> {
     return Promise.resolve({
       workerId: 'worker',
       dispatchesStarted: 0,
@@ -253,14 +255,15 @@ describe('delivery HTTP integration', () => {
   afterAll(async () => app?.close());
 
   it('lists and accepts captain offers', async () => {
-    expect((await request(server).get('/captain/delivery-offers')).body.data.offers).toHaveLength(
-      1,
-    );
+    const offersResponse = await request(server).get('/captain/delivery-offers');
+    expect(responseData(offersResponse.body as unknown)['offers']).toHaveLength(1);
     const response = await request(server)
       .post(`/captain/delivery-offers/${ASSIGNMENT_ID}/accept`)
       .set('Idempotency-Key', KEY);
     expect(response.status).toBe(200);
-    expect(response.body.data.delivery.taskStatus).toBe('ASSIGNED');
+    expect(requireRecord(responseData(response.body as unknown)['delivery'])['taskStatus']).toBe(
+      'ASSIGNED',
+    );
   });
 
   it('confirms pickup arrival and handover through task routes', async () => {
@@ -276,13 +279,17 @@ describe('delivery HTTP integration', () => {
         },
       });
     expect(arrival.status).toBe(200);
-    expect(arrival.body.data.delivery.taskStatus).toBe('AT_PICKUP');
+    expect(requireRecord(responseData(arrival.body as unknown)['delivery'])['taskStatus']).toBe(
+      'AT_PICKUP',
+    );
     const pickup = await request(server)
       .post(`/captain/deliveries/${TASK_ID}/verify-pickup`)
       .set('Idempotency-Key', KEY)
       .send({ pickupCode: '123456' });
     expect(pickup.status).toBe(200);
-    expect(pickup.body.data.delivery.taskStatus).toBe('PICKED_UP');
+    expect(requireRecord(responseData(pickup.body as unknown)['delivery'])['taskStatus']).toBe(
+      'PICKED_UP',
+    );
   });
 
   it('completes exact COD and OTP at the customer', async () => {
@@ -291,6 +298,8 @@ describe('delivery HTTP integration', () => {
       .set('Idempotency-Key', KEY)
       .send({ collectedAmountPaise: 149900, deliveryOtp: '654321', location: null });
     expect(response.status).toBe(200);
-    expect(response.body.data.completion.orderStatus).toBe('DELIVERED');
+    expect(requireRecord(responseData(response.body as unknown)['completion'])['orderStatus']).toBe(
+      'DELIVERED',
+    );
   });
 });

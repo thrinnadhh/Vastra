@@ -337,14 +337,13 @@ export class HttpCaptainDeliveryClient implements CaptainDeliveryPort {
     const token = await this.getAccessToken();
     if (token === null)
       throw new CaptainDeliveryApiError('AUTHENTICATION_REQUIRED', 'Sign in again.', false);
+    const headers = new Headers(init.headers);
+    headers.set('Accept', 'application/json');
+    headers.set('Authorization', `Bearer ${token}`);
+    if (init.body !== undefined) headers.set('Content-Type', 'application/json');
     const response = await this.fetchFunction(`${this.apiBaseUrl}${path}`, {
       ...init,
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...(init.body === undefined ? {} : { 'Content-Type': 'application/json' }),
-        ...init.headers,
-      },
+      headers,
     });
     const body: unknown = await response.json();
     if (!response.ok) throw readError(body);

@@ -12,7 +12,9 @@ export function CaptainOperationsScreen() {
         <Pressable
           accessibilityRole="tab"
           accessibilityState={{ selected: tab === 'DELIVERIES' }}
-          onPress={() => setTab('DELIVERIES')}
+          onPress={() => {
+            setTab('DELIVERIES');
+          }}
           style={[styles.tab, tab === 'DELIVERIES' ? styles.activeTab : null]}
         >
           <Text style={styles.tabText}>Deliveries</Text>
@@ -20,7 +22,9 @@ export function CaptainOperationsScreen() {
         <Pressable
           accessibilityRole="tab"
           accessibilityState={{ selected: tab === 'AVAILABILITY' }}
-          onPress={() => setTab('AVAILABILITY')}
+          onPress={() => {
+            setTab('AVAILABILITY');
+          }}
           style={[styles.tab, tab === 'AVAILABILITY' ? styles.activeTab : null]}
         >
           <Text style={styles.tabText}>Availability</Text>

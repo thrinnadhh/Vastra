@@ -55,7 +55,9 @@ function money(paise: number): string {
 }
 function distance(meters: number | null): string {
   if (meters === null) return 'Distance pending';
-  return meters < 1000 ? `${Math.round(meters)} m away` : `${(meters / 1000).toFixed(1)} km away`;
+  return meters < 1000
+    ? `${String(Math.round(meters))} m away`
+    : `${(meters / 1000).toFixed(1)} km away`;
 }
 function addressLine(delivery: CaptainDelivery, target: 'pickup' | 'drop'): string {
   const address = delivery[target];
@@ -95,7 +97,10 @@ function OfferCard({
     <View accessible accessibilityLabel={`Delivery offer ${offer.orderNumber}`} style={styles.card}>
       <View style={styles.rowBetween}>
         <Text style={styles.cardTitle}>{offer.pickup.recipientName ?? 'Pickup shop'}</Text>
-        <Text accessibilityLabel={`Offer expires in ${remaining} seconds`} style={styles.timer}>
+        <Text
+          accessibilityLabel={`Offer expires in ${String(remaining)} seconds`}
+          style={styles.timer}
+        >
           {remaining}s
         </Text>
       </View>
@@ -111,7 +116,9 @@ function OfferCard({
         <Pressable
           accessibilityRole="button"
           disabled={busy || remaining === 0}
-          onPress={() => onReject('TOO_FAR')}
+          onPress={() => {
+            onReject('TOO_FAR');
+          }}
           style={styles.secondaryButton}
         >
           <Text style={styles.secondaryText}>Reject</Text>
@@ -170,11 +177,18 @@ export function CaptainDeliveryScreen({
 
   useEffect(() => {
     mounted.current = true;
-    void load();
-    const refresh = setInterval(() => void load(), 10_000);
-    const clock = setInterval(() => setNow(Date.now()), 1_000);
+    const initialLoad = setTimeout(() => {
+      void load();
+    }, 0);
+    const refresh = setInterval(() => {
+      void load();
+    }, 10_000);
+    const clock = setInterval(() => {
+      setNow(Date.now());
+    }, 1_000);
     return () => {
       mounted.current = false;
+      clearTimeout(initialLoad);
       clearInterval(refresh);
       clearInterval(clock);
     };
@@ -187,21 +201,21 @@ export function CaptainDeliveryScreen({
     )
       return undefined;
     let stop: (() => void) | undefined;
-    let cancelled = false;
+    const lifecycle = { cancelled: false };
     void locationProvider.requestForegroundPermission().then(async (permission) => {
-      if (!permission.granted || cancelled) return;
+      if (!permission.granted || lifecycle.cancelled) return;
       stop = await locationProvider.watchLocations((sample) => {
         void presenceClient
           .updateLocation({ ...sample, activeDeliveryTaskId: active.taskId })
           .catch(() => undefined);
       });
-      if (cancelled) stop();
+      if (lifecycle.cancelled) stop();
     });
     return () => {
-      cancelled = true;
+      lifecycle.cancelled = true;
       stop?.();
     };
-  }, [active?.taskId, active?.taskStatus, locationProvider, presenceClient]);
+  }, [active, locationProvider, presenceClient]);
 
   const location = useCallback(
     async (required: boolean): Promise<DeliveryLocation | null> => {
@@ -254,11 +268,7 @@ export function CaptainDeliveryScreen({
     active === null
       ? undefined
       : run(async () =>
-          client.arrivePickup(
-            active.taskId,
-            (await location(true)) as DeliveryLocation,
-            createIdempotencyKey(),
-          ),
+          client.arrivePickup(active.taskId, (await location(true))!, createIdempotencyKey()),
         );
   const verifyPickup = () =>
     active === null
@@ -354,7 +364,12 @@ export function CaptainDeliveryScreen({
             <Text style={styles.meta}>
               Stay available with a fresh location. Nearby work will appear automatically.
             </Text>
-            <Pressable onPress={() => void load()} style={styles.secondaryButton}>
+            <Pressable
+              onPress={() => {
+                void load();
+              }}
+              style={styles.secondaryButton}
+            >
               <Text style={styles.secondaryText}>Refresh</Text>
             </Pressable>
           </View>
@@ -365,8 +380,12 @@ export function CaptainDeliveryScreen({
               offer={offer}
               busy={busy}
               now={now}
-              onAccept={() => void accept(offer)}
-              onReject={(reason) => void reject(offer, reason)}
+              onAccept={() => {
+                void accept(offer);
+              }}
+              onReject={(reason) => {
+                void reject(offer, reason);
+              }}
             />
           ))
         )
@@ -406,7 +425,7 @@ export function CaptainDeliveryScreen({
                     ? active.drop.location
                     : active.pickup.location;
                 void Linking.openURL(
-                  `https://www.google.com/maps/dir/?api=1&destination=${target.latitude},${target.longitude}`,
+                  `https://www.google.com/maps/dir/?api=1&destination=${String(target.latitude)},${String(target.longitude)}`,
                 );
               }}
               style={styles.secondaryButton}
@@ -528,11 +547,11 @@ export function CaptainDeliveryScreen({
 export function AuthenticatedCaptainDeliveryScreen() {
   const session = useCaptainApiSession();
   const client = useMemo(
-    () => new HttpCaptainDeliveryClient(session.apiBaseUrl, session.getAccessToken),
+    () => new HttpCaptainDeliveryClient(session.apiBaseUrl, () => session.getAccessToken()),
     [session],
   );
   const presenceClient = useMemo(
-    () => new HttpCaptainPresenceClient(session.apiBaseUrl, session.getAccessToken),
+    () => new HttpCaptainPresenceClient(session.apiBaseUrl, () => session.getAccessToken()),
     [session],
   );
   const locationProvider = useMemo(() => new ExpoCaptainLocationProvider(), []);
