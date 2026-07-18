@@ -50,6 +50,10 @@ function response(body: unknown, ok = true): Response {
   return { ok, json: () => Promise.resolve(body) } as Response;
 }
 
+function requestHeaders(init: RequestInit | undefined): Headers {
+  return new Headers(init?.headers);
+}
+
 describe('HttpCaptainDeliveryClient', () => {
   it('parses captain offers and sends bearer authentication', async () => {
     const calls: (readonly [string, RequestInit])[] = [];
@@ -65,9 +69,7 @@ describe('HttpCaptainDeliveryClient', () => {
     );
     await expect(client.listOffers()).resolves.toHaveLength(1);
     expect(calls[0]?.[0]).toBe('https://api.example.test/v1/captain/delivery-offers');
-    expect(calls[0]?.[1].headers).toEqual(
-      expect.objectContaining({ Authorization: 'Bearer token' }),
-    );
+    expect(requestHeaders(calls[0]?.[1]).get('Authorization')).toBe('Bearer token');
   });
 
   it('sends the idempotency key when accepting an offer', async () => {
@@ -95,8 +97,8 @@ describe('HttpCaptainDeliveryClient', () => {
       },
     );
     await client.acceptOffer(DELIVERY.assignmentId, '50000000-0000-4000-8000-000000000001');
-    expect(calls[0]?.headers).toEqual(
-      expect.objectContaining({ 'Idempotency-Key': '50000000-0000-4000-8000-000000000001' }),
+    expect(requestHeaders(calls[0]).get('Idempotency-Key')).toBe(
+      '50000000-0000-4000-8000-000000000001',
     );
   });
 
