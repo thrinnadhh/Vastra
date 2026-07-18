@@ -20,6 +20,27 @@ function captureError(callback: () => unknown): unknown {
   return undefined;
 }
 
+function validServerEnvironment() {
+  return {
+    ...commonEnvironment,
+    NODE_ENV: 'test',
+    PORT: '8080',
+    DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+    SUPABASE_URL: 'http://127.0.0.1:54321',
+    SUPABASE_PUBLISHABLE_KEY: 'local-publishable-placeholder',
+    SUPABASE_SERVICE_ROLE_KEY: 'local-service-role-placeholder',
+    PAYMENT_PROVIDER: 'cashfree',
+    PAYMENT_CLIENT_ID: 'local-cashfree-client-id',
+    PAYMENT_SECRET_KEY: 'local-payment-secret-placeholder',
+    SMS_PROVIDER: 'msg91',
+    SMS_API_KEY: 'local-sms-secret-placeholder',
+    FCM_PROJECT_ID: 'local-project-placeholder',
+    FCM_CLIENT_EMAIL: 'firebase-admin@example.invalid',
+    FCM_PRIVATE_KEY: 'local-private-key-placeholder',
+    MAPS_API_KEY: 'local-maps-secret-placeholder',
+  } as const;
+}
+
 describe('environment validation', () => {
   it('accepts a valid mobile environment', () => {
     const result = parseMobileEnv({
@@ -28,7 +49,6 @@ describe('environment validation', () => {
       EXPO_PUBLIC_SUPABASE_URL: 'https://example.invalid',
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'public-publishable-placeholder',
     });
-
     expect(result.APP_ENV).toBe('test');
   });
 
@@ -39,31 +59,23 @@ describe('environment validation', () => {
       NEXT_PUBLIC_SUPABASE_URL: 'https://example.invalid',
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'public-publishable-placeholder',
     });
-
     expect(result.APP_ENV).toBe('test');
   });
 
-  it('accepts a valid server environment', () => {
-    const result = parseServerEnv({
-      ...commonEnvironment,
-      NODE_ENV: 'test',
-      PORT: '8080',
-      DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
-      SUPABASE_URL: 'http://127.0.0.1:54321',
-      SUPABASE_PUBLISHABLE_KEY: 'local-publishable-placeholder',
-      SUPABASE_SERVICE_ROLE_KEY: 'local-service-role-placeholder',
-      PAYMENT_PROVIDER: 'cashfree',
-      PAYMENT_SECRET_KEY: 'local-payment-secret-placeholder',
-      PAYMENT_WEBHOOK_SECRET: 'local-webhook-secret-placeholder',
-      SMS_PROVIDER: 'msg91',
-      SMS_API_KEY: 'local-sms-secret-placeholder',
-      FCM_PROJECT_ID: 'local-project-placeholder',
-      FCM_CLIENT_EMAIL: 'firebase-admin@example.invalid',
-      FCM_PRIVATE_KEY: 'local-private-key-placeholder',
-      MAPS_API_KEY: 'local-maps-secret-placeholder',
-    });
-
+  it('accepts the frozen Cashfree server environment', () => {
+    const result = parseServerEnv(validServerEnvironment());
     expect(result.PORT).toBe(8080);
+    expect(result.PAYMENT_PROVIDER).toBe('cashfree');
+    expect(result.PAYMENT_API_VERSION).toBe('2025-01-01');
+  });
+
+  it('rejects payment providers outside the Sprint 10 contract', () => {
+    expect(() =>
+      parseServerEnv({
+        ...validServerEnvironment(),
+        PAYMENT_PROVIDER: 'razorpay',
+      }),
+    ).toThrow(EnvironmentValidationError);
   });
 
   it('does not return backend secrets from the mobile schema', () => {
@@ -74,39 +86,21 @@ describe('environment validation', () => {
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'public-publishable-placeholder',
       SUPABASE_SERVICE_ROLE_KEY: 'must-not-be-returned',
     });
-
     expect(Object.hasOwn(result, 'SUPABASE_SERVICE_ROLE_KEY')).toBe(false);
   });
 
   it('reports variable names without printing secret values', () => {
     const secretValue = 'highly-sensitive-payment-value';
-
     const error = captureError(() =>
       parseServerEnv({
-        ...commonEnvironment,
-        NODE_ENV: 'test',
-        PORT: '8080',
-        DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
-        SUPABASE_URL: 'http://127.0.0.1:54321',
-        SUPABASE_PUBLISHABLE_KEY: 'local-publishable-placeholder',
-        SUPABASE_SERVICE_ROLE_KEY: 'local-service-role-placeholder',
-        PAYMENT_PROVIDER: 'cashfree',
+        ...validServerEnvironment(),
         PAYMENT_SECRET_KEY: secretValue,
-        PAYMENT_WEBHOOK_SECRET: '',
-        SMS_PROVIDER: 'msg91',
-        SMS_API_KEY: 'local-sms-secret-placeholder',
-        FCM_PROJECT_ID: 'local-project-placeholder',
-        FCM_CLIENT_EMAIL: 'firebase-admin@example.invalid',
-        FCM_PRIVATE_KEY: 'local-private-key-placeholder',
-        MAPS_API_KEY: 'local-maps-secret-placeholder',
+        PAYMENT_CLIENT_ID: '',
       }),
     );
-
     expect(error).toBeInstanceOf(EnvironmentValidationError);
-
     const message = error instanceof Error ? error.message : String(error);
-
-    expect(message).toContain('PAYMENT_WEBHOOK_SECRET');
+    expect(message).toContain('PAYMENT_CLIENT_ID');
     expect(message).not.toContain(secretValue);
   });
 });
