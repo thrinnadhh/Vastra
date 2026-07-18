@@ -145,3 +145,4 @@ Workstream branches must consume these contracts rather than redefine them.
 - Integer-paise conversion is tested.
 - Finance roles and permissions are explicit and isolated from operations roles.
 - Lock order, error codes, idempotency and shared-file ownership are frozen.
+- Normal repository CI is the mandatory merge gate before workstream integration.
