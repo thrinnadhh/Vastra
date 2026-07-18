@@ -161,7 +161,7 @@ export function formatPaiseForProvider(amountPaise: number): string {
   }
   const rupees = Math.floor(amountPaise / 100);
   const paise = amountPaise % 100;
-  return `${rupees}.${String(paise).padStart(2, '0')}`;
+  return `${String(rupees)}.${String(paise).padStart(2, '0')}`;
 }
 
 export function parseProviderAmountToPaise(amount: string): number {
