@@ -53,10 +53,13 @@ export class RefundExecutionService {
     rawLimit: unknown,
   ): Promise<RefundExecutionResponse<readonly RefundExecutionRecord[]>> {
     try {
-      const status =
-        rawStatus === undefined || rawStatus === null || rawStatus === ''
-          ? null
-          : String(rawStatus).trim().toUpperCase();
+      let status: string | null = null;
+      if (rawStatus !== undefined && rawStatus !== null && rawStatus !== '') {
+        if (typeof rawStatus !== 'string') {
+          throw new RefundExecutionValidationError();
+        }
+        status = rawStatus.trim().toUpperCase();
+      }
       if (status !== null && !ALLOWED_STATUSES.has(status)) {
         throw new RefundExecutionValidationError();
       }
