@@ -30,7 +30,14 @@ function cashfreeRoot(): string {
 }
 
 function requireRecord(value: unknown): Record<string, unknown> {
-  const candidate = Array.isArray(value) && value.length === 1 ? value[0] : value;
+  let candidate: unknown = value;
+  if (Array.isArray(value)) {
+    const values = value as unknown[];
+    if (values.length !== 1) {
+      throw new PaymentProviderResponseInvalidError();
+    }
+    candidate = values[0];
+  }
   if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
     throw new PaymentProviderResponseInvalidError();
   }
