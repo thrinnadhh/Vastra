@@ -81,7 +81,25 @@ jobs:
           version: 2.109.1
 
       - name: Run database tests
-        run: pnpm db:test
+        id: database-tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm db:test 2>&1 | tee /tmp/s8-database-tests.log
+
+      - name: Upload failed database-test report
+        if: steps.database-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: s8-database-test-diagnostics
+          path: /tmp/s8-database-tests.log
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Stop after failed database tests
+        if: steps.database-tests.outcome == 'failure'
+        run: exit 1
 
       - name: Validate OpenAPI
         run: pnpm openapi:check
