@@ -40,9 +40,9 @@ class GatewayStub implements AdminCaptainGateway {
 }
 
 describe('AdminCaptainService', () => {
-  it('requires idempotency for captain mutations', async () => {
+  it('requires idempotency for captain mutations', () => {
     const service = new AdminCaptainService(new GatewayStub());
-    await expect(
+    expect(() =>
       service.setStatus(
         CONTEXT,
         CAPTAIN_ID,
@@ -51,7 +51,7 @@ describe('AdminCaptainService', () => {
         { reasonCode: 'SAFETY_INCIDENT' },
         'SUSPENDED',
       ),
-    ).rejects.toBeInstanceOf(AdminCaptainIdempotencyKeyRequiredError);
+    ).toThrow(AdminCaptainIdempotencyKeyRequiredError);
   });
 
   it('binds a suspension to the authenticated admin actor', async () => {
@@ -72,13 +72,13 @@ describe('AdminCaptainService', () => {
     });
   });
 
-  it('rejects assignment-only availability values', async () => {
+  it('rejects assignment-only availability values', () => {
     const service = new AdminCaptainService(new GatewayStub());
-    await expect(
+    expect(() =>
       service.correctAvailability(CONTEXT, CAPTAIN_ID, KEY, null, {
         reasonCode: 'DATA_CORRECTION',
         targetAvailability: 'DELIVERING',
       }),
-    ).rejects.toBeInstanceOf(AdminCaptainRequestInvalidError);
+    ).toThrow(AdminCaptainRequestInvalidError);
   });
 });
