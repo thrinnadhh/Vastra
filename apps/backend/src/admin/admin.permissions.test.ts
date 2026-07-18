@@ -1,3 +1,5 @@
+import { describe, expect, it } from 'vitest';
+
 import {
   ADMIN_PERMISSIONS,
   ADMIN_ROLE_PERMISSIONS,

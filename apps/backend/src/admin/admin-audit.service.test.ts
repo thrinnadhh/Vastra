@@ -1,3 +1,5 @@
+import { describe, expect, it } from 'vitest';
+
 import type { AuthenticatedRequestContext } from '../auth/auth.types';
 import type { AdminAuditGateway, RecordAdminAuditInput } from './admin-audit.gateway';
 import { AdminAuditService } from './admin-audit.service';
