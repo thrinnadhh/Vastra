@@ -6,6 +6,12 @@ import { AdminAuditService } from './admin-audit.service';
 import { AdminCaptainController } from './admin-captain.controller';
 import { SupabaseAdminCaptainGateway } from './admin-captain.gateway';
 import { AdminCaptainService } from './admin-captain.service';
+import { AdminCaseController } from './admin-case.controller';
+import { SupabaseAdminCaseGateway } from './admin-case.gateway';
+import { AdminCaseService } from './admin-case.service';
+import { AdminConfigurationController } from './admin-configuration.controller';
+import { SupabaseAdminConfigurationGateway } from './admin-configuration.gateway';
+import { AdminConfigurationService } from './admin-configuration.service';
 import { AdminDashboardController } from './admin-dashboard.controller';
 import { SupabaseAdminDashboardGateway } from './admin-dashboard.gateway';
 import { AdminDashboardService } from './admin-dashboard.service';
@@ -21,6 +27,8 @@ import { AdminOrderOperationsService } from './admin-order-operations.service';
 import {
   ADMIN_AUDIT_GATEWAY,
   ADMIN_CAPTAIN_GATEWAY,
+  ADMIN_CASE_GATEWAY,
+  ADMIN_CONFIGURATION_GATEWAY,
   ADMIN_DASHBOARD_GATEWAY,
   ADMIN_MERCHANT_GATEWAY,
   ADMIN_ORDER_INVESTIGATION_GATEWAY,
@@ -35,6 +43,8 @@ import {
     AdminOrderOperationsController,
     AdminMerchantController,
     AdminCaptainController,
+    AdminConfigurationController,
+    AdminCaseController,
   ],
   providers: [
     {
@@ -61,12 +71,22 @@ import {
       provide: ADMIN_CAPTAIN_GATEWAY,
       useClass: SupabaseAdminCaptainGateway,
     },
+    {
+      provide: ADMIN_CONFIGURATION_GATEWAY,
+      useClass: SupabaseAdminConfigurationGateway,
+    },
+    {
+      provide: ADMIN_CASE_GATEWAY,
+      useClass: SupabaseAdminCaseGateway,
+    },
     AdminAuditService,
     AdminDashboardService,
     AdminOrderInvestigationService,
     AdminOrderOperationsService,
     AdminMerchantService,
     AdminCaptainService,
+    AdminConfigurationService,
+    AdminCaseService,
   ],
   exports: [
     ADMIN_AUDIT_GATEWAY,
@@ -75,12 +95,16 @@ import {
     ADMIN_ORDER_OPERATIONS_GATEWAY,
     ADMIN_MERCHANT_GATEWAY,
     ADMIN_CAPTAIN_GATEWAY,
+    ADMIN_CONFIGURATION_GATEWAY,
+    ADMIN_CASE_GATEWAY,
     AdminAuditService,
     AdminDashboardService,
     AdminOrderInvestigationService,
     AdminOrderOperationsService,
     AdminMerchantService,
     AdminCaptainService,
+    AdminConfigurationService,
+    AdminCaseService,
   ],
 })
 export class AdminModule {}
