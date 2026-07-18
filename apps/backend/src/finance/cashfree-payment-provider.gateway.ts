@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
-import { CASHFREE_API_VERSION, FINANCE_PROVIDER, formatPaiseForProvider } from './finance.contracts';
+import {
+  CASHFREE_API_VERSION,
+  FINANCE_PROVIDER,
+  formatPaiseForProvider,
+} from './finance.contracts';
 import type {
   CreateProviderOrderInput,
   CreateProviderRefundInput,
@@ -131,10 +135,13 @@ export class CashfreePaymentProviderGateway implements PaymentProviderGateway {
   }
 
   public async fetchOrder(providerOrderId: string): Promise<ProviderOrderSnapshot> {
-    const response = await fetch(`${cashfreeRoot()}/pg/orders/${encodeURIComponent(providerOrderId)}`, {
-      method: 'GET',
-      headers: this.headers(),
-    });
+    const response = await fetch(
+      `${cashfreeRoot()}/pg/orders/${encodeURIComponent(providerOrderId)}`,
+      {
+        method: 'GET',
+        headers: this.headers(),
+      },
+    );
     if (!response.ok) throw new PaymentProviderUnavailableError();
     let payload: unknown;
     try {

@@ -18,10 +18,7 @@ import {
   CustomerPaymentOrderNotPayableError,
   CustomerPaymentQuoteInvalidError,
 } from './customer-payment.gateway';
-import type {
-  CustomerPaymentCheckout,
-  CustomerPaymentResponse,
-} from './customer-payment.types';
+import type { CustomerPaymentCheckout, CustomerPaymentResponse } from './customer-payment.types';
 import {
   CustomerPaymentIdempotencyKeyRequiredError,
   CustomerPaymentValidationError,
@@ -52,10 +49,7 @@ export class CustomerPaymentService {
     try {
       const input = parsePlaceCustomerOnlineOrderInput(body, idempotencyKey);
       const prepared = await this.gateway.prepare(context.actor.id, input);
-      if (
-        prepared.paymentSessionId !== null &&
-        prepared.providerReferenceId !== null
-      ) {
+      if (prepared.paymentSessionId !== null && prepared.providerReferenceId !== null) {
         const existing = await this.gateway.getLatest(context.actor.id, prepared.orderId);
         if (existing === null) throw new CustomerPaymentGatewayUnavailableError();
         return this.success(existing);

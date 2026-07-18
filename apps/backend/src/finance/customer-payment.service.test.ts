@@ -61,11 +61,7 @@ class CustomerGatewayStub implements CustomerPaymentGateway {
     void input;
     return Promise.resolve(this.prepared);
   }
-  public attachSession(
-    actorId: string,
-    paymentId: string,
-    session: ProviderCheckoutSession,
-  ) {
+  public attachSession(actorId: string, paymentId: string, session: ProviderCheckoutSession) {
     void actorId;
     void paymentId;
     void session;
