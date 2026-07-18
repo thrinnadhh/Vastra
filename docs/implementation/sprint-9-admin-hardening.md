@@ -32,4 +32,4 @@ Sprint 9 is complete when this ticket's normal repository CI passes and its PR i
 
 ## Merge gate
 
-The final PR must pass formatting, environment validation, lint, typecheck, unit tests, integration tests, the complete Supabase migration and pgTAP suite, OpenAPI validation and the production build.
+The final PR must pass formatting, environment validation, lint, typecheck, unit tests, integration tests, the complete Supabase migration and pgTAP suite, OpenAPI validation and the production build. The successful PR workflow is the authoritative Sprint 9 closure evidence.
