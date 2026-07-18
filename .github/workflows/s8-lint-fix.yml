@@ -1,0 +1,313 @@
+name: Apply Sprint 8 lint fixes
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply-lint-fixes:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/s8-03-10-captain-delivery'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply focused lint corrections
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def edit(path: str, replacements: list[tuple[str, str]]) -> None:
+              file = Path(path)
+              text = file.read_text()
+              for old, new in replacements:
+                  if old not in text:
+                      raise SystemExit(f"Expected snippet not found in {path}: {old[:120]!r}")
+                  text = text.replace(old, new, 1)
+              file.write_text(text)
+
+          edit(
+              'apps/backend/src/dispatch/delivery.gateway.ts',
+              [
+                  (
+                      "    case 'P0064':\n      return new CodAmountMismatchError();\n    default:\n",
+                      "    case 'P0064':\n      return new CodAmountMismatchError();\n    case undefined:\n      return new DeliveryGatewayUnavailableError();\n    default:\n",
+                  ),
+              ],
+          )
+
+          integration = 'apps/backend/src/dispatch/delivery.integration.test.ts'
+          edit(
+              integration,
+              [
+                  ("  AdminAssignInput,\n", ""),
+                  ("  AdminDeliveryOverrideInput,\n", ""),
+                  ("  ArrivePickupInput,\n", ""),
+                  ("  CompleteDeliveryInput,\n", ""),
+                  ("  DeliveryLifecycleLocationInput,\n", ""),
+                  ("  DeliveryOfferWaveConfiguration,\n", ""),
+                  ("  VerifyPickupInput,\n", ""),
+                  (
+                      "  public arrivePickup(_input: ArrivePickupInput): Promise<CaptainDeliverySnapshot> {\n",
+                      "  public arrivePickup(): Promise<CaptainDeliverySnapshot> {\n",
+                  ),
+                  (
+                      "  public verifyPickup(_input: VerifyPickupInput): Promise<CaptainDeliverySnapshot> {\n",
+                      "  public verifyPickup(): Promise<CaptainDeliverySnapshot> {\n",
+                  ),
+                  (
+                      "  public departPickup(_input: DeliveryLifecycleLocationInput): Promise<CaptainDeliverySnapshot> {\n",
+                      "  public departPickup(): Promise<CaptainDeliverySnapshot> {\n",
+                  ),
+                  (
+                      "  public arriveDrop(_input: DeliveryLifecycleLocationInput): Promise<CaptainDeliverySnapshot> {\n",
+                      "  public arriveDrop(): Promise<CaptainDeliverySnapshot> {\n",
+                  ),
+                  (
+                      "  public complete(_input: CompleteDeliveryInput): Promise<DeliveryCompletionSnapshot> {\n",
+                      "  public complete(): Promise<DeliveryCompletionSnapshot> {\n",
+                  ),
+                  (
+                      "  public adminAssign(_input: AdminAssignInput): Promise<CaptainDeliverySnapshot> {\n",
+                      "  public adminAssign(): Promise<CaptainDeliverySnapshot> {\n",
+                  ),
+                  (
+                      "  public adminOverride(_input: AdminDeliveryOverrideInput): Promise<DeliveryCompletionSnapshot> {\n    return this.complete({} as CompleteDeliveryInput);\n",
+                      "  public adminOverride(): Promise<DeliveryCompletionSnapshot> {\n    return this.complete();\n",
+                  ),
+                  (
+                      "  public runDispatchCycle(\n    _configuration: DeliveryOfferWaveConfiguration,\n  ): Promise<DeliveryDispatchCycleResult> {\n",
+                      "  public runDispatchCycle(): Promise<DeliveryDispatchCycleResult> {\n",
+                  ),
+                  (
+                      "const tracking: DeliveryTrackingSnapshot = {\n",
+                      "function requireRecord(value: unknown): Record<string, unknown> {\n  if (typeof value !== 'object' || value === null || Array.isArray(value)) {\n    throw new TypeError('Expected response record');\n  }\n  return value as Record<string, unknown>;\n}\n\nfunction responseData(body: unknown): Record<string, unknown> {\n  return requireRecord(requireRecord(body)['data']);\n}\n\nconst tracking: DeliveryTrackingSnapshot = {\n",
+                  ),
+                  (
+                      "    expect((await request(server).get('/captain/delivery-offers')).body.data.offers).toHaveLength(\n      1,\n    );\n",
+                      "    const offersResponse = await request(server).get('/captain/delivery-offers');\n    expect(responseData(offersResponse.body as unknown)['offers']).toHaveLength(1);\n",
+                  ),
+                  (
+                      "    expect(response.body.data.delivery.taskStatus).toBe('ASSIGNED');\n",
+                      "    expect(\n      requireRecord(responseData(response.body as unknown)['delivery'])['taskStatus'],\n    ).toBe('ASSIGNED');\n",
+                  ),
+                  (
+                      "    expect(arrival.body.data.delivery.taskStatus).toBe('AT_PICKUP');\n",
+                      "    expect(\n      requireRecord(responseData(arrival.body as unknown)['delivery'])['taskStatus'],\n    ).toBe('AT_PICKUP');\n",
+                  ),
+                  (
+                      "    expect(pickup.body.data.delivery.taskStatus).toBe('PICKED_UP');\n",
+                      "    expect(\n      requireRecord(responseData(pickup.body as unknown)['delivery'])['taskStatus'],\n    ).toBe('PICKED_UP');\n",
+                  ),
+                  (
+                      "    expect(response.body.data.completion.orderStatus).toBe('DELIVERED');\n",
+                      "    expect(\n      requireRecord(responseData(response.body as unknown)['completion'])['orderStatus'],\n    ).toBe('DELIVERED');\n",
+                  ),
+              ],
+          )
+
+          service_test = 'apps/backend/src/dispatch/delivery.service.test.ts'
+          edit(
+              service_test,
+              [
+                  ("  AdminAssignInput,\n", ""),
+                  ("  AdminDeliveryOverrideInput,\n", ""),
+                  ("  DeliveryLifecycleLocationInput,\n", ""),
+                  ("  DeliveryOfferWaveConfiguration,\n", ""),
+                  (
+                      "  public departPickup(_input: DeliveryLifecycleLocationInput): Promise<CaptainDeliverySnapshot> {\n",
+                      "  public departPickup(): Promise<CaptainDeliverySnapshot> {\n",
+                  ),
+                  (
+                      "  public arriveDrop(_input: DeliveryLifecycleLocationInput): Promise<CaptainDeliverySnapshot> {\n",
+                      "  public arriveDrop(): Promise<CaptainDeliverySnapshot> {\n",
+                  ),
+                  (
+                      "  public adminAssign(_input: AdminAssignInput): Promise<CaptainDeliverySnapshot> {\n",
+                      "  public adminAssign(): Promise<CaptainDeliverySnapshot> {\n",
+                  ),
+                  (
+                      "  public adminOverride(_input: AdminDeliveryOverrideInput): Promise<DeliveryCompletionSnapshot> {\n",
+                      "  public adminOverride(): Promise<DeliveryCompletionSnapshot> {\n",
+                  ),
+                  (
+                      "  public runDispatchCycle(\n    _configuration: DeliveryOfferWaveConfiguration,\n  ): Promise<DeliveryDispatchCycleResult> {\n",
+                      "  public runDispatchCycle(): Promise<DeliveryDispatchCycleResult> {\n",
+                  ),
+              ],
+          )
+
+          edit(
+              'apps/captain-app/src/captain-operations.screen.tsx',
+              [
+                  (
+                      "          onPress={() => setTab('DELIVERIES')}\n",
+                      "          onPress={() => {\n            setTab('DELIVERIES');\n          }}\n",
+                  ),
+                  (
+                      "          onPress={() => setTab('AVAILABILITY')}\n",
+                      "          onPress={() => {\n            setTab('AVAILABILITY');\n          }}\n",
+                  ),
+              ],
+          )
+
+          edit(
+              'apps/captain-app/src/delivery/captain-delivery.client.test.ts',
+              [
+                  (
+                      "    const calls: Array<readonly [string, RequestInit]> = [];\n",
+                      "    const calls: (readonly [string, RequestInit])[] = [];\n",
+                  ),
+                  (
+                      "    const calls: Array<readonly [string, RequestInit]> = [];\n",
+                      "    const calls: (readonly [string, RequestInit])[] = [];\n",
+                  ),
+                  (
+                      "    expect(calls[0]?.[0]).toEndWith(`/captain/deliveries/${DELIVERY.taskId}/complete`);\n",
+                      "    expect(calls[0]?.[0]).toBe(\n      `https://api.example.test/v1/captain/deliveries/${DELIVERY.taskId}/complete`,\n    );\n",
+                  ),
+              ],
+          )
+
+          edit(
+              'apps/captain-app/src/delivery/captain-delivery.client.ts',
+              [
+                  (
+                      "    const response = await this.fetchFunction(`${this.apiBaseUrl}${path}`, {\n      ...init,\n      headers: {\n        Accept: 'application/json',\n        Authorization: `Bearer ${token}`,\n        ...(init.body === undefined ? {} : { 'Content-Type': 'application/json' }),\n        ...init.headers,\n      },\n    });\n",
+                      "    const headers = new Headers(init.headers);\n    headers.set('Accept', 'application/json');\n    headers.set('Authorization', `Bearer ${token}`);\n    if (init.body !== undefined) headers.set('Content-Type', 'application/json');\n    const response = await this.fetchFunction(`${this.apiBaseUrl}${path}`, {\n      ...init,\n      headers,\n    });\n",
+                  ),
+              ],
+          )
+
+          screen = 'apps/captain-app/src/delivery/captain-delivery.screen.tsx'
+          edit(
+              screen,
+              [
+                  (
+                      "  return meters < 1000 ? `${Math.round(meters)} m away` : `${(meters / 1000).toFixed(1)} km away`;\n",
+                      "  return meters < 1000\n    ? `${String(Math.round(meters))} m away`\n    : `${(meters / 1000).toFixed(1)} km away`;\n",
+                  ),
+                  (
+                      "        <Text accessibilityLabel={`Offer expires in ${remaining} seconds`} style={styles.timer}>\n",
+                      "        <Text\n          accessibilityLabel={`Offer expires in ${String(remaining)} seconds`}\n          style={styles.timer}\n        >\n",
+                  ),
+                  (
+                      "          onPress={() => onReject('TOO_FAR')}\n",
+                      "          onPress={() => {\n            onReject('TOO_FAR');\n          }}\n",
+                  ),
+                  (
+                      "    void load();\n    const refresh = setInterval(() => void load(), 10_000);\n    const clock = setInterval(() => setNow(Date.now()), 1_000);\n",
+                      "    const initialLoad = setTimeout(() => {\n      void load();\n    }, 0);\n    const refresh = setInterval(() => {\n      void load();\n    }, 10_000);\n    const clock = setInterval(() => {\n      setNow(Date.now());\n    }, 1_000);\n",
+                  ),
+                  (
+                      "      clearInterval(refresh);\n      clearInterval(clock);\n",
+                      "      clearTimeout(initialLoad);\n      clearInterval(refresh);\n      clearInterval(clock);\n",
+                  ),
+                  (
+                      "    let stop: (() => void) | undefined;\n    let cancelled = false;\n    void locationProvider.requestForegroundPermission().then(async (permission) => {\n      if (!permission.granted || cancelled) return;\n",
+                      "    let stop: (() => void) | undefined;\n    const lifecycle = { cancelled: false };\n    void locationProvider.requestForegroundPermission().then(async (permission) => {\n      if (!permission.granted || lifecycle.cancelled) return;\n",
+                  ),
+                  (
+                      "      if (cancelled) stop();\n    });\n    return () => {\n      cancelled = true;\n",
+                      "      if (lifecycle.cancelled) stop();\n    });\n    return () => {\n      lifecycle.cancelled = true;\n",
+                  ),
+                  (
+                      "  }, [active?.taskId, active?.taskStatus, locationProvider, presenceClient]);\n",
+                      "  }, [active, locationProvider, presenceClient]);\n",
+                  ),
+                  (
+                      "            (await location(true)) as DeliveryLocation,\n",
+                      "            (await location(true))!,\n",
+                  ),
+                  (
+                      "            <Pressable onPress={() => void load()} style={styles.secondaryButton}>\n",
+                      "            <Pressable\n              onPress={() => {\n                void load();\n              }}\n              style={styles.secondaryButton}\n            >\n",
+                  ),
+                  (
+                      "              onAccept={() => void accept(offer)}\n              onReject={(reason) => void reject(offer, reason)}\n",
+                      "              onAccept={() => {\n                void accept(offer);\n              }}\n              onReject={(reason) => {\n                void reject(offer, reason);\n              }}\n",
+                  ),
+                  (
+                      "                  `https://www.google.com/maps/dir/?api=1&destination=${target.latitude},${target.longitude}`,\n",
+                      "                  `https://www.google.com/maps/dir/?api=1&destination=${String(target.latitude)},${String(target.longitude)}`,\n",
+                  ),
+                  (
+                      "    () => new HttpCaptainDeliveryClient(session.apiBaseUrl, session.getAccessToken),\n",
+                      "    () =>\n      new HttpCaptainDeliveryClient(session.apiBaseUrl, () => session.getAccessToken()),\n",
+                  ),
+                  (
+                      "    () => new HttpCaptainPresenceClient(session.apiBaseUrl, session.getAccessToken),\n",
+                      "    () => new HttpCaptainPresenceClient(session.apiBaseUrl, () => session.getAccessToken()),\n",
+                  ),
+              ],
+          )
+          PY
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Auto-fix and format
+        shell: bash
+        run: |
+          pnpm exec eslint . --fix || true
+          pnpm format
+
+      - name: Run lint
+        id: lint
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm lint 2>&1 | tee /tmp/s8-lint-after-fix.log
+
+      - name: Upload residual lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s8-lint-after-fix
+          path: /tmp/s8-lint-after-fix.log
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Remove temporary workflows
+        shell: bash
+        run: |
+          rm -f .github/workflows/s8-lint-diagnostics.yml
+          rm -f .github/workflows/s8-lint-fix.yml
+
+      - name: Commit lint fixes to PR branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --stat
+          git commit -m "fix(delivery): satisfy Sprint 8 lint rules"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+
+      - name: Fail when lint remains
+        if: steps.lint.outcome == 'failure'
+        run: exit 1
