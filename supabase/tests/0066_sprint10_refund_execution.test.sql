@@ -1,0 +1,14 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public;
+select no_plan();
+select ok(to_regprocedure('public.prepare_return_refund(uuid,uuid,text,text,uuid)') is not null,'refund preparation command exists');
+select ok(to_regprocedure('public.apply_return_refund_result(uuid,uuid,text,text,timestamptz,text)') is not null,'provider refund result command exists');
+select ok(to_regprocedure('public.mark_refund_retrying(uuid,uuid)') is not null,'failed refund retry command exists');
+select ok(not has_function_privilege('authenticated','public.prepare_return_refund(uuid,uuid,text,text,uuid)','EXECUTE'),'clients cannot initiate refunds');
+select ok(has_function_privilege('service_role','public.prepare_return_refund(uuid,uuid,text,text,uuid)','EXECUTE'),'service role can initiate refunds');
+select ok(pg_get_functiondef('public.prepare_return_refund(uuid,uuid,text,text,uuid)'::regprocedure) like '%FINANCE_REFUND_AMOUNT_CONFLICT%','refund amount is bounded by captured payment');
+select ok(pg_get_functiondef('public.apply_return_refund_result(uuid,uuid,text,text,timestamptz,text)'::regprocedure) like '%PARTIALLY_REFUNDED%','partial refunds update payment state');
+select ok(pg_get_functiondef('public.apply_return_refund_result(uuid,uuid,text,text,timestamptz,text)'::regprocedure) like '%refund.completed%','completed refunds emit a durable event');
+select * from finish();
+rollback;
