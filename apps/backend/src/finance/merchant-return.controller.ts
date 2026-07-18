@@ -16,12 +16,18 @@ export class MerchantReturnController {
   ) {}
 
   @Get()
-  public list(@CurrentAuthContext() context: AuthenticatedRequestContext, @Query('limit') limit: unknown) {
+  public list(
+    @CurrentAuthContext() context: AuthenticatedRequestContext,
+    @Query('limit') limit: unknown,
+  ) {
     return this.service.list(context, limit);
   }
 
   @Get(':returnId')
-  public get(@CurrentAuthContext() context: AuthenticatedRequestContext, @Param('returnId') returnId: unknown) {
+  public get(
+    @CurrentAuthContext() context: AuthenticatedRequestContext,
+    @Param('returnId') returnId: unknown,
+  ) {
     return this.service.get(context, returnId);
   }
 

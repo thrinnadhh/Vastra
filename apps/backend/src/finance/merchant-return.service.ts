@@ -31,19 +31,29 @@ export class MerchantReturnService {
     private readonly gateway: MerchantReturnGateway,
   ) {}
 
-  public async list(context: AuthenticatedRequestContext, rawLimit: unknown): Promise<MerchantReturnResponse<readonly MerchantReturnRecord[]>> {
+  public async list(
+    context: AuthenticatedRequestContext,
+    rawLimit: unknown,
+  ): Promise<MerchantReturnResponse<readonly MerchantReturnRecord[]>> {
     try {
       const limit = rawLimit === undefined ? 25 : Number(rawLimit);
-      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new MerchantReturnValidationError();
+      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
+        throw new MerchantReturnValidationError();
       return this.success(await this.gateway.list(context.actor.id, limit));
     } catch (error: unknown) {
       return this.rethrowMapped(error);
     }
   }
 
-  public async get(context: AuthenticatedRequestContext, rawReturnId: unknown): Promise<MerchantReturnResponse<MerchantReturnRecord>> {
+  public async get(
+    context: AuthenticatedRequestContext,
+    rawReturnId: unknown,
+  ): Promise<MerchantReturnResponse<MerchantReturnRecord>> {
     try {
-      const result = await this.gateway.get(context.actor.id, requireMerchantReturnUuid(rawReturnId));
+      const result = await this.gateway.get(
+        context.actor.id,
+        requireMerchantReturnUuid(rawReturnId),
+      );
       if (result === null) throw new MerchantReturnNotFoundError();
       return this.success(result);
     } catch (error: unknown) {
@@ -51,7 +61,12 @@ export class MerchantReturnService {
     }
   }
 
-  public async receive(context: AuthenticatedRequestContext, rawReturnId: unknown, idempotencyKey: unknown, body: unknown): Promise<MerchantReturnResponse<MerchantReturnRecord>> {
+  public async receive(
+    context: AuthenticatedRequestContext,
+    rawReturnId: unknown,
+    idempotencyKey: unknown,
+    body: unknown,
+  ): Promise<MerchantReturnResponse<MerchantReturnRecord>> {
     try {
       return this.success(
         await this.gateway.receive(
@@ -65,7 +80,12 @@ export class MerchantReturnService {
     }
   }
 
-  public async inspect(context: AuthenticatedRequestContext, rawReturnId: unknown, idempotencyKey: unknown, body: unknown): Promise<MerchantReturnResponse<MerchantReturnRecord>> {
+  public async inspect(
+    context: AuthenticatedRequestContext,
+    rawReturnId: unknown,
+    idempotencyKey: unknown,
+    body: unknown,
+  ): Promise<MerchantReturnResponse<MerchantReturnRecord>> {
     try {
       return this.success(
         await this.gateway.inspect(
@@ -84,12 +104,18 @@ export class MerchantReturnService {
   }
 
   private rethrowMapped(error: unknown): never {
-    if (error instanceof MerchantReturnValidationError) throw new BadRequestException('Merchant return request is invalid');
-    if (error instanceof MerchantReturnStateConflictError || error instanceof MerchantReturnIdempotencyConflictError) {
+    if (error instanceof MerchantReturnValidationError)
+      throw new BadRequestException('Merchant return request is invalid');
+    if (
+      error instanceof MerchantReturnStateConflictError ||
+      error instanceof MerchantReturnIdempotencyConflictError
+    ) {
       throw new ConflictException('Merchant return conflicts with current state');
     }
-    if (error instanceof MerchantReturnNotFoundError) throw new NotFoundException('Merchant return was not found');
-    if (error instanceof MerchantReturnGatewayUnavailableError) throw new ServiceUnavailableException('Merchant return service is unavailable');
+    if (error instanceof MerchantReturnNotFoundError)
+      throw new NotFoundException('Merchant return was not found');
+    if (error instanceof MerchantReturnGatewayUnavailableError)
+      throw new ServiceUnavailableException('Merchant return service is unavailable');
     throw error;
   }
 }

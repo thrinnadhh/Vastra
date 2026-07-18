@@ -11,8 +11,16 @@ import type {
 export interface MerchantReturnGateway {
   list(actorId: string, limit: number): Promise<readonly MerchantReturnRecord[]>;
   get(actorId: string, returnId: string): Promise<MerchantReturnRecord | null>;
-  receive(actorId: string, returnId: string, input: MerchantReturnCommandInput): Promise<MerchantReturnRecord>;
-  inspect(actorId: string, returnId: string, input: MerchantReturnInspectionInput): Promise<MerchantReturnRecord>;
+  receive(
+    actorId: string,
+    returnId: string,
+    input: MerchantReturnCommandInput,
+  ): Promise<MerchantReturnRecord>;
+  inspect(
+    actorId: string,
+    returnId: string,
+    input: MerchantReturnInspectionInput,
+  ): Promise<MerchantReturnRecord>;
 }
 
 export class MerchantReturnGatewayUnavailableError extends Error {}
@@ -35,8 +43,10 @@ export class SupabaseMerchantReturnGateway implements MerchantReturnGateway {
   ) {}
 
   private mapError(message: string): never {
-    if (message.includes('FINANCE_IDEMPOTENCY_CONFLICT')) throw new MerchantReturnIdempotencyConflictError();
-    if (message.includes('FINANCE_RETURN_STATE_CONFLICT')) throw new MerchantReturnStateConflictError();
+    if (message.includes('FINANCE_IDEMPOTENCY_CONFLICT'))
+      throw new MerchantReturnIdempotencyConflictError();
+    if (message.includes('FINANCE_RETURN_STATE_CONFLICT'))
+      throw new MerchantReturnStateConflictError();
     if (message.includes('FINANCE_RETURN_NOT_FOUND')) throw new MerchantReturnNotFoundError();
     throw new MerchantReturnGatewayUnavailableError();
   }
@@ -60,7 +70,11 @@ export class SupabaseMerchantReturnGateway implements MerchantReturnGateway {
     return data === null ? null : requireRecord(data);
   }
 
-  public async receive(actorId: string, returnId: string, input: MerchantReturnCommandInput): Promise<MerchantReturnRecord> {
+  public async receive(
+    actorId: string,
+    returnId: string,
+    input: MerchantReturnCommandInput,
+  ): Promise<MerchantReturnRecord> {
     const { data, error } = await this.client.rpc('merchant_receive_return', {
       p_actor_id: actorId,
       p_return_id: returnId,
@@ -71,7 +85,11 @@ export class SupabaseMerchantReturnGateway implements MerchantReturnGateway {
     return requireRecord(data);
   }
 
-  public async inspect(actorId: string, returnId: string, input: MerchantReturnInspectionInput): Promise<MerchantReturnRecord> {
+  public async inspect(
+    actorId: string,
+    returnId: string,
+    input: MerchantReturnInspectionInput,
+  ): Promise<MerchantReturnRecord> {
     const { data, error } = await this.client.rpc('merchant_submit_return_inspection', {
       p_actor_id: actorId,
       p_return_id: returnId,

@@ -81,7 +81,9 @@ export function parseMerchantReturnInspection(
         : String(evidenceValue).trim();
     if (
       evidenceObjectKey !== null &&
-      (evidenceObjectKey.length > 500 || evidenceObjectKey.includes('..') || evidenceObjectKey.endsWith('/'))
+      (evidenceObjectKey.length > 500 ||
+        evidenceObjectKey.includes('..') ||
+        evidenceObjectKey.endsWith('/'))
     ) {
       throw new MerchantReturnValidationError();
     }
