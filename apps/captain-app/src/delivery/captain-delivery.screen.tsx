@@ -200,20 +200,20 @@ export function CaptainDeliveryScreen({
       !['ASSIGNED', 'AT_PICKUP', 'PICKED_UP', 'IN_TRANSIT', 'AT_DROP'].includes(active.taskStatus)
     )
       return undefined;
-    let stop: (() => void) | undefined;
-    const lifecycle = { cancelled: false };
-    void locationProvider.requestForegroundPermission().then(async (permission) => {
-      if (!permission.granted || lifecycle.cancelled) return;
-      stop = await locationProvider.watchLocations((sample) => {
+    const subscription = locationProvider.requestForegroundPermission().then(async (permission) => {
+      if (!permission.granted) return undefined;
+      return locationProvider.watchLocations((sample) => {
         void presenceClient
           .updateLocation({ ...sample, activeDeliveryTaskId: active.taskId })
           .catch(() => undefined);
       });
-      if (lifecycle.cancelled) stop();
     });
     return () => {
-      lifecycle.cancelled = true;
-      stop?.();
+      void subscription
+        .then((stopWatching) => {
+          stopWatching?.();
+        })
+        .catch(() => undefined);
     };
   }, [active, locationProvider, presenceClient]);
 
@@ -267,9 +267,13 @@ export function CaptainDeliveryScreen({
   const arrivePickup = () =>
     active === null
       ? undefined
-      : run(async () =>
-          client.arrivePickup(active.taskId, (await location(true))!, createIdempotencyKey()),
-        );
+      : run(async () => {
+          const currentLocation = await location(true);
+          if (currentLocation === null) {
+            throw new Error('Location is required to confirm store arrival.');
+          }
+          return client.arrivePickup(active.taskId, currentLocation, createIdempotencyKey());
+        });
   const verifyPickup = () =>
     active === null
       ? undefined
