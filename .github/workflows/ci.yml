@@ -45,6 +45,15 @@ jobs:
       - name: Validate environment templates
         run: pnpm env:check
 
+      - name: Test Sprint 11 pilot tooling
+        run: pnpm test:pilot-tooling
+
+      - name: Validate Sprint 11 evidence structure
+        run: pnpm pilot:evidence:check
+
+      - name: Scan client apps for privileged secrets
+        run: pnpm security:client-secrets
+
       - name: Lint
         run: pnpm lint
 
