@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "pilot": "tirupati-limited",
+  "releaseCommit": null,
+  "decision": "NOT_ASSESSED",
+  "decisionNotes": "Sprint 11 evidence collection has started. Production readiness has not been assessed.",
+  "signOff": {
+    "productOwner": null,
+    "engineeringOwner": null,
+    "operationsOwner": null
+  },
+  "checks": [
+    {
+      "id": "S11-02-ACCEPTANCE",
+      "category": "acceptance",
+      "severity": "CRITICAL",
+      "status": "NOT_RUN",
+      "owner": "engineering",
+      "evidence": [],
+      "notes": "Execute the complete canonical acceptance suite and attach the report."
+    },
+    {
+      "id": "S11-03-SECURITY",
+      "category": "security",
+      "severity": "CRITICAL",
+      "status": "NOT_RUN",
+      "owner": "security",
+      "evidence": [],
+      "notes": "Run client-secret, dependency, committed-secret, authentication, and storage reviews."
+    },
+    {
+      "id": "S11-04-RLS",
+      "category": "security",
+      "severity": "CRITICAL",
+      "status": "NOT_RUN",
+      "owner": "backend",
+      "evidence": [],
+      "notes": "Execute actor-isolation tests across PostgreSQL, RPCs, Storage, and Realtime."
+    },
+    {
+      "id": "S11-05-LOAD",
+      "category": "performance",
+      "severity": "HIGH",
+      "status": "NOT_RUN",
+      "owner": "engineering",
+      "evidence": [],
+      "notes": "Run staging load and concurrency scenarios and attach machine-readable results."
+    },
+    {
+      "id": "S11-06-DEVICE",
+      "category": "device",
+      "severity": "CRITICAL",
+      "status": "NOT_RUN",
+      "owner": "mobile",
+      "evidence": [],
+      "notes": "Physical Android merchant-alert and customer/captain device evidence is mandatory."
+    },
+    {
+      "id": "S11-07-FINANCE-DRILLS",
+      "category": "finance",
+      "severity": "CRITICAL",
+      "status": "NOT_RUN",
+      "owner": "finance-engineering",
+      "evidence": [],
+      "notes": "Rehearse payment, webhook, refund, and COD failure/recovery scenarios."
+    },
+    {
+      "id": "S11-08-BACKUP-RESTORE",
+      "category": "recovery",
+      "severity": "CRITICAL",
+      "status": "NOT_RUN",
+      "owner": "platform",
+      "evidence": [],
+      "notes": "Restore a clean environment from backup and verify critical records."
+    },
+    {
+      "id": "S11-09-OBSERVABILITY",
+      "category": "operations",
+      "severity": "HIGH",
+      "status": "NOT_RUN",
+      "owner": "platform",
+      "evidence": [],
+      "notes": "Verify dashboards, searchable identifiers, and pilot-critical alerts."
+    },
+    {
+      "id": "S11-10-RUNBOOKS",
+      "category": "operations",
+      "severity": "HIGH",
+      "status": "NOT_RUN",
+      "owner": "operations",
+      "evidence": [],
+      "notes": "Review and dry-run pilot incident runbooks."
+    },
+    {
+      "id": "S11-11-DEPLOYMENT",
+      "category": "release",
+      "severity": "CRITICAL",
+      "status": "NOT_RUN",
+      "owner": "platform",
+      "evidence": [],
+      "notes": "Rehearse staging-to-production promotion and rollback without enabling pilot traffic."
+    },
+    {
+      "id": "S11-12-DEFECTS",
+      "category": "release",
+      "severity": "CRITICAL",
+      "status": "NOT_RUN",
+      "owner": "engineering",
+      "evidence": [],
+      "notes": "Close or explicitly reject every critical/high defect before sign-off."
+    }
+  ],
+  "openDefects": []
+}
