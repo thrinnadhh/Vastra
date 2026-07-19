@@ -11,6 +11,7 @@ This directory contains Sprint 11 execution plans and evidence for the limited T
 5. The evidence manifest is the release decision source of truth.
 6. CI validates structure only. Manual and external-system checks remain `NOT_RUN` until actually executed.
 7. Repository Prettier output is the canonical format for committed evidence and tooling.
+8. Pull-request CI is the executable gate for every Sprint 11 tooling change.
 
 ## Evidence layout
 
