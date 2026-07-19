@@ -117,7 +117,8 @@ try {
   runSecretScannerTests();
   console.log('OK: Sprint 11 pilot tooling tests passed.');
 } catch (error) {
-  const message = error instanceof Error ? error.stack ?? error.message : 'Unknown tooling test failure';
+  const message =
+    error instanceof Error ? (error.stack ?? error.message) : 'Unknown tooling test failure';
   console.error(message);
   process.exitCode = 1;
 }

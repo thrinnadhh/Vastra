@@ -35,16 +35,16 @@ function validateEvidencePath(repositoryRoot, evidencePath) {
   const resolvedPath = resolve(repositoryRoot, evidencePath);
   const relativePath = relative(repositoryRoot, resolvedPath);
 
-  return relativePath.length > 0 && relativePath !== '..' && !relativePath.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`);
+  return (
+    relativePath.length > 0 &&
+    relativePath !== '..' &&
+    !relativePath.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`)
+  );
 }
 
 export function validatePilotManifest(
   manifest,
-  {
-    repositoryRoot = process.cwd(),
-    evidenceExists = () => true,
-    enforceGo = false,
-  } = {},
+  { repositoryRoot = process.cwd(), evidenceExists = () => true, enforceGo = false } = {},
 ) {
   const errors = [];
 
@@ -137,11 +137,19 @@ export function validatePilotManifest(
       }
     }
 
-    if (check.status === 'PASS' && (!Array.isArray(check.evidence) || check.evidence.length === 0)) {
+    if (
+      check.status === 'PASS' &&
+      (!Array.isArray(check.evidence) || check.evidence.length === 0)
+    ) {
       errors.push(`${prefix} cannot be PASS without evidence.`);
     }
 
-    if ((check.status === 'FAIL' || check.status === 'BLOCKED' || check.status === 'NOT_APPLICABLE') && !isNonEmptyString(check.notes)) {
+    if (
+      (check.status === 'FAIL' ||
+        check.status === 'BLOCKED' ||
+        check.status === 'NOT_APPLICABLE') &&
+      !isNonEmptyString(check.notes)
+    ) {
       errors.push(`${prefix}.notes must explain ${check.status}.`);
     }
   }
@@ -152,7 +160,10 @@ export function validatePilotManifest(
     }
   }
 
-  if (seenCheckIds.size !== REQUIRED_CHECK_IDS.length || checks.length !== REQUIRED_CHECK_IDS.length) {
+  if (
+    seenCheckIds.size !== REQUIRED_CHECK_IDS.length ||
+    checks.length !== REQUIRED_CHECK_IDS.length
+  ) {
     errors.push('checks must contain exactly the frozen Sprint 11 release gates.');
   }
 
@@ -206,7 +217,11 @@ export function validatePilotManifest(
       defect.status === 'OPEN',
   );
   const signers = isRecord(manifest.signOff)
-    ? [manifest.signOff.productOwner, manifest.signOff.engineeringOwner, manifest.signOff.operationsOwner]
+    ? [
+        manifest.signOff.productOwner,
+        manifest.signOff.engineeringOwner,
+        manifest.signOff.operationsOwner,
+      ]
     : [];
 
   if (manifest.decision === 'GO') {

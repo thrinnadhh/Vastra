@@ -55,7 +55,8 @@ try {
     );
   }
 } catch (error) {
-  const message = error instanceof Error ? error.message : 'Unknown pilot evidence validation failure';
+  const message =
+    error instanceof Error ? error.message : 'Unknown pilot evidence validation failure';
   console.error(`ERROR: ${message}`);
   process.exitCode = 1;
 }

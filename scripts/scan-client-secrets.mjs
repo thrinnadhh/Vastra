@@ -56,7 +56,9 @@ try {
     }
     process.exitCode = 1;
   } else {
-    console.log('OK: no privileged identifiers or hard-coded secret material found in client apps.');
+    console.log(
+      'OK: no privileged identifiers or hard-coded secret material found in client apps.',
+    );
   }
 } catch (error) {
   const message = error instanceof Error ? error.message : 'Unknown client secret scan failure';
