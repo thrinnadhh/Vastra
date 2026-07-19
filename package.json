@@ -10,15 +10,19 @@
   "scripts": {
     "build": "turbo run build",
     "db:test": "bash scripts/run-db-tests.sh",
-    "lint": "eslint . --max-warnings=0",
-    "openapi:check": "redocly lint docs/api/openapi.yaml --extends=spec",
-    "test": "turbo run test",
-    "test:integration": "turbo run test:integration",
-    "typecheck": "turbo run typecheck",
-    "lint:fix": "eslint . --fix",
+    "env:check": "tsx scripts/validate-env.mts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "env:check": "tsx scripts/validate-env.mts"
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "openapi:check": "redocly lint docs/api/openapi.yaml --extends=spec",
+    "pilot:evidence:check": "node scripts/validate-pilot-evidence.mjs",
+    "pilot:go-no-go": "node scripts/validate-pilot-evidence.mjs --enforce-go",
+    "security:client-secrets": "node scripts/scan-client-secrets.mjs",
+    "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
+    "test:pilot-tooling": "node scripts/run-pilot-tooling-tests.mjs",
+    "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
