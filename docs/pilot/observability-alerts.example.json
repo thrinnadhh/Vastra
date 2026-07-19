@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "environment": "staging",
+  "releaseCommit": "REPLACE_WITH_FULL_GIT_SHA",
+  "testedAt": "REPLACE_WITH_UTC_TIMESTAMP",
+  "alerts": [
+    {
+      "name": "merchant-alert-delivery-lag",
+      "severity": "CRITICAL",
+      "owner": "operations",
+      "syntheticSignalTested": false,
+      "notificationReceived": false,
+      "evidence": []
+    },
+    {
+      "name": "payment-event-processing-failure",
+      "severity": "CRITICAL",
+      "owner": "finance-engineering",
+      "syntheticSignalTested": false,
+      "notificationReceived": false,
+      "evidence": []
+    },
+    {
+      "name": "refund-processing-timeout",
+      "severity": "CRITICAL",
+      "owner": "finance-engineering",
+      "syntheticSignalTested": false,
+      "notificationReceived": false,
+      "evidence": []
+    },
+    {
+      "name": "unassigned-order-age",
+      "severity": "HIGH",
+      "owner": "operations",
+      "syntheticSignalTested": false,
+      "notificationReceived": false,
+      "evidence": []
+    },
+    {
+      "name": "database-saturation-or-deadlock",
+      "severity": "CRITICAL",
+      "owner": "platform",
+      "syntheticSignalTested": false,
+      "notificationReceived": false,
+      "evidence": []
+    }
+  ]
+}
