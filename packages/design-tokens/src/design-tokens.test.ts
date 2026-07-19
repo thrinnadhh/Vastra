@@ -16,9 +16,7 @@ import {
 
 function lineariseChannel(channel: number): number {
   const normalised = channel / 255;
-  return normalised <= 0.04045
-    ? normalised / 12.92
-    : Math.pow((normalised + 0.055) / 1.055, 2.4);
+  return normalised <= 0.04045 ? normalised / 12.92 : Math.pow((normalised + 0.055) / 1.055, 2.4);
 }
 
 function relativeLuminance(hex: string): number {
