@@ -1,0 +1,15 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public;
+select no_plan();
+select has_table('public','return_admin_decisions','admin return decisions exist');
+select has_table('public','return_admin_decision_items','line-level return decisions exist');
+select has_trigger('public','return_admin_decisions','prevent_return_admin_decision_mutation','return decisions are append-only');
+select has_trigger('public','return_admin_decision_items','prevent_return_admin_decision_item_mutation','return decision items are append-only');
+select ok(to_regprocedure('public.decide_admin_return(uuid,uuid,text,jsonb,text,text,uuid)') is not null,'admin return decision command exists');
+select ok(not has_function_privilege('authenticated','public.decide_admin_return(uuid,uuid,text,jsonb,text,text,uuid)','EXECUTE'),'clients cannot decide returns');
+select ok(has_function_privilege('service_role','public.decide_admin_return(uuid,uuid,text,jsonb,text,text,uuid)','EXECUTE'),'service role can decide returns');
+select ok(pg_get_functiondef('public.decide_admin_return(uuid,uuid,text,jsonb,text,text,uuid)'::regprocedure) like '%FINANCE_IDEMPOTENCY_CONFLICT%','return decisions enforce idempotency');
+select ok(pg_get_functiondef('public.decide_admin_return(uuid,uuid,text,jsonb,text,text,uuid)'::regprocedure) like '%approved_refund_paise%','disputed inspection decisions freeze approved refund values');
+select * from finish();
+rollback;

@@ -1,0 +1,16 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public;
+select no_plan();
+select ok(to_regproc('public.prepare_customer_online_payment') is not null,'online checkout exists');
+select ok(to_regproc('public.ingest_verified_payment_event') is not null,'payment webhook ingestion exists');
+select ok(to_regproc('public.process_verified_payment_events') is not null,'payment processing exists');
+select ok(to_regproc('public.create_customer_return_request') is not null,'customer return request exists');
+select ok(to_regproc('public.admin_assign_return_pickup') is not null,'reverse pickup exists');
+select ok(to_regproc('public.merchant_submit_return_inspection') is not null,'merchant inspection exists');
+select ok(to_regproc('public.decide_admin_return') is not null,'admin return decision exists');
+select ok(to_regproc('public.prepare_return_refund') is not null,'refund execution exists');
+select ok(to_regproc('public.create_merchant_settlement_ledger') is not null,'merchant settlement ledger exists');
+select ok(to_regproc('public.admin_create_captain_payout') is not null,'captain payout ledger exists');
+select * from finish();
+rollback;
