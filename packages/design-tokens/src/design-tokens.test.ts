@@ -14,15 +14,18 @@ import {
   touchTarget,
 } from './index';
 
+function lineariseChannel(channel: number): number {
+  const normalised = channel / 255;
+  return normalised <= 0.04045
+    ? normalised / 12.92
+    : Math.pow((normalised + 0.055) / 1.055, 2.4);
+}
+
 function relativeLuminance(hex: string): number {
   const value = hex.replace('#', '');
-  const channels = [0, 2, 4].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16));
-  const [red, green, blue] = channels.map((channel) => {
-    const normalised = channel / 255;
-    return normalised <= 0.04045
-      ? normalised / 12.92
-      : Math.pow((normalised + 0.055) / 1.055, 2.4);
-  });
+  const red = lineariseChannel(Number.parseInt(value.slice(0, 2), 16));
+  const green = lineariseChannel(Number.parseInt(value.slice(2, 4), 16));
+  const blue = lineariseChannel(Number.parseInt(value.slice(4, 6), 16));
 
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
