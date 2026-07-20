@@ -81,6 +81,48 @@ Run in order:
 
 Each sprint prompt is still too large for a single final implementation task. Ask Codex to split it into ordered tickets, then execute one ticket at a time.
 
+## Stage 5 — Frontend UI/UX program
+
+The backend/domain sprints above are the capability source of truth. The frontend program surfaces those capabilities through the approved Vastra design system.
+
+Read:
+
+```text
+docs/design/frontend-implementation-guide.md
+docs/design/frontend-ui-ux-sprint-roadmap.md
+docs/design/frontend-screen-inventory.md
+docs/design/frontend-visual-contract.md
+codex/prompts/frontend/README.md
+```
+
+Run the frontend prompts in order:
+
+```text
+codex/prompts/frontend/00-master-frontend-contract.md
+codex/prompts/frontend/01-gates-visual-and-platform.md
+codex/prompts/frontend/02-customer-access-discovery-and-cod.md
+codex/prompts/frontend/03-operational-cod-slice.md
+codex/prompts/frontend/04-trust-payments-and-returns.md
+codex/prompts/frontend/05-operations-completion.md
+codex/prompts/frontend/06-style-and-closure.md
+```
+
+Rules:
+
+- The grouped frontend prompts are planning packs, not single implementation tasks.
+- Start with Gate 0 and split grouped packs into the exact ticket IDs defined in the
+  frontend roadmap.
+- Execute one ticket per branch/worktree and commit.
+- Freeze Gate 0 decisions, Sprint 1R tokens/presentation modes, Sprint 02 platform
+  boundaries, and Sprint 03 routes before parallel screen work.
+- Do not implement a screen when the required backend/API capability is absent; record the dependency.
+- Do not let parallel agents edit shared tokens, root navigation, route types or API clients simultaneously.
+- Prove the customer → merchant → captain → admin COD slice before Wardrobe or Group
+  Style is treated as a pilot priority.
+- Do not add Couple, event-based Groups, a separate customer website, or AI/virtual
+  try-on features to the frozen MVP.
+- Run physical-device, accessibility, visual-regression and E2E evidence before completing Sprint 16.
+
 ## Per-ticket loop
 
 1. Copy `codex/TASK_TEMPLATE.md`.
@@ -126,6 +168,29 @@ Acceptance:
 - Does not modify unrelated modules.
 ```
 
+Frontend example:
+
+```text
+Implement ticket FE-S04-04: customer product detail and available variant state.
+
+Read:
+- codex/prompts/frontend/00-master-frontend-contract.md
+- docs/design/frontend-ui-ux-sprint-roadmap.md
+- docs/design/frontend-screen-inventory.md
+- docs/design/design-system.md
+- docs/design/frontend-visual-contract.md
+- relevant catalogue and inventory contracts
+
+Acceptance:
+- Uses typed product and variant identities.
+- Renders only server-backed colours and sizes.
+- Prevents add-to-cart until an available variant is selected.
+- Handles stale stock and price changes explicitly.
+- Uses semantic design tokens and Commerce presentation mode.
+- Adds unit/component tests for initial selection, unavailable variants and stock refresh.
+- Runs relevant checks and does not modify unrelated flows.
+```
+
 ## Parallel Codex tasks
 
 Parallelize only independent work.
@@ -135,6 +200,8 @@ Safe examples:
 - Design tokens vs database migration
 - Customer read-only product card vs backend migration
 - Documentation validation vs unrelated test fixtures
+- Customer discovery after route contracts freeze vs merchant operational UI
+- Captain UI vs admin dashboard
 
 Unsafe examples:
 
@@ -142,5 +209,8 @@ Unsafe examples:
 - Two agents editing the same migration
 - API contract and implementation changing independently
 - Multiple agents changing shared domain enums
+- Two agents changing customer root navigation
+- Two agents changing semantic colour or presentation-mode tokens
+- Group Style and Wardrobe changing sharing/privacy contracts independently
 
 Use separate Git worktrees or branches for parallel tasks.

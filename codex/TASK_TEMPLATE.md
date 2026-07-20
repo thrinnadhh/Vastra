@@ -4,6 +4,12 @@
 
 [One focused feature, endpoint, migration, screen, test group, or bug]
 
+## Ticket and readiness
+
+- Ticket ID: [for example `FE-S05-04`]
+- Classification: [READY / CONTRACT-GAP / PLATFORM-GAP]
+- Blocking dependency: [none or exact ticket/contract]
+
 ## Work directory
 
 [Example: apps/backend]
@@ -43,6 +49,12 @@
 - UI/device:
 - Contract:
 
+## Contracts consumed or changed
+
+- OpenAPI operation(s):
+- Shared/generated type(s):
+- State-machine/business-rule impact:
+
 ## Constraints
 
 - Do not modify unrelated files.
@@ -69,4 +81,5 @@ Report:
 - Tests added
 - Commands and results
 - Documentation updated
+- Contracts consumed or changed
 - Risks or follow-up
