@@ -1,679 +1,577 @@
 # Vastra frontend UI/UX implementation roadmap
 
-Status: approved implementation plan  
-Design source of truth: `design-system/vastra/MASTER.md`  
-Execution prompts: `codex/prompts/frontend/`
+Status: implementation-ready planning baseline
+Last reviewed: 2026-07-20
+Operator guide: `docs/design/frontend-implementation-guide.md`
 
-## Product direction
+## Purpose
 
-Vastra uses one shared design system with three controlled presentation modes:
+This roadmap delivers the frozen Vastra MVP in transaction-risk order. It does not
+authorize new backend behavior or product scope.
 
-- **Brand** — Krishna-inspired cosmic warmth for emotional, editorial and celebratory moments.
-- **Commerce** — clean, modern and category-neutral shopping and operational interfaces.
-- **Hybrid** — a commerce screen containing one or two controlled brand moments.
+The release-defining sequence is:
 
-The visual formula is:
+```text
+Customer discovers and orders
+→ inventory is reserved
+→ merchant receives a loud alert and fulfils
+→ captain picks up and delivers
+→ customer confirms with OTP
+→ admin can observe and recover failures
+```
 
-> warm Indian soul + cosmic royal blue + plum + peacock teal + restrained gold + modern fashion photography + clear commerce structure
+Wardrobe and private Group Style rooms remain MVP capabilities, but they follow a
+proven COD operational slice. Vastra Couple, event-based Groups, a separate customer
+website, AI sizing, body scanning, virtual try-on, and advanced recommendations are
+post-MVP unless a later approved scope document explicitly enables them.
 
-The interface must communicate all local fashion, not only ethnic or festive clothing. Initial discovery surfaces must visibly include women, men, kids, western, casual, office, ethnic, footwear and accessories.
+## Sources of truth
 
-## Global implementation constraints
+Read the smallest relevant set for each ticket. These files control the program:
 
-1. Consume `@vastra/design-tokens`; do not add raw screen-specific colours when a semantic token exists.
-2. Add shared primitives and shells before composing feature screens.
-3. Keep product workflows, API contracts, state machines, authorization and RLS authoritative.
-4. Do not invent backend capabilities to complete a visual design.
-5. Every screen requires loading, empty, error, offline and session-expired behaviour where applicable.
-6. Android touch targets are at least 48 x 48 dp, iOS targets at least 44 x 44 pt, with at least 8 dp separation.
-7. Normal text contrast is at least 4.5:1.
-8. Decorative assets are non-interactive, hidden from accessibility traversal and disabled or simplified for reduced motion.
-9. Customer, merchant and captain mobile applications use native React Native primitives. Admin uses accessible web primitives.
-10. No direct network requests inside presentational components. Use feature hooks and typed clients.
-11. Server state belongs in the repository-approved query/cache layer; local ephemeral state must remain local.
-12. A screen must not bypass an invalid backend state merely to make the UI flow work.
-13. Couple and Groups remain separate products. Couple is private, mutual, exactly two people and never a discovery/dating surface.
-14. Wardrobe items are private by default and shared only through explicit item/event/context actions.
-15. Each ticket gets its own branch, focused tests, review and commit.
+1. `docs/architecture/security-model.md`
+2. `docs/product/mvp-scope.md`
+3. `docs/product/business-rules.md`
+4. `docs/workflows/order-state-machine.md`
+5. `docs/api/openapi.yaml`
+6. `docs/testing/acceptance-tests.md`
+7. `docs/design/design-system.md`
+8. `docs/design/frontend-visual-contract.md`
+9. `docs/design/frontend-screen-inventory.md`
+10. `docs/design/navigation-map.md`
 
-## Presentation-mode allocation
+Security wins over every other source. Frozen scope wins over visual concepts.
+Business rules win over UI assumptions, and OpenAPI is the API contract. Stop on an
+unresolved conflict.
 
-| Surface | Mode |
-|---|---|
-| Splash, welcome, brand story | Brand |
-| Login, OTP, profile setup | Commerce with restrained brand header |
-| Customer Home | Hybrid |
-| Search, categories, listings, product, cart, checkout | Commerce |
-| Order confirmation and delivered success | Brand moment inside Commerce |
-| Wardrobe Home | Hybrid |
-| Wardrobe management | Commerce |
-| Couple introduction and final look | Brand |
-| Couple planning and consent | Commerce |
-| Groups introduction and final event look | Brand |
-| Group management, voting and readiness | Commerce |
-| Merchant, captain and admin | Commerce/operational only |
-| Marketing website Home | Hybrid |
+## Program rules
+
+1. Implement exactly one ticket per branch and review its diff before the next.
+2. Preserve tested customer checkout/orders, merchant ringing/fulfilment, and captain
+   delivery behavior while replacing temporary shells.
+3. Mark each ticket `READY`, `CONTRACT-GAP`, or `PLATFORM-GAP` before implementation.
+4. A `CONTRACT-GAP` ticket may produce a contract proposal, but it may not fabricate a
+   client-only success path.
+5. Shared design tokens, root navigation, route types, and API/query infrastructure
+   have one active owner at a time.
+6. Use generated/shared API types. Do not duplicate contract models in screens.
+7. Server state belongs in the approved query/cache layer; transient interaction state
+   stays local.
+8. Every data screen covers loading, empty where applicable, recoverable error,
+   offline/stale behavior, authorization, session expiry, and accessibility.
+9. Every mutation protects against duplicate submission and preserves server authority.
+10. Customer, merchant, and captain use native React Native primitives. Admin uses
+    accessible web primitives.
+11. Do not claim device, E2E, visual-regression, or provider evidence unless it exists.
+12. Ticket IDs are zero-padded: `FE-S02-01`, `FE-S03-01`, and so on. Sprint 1 revision
+    tickets retain `FE-S1R-01` through `FE-S1R-05`.
+
+## Presentation modes
+
+| Mode | Use | Constraints |
+|---|---|---|
+| Brand | Splash, welcome, confirmation, delivered success | Emotional but brief; never blocks a task |
+| Commerce | Search, product, checkout, orders, operations | Dense, legible, category-neutral |
+| Hybrid | Customer Home, Wardrobe Home, selected collections | Commerce structure with at most two Brand moments |
+
+Merchant, captain, and admin work surfaces are Commerce/operational only. The exact
+visual and ornament policy is in `docs/design/frontend-visual-contract.md`.
 
 ---
 
-# Sprint 1R — approved visual-system revision
+# Gate 0 — scope, contract, and platform decisions
 
 ## Goal
 
-Extend Sprint 1 with the approved cosmic-blue two-layer architecture before page composition begins.
+Remove planning ambiguity before page composition begins.
 
 ## Tickets
 
-### S1R-01 — cosmic colour system
-
-- Add cosmic navy, royal blue, peacock teal, magenta and warm-gold primitive ramps.
-- Add semantic roles for brand background, brand foreground, information emphasis and decorative sparkle.
-- Maintain accessible light and dark themes.
-- Add contrast tests for canonical colour pairs.
-
-### S1R-02 — presentation-mode contracts
-
-- Add `brand`, `commerce` and `hybrid` presentation definitions.
-- Define decoration, background, heading and motion intensity for each mode.
-- Export platform-neutral presentation tokens.
-
-### S1R-03 — brand ornament policy
-
-Define usage contracts for:
-
-- arch frame;
-- flute divider;
-- peacock accent;
-- textile pattern;
-- cosmic sprinkle;
-- editorial hero;
-- trust strip.
-
-Decorations must never obscure text, product imagery or controls.
-
-### S1R-04 — logo and asset contract
-
-Reserve asset variants:
-
-1. full opening illustration;
-2. horizontal wordmark with flute;
-3. compact mark;
-4. monochrome notification mark;
-5. app icon;
-6. web favicon.
-
-Do not use the full illustration at small sizes.
-
-### S1R-05 — shared shells and test contracts
-
-Specify:
-
-- `BrandExperienceShell`;
-- `CommerceScreenShell`;
-- `HybridScreenShell`;
-- safe-area and keyboard behaviour;
-- reduced-motion variants;
-- accessibility and screenshot-test expectations.
+- **FE-G0-01 — scope reconciliation:** freeze Couple, event-based Groups, and customer
+  web as post-MVP; retain private room-based Group Style.
+- **FE-G0-02 — API coverage ledger:** map every MVP screen action to OpenAPI and the
+  current implementation; create backend tickets for missing contracts.
+- **FE-G0-03 — navigation decision:** approve the customer five-tab model and typed
+  route/deep-link contract.
+- **FE-G0-04 — server-state decision:** choose the repository query/cache layer and
+  error-normalization boundary.
+- **FE-G0-05 — visual contract approval:** approve the Brand/Commerce/Hybrid contract,
+  asset manifest, and light-theme MVP boundary.
+- **FE-G0-06 — test-platform plan:** define unit/component, mobile E2E, admin E2E,
+  accessibility, and visual-regression ownership.
 
 ## Exit criteria
 
-- Typecheck, lint, unit tests and build pass.
-- Every future screen can declare an explicit presentation mode.
-- No third uncontrolled visual mode exists.
+- no MVP screen depends on Couple or event-based Group concepts;
+- contract gaps have named backend tickets or are explicitly deferred;
+- route, query/cache, and visual decisions are recorded;
+- no production screen implementation has started.
 
 ---
 
-# Sprint 2 — opening, authentication and onboarding
-
-## Screens
-
-1. Splash
-2. Welcome
-3. Shop local
-4. Fashion for everyone
-5. Style preference selection
-6. Size preferences
-7. Budget preferences
-8. Location explanation
-9. Location permission denied
-10. Manual location selection
-11. Phone login
-12. OTP verification
-13. Profile setup
-14. Service-area unavailable
-15. Session expired
-
-## Tickets
-
-- S2-01 app launch state and splash composition
-- S2-02 first-launch onboarding pager
-- S2-03 authentication shell and phone validation
-- S2-04 OTP states, resend and recovery
-- S2-05 optional preference capture
-- S2-06 location permission and manual fallback
-- S2-07 returning-user bypass and session expiry
-- S2-08 accessibility, device and screenshot tests
-
-## Exit criteria
-
-A new user understands local fashion, broad category coverage and permission purpose; a returning user reaches the correct authenticated route without replaying onboarding.
-
----
-
-# Sprint 3 — navigation and shared customer UI
+# Sprint 1R — visual contracts and token foundation
 
 ## Goal
 
-Replace temporary local route switches with production customer navigation and shared components.
-
-## Navigation
-
-- Auth stack
-- Main tabs: Home, Discover, Wardrobe, Orders, Profile
-- Nested shop/product stack
-- Checkout stack
-- Returns/support stack
-- Couple and Groups nested stacks
+Encode the approved cosmic visual direction as accessible semantic contracts before
+screens consume it.
 
 ## Tickets
 
-- S3-01 navigation contracts and route types
-- S3-02 app header, bottom tabs and safe-area shell
-- S3-03 buttons, inputs, icon buttons and focus/press states
-- S3-04 cards, chips, prices and badges
-- S3-05 loaders, empty/error/offline states and toast
-- S3-06 confirmation modal and bottom sheet
-- S3-07 API client/error mapping boundary
-- S3-08 navigation and component tests
+- **FE-S1R-01 — semantic colour roles:** extend existing tokens with cosmic navy,
+  royal blue, peacock teal, plum/magenta, warm gold, and tested foreground pairs.
+- **FE-S1R-02 — presentation modes:** add typed `brand`, `commerce`, and `hybrid`
+  definitions; light theme is required, dark theme remains compatible but is not an
+  MVP release gate unless separately approved.
+- **FE-S1R-03 — ornament policy:** document and type arch, flute, peacock, textile,
+  sprinkle, editorial hero, and trust-strip usage.
+- **FE-S1R-04 — asset contract:** add a manifest for full illustration, wordmark,
+  compact mark, monochrome notification mark, app icon, and favicon; do not fabricate
+  production artwork.
+- **FE-S1R-05 — shell contracts:** define Brand, Commerce, and Hybrid shell behavior,
+  safe areas, keyboard handling, reduced motion, and screenshot/a11y expectations.
 
 ## Exit criteria
 
-No feature screen defines its own global navigation, raw button system or duplicated server-error mapping.
+- `@vastra/design-tokens` exports tested, framework-neutral values;
+- every future screen can declare exactly one presentation mode;
+- approved foreground/background pairs meet WCAG requirements;
+- no feature screen was composed during this sprint.
 
 ---
 
-# Sprint 4 — customer Home and local discovery entry
+# Sprint 02 — frontend platform
+
+## Goal
+
+Create the shared technical foundation without replacing working feature behavior.
+
+## Tickets
+
+- **FE-S02-01 — platform audit and preservation tests:** lock current checkout/orders,
+  merchant alert/fulfilment, and captain delivery behavior with regression tests.
+- **FE-S02-02 — typed API boundary:** generate or expose shared API types, auth headers,
+  request IDs, error normalization, and structured client logging.
+- **FE-S02-03 — query/cache foundation:** configure the approved server-state layer,
+  retry policy, invalidation conventions, offline/stale semantics, and test helpers.
+- **FE-S02-04 — shared primitives:** implement accessible buttons, fields, icons,
+  status badges, prices, cards, skeletons, errors, sheets, dialogs, and toasts.
+- **FE-S02-05 — application shells:** establish mobile safe-area/keyboard shells and the
+  accessible admin layout foundation.
+- **FE-S02-06 — frontend test harness:** add deterministic component fixtures and the
+  agreed mobile/admin E2E and visual-regression entry points.
+
+## Exit criteria
+
+- presentational components make no direct network requests;
+- temporary roots can be replaced without losing working flows;
+- shared infrastructure has a single owner and passing tests.
+
+---
+
+# Sprint 03 — customer access, location, and navigation
+
+## Goal
+
+Take a new or returning customer to a stable five-tab shell with truthful location
+and authentication recovery.
 
 ## Screens
 
-1. Home
-2. Location selector sheet
-3. Campaign collection
-4. Nearby shops
-5. Category hub
-6. Occasion hub
-7. Budget hub
-8. Trend zone
-9. Recently viewed
-10. No nearby shops
-11. Shop closed state
-
-## Home composition
-
-- location and search;
-- one rich campaign banner;
-- women, men, kids, ethnic, western, footwear and accessories;
-- nearby stores;
-- trending near user;
-- office, college, casual and festive occasions;
-- price bands;
-- complete-the-look entry;
-- trust strip.
+Splash, welcome, phone login, OTP, profile setup, location explanation, manual
+location, permission/serviceability failures, session expiry, and the root tab shell.
 
 ## Tickets
 
-- S4-01 Home data model and skeleton
-- S4-02 campaign and editorial hero components
-- S4-03 category and occasion rows
-- S4-04 nearby-shop and delivery-time cards
-- S4-05 trends, budgets and recently viewed
-- S4-06 empty/closed/offline/personalization states
-- S4-07 responsive, performance and analytics hooks
-- S4-08 Home E2E journey
+- **FE-S03-01 — typed route contract:** auth stack; tabs `Home`, `Discover`, `Style`,
+  `Orders`, `Profile`; nested shop/product, checkout, return, support, Wardrobe, and
+  Group Style routes.
+- **FE-S03-02 — session bootstrap:** first launch, returning session, logout, expiry,
+  and deterministic splash behavior.
+- **FE-S03-03 — phone and OTP:** validation, resend timing, wrong/expired code,
+  rate-limit messaging, and recovery.
+- **FE-S03-04 — location:** explain permission, denied/blocked/GPS-off states, manual
+  fallback, and server-confirmed serviceability.
+- **FE-S03-05 — profile and optional preferences:** collect only supported required
+  data; keep category, size, and budget preferences optional/editable.
+- **FE-S03-06 — root migration:** replace the temporary Checkout/Orders switch while
+  keeping both existing flows reachable.
+- **FE-S03-07 — access/navigation E2E:** launch, login, location fallback, tab state,
+  deep-link authorization, session expiry, accessibility, and back behavior.
+
+## Contract gate
+
+Authentication and location may proceed from existing contracts. Address CRUD must
+not be inferred from database access; it remains blocked until an HTTP contract is
+approved.
 
 ---
 
-# Sprint 5 — search, categories and shop experience
+# Sprint 04 — discovery, shops, and products
 
-## Screens
+## Goal
 
-1. Discover Home
-2. Search suggestions
-3. Search results
-4. Product results
-5. Shop results
-6. Look results
-7. Filters
-8. Sort
-9. No results
-10. Shop detail
-11. Shop catalogue
-12. Collection page
-13. Product grid
+Prove that Vastra is “all kinds of fashion from local shops” and provide a reliable
+path from Home to an available variant.
 
 ## Tickets
 
-- S5-01 typed search query and URL/state contract
-- S5-02 search suggestions and recent searches
-- S5-03 results tabs and pagination
-- S5-04 filter/sort bottom sheets
-- S5-05 nearby shop directory and cards
-- S5-06 shop detail and catalogue
-- S5-07 collection and product-grid reuse
-- S5-08 no-result, stale and retry states
-- S5-09 search/shop E2E and accessibility
+- **FE-S04-01 — Home composition:** location, search, one editorial hero, broad
+  categories, nearby shops, trends, occasions, price bands, and trust strip.
+- **FE-S04-02 — search contract:** suggestions, results, pagination, filters, sorting,
+  no-results recovery, and preserved query state.
+- **FE-S04-03 — shop experience:** nearby directory, shop details, open/closed state,
+  delivery estimate, and catalogue.
+- **FE-S04-04 — product detail:** media, real variants, size chart, price/stock refresh,
+  shop/return information, and valid add-to-cart state.
+- **FE-S04-05 — favourites and discovery states:** favourite shops, partial failures,
+  stale/offline behavior, empty inventory, and service-area failures.
+- **FE-S04-06 — discovery E2E:** Home → shop → product and search → product, including
+  accessibility, pagination, and low-end image/scroll performance.
+
+## Contract gate
+
+Use current discovery/catalogue APIs. Reviews, customer photos, personalization, and
+recommendation claims remain omitted unless a supporting contract exists.
 
 ---
 
-# Sprint 6 — product detail and trust
+# Sprint 05 — customer COD order slice
 
-## Screens
+## Goal
 
-1. Product detail
-2. Image gallery
-3. Fabric close-up
-4. Colour selection
-5. Size selection
-6. Size guide
-7. Variant unavailable
-8. Reviews
-9. Customer photos
-10. Similar styles
-11. Complete the look
-12. Shop and quality information
+Complete the customer side of the pilot transaction using the existing one-shop cart,
+server quote, COD placement, orders, tracking, and OTP behavior.
 
 ## Tickets
 
-- S6-01 product-detail query and route contract
-- S6-02 media gallery and image optimisation
-- S6-03 variant, colour, size and stock state
-- S6-04 price, discount and delivery information
-- S6-05 fit, fabric, colour-accuracy and return trust
-- S6-06 reviews and customer media
-- S6-07 similar products and complete-the-look
-- S6-08 product E2E, accessibility and performance
+- **FE-S05-01 — cart preservation and redesign:** retain tested cart/session behavior,
+  one-shop enforcement, quantity/removal, stock refresh, and safe errors.
+- **FE-S05-02 — address contract:** implement list/add/edit/select only after the Gate 0
+  address API contract is approved.
+- **FE-S05-03 — quote and fees:** render server-authoritative totals, fees, discounts,
+  serviceability, and stock/price changes.
+- **FE-S05-04 — COD placement:** confirmation, idempotency, duplicate-submit protection,
+  unknown/retry state, and server-returned order navigation.
+- **FE-S05-05 — orders and tracking:** preserve current session/order behavior; add the
+  centralized status-to-copy/action map, list/detail/timeline, and delivery OTP state.
+- **FE-S05-06 — COD customer E2E:** product → cart → address → quote → COD → confirmation
+  → tracking, with failure injection and accessibility.
+
+## Exit criteria
+
+The customer COD journey works without client-authored totals, fake address data, or
+duplicate placement. Cancellation is not enabled until its contract exists.
 
 ---
 
-# Sprint 7 — cart, address, checkout and payment
+# Sprint 06 — merchant fulfilment slice
 
-## Screens
+## Goal
 
-1. Cart
-2. Empty cart
-3. One-shop warning
-4. Address list
-5. Add address
-6. Edit address
-7. Checkout quote
-8. Fee breakdown
-9. Coupon entry
-10. Payment method
-11. COD confirmation
-12. Online-payment processing
-13. Payment failed
-14. Payment retry
-15. Order placement
-16. Order confirmation
+Preserve the tested loud-alert infrastructure and take a COD order from merchant alert
+through handover.
 
 ## Tickets
 
-- S7-01 cart state and one-shop invariant
-- S7-02 quantity/removal and stock refresh
-- S7-03 address CRUD UI and validation
-- S7-04 checkout-quote integration
-- S7-05 transparent fee and coupon presentation
-- S7-06 COD placement and idempotency UI
-- S7-07 online payment processing/retry UI
-- S7-08 confirmation brand moment
-- S7-09 checkout E2E and duplicate-submit tests
+- **FE-S06-01 — merchant shell and readiness:** navigation, login/readiness states,
+  notification permission/channel, device registration, ringtone test, and diagnostics.
+- **FE-S06-02 — urgent alert:** preserve FCM channel/sound/acknowledgement/countdown;
+  add accessible accept/reject and already-handled/expired states.
+- **FE-S06-03 — order queue and decision:** actionable inbox, details, preparation time,
+  rejection reason, authorization, and race recovery.
+- **FE-S06-04 — packing and ready:** item verification, packing checklist, ready for
+  pickup, captain state, and handover confirmation.
+- **FE-S06-05 — merchant fulfilment E2E:** background/foreground alert, multi-device
+  race, accept/reject, pack, ready, and handover on the approved device matrix.
+
+## Exit criteria
+
+The existing notification safety behavior is not regressed, and invalid order
+transitions are never bypassed by the UI.
 
 ---
 
-# Sprint 8 — orders, tracking, cancellation, return and refund
+# Sprint 07 — captain COD delivery slice
 
-## Screens
+## Goal
 
-1. Orders list
-2. Active order detail
-3. Order timeline
-4. Merchant preparation
-5. Captain assigned
-6. Out for delivery
-7. Delivery OTP
-8. Delivered
-9. Cancellation
-10. Failed delivery
-11. Return eligibility
-12. Return reason/item selection
-13. Evidence upload
-14. Return status
-15. Merchant inspection status
-16. Refund initiated
-17. Refund completed
-18. Refund failed
+Take the merchant-ready order through captain assignment, pickup verification, customer
+OTP, COD confirmation, and completion.
 
 ## Tickets
 
-- S8-01 order list and pagination
-- S8-02 order detail and state-to-copy mapping
-- S8-03 timeline and delivery tracking
-- S8-04 OTP and customer-contact states
-- S8-05 cancellation eligibility and confirmation
-- S8-06 return request and evidence
-- S8-07 return/refund status
-- S8-08 delivered celebration and reorder entry
-- S8-09 order lifecycle E2E
+- **FE-S07-01 — captain shell/readiness:** root navigation, availability, permissions,
+  GPS/service area, location freshness, weak-network, and session states.
+- **FE-S07-02 — offer lifecycle:** preserve tested offers; add countdown, expired/taken
+  races, assignment confirmation, and privacy-safe summaries.
+- **FE-S07-03 — pickup:** merchant navigation/arrival, pickup code, failure/lockout, and
+  authoritative pickup confirmation.
+- **FE-S07-04 — drop and COD:** customer navigation/contact, delivery OTP, authoritative
+  COD amount, collection confirmation, completion, and retry/unknown states.
+- **FE-S07-05 — delivery failures:** supported failure reasons, safe escalation, and no
+  distracting interaction while driving.
+- **FE-S07-06 — captain COD E2E:** online → offer → pickup code → delivery OTP → COD →
+  complete on the approved device matrix.
+
+## Contract gate
+
+Current completion is COD-specific. Prepaid delivery completion is blocked until the
+backend state machine and OpenAPI contract support it.
 
 ---
 
-# Sprint 9 — Digital Wardrobe
+# Sprint 08 — admin observation and recovery
 
-## Screens
+## Goal
 
-1. Wardrobe Home
-2. Wardrobe categories
-3. Add wardrobe item
-4. Upload image
-5. Add purchased item
-6. Item detail
-7. Item edit
-8. Visibility settings
-9. Outfit suggestions
-10. Mood styling
-11. Colour matching
-12. Saved looks
-13. Recently worn
-14. Missing-item recommendations
+Replace the placeholder with the minimum permission-aware control plane needed to
+observe and recover the COD pilot.
 
 ## Tickets
 
-- S9-01 wardrobe navigation and private-default contract
-- S9-02 item list, categories and filters
-- S9-03 add/upload/purchased-item flows
-- S9-04 metadata editing and image handling
-- S9-05 item visibility controls
-- S9-06 rule-based outfit suggestions
-- S9-07 colour and mood styling
-- S9-08 saved looks and nearby missing items
-- S9-09 privacy, authorization and E2E tests
+- **FE-S08-01 — admin shell and guards:** routing, session/MFA states when supported,
+  permission-aware navigation, keyboard behavior, and responsive layout.
+- **FE-S08-02 — live operations dashboard:** truthful counters and queues for waiting,
+  stuck, unassigned, alert, payment/refund, and case states that have real queries.
+- **FE-S08-03 — search and order detail:** supported identifier search, full timeline,
+  linked actors, and operational state.
+- **FE-S08-04 — assignment/recovery:** authorized confirmation, mandatory reason,
+  idempotent progress, refreshed state, and visible audit outcome.
+- **FE-S08-05 — core actor views:** merchant and captain detail sufficient for pilot
+  recovery without exposing unnecessary personal data.
+- **FE-S08-06 — admin recovery E2E:** dashboard → search → order → authorized recovery
+  → reason → audit record, including permission denial and keyboard use.
+
+## Exit criteria
+
+The complete COD slice is visible end to end and privileged recovery remains enforced
+on the server.
 
 ---
 
-# Sprint 10 — Vastra Couple
+# Sprint 09 — customer trust, account, and support
 
-## Screens
+## Goal
 
-1. Couple introduction
-2. Invite partner
-3. Invite through link/code/QR
-4. Invitation received
-5. Accept/decline
-6. Couple Home
-7. Create plan
-8. Select wardrobe items
-9. Waiting for partner
-10. Shared wardrobe
-11. Coordinated suggestions
-12. Matching/complementary/same-theme modes
-13. Replace item
-14. Reactions
-15. Nearby missing products
-16. Final look
-17. Saved plans
-18. Disconnect
+Complete the post-order and account capabilities required by frozen scope.
 
 ## Tickets
 
-- S10-01 consent, connection and one-active-partner contract
-- S10-02 invitation UI and deep-link states
-- S10-03 Couple Home and plan lifecycle
-- S10-04 explicit wardrobe sharing
-- S10-05 side-by-side recommendations
-- S10-06 reactions and approval
-- S10-07 nearby product completion
-- S10-08 final brand presentation
-- S10-09 disconnect/revoke access
-- S10-10 privacy, abuse prevention and E2E
+- **FE-S09-01 — cancellation** after eligibility/action contracts exist.
+- **FE-S09-02 — support tickets and conversation** after customer support contracts
+  exist.
+- **FE-S09-03 — ratings** after eligibility and submission contracts exist.
+- **FE-S09-04 — profile, addresses, preferences, notification settings, legal, logout,
+  and account deletion** using approved contracts only.
+- **FE-S09-05 — trust/account E2E** including authorization, session expiry, duplicate
+  actions, destructive confirmation, and accessible recovery.
+
+## Contract gate
+
+Cancellation, customer support, ratings, address HTTP CRUD, and account deletion are
+`CONTRACT-GAP` at this roadmap revision.
 
 ---
 
-# Sprint 11 — Vastra Groups
+# Sprint 10 — online payment, returns, refunds, and finance
 
-## Screens
+## Goal
 
-1. Groups Home
-2. Create group
-3. Invite members
-4. Invitation received
-5. Group Home
-6. Members and roles
-7. Create event
-8. Dress code
-9. Colour palette
-10. Share item for group/event
-11. Submit member look
-12. Group gallery
-13. Coordination feedback
-14. Voting
-15. Change request
-16. Readiness tracker
-17. Group shopping list
-18. Final event look
-19. Leave group
-20. Delete group
+Add the second payment path and the complete return/refund lifecycle after contracts
+match the implementation and prepaid delivery is supported.
 
 ## Tickets
 
-- S11-01 group membership and role contract
-- S11-02 create/invite/join/leave UI
-- S11-03 event lifecycle
-- S11-04 palette and dress-code editor
-- S11-05 event-scoped wardrobe sharing
-- S11-06 member submissions and gallery
-- S11-07 voting and change requests
-- S11-08 readiness and shopping list
-- S11-09 final brand presentation
-- S11-10 permissions and multi-member E2E
+- **FE-S10-01 — payment contract reconciliation:** document create/verify/webhook and
+  unknown/reconciliation states in OpenAPI and shared types.
+- **FE-S10-02 — online payment UI:** processing, success, decline, cancellation,
+  timeout, retry, and server-verified completion.
+- **FE-S10-03 — prepaid delivery completion:** implement only after the state-machine
+  gap is closed and tested across customer/captain/admin.
+- **FE-S10-04 — customer return request:** eligibility, quantities, reasons, evidence,
+  upload validation, and duplicate protection.
+- **FE-S10-05 — merchant inspection and admin review:** expose supported receipt,
+  inspection, decision, exception, and audit states.
+- **FE-S10-06 — refund and finance views:** customer status, admin refund/provider
+  failures, settlements, payouts, and COD reconciliation from authoritative data.
+- **FE-S10-07 — payment/return E2E:** provider sandbox and lifecycle evidence, including
+  failure and unknown states.
 
 ---
 
-# Sprint 12 — merchant application
-
-## Screens
-
-- authentication/readiness;
-- approval/KYC/suspension states;
-- notification permission and ringtone test;
-- urgent order alert;
-- order inbox and details;
-- accept/reject and reason;
-- preparation time and packing checklist;
-- ready for pickup and handover;
-- inventory and stock adjustment;
-- offline sale;
-- incoming returns and inspection;
-- shop status, hours, profile and support.
+# Sprint 11 — merchant catalogue, inventory, and shop operations
 
 ## Tickets
 
-- S12-01 merchant navigation and operational shell
-- S12-02 readiness and permissions
-- S12-03 urgent alert and multi-device handling
-- S12-04 order inbox and decision
-- S12-05 preparation, packing and pickup
-- S12-06 inventory and movements
-- S12-07 offline sale
-- S12-08 returns and inspection
-- S12-09 shop controls/profile/support
-- S12-10 merchant journey E2E and device tests
+- **FE-S11-01 — product/variant/image CRUD** with SKU/barcode and validation.
+- **FE-S11-02 — inventory:** search/scan, variant stock, adjustment reasons, movements,
+  low stock, and immutable history.
+- **FE-S11-03 — offline sale:** retry-safe recording with success/unknown/failure state.
+- **FE-S11-04 — shop controls:** status, profile, hours, and readiness where supported.
+- **FE-S11-05 — sales, settlement, followers, and support** after self-service contracts
+  are available.
+- **FE-S11-06 — merchant operations E2E** with authorization and duplicate mutation
+  coverage.
 
 ---
 
-# Sprint 13 — captain application
-
-## Screens
-
-- authentication/readiness;
-- online/offline and location freshness;
-- delivery offer and countdown;
-- active delivery overview;
-- merchant navigation and pickup code;
-- customer navigation and OTP;
-- COD collection;
-- completion;
-- failure/escalation states;
-- earnings, COD reconciliation, payout and profile.
+# Sprint 12 — captain onboarding, earnings, history, and support
 
 ## Tickets
 
-- S13-01 captain navigation and high-attention shell
-- S13-02 availability/location states
-- S13-03 offer lifecycle
-- S13-04 pickup workflow
-- S13-05 delivery and OTP workflow
-- S13-06 COD collection and completion
-- S13-07 failure and support escalation
-- S13-08 earnings/reconciliation/profile
-- S13-09 captain journey E2E and physical-device tests
+- **FE-S12-01 — OTP, KYC, approval, suspension, profile, and vehicle states.**
+- **FE-S12-02 — earnings and completed-delivery history** after captain self-service
+  contracts exist.
+- **FE-S12-03 — COD reconciliation and payout status/history** after self-service
+  contracts exist.
+- **FE-S12-04 — support and emergency escalation** using approved safety contracts.
+- **FE-S12-05 — captain account/finance E2E** with privacy and permission coverage.
 
 ---
 
-# Sprint 14 — admin dashboard
-
-## Pages
-
-- authentication and MFA;
-- operations dashboard;
-- global search;
-- orders and recovery;
-- merchants and KYC;
-- captains and assignments;
-- returns and refunds;
-- finance, settlement and COD;
-- support cases;
-- audit log;
-- configuration and feature flags.
+# Sprint 13 — admin MVP completion
 
 ## Tickets
 
-- S14-01 admin shell, routing and permission guards
-- S14-02 operations dashboard and counters
-- S14-03 global search
-- S14-04 order detail and recovery actions
-- S14-05 merchant management
-- S14-06 captain management
-- S14-07 returns and refunds
-- S14-08 finance and COD
-- S14-09 cases and audit
-- S14-10 configuration
-- S14-11 keyboard, responsive and Playwright E2E
+- **FE-S13-01 — merchant and captain approval/KYC.**
+- **FE-S13-02 — customer search and support queue.**
+- **FE-S13-03 — returns, refunds, payments, settlements, payouts, and COD.**
+- **FE-S13-04 — catalogue moderation.**
+- **FE-S13-05 — banners and basic coupons.**
+- **FE-S13-06 — audit logs and four-role admin-user management.**
+- **FE-S13-07 — admin completion E2E:** permissions, confirmation/reason, audit, table
+  accessibility, and responsive/keyboard behavior.
+
+Each ticket is gated by OpenAPI coverage for its actions. Existing controllers that
+are not contracted do not count as frontend-ready.
 
 ---
 
-# Sprint 15 — customer website
+# Sprint 14 — Digital Wardrobe and saved looks
 
-## Pages
+## Goal
 
-- immersive Home;
-- nearby-store directory;
-- store page;
-- category and collection;
-- product detail;
-- cart and checkout;
-- order tracking;
-- Wardrobe;
-- Style Together;
-- Couple and Groups landing pages;
-- profile and support.
+Deliver private wardrobe management and saved looks without automatic image analysis.
 
 ## Tickets
 
-- S15-01 web shell and responsive tokens
-- S15-02 immersive but performant Home
-- S15-03 catalogue/store/product responsive reuse
-- S15-04 cart/checkout/order web flows
-- S15-05 Wardrobe and Style Together web
-- S15-06 SEO, accessibility and performance
-- S15-07 Playwright critical journeys
+- **FE-S14-01 — Style/Wardrobe navigation and private-default contract.**
+- **FE-S14-02 — wardrobe list, empty state, categories, and item detail.**
+- **FE-S14-03 — add/edit/delete uploaded or purchased items** with supported metadata
+  and private media handling.
+- **FE-S14-04 — saved looks:** create, rename, duplicate, edit, delete, and detail.
+- **FE-S14-05 — look commerce:** refresh product availability, distinguish owned/shop
+  items, and add eligible products to the one-shop cart.
+- **FE-S14-06 — wardrobe/look sharing boundary:** private links or approved room-scoped
+  sharing only; never expose the full wardrobe.
+- **FE-S14-07 — Wardrobe E2E:** private default, media failure, authorization, revoke,
+  look management, and add-to-cart.
 
 ---
 
-# Sprint 16 — cross-platform QA and release closure
+# Sprint 15 — private Group Style rooms
+
+## Goal
+
+Deliver the frozen invitation-only room product: product/look sharing, comments,
+`LOVE`/`MAYBE`/`SKIP` voting, shortlist, membership, reporting, and individual checkout.
 
 ## Tickets
 
-- S16-01 screen inventory reconciliation
-- S16-02 visual-regression baselines
-- S16-03 accessibility audit
-- S16-04 low-end Android performance audit
-- S16-05 responsive and keyboard audit
-- S16-06 offline/error/recovery audit
-- S16-07 privacy and permission audit
-- S16-08 end-to-end COD pilot journey
-- S16-09 release build and evidence
+- **FE-S15-01 — backend/OpenAPI room contract:** implement and contract durable room,
+  invite, membership, share, comment, vote, shortlist, report, and close behavior.
+- **FE-S15-02 — room entry:** create, link/join-code invitation, authentication return,
+  join, invalid/expired invite, and membership state.
+- **FE-S15-03 — room activity:** share approved products/looks, comments, votes, and
+  real-time or refresh behavior without fabricated presence.
+- **FE-S15-04 — shortlist and commerce:** refreshed product availability and individual
+  add-to-cart/checkout under the one-shop rule.
+- **FE-S15-05 — membership, moderation, and closure:** owner controls, leave/remove,
+  abuse report, closed read-only state, and access revocation.
+- **FE-S15-06 — Group Style E2E:** create → invite → join → share → comment/vote →
+  shortlist → individual cart → close/report, with privacy/authorization coverage.
 
-## Required validation
+## Contract gate
 
-- customer mobile E2E;
-- merchant mobile E2E;
-- captain mobile E2E;
-- admin Playwright E2E;
-- physical Android matrix;
-- accessibility checks;
-- visual regression;
-- full repository CI;
-- no unresolved critical/high defects.
+This sprint is blocked until its OpenAPI-only contract has a backend module, migrations,
+RLS, storage rules where needed, tests, and shared generated types.
+
+---
+
+# Sprint 16 — cross-platform closure and pilot proof
+
+## Tickets
+
+- **FE-S16-01 — screen/contract reconciliation:** mark every inventory item implemented,
+  blocked, deferred, or intentionally removed.
+- **FE-S16-02 — visual regression:** deterministic Brand, Commerce, and Hybrid baselines.
+- **FE-S16-03 — accessibility audit:** contrast, target sizes, labels/roles, focus,
+  dynamic text/zoom, forms, reduced motion, and non-colour status.
+- **FE-S16-04 — low-end Android and responsive performance audit.**
+- **FE-S16-05 — offline/error/recovery and duplicate-mutation audit.**
+- **FE-S16-06 — privacy, permission, and client-secret audit.**
+- **FE-S16-07 — physical COD pilot evidence:** customer → merchant → captain → admin.
+- **FE-S16-08 — release builds, defect reconciliation, and evidence manifest.**
+
+## Release exit
+
+- all applicable repository checks pass;
+- the physical COD journey has captured evidence;
+- no unresolved critical/high defects remain;
+- blocked/deferred screens are explicit;
+- the pilot recommendation does not overstate unexecuted checks.
 
 ---
 
 # Dependency and parallelization map
 
-## Sequential foundation
+```text
+Gate 0 → S1R → S02 → S03 → S04 → S05 → S06 → S07 → S08
+                                   │
+                                   ├→ S09 → S10
+                                   ├→ S11
+                                   ├→ S12
+                                   └→ S13
 
-S1R -> S2 -> S3
+S03 + backend-ready Wardrobe contracts → S14
+S14 + Group Style backend contract      → S15
+S08 + S09–S15 applicable scope          → S16
+```
 
-Shared tokens, route contracts, shells and primitives have a single owner.
+After S03 freezes shared contracts, independent application tickets may run in
+parallel. Do not parallelize changes to shared tokens, root routes, shared API types,
+the order state machine, or the same feature module.
 
-## Parallel after Sprint 3 contracts freeze
+# Current capability gates
 
-- Customer discovery: S4-S6
-- Customer transaction: S7-S8
-- Wardrobe: S9
-- Merchant: S12
-- Captain: S13
-- Admin: S14
-- Website shell: S15-01
+| Area | Current disposition |
+|---|---|
+| Customer discovery/catalogue/cart/quote/COD/orders | `READY` with preservation tests |
+| Merchant urgent alert and core fulfilment | `READY` with preservation tests |
+| Captain offer/pickup/delivery/COD | `READY` for COD only |
+| Admin core observation/recovery | `PARTIAL`; contract each action |
+| Wardrobe and saved looks | `READY`/`PARTIAL`; audit existing behavior first |
+| Address HTTP CRUD, cancellation, support, ratings, account deletion | `CONTRACT-GAP` |
+| Online payment/returns/refunds | implementation exists in areas; OpenAPI/state-machine reconciliation required |
+| Merchant catalogue/inventory/offline sale | `READY`; self-service shop/finance/support is partial |
+| Captain KYC/earnings/payout/support self-service | `CONTRACT-GAP`/`PARTIAL` |
+| Private Group Style rooms | `CONTRACT-GAP`; OpenAPI only, no complete backend slice |
+| Couple, event-based Groups, customer website | `POST-MVP` |
 
-## Requires Wardrobe contract
+# Per-ticket completion report
 
-S9 -> S10 -> S11
+Every implementation ticket ends with:
 
-Couple and Groups may share lower-level wardrobe primitives but must not share relationship or membership domain rules.
-
-## Integration order
-
-1. Shared foundation
-2. Customer COD vertical slice
-3. Merchant fulfilment
-4. Captain delivery
-5. Admin observation/recovery
-6. Wardrobe
-7. Couple
-8. Groups
-9. Website
-10. Closure
-
-# Per-ticket completion response
-
-Codex must report:
-
-- objective completed;
-- files changed;
-- routes/screens added;
-- API contracts consumed;
-- tests added;
-- commands and results;
-- screenshots/device evidence where applicable;
-- accessibility considerations;
-- risks or deferred work.
+```text
+Summary
+Files changed
+Behavior implemented
+Routes/screens changed
+API contracts consumed
+Tests added
+Commands run and results
+Accessibility/performance evidence
+Documentation updated
+Known limitations or follow-up
+```

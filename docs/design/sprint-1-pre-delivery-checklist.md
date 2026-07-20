@@ -1,19 +1,22 @@
 # Vastra UI pre-delivery checklist
 
-Use this checklist for every customer, merchant, captain, admin, Wardrobe, Couple, Group, mobile-web, and desktop-web delivery.
+Use this checklist for every customer, merchant, captain, admin, Wardrobe, saved-look,
+and private Group Style delivery.
 
 ## Process
 
-- [ ] Read `design-system/vastra/MASTER.md`.
+- [ ] Read `docs/design/design-system.md` and `docs/design/frontend-visual-contract.md`.
 - [ ] Check for an approved page-specific override.
 - [ ] Verify the screen maps to an approved product capability.
+- [ ] Verify every action maps to an OpenAPI operation and implemented authorization.
+- [ ] Record the ticket as `READY`, `CONTRACT-GAP`, or `PLATFORM-GAP` before editing.
 - [ ] Review loading, empty, error, offline, permission, and session states.
 - [ ] Test at 375 px width and in landscape.
 - [ ] Test on a large phone and tablet.
 - [ ] Test desktop at 1024, 1440, and 1920 where applicable.
 - [ ] Test reduced motion.
 - [ ] Test the largest supported system text size.
-- [ ] Test light and dark contrast separately.
+- [ ] Test light-theme contrast; test dark theme only when the ticket enables it.
 
 ## Accessibility
 
@@ -109,14 +112,13 @@ Use this checklist for every customer, merchant, captain, admin, Wardrobe, Coupl
 - [ ] Product quality and colour-accuracy claims are evidence-based.
 - [ ] Error states preserve safe customer progress.
 
-## Wardrobe, Couple, and Group privacy
+## Wardrobe, saved-look, and Group Style privacy
 
 - [ ] New wardrobe items default to private.
-- [ ] Couple sharing requires an accepted connection.
-- [ ] Couple and Group remain separate experiences.
-- [ ] Group sharing is scoped to the selected group or event.
+- [ ] Sharing a saved look does not expose the owner's full wardrobe.
+- [ ] Group Style room sharing is scoped to the selected private room.
 - [ ] Users can revoke sharing.
-- [ ] Disconnecting or leaving removes future access.
+- [ ] Removal, leaving, or room closure removes future access as defined by the contract.
 - [ ] No public stranger discovery is introduced.
 - [ ] Shared previews do not expose unselected wardrobe items.
 

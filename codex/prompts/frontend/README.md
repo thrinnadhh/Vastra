@@ -1,105 +1,117 @@
 # Vastra frontend Codex run order
 
-These prompts implement the approved frontend program. They do not grant permission to change backend contracts, RLS, state machines or product scope.
+These prompt packs execute the frozen-MVP frontend roadmap. They do not authorize
+changes to product scope, backend contracts, RLS, or state machines.
 
-## Read before every frontend task
+## Operator entry point
 
-- root `AGENTS.md` and nearest nested `AGENTS.md`;
-- `design-system/vastra/MASTER.md`;
+Read `docs/design/frontend-implementation-guide.md` first. Select exactly one ticket
+from `docs/design/frontend-ui-ux-sprint-roadmap.md` and provide that ID in the request.
+A grouped prompt pack is context, not permission to implement all tickets in it.
+
+## Read before every frontend ticket
+
+- root `AGENTS.md` and the nearest nested `AGENTS.md`;
+- `codex/prompts/frontend/00-master-frontend-contract.md`;
+- the relevant grouped prompt pack below;
 - `docs/design/frontend-ui-ux-sprint-roadmap.md`;
-- `docs/design/frontend-screen-inventory.md`;
-- `docs/design/sprint-1-component-contracts.md`;
+- `docs/design/frontend-screen-inventory.md` and `docs/design/navigation-map.md`;
+- `docs/design/design-system.md` and `docs/design/frontend-visual-contract.md`;
 - `docs/design/sprint-1-pre-delivery-checklist.md`;
-- relevant OpenAPI and implementation contracts;
-- relevant existing feature tests.
-
-## Mandatory execution rules
-
-1. Run one ticket at a time.
-2. Start by auditing the relevant application and API capability.
-3. Do not implement a visual screen whose required backend capability does not exist; record the dependency instead.
-4. Use a dedicated branch and worktree for each ticket.
-5. Do not let parallel agents edit shared tokens, route types, navigation roots or shared API clients simultaneously.
-6. Review the diff and run narrow tests before broader checks.
-7. Do not claim physical-device, payment-provider or visual evidence without actually producing it.
-8. Keep generated binaries and screenshots out of commits unless the repository explicitly defines their evidence path.
-9. Use semantic design tokens, not copied hex values.
-10. Do not add production dependencies without approval.
+- the smallest relevant canonical product/security/workflow/OpenAPI documents;
+- the current implementation and feature tests that must be preserved.
 
 ## Prompt order
 
 ```text
 00-master-frontend-contract.md
-01-sprint-1r-theme-revision.md
-02-sprints-2-4-customer-foundation.md
-03-sprints-5-8-commerce.md
-04-sprints-9-11-style-together.md
-05-sprints-12-14-operations.md
-06-sprints-15-16-web-and-closure.md
+01-gates-visual-and-platform.md
+02-customer-access-discovery-and-cod.md
+03-operational-cod-slice.md
+04-trust-payments-and-returns.md
+05-operations-completion.md
+06-style-and-closure.md
 ```
 
-The grouped prompts are planning packs. Codex must split each named sprint into the tickets already defined in `docs/design/frontend-ui-ux-sprint-roadmap.md` and execute exactly one ticket per task.
+| Prompt | Ticket range |
+|---|---|
+| `01-gates-visual-and-platform.md` | `FE-G0-*`, `FE-S1R-*`, `FE-S02-*` |
+| `02-customer-access-discovery-and-cod.md` | `FE-S03-*`, `FE-S04-*`, `FE-S05-*` |
+| `03-operational-cod-slice.md` | `FE-S06-*`, `FE-S07-*`, `FE-S08-*` |
+| `04-trust-payments-and-returns.md` | `FE-S09-*`, `FE-S10-*` |
+| `05-operations-completion.md` | `FE-S11-*`, `FE-S12-*`, `FE-S13-*` |
+| `06-style-and-closure.md` | `FE-S14-*`, `FE-S15-*`, `FE-S16-*` |
 
-## Branch convention
+## Mandatory execution rules
+
+1. Audit the selected capability and classify it `READY`, `CONTRACT-GAP`, or
+   `PLATFORM-GAP` before implementation.
+2. Run one ticket per branch/worktree and commit.
+3. Preserve tested checkout/orders, merchant ringing/fulfilment, and captain delivery
+   behavior while replacing temporary shells.
+4. Do not build a visual mutation flow when its public API capability is missing.
+5. Use one active owner for shared tokens, root navigation, route types, shared API
+   types, and query/cache infrastructure.
+6. Review the diff and run focused tests before broader applicable checks.
+7. Do not claim device, provider, accessibility, E2E, or visual evidence unless it was
+   actually produced.
+8. Keep generated binaries/screenshots out of commits unless an approved evidence path
+   requires them.
+9. Use semantic design tokens; do not copy raw colours into screens.
+10. Do not add production dependencies without approval.
+
+## Branch and commit convention
 
 ```text
-feat/ui-s1r-01-cosmic-colours
-feat/ui-s2-01-splash
-feat/ui-s3-01-navigation-contracts
-feat/ui-s4-01-home-data-model
+feat/ui-fe-s1r-01-semantic-colours
+feat/ui-fe-s03-01-customer-routes
+feat/ui-fe-s06-02-merchant-alert
 ```
 
-Use the same pattern for later tickets.
-
-## Commit convention
-
 ```text
-S1R-01 feat(design): add cosmic colour roles
-S2-01 feat(customer): add launch splash state
-S12-03 feat(merchant): add urgent order alert
+FE-S1R-01 feat(design): add semantic cosmic roles
+FE-S03-01 feat(customer): add typed customer routes
+FE-S06-02 feat(merchant): preserve urgent alert workflow
 ```
 
 ## Required ticket response
 
-Report:
+```text
+Summary
+Files changed
+Behavior implemented
+Routes/screens changed
+API contracts consumed
+Tests added
+Commands run and results
+Accessibility/performance evidence
+Documentation updated
+Known limitations or follow-up
+```
 
-- ticket and objective;
-- implementation summary;
-- screens/routes changed;
-- API contracts consumed;
-- files changed;
-- tests added;
-- commands and results;
-- accessibility and performance decisions;
-- screenshots/device evidence when actually generated;
-- risks, dependencies or follow-up.
+## Applicable validation
 
-## Integration gates
-
-Before merging any ticket:
+Run the narrowest relevant tests during development, then the full applicable set
+before completion:
 
 ```bash
 pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:integration
+pnpm db:test
+pnpm openapi:check
+pnpm build
 ```
 
-Also run the relevant application build, feature tests, E2E suite and database/OpenAPI checks when the change touches those boundaries.
+Use the exact scripts that exist. Never fabricate a result or silently rename a
+missing command. Mobile/admin E2E, accessibility, visual regression, and physical
+device checks are required only after their harnesses exist, but missing release
+evidence remains explicit.
 
-## Parallelization
+## First recommended run
 
-Safe after shared contracts are frozen:
-
-- customer discovery versus merchant operational UI;
-- captain UI versus admin dashboard;
-- Wardrobe UI versus website shell;
-- documentation/test fixtures versus independent feature screens.
-
-Unsafe:
-
-- two agents changing customer navigation;
-- two agents changing design token semantics;
-- Couple and Groups independently changing wardrobe visibility types;
-- UI changing API types while backend changes the same contract;
-- multiple agents changing the same root app shell.
+Ask Codex to complete `FE-G0-01` as a documentation-only scope reconciliation. Then
+continue Gate 0 in order. Do not start screen composition until Gate 0, S1R, S02, and
+the relevant S03 foundation ticket are complete.

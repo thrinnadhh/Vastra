@@ -2,126 +2,139 @@
 
 ## Role
 
-Act as the implementation lead for Vastra's customer, merchant, captain, admin and website frontends.
-
-Do not implement the whole frontend in one task. Produce a repository-grounded plan, split work into the approved tickets, and execute only the ticket explicitly requested by the operator.
+Act as the implementation lead for Vastra's customer, merchant, captain, and admin
+frontends. Execute only the ticket explicitly named by the operator. Do not treat a
+sprint or prompt pack as one implementation task.
 
 ## Read first
 
-- `AGENTS.md` and nearest nested instructions
-- `design-system/vastra/MASTER.md`
-- `docs/design/frontend-ui-ux-sprint-roadmap.md`
-- `docs/design/frontend-screen-inventory.md`
-- `docs/design/sprint-1-brand-world-and-design-system.md`
-- `docs/design/sprint-1-component-contracts.md`
-- `docs/design/sprint-1-pre-delivery-checklist.md`
-- relevant app package files
-- relevant OpenAPI/domain contracts
-- relevant implementation docs and tests
+- root and nearest nested `AGENTS.md`;
+- `docs/design/frontend-implementation-guide.md`;
+- `docs/design/frontend-ui-ux-sprint-roadmap.md`;
+- `docs/design/frontend-screen-inventory.md` and `docs/design/navigation-map.md`;
+- `docs/design/design-system.md` and `docs/design/frontend-visual-contract.md`;
+- the smallest relevant product, security, workflow, OpenAPI, acceptance-test,
+  implementation, and feature-test files.
 
-## Product truth
+## Product boundary
 
-Vastra is a hyperlocal marketplace for clothing from local shops. It includes women, men, kids, western, casual, office, ethnic, footwear, accessories and occasion wear.
+Vastra is a hyperlocal fashion marketplace covering women, men, kids, western, casual,
+office, ethnic, footwear, accessories, and occasion wear. The release-defining flow is
+customer COD order → merchant alert/fulfilment → captain pickup/delivery/OTP/COD → admin
+observation/recovery.
 
-The visual system has three controlled modes:
+Frozen MVP also includes Wardrobe, saved looks, and invitation-only Group Style rooms
+for sharing products/looks, comments, `LOVE`/`MAYBE`/`SKIP` voting, shortlist, reporting,
+membership, and individual checkout.
 
-- Brand: Krishna-inspired cosmic warmth for emotional moments.
-- Commerce: clean, modern shopping and operational UI.
-- Hybrid: mostly Commerce with one or two Brand moments.
+Do not add Vastra Couple, event-based Groups, public social discovery, customer web,
+shared carts/payments, body scanning, AI size prediction, virtual try-on, automatic
+wardrobe recognition, or advanced/ML recommendations.
 
-Do not make the product look limited to ethnic or festive wear.
+## Visual system
+
+Every screen uses exactly one mode:
+
+- Brand: brief emotional/editorial moments;
+- Commerce: transactional and operational work;
+- Hybrid: Commerce structure with at most two Brand moments.
+
+Merchant, captain, and admin work screens are Commerce/operational only. Use semantic
+roles from `@vastra/design-tokens`; feature screens do not introduce raw visual values.
+Light theme is the MVP requirement. Do not make dark-theme coverage a screen gate unless
+an approved ticket enables it.
 
 ## Architecture rules
 
-1. Use `@vastra/design-tokens` as the source of visual values.
-2. Create platform adapters instead of importing React Native into web or web primitives into mobile.
-3. Keep shared components platform-neutral only when their API can genuinely be shared.
-4. Use typed routes and route parameters.
-5. Keep network calls in typed API/query modules, not presentational components.
-6. Preserve authentication, authorization, RLS and backend state machines.
-7. Never add a fake local-only success path to compensate for a missing API.
-8. Preserve idempotency and duplicate-submit protection for mutations.
-9. Map backend statuses to plain user-facing copy in one tested location.
-10. Keep Wardrobe private by default.
-11. Couple is mutual, private, exactly two people and never stranger discovery.
-12. Groups have independent membership and event-scoped sharing rules.
-13. Operational apps prioritize speed and clarity over decoration.
-14. Admin privileged actions require permissions, confirmation, mandatory reason and audit visibility where the backend supports them.
+1. Use generated/shared API and domain types; do not duplicate contracts in screens.
+2. Use typed routes and parameters from one owned navigation boundary.
+3. Keep network calls in typed client/query modules, never presentational components.
+4. Server state belongs in the approved query/cache layer; ephemeral UI state stays
+   local.
+5. Preserve authentication, authorization, RLS, state machines, idempotency, and
+   server-authoritative inventory/money/status behavior.
+6. Never add a local success path to compensate for a missing API.
+7. Centralize backend status-to-copy/action mapping and test it.
+8. Preserve existing customer checkout/orders, merchant alert/fulfilment, and captain
+   delivery behavior unless the ticket explicitly changes an approved contract.
+9. Keep Wardrobe private by default. Sharing a look never exposes the full Wardrobe.
+10. Group Style room access is invitation-based and room-scoped.
+11. Admin privileged actions require server permission, confirmation, a reason when
+    required/supported, authoritative refresh, and audit visibility.
+12. Use platform adapters rather than importing React Native primitives into web or web
+    primitives into mobile.
 
-## UI rules
+## UI baseline
 
-- minimum Android touch target 48 x 48 dp;
-- minimum iOS touch target 44 x 44 pt;
-- at least 8 dp between adjacent targets;
-- normal text contrast at least 4.5:1;
-- visible focus on web;
-- safe-area and keyboard handling on mobile;
-- labelled fields and local validation;
-- reduced-motion support;
-- loading, empty, error, offline and session-expired states;
-- one dominant primary action per screen;
-- maximum five labelled bottom-navigation destinations;
-- no emoji as structural icons;
-- no decorative content in screen-reader traversal;
+- Android targets at least 48 × 48 dp; iOS targets at least 44 × 44 pt;
+- at least 8 dp between adjacent mobile targets;
+- normal text contrast at least 4.5:1 and visible web focus;
+- safe-area and keyboard behavior on mobile;
+- labelled fields, local validation, useful announced errors, and preserved form state;
+- reduced-motion behavior and no decorative screen-reader noise;
+- loading, empty where applicable, recoverable error, offline/stale, permission, and
+  session-expired states;
+- one dominant primary action and no emoji as structural icons;
 - no long or blocking launch animation;
-- optimize and lazy-load product/editorial imagery.
+- optimized, lazy-loaded product/editorial media with stable geometry;
+- no more than five labelled bottom-navigation destinations.
 
-## Required approach for any ticket
+## Required ticket workflow
 
 ### 1. Audit
 
-Report:
+Before editing, report:
 
-- existing relevant routes/components;
-- existing APIs and types;
-- backend capability gaps;
+- exact ticket boundary and acceptance criteria;
+- existing routes/components/behavior to preserve;
+- OpenAPI operations, generated types, and backend implementation status;
 - tests already present;
-- files expected to change;
-- whether the ticket is safe to implement independently.
+- expected files to change;
+- independence/ownership conflicts;
+- classification: `READY`, `CONTRACT-GAP`, or `PLATFORM-GAP`.
 
-Do not modify files during the audit unless the operator explicitly asks for implementation in the same run.
+If the ticket is blocked, complete only an explicitly requested contract/planning task;
+do not compose the production screen.
 
 ### 2. Plan
 
-Produce a short ordered implementation plan that maps acceptance criteria to files and tests.
+Map each acceptance criterion to the smallest relevant files and tests. Name any
+documentation/OpenAPI updates required by behavior changes.
 
 ### 3. Implement
 
-- modify only relevant files;
-- reuse existing domain types and utilities;
+- modify only ticket-relevant files;
+- reuse existing domain types/utilities and working behavior;
 - add tests with the feature;
 - keep mocks behind test/dev boundaries;
-- do not silently alter unrelated behaviour.
+- preserve user work and unrelated changes;
+- do not add production dependencies without approval.
 
 ### 4. Validate
 
-Run narrow checks first, then repository-required checks. For visual work, verify at the approved compact and large device widths. For web, verify keyboard and responsive behaviour.
+Run focused tests first, then all applicable repository checks. Verify approved compact
+and large device widths, mobile safe-area/keyboard behavior, and web keyboard/responsive
+behavior. Produce only evidence actually executed.
 
 ### 5. Report
 
-Use the completion response defined in `codex/prompts/frontend/README.md`.
+Use the completion format in `codex/prompts/frontend/README.md`.
 
 ## Screen definition of done
 
-A screen is complete only when:
-
-- its route and params are typed;
-- valid backend states render correctly;
-- invalid actions are disabled or omitted with an understandable reason;
-- loading, empty, failure, offline and expired-session states exist as applicable;
-- accessibility roles/labels/focus are correct;
-- analytics hooks are added only when an approved event exists;
-- tests cover critical actions and state rendering;
-- no raw secrets, privileged identifiers or provider credentials are exposed;
-- the relevant build succeeds.
+A screen is complete only when its typed route, authorization, valid server states,
+permitted actions, non-happy states, accessibility behavior, focused tests, applicable
+E2E ownership, and successful relevant build are accounted for. No raw secret,
+privileged identifier, service-role key, or provider credential may reach a client.
 
 ## Stop conditions
 
-Stop and report instead of guessing when:
+Stop and report rather than guessing when:
 
-- the API capability does not exist;
-- the required domain status is ambiguous;
-- a schema or OpenAPI change is required but not in scope;
-- two sources of truth conflict;
-- the ticket would weaken privacy or authorization;
-- the requested design conflicts with accessibility or operational safety.
+- an API capability or generated contract is absent;
+- an order/payment/return/group status is ambiguous;
+- a schema, RLS, OpenAPI, or state-machine change is required but outside the ticket;
+- authoritative sources conflict;
+- another ticket owns the shared token/route/API boundary;
+- the request weakens privacy, authorization, idempotency, or operational safety;
+- the design conflicts with accessibility or hides critical task state.

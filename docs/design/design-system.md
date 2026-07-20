@@ -1,11 +1,17 @@
 ---
 project: Vastra
-version: 1.0
+version: 1.1
 status: Frozen MVP
-last_updated: 2026-07-11
+last_updated: 2026-07-20
 ---
 
 # Design System
+
+The semantic baseline in this file remains authoritative. The approved frontend
+presentation modes, cosmic role intent, ornament limits, and asset/shell contracts are
+defined in `docs/design/frontend-visual-contract.md`. Sprint `FE-S1R-*` must reconcile
+both documents in `@vastra/design-tokens` before feature screens consume the revised
+visual system.
 
 ## 1. Product identity
 
