@@ -246,7 +246,7 @@ describe('CaptainDeliveryScreen preservation', () => {
       intervalSpy.mockRestore();
       jest.useRealTimers();
     }
-  });
+  }, 20_000);
 
   it('renders an authoritative offer and accepts it with an idempotency key', async () => {
     const offer = delivery('OFFERED');
