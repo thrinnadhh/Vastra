@@ -213,6 +213,38 @@ describe('MerchantOrderQueueScreen', () => {
     jest.useRealTimers();
   });
 
+  it('preserves the default 15-second queue polling interval', async () => {
+    jest.useFakeTimers();
+    const client = port();
+    const view = render(<MerchantOrderQueueScreen orderClient={client} />);
+
+    try {
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(client.listOrders.mock.calls).toHaveLength(1);
+
+      act(() => {
+        jest.advanceTimersByTime(14_999);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(client.listOrders.mock.calls).toHaveLength(1);
+
+      act(() => {
+        jest.advanceTimersByTime(1);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(client.listOrders.mock.calls).toHaveLength(2);
+    } finally {
+      view.unmount();
+      jest.useRealTimers();
+    }
+  });
+
   it('waits for a slow queue request to settle before scheduling the next poll', async () => {
     jest.useFakeTimers();
     let resolveFirst:
