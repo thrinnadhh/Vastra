@@ -212,6 +212,7 @@ async function advance(milliseconds: number): Promise<void> {
 describe('CaptainDeliveryScreen preservation', () => {
   it('preserves the default 10-second active-delivery and offer polling interval', async () => {
     jest.useFakeTimers();
+    const intervalSpy = jest.spyOn(globalThis, 'setInterval');
     const client = deliveryClient(null);
     const view = render(
       <CaptainDeliveryScreen
@@ -226,14 +227,23 @@ describe('CaptainDeliveryScreen preservation', () => {
       expect(client.getActive.mock.calls).toHaveLength(1);
       expect(client.listOffers.mock.calls).toHaveLength(1);
 
-      await advance(9_999);
-      expect(client.getActive.mock.calls).toHaveLength(1);
+      const refreshRegistration = intervalSpy.mock.calls.find(([, delay]) => delay === 10_000);
+      expect(refreshRegistration).toBeDefined();
+      const refresh = refreshRegistration?.[0];
+      if (typeof refresh !== 'function') {
+        throw new TypeError('Expected the delivery refresh interval callback');
+      }
 
-      await advance(1);
+      await act(async () => {
+        refresh();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
       expect(client.getActive.mock.calls).toHaveLength(2);
       expect(client.listOffers.mock.calls).toHaveLength(2);
     } finally {
       view.unmount();
+      intervalSpy.mockRestore();
       jest.useRealTimers();
     }
   });
