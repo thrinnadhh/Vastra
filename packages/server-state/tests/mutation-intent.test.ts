@@ -17,7 +17,10 @@ describe('mutation intent and idempotency lifecycle', () => {
     expect(controller.begin('place-order:quote-1')).toBe(FIRST_KEY);
     controller.markUnknownOutcome('place-order:quote-1');
     expect(controller.begin('place-order:quote-1')).toBe(FIRST_KEY);
-    expect(controller.current()).toEqual({ intentId: 'place-order:quote-1', idempotencyKey: FIRST_KEY });
+    expect(controller.current()).toEqual({
+      intentId: 'place-order:quote-1',
+      idempotencyKey: FIRST_KEY,
+    });
   });
 
   it('clears only for terminal success, rejection, cancel, or replacement', () => {

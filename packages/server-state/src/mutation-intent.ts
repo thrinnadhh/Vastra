@@ -1,7 +1,6 @@
 import type { IdempotencyKey } from './types';
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 export function asIdempotencyKey(value: string): IdempotencyKey {
   if (!UUID_PATTERN.test(value)) throw new TypeError('Idempotency keys must be UUIDs');
@@ -13,10 +12,7 @@ export function createIdempotencyKey(generator: () => string): IdempotencyKey {
 }
 
 export type MutationIntentTerminalReason =
-  | 'SUCCESS'
-  | 'REJECTED'
-  | 'CANCELLED'
-  | 'AUTHORITATIVE_REPLACEMENT';
+  'SUCCESS' | 'REJECTED' | 'CANCELLED' | 'AUTHORITATIVE_REPLACEMENT';
 
 export interface ActiveMutationIntent {
   readonly intentId: string;
@@ -47,9 +43,7 @@ export class MutationIntentController {
   }
 
   public markUnknownOutcome(intentId: string): void {
-    if (this.active === null || this.active.intentId !== intentId) {
-      throw new MutationIntentConflictError();
-    }
+    if (this.active?.intentId !== intentId) throw new MutationIntentConflictError();
   }
 
   public clear(reason: MutationIntentTerminalReason): void {

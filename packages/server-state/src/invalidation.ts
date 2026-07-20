@@ -3,7 +3,10 @@ import type { QueryClient, QueryKey } from '@tanstack/react-query';
 import { adminKeys, captainKeys, customerKeys, merchantKeys } from './keys';
 import type { AccountId, AuthorizationEpoch } from './types';
 
-async function invalidatePrefixes(client: QueryClient, prefixes: readonly QueryKey[]): Promise<void> {
+async function invalidatePrefixes(
+  client: QueryClient,
+  prefixes: readonly QueryKey[],
+): Promise<void> {
   await Promise.all(
     prefixes.map(async (queryKey) => {
       await client.invalidateQueries({ queryKey, exact: false, refetchType: 'active' });

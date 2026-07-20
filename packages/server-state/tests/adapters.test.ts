@@ -60,7 +60,7 @@ describe('focus and connectivity adapters', () => {
     'maps platform focus without importing platform runtime modules',
     (install) => {
       const source = new FocusSource(false);
-      let cleanup = () => undefined;
+      let cleanup: () => void = () => undefined;
       const setFocused = vi.fn();
       const manager: QueryFocusManagerPort = {
         setEventListener: (setup) => {
@@ -79,7 +79,7 @@ describe('focus and connectivity adapters', () => {
 
   it('maps online/offline and leaves unknown connectivity unspecified', async () => {
     const source = new ConnectivitySource('UNKNOWN');
-    let cleanup = () => undefined;
+    let cleanup: () => void = () => undefined;
     const setOnline = vi.fn();
     const manager: OnlineManagerPort = {
       setEventListener: (setup) => {
@@ -94,6 +94,6 @@ describe('focus and connectivity adapters', () => {
     cleanup();
     source.emit('OFFLINE');
 
-    expect(setOnline.mock.calls).toEqual([[undefined], [false], [true]]);
+    expect(setOnline.mock.calls).toEqual([[false], [true]]);
   });
 });

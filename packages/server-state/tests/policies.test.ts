@@ -23,16 +23,20 @@ const error = (overrides: Partial<RetryPolicyError>): RetryPolicyError => ({
 
 describe('server-state policies', () => {
   it('implements every frozen stale and garbage-collection class', () => {
-    expect(CACHE_POLICIES).toEqual({
-      CATALOGUE: expect.objectContaining({ staleTime: 60_000, gcTime: 600_000 }),
-      PERSONAL: expect.objectContaining({ staleTime: 30_000, gcTime: 600_000 }),
-      TRANSACTION: expect.objectContaining({ staleTime: 0, gcTime: 300_000 }),
-      LIVE: expect.objectContaining({ staleTime: 0, gcTime: 60_000 }),
-    });
-    expect(createEphemeralQuotePolicy('2026-07-21T10:02:00.000Z', Date.parse('2026-07-21T10:00:00Z')))
-      .toEqual(expect.objectContaining({ staleTime: 0, gcTime: 120_000 }));
-    expect(createEphemeralQuotePolicy('2026-07-21T11:00:00.000Z', Date.parse('2026-07-21T10:00:00Z')))
-      .toEqual(expect.objectContaining({ staleTime: 0, gcTime: 300_000 }));
+    expect(CACHE_POLICIES.CATALOGUE.staleTime).toBe(60_000);
+    expect(CACHE_POLICIES.CATALOGUE.gcTime).toBe(600_000);
+    expect(CACHE_POLICIES.PERSONAL.staleTime).toBe(30_000);
+    expect(CACHE_POLICIES.PERSONAL.gcTime).toBe(600_000);
+    expect(CACHE_POLICIES.TRANSACTION.staleTime).toBe(0);
+    expect(CACHE_POLICIES.TRANSACTION.gcTime).toBe(300_000);
+    expect(CACHE_POLICIES.LIVE.staleTime).toBe(0);
+    expect(CACHE_POLICIES.LIVE.gcTime).toBe(60_000);
+    expect(
+      createEphemeralQuotePolicy('2026-07-21T10:02:00.000Z', Date.parse('2026-07-21T10:00:00Z')),
+    ).toEqual(expect.objectContaining({ staleTime: 0, gcTime: 120_000 }));
+    expect(
+      createEphemeralQuotePolicy('2026-07-21T11:00:00.000Z', Date.parse('2026-07-21T10:00:00Z')),
+    ).toEqual(expect.objectContaining({ staleTime: 0, gcTime: 300_000 }));
   });
 
   it('uses one safe QueryClient policy and never retries or pauses mutations', () => {
@@ -67,9 +71,7 @@ describe('server-state policies', () => {
 
     expect(retry(0, boundedRateLimit)).toBe(true);
     expect(retry(1, boundedRateLimit)).toBe(false);
-    expect(retry(0, error({ kind: 'RATE_LIMIT', status: 429, retryAfterMs: 30_001 }))).toBe(
-      false,
-    );
+    expect(retry(0, error({ kind: 'RATE_LIMIT', status: 429, retryAfterMs: 30_001 }))).toBe(false);
     expect(readRetryDelay(0, error({}), () => 1)).toBe(500);
     expect(readRetryDelay(4, error({}), () => 1)).toBe(4_000);
     expect(readRetryDelay(0, boundedRateLimit, () => 0)).toBe(5_000);

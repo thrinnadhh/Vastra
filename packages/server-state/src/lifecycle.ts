@@ -50,7 +50,11 @@ export class AccountPartitionedQueryClient {
   public constructor(private readonly createClient: QueryClientFactory = createVastraQueryClient) {}
 
   public async activate(partition: AccountPartition): Promise<QueryClient> {
-    if (this.partition !== null && this.client !== null && isSamePartition(this.partition, partition)) {
+    if (
+      this.partition !== null &&
+      this.client !== null &&
+      isSamePartition(this.partition, partition)
+    ) {
       return this.client;
     }
     await this.clear();

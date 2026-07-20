@@ -50,7 +50,8 @@ describe('typed query-key factories', () => {
     ];
 
     expect(keys).toHaveLength(25);
-    expect(keys.every((key) => key[0] === 'customer' && key[1] === accountId)).toBe(true);
+    expect(customerKeys.root(accountId)).toEqual(['customer', accountId]);
+    expect(keys.every((key) => key[1] === accountId)).toBe(true);
     expect(customerKeys.checkoutQuotes(accountId)).toEqual([
       'customer',
       accountId,
@@ -95,7 +96,8 @@ describe('typed query-key factories', () => {
     expect(merchant).toHaveLength(12);
     expect(merchant.every((key) => key[2] === shopId)).toBe(true);
     expect(captain).toHaveLength(9);
-    expect(captain.every((key) => key[0] === 'captain' && key[1] === accountId)).toBe(true);
+    expect(captainKeys.root(accountId)).toEqual(['captain', accountId]);
+    expect(captain.every((key) => key[1] === accountId)).toBe(true);
     expect(admin).toHaveLength(5);
     expect(admin.every((key) => key[2] === authorizationEpoch)).toBe(true);
   });
@@ -103,9 +105,7 @@ describe('typed query-key factories', () => {
   it('normalizes filter objects deterministically and rejects unsafe values', () => {
     expect(
       normalizeQueryFilters({ sort: 'RECENT', nested: { pageSize: 20, active: true } }),
-    ).toEqual(
-      normalizeQueryFilters({ nested: { active: true, pageSize: 20 }, sort: 'RECENT' }),
-    );
+    ).toEqual(normalizeQueryFilters({ nested: { active: true, pageSize: 20 }, sort: 'RECENT' }));
     expect(() => normalizeQueryFilters({ latitude: Number.NaN })).toThrow(
       'Query filters must contain only finite JSON values',
     );

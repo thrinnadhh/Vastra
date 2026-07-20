@@ -53,7 +53,21 @@ export interface RetryPolicyError {
 }
 
 export type ReadRetryClass = 'STANDARD' | 'LIVE';
-export type ReadRetryPolicy = (failureCount: number, error: RetryPolicyError) => boolean;
+export type ReadRetryPolicy = (failureCount: number, error: unknown) => boolean;
+
+function retryPolicyError(value: unknown): RetryPolicyError | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const candidate = value as Readonly<Record<string, unknown>>;
+  if (
+    typeof candidate['kind'] !== 'string' ||
+    (typeof candidate['status'] !== 'number' && candidate['status'] !== null) ||
+    typeof candidate['retryable'] !== 'boolean' ||
+    (typeof candidate['retryAfterMs'] !== 'number' && candidate['retryAfterMs'] !== null)
+  ) {
+    return null;
+  }
+  return candidate as unknown as RetryPolicyError;
+}
 
 function isRetryableReadFailure(error: RetryPolicyError): boolean {
   if (!error.retryable) return false;
@@ -63,7 +77,9 @@ function isRetryableReadFailure(error: RetryPolicyError): boolean {
 
 export function createReadRetryPolicy(retryClass: ReadRetryClass): ReadRetryPolicy {
   if (retryClass === 'LIVE') return () => false;
-  return (failureCount, error) => {
+  return (failureCount, sourceError) => {
+    const error = retryPolicyError(sourceError);
+    if (error === null) return false;
     if (error.kind === 'RATE_LIMIT') {
       return (
         error.retryable &&
@@ -79,10 +95,11 @@ export function createReadRetryPolicy(retryClass: ReadRetryClass): ReadRetryPoli
 
 export function readRetryDelay(
   failureCount: number,
-  error: RetryPolicyError,
+  sourceError: unknown,
   random: () => number = Math.random,
 ): number {
-  if (error.kind === 'RATE_LIMIT' && error.retryAfterMs !== null) return error.retryAfterMs;
+  const error = retryPolicyError(sourceError);
+  if (error?.kind === 'RATE_LIMIT' && error.retryAfterMs !== null) return error.retryAfterMs;
   const maximum = Math.min(4_000, 500 * 2 ** Math.max(0, failureCount));
   return Math.floor(Math.max(0, Math.min(1, random())) * maximum);
 }

@@ -37,14 +37,12 @@ export const customerKeys = {
   ) => [...customerRoot(accountId), 'shopProducts', locationScopeId, shopId, filters] as const,
   product: (accountId: AccountId, locationScopeId: LocationScopeId, productId: string) =>
     [...customerRoot(accountId), 'product', locationScopeId, productId] as const,
-  favouriteShops: (accountId: AccountId) =>
-    [...customerRoot(accountId), 'favouriteShops'] as const,
+  favouriteShops: (accountId: AccountId) => [...customerRoot(accountId), 'favouriteShops'] as const,
   addresses: (accountId: AccountId) => [...customerRoot(accountId), 'addresses'] as const,
   address: (accountId: AccountId, addressId: string) =>
     [...customerRoot(accountId), 'address', addressId] as const,
   cart: (accountId: AccountId) => [...customerRoot(accountId), 'cart'] as const,
-  checkoutQuotes: (accountId: AccountId) =>
-    [...customerRoot(accountId), 'checkoutQuote'] as const,
+  checkoutQuotes: (accountId: AccountId) => [...customerRoot(accountId), 'checkoutQuote'] as const,
   checkoutQuote: (accountId: AccountId, quoteId: string) =>
     [...customerRoot(accountId), 'checkoutQuote', quoteId] as const,
   orderLists: (accountId: AccountId) => [...customerRoot(accountId), 'orders'] as const,
@@ -129,11 +127,8 @@ export const adminKeys = {
   root: adminRoot,
   dashboard: (accountId: AccountId, authorizationEpoch: AuthorizationEpoch) =>
     [...adminRoot(accountId, authorizationEpoch), 'dashboard'] as const,
-  collections: (
-    accountId: AccountId,
-    authorizationEpoch: AuthorizationEpoch,
-    resource: string,
-  ) => [...adminRoot(accountId, authorizationEpoch), 'collection', resource] as const,
+  collections: (accountId: AccountId, authorizationEpoch: AuthorizationEpoch, resource: string) =>
+    [...adminRoot(accountId, authorizationEpoch), 'collection', resource] as const,
   collection: (
     accountId: AccountId,
     authorizationEpoch: AuthorizationEpoch,
@@ -160,12 +155,8 @@ export const adminKeys = {
 export const mutationKeys = {
   customer: (accountId: AccountId, resource: string, command: string) =>
     [...customerRoot(accountId), 'mutation', resource, command] as const,
-  merchant: (
-    accountId: AccountId,
-    shopId: string,
-    resource: string,
-    command: string,
-  ) => [...merchantRoot(accountId, shopId), 'mutation', resource, command] as const,
+  merchant: (accountId: AccountId, shopId: string, resource: string, command: string) =>
+    [...merchantRoot(accountId, shopId), 'mutation', resource, command] as const,
   captain: (accountId: AccountId, resource: string, command: string) =>
     [...captainRoot(accountId), 'mutation', resource, command] as const,
   admin: (
