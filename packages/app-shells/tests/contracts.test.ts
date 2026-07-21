@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  createAdminShellContract,
-  createMobileShellContract,
-} from '../src/contracts.js';
+import { createAdminShellContract, createMobileShellContract } from '../src/contracts.js';
 
 describe('createMobileShellContract', () => {
   it('defines safe-area, keyboard, and overlay ordering defaults', () => {

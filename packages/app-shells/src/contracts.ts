@@ -28,9 +28,7 @@ export interface MobileShellContract {
 
 const ALL_SAFE_AREA_EDGES = ['top', 'right', 'bottom', 'left'] as const;
 
-export function createMobileShellContract(
-  input: MobileShellContractInput,
-): MobileShellContract {
+export function createMobileShellContract(input: MobileShellContractInput): MobileShellContract {
   const mode = input.mode ?? 'commerce';
   if (input.role !== 'customer' && mode !== 'commerce') {
     throw new Error('Merchant and captain application shells must use Commerce mode');
