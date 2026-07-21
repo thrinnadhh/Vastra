@@ -146,7 +146,13 @@ export function activeCustomerRoute(state: CustomerNavigationState): CustomerRou
 
   switch (state.selectedTab) {
     case 'Home':
-      return state.homeStack.at(-1) ?? { scope: 'HOME', name: 'Home', params: undefined };
+      return (
+        state.homeStack.at(-1) ?? {
+          scope: 'HOME',
+          name: 'Home',
+          params: undefined,
+        }
+      );
     case 'Discover':
       return (
         state.discoveryStack.at(-1) ?? {
@@ -156,10 +162,28 @@ export function activeCustomerRoute(state: CustomerNavigationState): CustomerRou
         }
       );
     case 'Style':
-      return state.styleStack.at(-1) ?? { scope: 'STYLE', name: 'StyleHome', params: undefined };
+      return (
+        state.styleStack.at(-1) ?? {
+          scope: 'STYLE',
+          name: 'StyleHome',
+          params: undefined,
+        }
+      );
     case 'Orders':
-      return state.ordersStack.at(-1) ?? { scope: 'ORDERS', name: 'Orders', params: undefined };
+      return (
+        state.ordersStack.at(-1) ?? {
+          scope: 'ORDERS',
+          name: 'Orders',
+          params: undefined,
+        }
+      );
     case 'Profile':
-      return state.profileStack.at(-1) ?? { scope: 'PROFILE', name: 'Profile', params: undefined };
+      return (
+        state.profileStack.at(-1) ?? {
+          scope: 'PROFILE',
+          name: 'Profile',
+          params: undefined,
+        }
+      );
   }
 }
