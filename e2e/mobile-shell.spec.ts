@@ -1,9 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import {
-  FRONTEND_E2E_ENTRY_POINTS,
-  getFrontendFixture,
-} from '@vastra/frontend-test-harness';
+import { FRONTEND_E2E_ENTRY_POINTS, getFrontendFixture } from '@vastra/frontend-test-harness';
 
 const mobileEntryPoints = FRONTEND_E2E_ENTRY_POINTS.filter(
   (entryPoint) => entryPoint.owner === 'mobile',
