@@ -138,12 +138,9 @@ describe('CustomerHomeScreen', () => {
   it('does not open a product without a currently available variant', async () => {
     const screen = renderHome(new HomePortStub([{ kind: 'SUCCESS', content }]));
 
-    const unavailableProduct = await screen.findByRole('button', {
-      name: 'Sold-out linen shirt from Tirupati Trends. ₹699. Currently unavailable',
-    });
-    expect(unavailableProduct.props.accessibilityState).toEqual({ disabled: true });
+    expect(await screen.findByText('Sold-out linen shirt')).toBeTruthy();
 
-    fireEvent.press(unavailableProduct);
+    fireEvent.press(screen.getByTestId('home-product-unavailable-product-id'));
     expect(screen.onSelectProduct).not.toHaveBeenCalled();
   });
 

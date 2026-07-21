@@ -43,7 +43,7 @@ function formatRupees(paise: number): string {
 
 function formatDistance(distanceMeters: number): string {
   if (distanceMeters < 1000) {
-    return `${Math.round(distanceMeters)} m away`;
+    return `${String(Math.round(distanceMeters))} m away`;
   }
 
   return `${(distanceMeters / 1000).toFixed(1)} km away`;
@@ -182,7 +182,7 @@ function ProductCard({
         <Text style={styles.productPrice}>{productPrice(product)}</Text>
         <Text style={selectable ? styles.availableText : styles.unavailableText}>
           {selectable
-            ? `${product.availableVariantCount} variant${product.availableVariantCount === 1 ? '' : 's'} available`
+            ? `${String(product.availableVariantCount)} variant${product.availableVariantCount === 1 ? '' : 's'} available`
             : 'Currently unavailable'}
         </Text>
       </View>
@@ -346,7 +346,6 @@ export function CustomerHomeScreen(props: CustomerHomeScreenProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadHome = useCallback(async () => {
-    setIsLoading(true);
     const result = await props.homePort.loadHome(props.coordinates);
 
     if (result.kind === 'SUCCESS') {
@@ -361,6 +360,11 @@ export function CustomerHomeScreen(props: CustomerHomeScreenProps) {
   useEffect(() => {
     void loadHome();
   }, [loadHome]);
+
+  const retryHome = (): void => {
+    setIsLoading(true);
+    void loadHome();
+  };
 
   const hasVisibleData =
     content !== null && (content.nearbyShops.length > 0 || content.nearbyProducts.length > 0);
@@ -382,9 +386,7 @@ export function CustomerHomeScreen(props: CustomerHomeScreenProps) {
   return (
     <CustomerNetworkStateBoundary
       onEmptyAction={props.onChangeLocation}
-      onRetry={() => {
-        void loadHome();
-      }}
+      onRetry={retryHome}
       state={networkState}
     >
       {content === null ? null : <HomeContent {...props} content={content} />}
