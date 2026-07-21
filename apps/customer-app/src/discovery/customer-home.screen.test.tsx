@@ -109,7 +109,7 @@ describe('CustomerHomeScreen', () => {
 
     expect(await screen.findByText('Find every kind of style from shops around you.')).toBeTruthy();
     expect(screen.getByText('Western wear')).toBeTruthy();
-    expect(screen.getByText('Tirupati Trends')).toBeTruthy();
+    expect(screen.getByTestId('home-shop-shop-id')).toBeTruthy();
     expect(screen.getByText('Blue cotton shirt')).toBeTruthy();
     expect(screen.getByText('₹799–₹999')).toBeTruthy();
     expect(homePort.coordinates).toEqual([{ latitude: 13.6288, longitude: 79.4192 }]);
@@ -167,10 +167,10 @@ describe('CustomerHomeScreen', () => {
     const screen = renderHome(homePort);
 
     expect(await screen.findByText('You are offline')).toBeTruthy();
-    expect(screen.queryByText('Tirupati Trends')).toBeNull();
+    expect(screen.queryByTestId('home-shop-shop-id')).toBeNull();
 
     fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByText('Tirupati Trends')).toBeTruthy();
+    expect(await screen.findByTestId('home-shop-shop-id')).toBeTruthy();
   });
 
   it('preserves visible content and announces stale data when a coordinate refresh fails', async () => {
@@ -180,7 +180,7 @@ describe('CustomerHomeScreen', () => {
     ]);
     const screen = renderHome(homePort);
 
-    expect(await screen.findByText('Tirupati Trends')).toBeTruthy();
+    expect(await screen.findByTestId('home-shop-shop-id')).toBeTruthy();
     screen.rerender(
       <CustomerHomeScreen
         coordinates={{ latitude: 13.63, longitude: 79.42 }}
@@ -195,6 +195,6 @@ describe('CustomerHomeScreen', () => {
     );
 
     expect(await screen.findByText('STALE DATA')).toBeTruthy();
-    expect(screen.getByText('Tirupati Trends')).toBeTruthy();
+    expect(screen.getByTestId('home-shop-shop-id')).toBeTruthy();
   });
 });
