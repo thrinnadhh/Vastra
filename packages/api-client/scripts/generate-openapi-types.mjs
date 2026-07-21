@@ -2,8 +2,8 @@ import { spawnSync } from 'node:child_process';
 import console from 'node:console';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import process from 'node:process';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = resolve(packageRoot, '../..');
@@ -213,6 +213,13 @@ if (bundleResult.status !== 0) {
   };
 
   const methods = new Set(['get', 'put', 'post', 'delete', 'patch', 'options', 'head', 'trace']);
+  const deriveOperationId = (method, path) => {
+    const segments = path
+      .split(/[^A-Za-z0-9]+/u)
+      .filter((segment) => segment.length > 0)
+      .map((segment) => `${segment.slice(0, 1).toUpperCase()}${segment.slice(1)}`);
+    return `${method.toLowerCase()}${segments.join('')}`;
+  };
   const operationEntries = [];
   const operationTypes = [];
   const seenOperationIds = new Set();
@@ -227,12 +234,10 @@ if (bundleResult.status !== 0) {
       if (!methods.has(method) || !isRecord(rawOperation)) {
         continue;
       }
-      const operationId = rawOperation.operationId;
-      if (typeof operationId !== 'string' || operationId.length === 0) {
-        throw new Error(
-          `Every OpenAPI operation requires operationId: ${method.toUpperCase()} ${path}`,
-        );
-      }
+      const operationId =
+        typeof rawOperation.operationId === 'string' && rawOperation.operationId.length > 0
+          ? rawOperation.operationId
+          : deriveOperationId(method, path);
       if (seenOperationIds.has(operationId)) {
         throw new Error(`Duplicate OpenAPI operationId: ${operationId}`);
       }
