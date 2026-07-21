@@ -1,0 +1,28 @@
+name: FE-S02-04 format diagnostics
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  format-patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Format FE-S02-04 files
+        run: pnpm exec prettier --write packages/ui-primitives docs/design/frontend-shared-primitives.md
+      - name: Capture formatting patch
+        run: git diff --binary > fe-s02-04-format.patch
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fe-s02-04-format-patch
+          path: fe-s02-04-format.patch
