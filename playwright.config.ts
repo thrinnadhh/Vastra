@@ -1,18 +1,15 @@
-import { env } from 'node:process';
-
 import { defineConfig, devices } from '@playwright/test';
 
 const fixtureOrigin = 'http://127.0.0.1:4178';
 const adminOrigin = 'http://127.0.0.1:4179';
-const isCi = env.CI !== undefined;
 
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
-  forbidOnly: isCi,
-  retries: isCi ? 1 : 0,
-  workers: isCi ? 1 : undefined,
-  reporter: isCi ? [['line'], ['html', { open: 'never' }]] : 'list',
+  forbidOnly: true,
+  retries: 1,
+  workers: 1,
+  reporter: [['line'], ['html', { open: 'never' }]],
   outputDir: 'test-results/playwright',
   use: {
     colorScheme: 'light',
@@ -25,14 +22,14 @@ export default defineConfig({
     {
       command: 'pnpm --filter @vastra/frontend-test-harness serve',
       url: `${fixtureOrigin}/health`,
-      reuseExistingServer: !isCi,
+      reuseExistingServer: false,
       timeout: 30_000,
     },
     {
       command:
         'pnpm --filter @vastra/admin-dashboard exec next build && pnpm --filter @vastra/admin-dashboard exec next start -H 127.0.0.1 -p 4179',
       url: adminOrigin,
-      reuseExistingServer: !isCi,
+      reuseExistingServer: false,
       timeout: 120_000,
     },
   ],
