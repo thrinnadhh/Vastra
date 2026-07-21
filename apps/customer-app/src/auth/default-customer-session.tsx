@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { AsyncStorageCustomerLaunchStore } from './async-storage-customer-launch-store';
 import { CustomerApiSessionProvider } from './customer-api-session';
-import { AsyncStorageCustomerLaunchStore } from './customer-launch-store';
 import { HttpCurrentAccountClient } from './current-account-client';
 import { CustomerSessionRoot } from './customer-session-root';
 import {
