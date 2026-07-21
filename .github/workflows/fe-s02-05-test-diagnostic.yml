@@ -1,0 +1,36 @@
+name: FE-S02-05 unit-test diagnostics
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-report:
+    if: github.head_ref == 'feat/ui-fe-s02-05-application-shells'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Capture exact repository unit-test output
+        shell: bash
+        run: |
+          set +e
+          pnpm test > fe-s02-05-test.log 2>&1
+          status=$?
+          cat fe-s02-05-test.log
+          echo "$status" > fe-s02-05-test.status
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fe-s02-05-test-report
+          path: |
+            fe-s02-05-test.log
+            fe-s02-05-test.status
