@@ -11,11 +11,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     moduleName.startsWith('.') &&
     moduleName.endsWith('.js');
 
-  return resolve(
-    context,
-    isApiClientSourceImport ? moduleName.slice(0, -3) : moduleName,
-    platform,
-  );
+  return resolve(context, isApiClientSourceImport ? moduleName.slice(0, -3) : moduleName, platform);
 };
 
 module.exports = config;
