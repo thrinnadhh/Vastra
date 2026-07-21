@@ -7,6 +7,7 @@ import type {
   CustomerHomeContent,
   CustomerHomeCoordinates,
   CustomerHomeFailureKind,
+  CustomerHomeLoadResult,
   CustomerHomePort,
   CustomerHomeProduct,
   CustomerHomeShop,
@@ -345,9 +346,7 @@ export function CustomerHomeScreen(props: CustomerHomeScreenProps) {
   const [failureKind, setFailureKind] = useState<CustomerHomeFailureKind | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadHome = useCallback(async () => {
-    const result = await props.homePort.loadHome(props.coordinates);
-
+  const applyLoadResult = useCallback((result: CustomerHomeLoadResult): void => {
     if (result.kind === 'SUCCESS') {
       setContent(result.content);
       setFailureKind(null);
@@ -355,15 +354,25 @@ export function CustomerHomeScreen(props: CustomerHomeScreenProps) {
       setFailureKind(result.failureKind);
     }
     setIsLoading(false);
-  }, [props.coordinates, props.homePort]);
+  }, []);
 
   useEffect(() => {
-    void loadHome();
-  }, [loadHome]);
+    let active = true;
+
+    void props.homePort.loadHome(props.coordinates).then((result) => {
+      if (active) {
+        applyLoadResult(result);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [applyLoadResult, props.coordinates, props.homePort]);
 
   const retryHome = (): void => {
     setIsLoading(true);
-    void loadHome();
+    void props.homePort.loadHome(props.coordinates).then(applyLoadResult);
   };
 
   const hasVisibleData =

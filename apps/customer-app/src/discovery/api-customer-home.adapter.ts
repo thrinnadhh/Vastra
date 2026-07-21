@@ -6,6 +6,52 @@ import type {
   CustomerHomePort,
 } from './customer-home.types';
 
+interface CustomerHomeApiCategory {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string | null;
+}
+
+interface CustomerHomeApiShop {
+  readonly id: string;
+  readonly name: string;
+  readonly operationalStatus: string;
+  readonly acceptsOnlineOrders: boolean;
+  readonly distanceMeters: number;
+  readonly minimumOrderPaise: number;
+  readonly averagePreparationMinutes: number;
+}
+
+interface CustomerHomeApiProduct {
+  readonly id: string;
+  readonly name: string;
+  readonly brand: string | null;
+  readonly genderCategory: string;
+  readonly primaryImage: Readonly<{
+    readonly imageUrl: string;
+    readonly altText: string;
+  }> | null;
+  readonly minSellingPricePaise: number | null;
+  readonly maxSellingPricePaise: number | null;
+  readonly availableVariantCount: number;
+  readonly totalAvailableQuantity: number;
+  readonly isAvailable: boolean;
+}
+
+interface CustomerHomeApiResponse {
+  readonly data: Readonly<{
+    readonly data: Readonly<{
+      readonly location: CustomerHomeCoordinates;
+      readonly categories: readonly CustomerHomeApiCategory[];
+      readonly nearbyShops: readonly CustomerHomeApiShop[];
+      readonly nearbyProducts: readonly Readonly<{
+        readonly product: CustomerHomeApiProduct;
+        readonly shop: Readonly<{ readonly id: string; readonly name: string }>;
+      }>[];
+    }>;
+  }>;
+}
+
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -23,7 +69,7 @@ export class ApiCustomerHomeAdapter implements CustomerHomePort {
 
   public async loadHome(coordinates: CustomerHomeCoordinates): Promise<CustomerHomeLoadResult> {
     try {
-      const response = await this.apiClient.request('getCustomerHome', {
+      const responseValue: unknown = await this.apiClient.request('getCustomerHome', {
         query: {
           latitude: coordinates.latitude,
           longitude: coordinates.longitude,
@@ -31,6 +77,7 @@ export class ApiCustomerHomeAdapter implements CustomerHomePort {
           productLimit: 16,
         },
       });
+      const response = responseValue as CustomerHomeApiResponse;
       const data = response.data.data;
 
       return {
