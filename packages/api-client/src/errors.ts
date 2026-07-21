@@ -1,4 +1,4 @@
-import type { ApiErrorKind, NormalizedApiError } from './types.js';
+import type { ApiErrorKind, NormalizedApiError } from './types';
 
 const MAX_RETRY_AFTER_MS = 30_000;
 const SAFE_CODE = /^[A-Z0-9_.:-]{1,80}$/u;
@@ -18,152 +18,54 @@ const extractEnvelope = (
 ): Readonly<{
   code: string | null;
   requestId: string | null;
-  retryable: boolean | null;
-  details: Record<string, unknown> | null;
+  retryable: boolean;
+  fieldErrors: Readonly<Record<string, readonly string[]>> | null;
 }> => {
   if (!isRecord(payload)) {
-    return { code: null, requestId: null, retryable: null, details: null };
+    return { code: null, requestId: null, retryable: false, fieldErrors: null };
   }
-
   const error = isRecord(payload['error']) ? payload['error'] : null;
+  const details = error !== null && isRecord(error['details']) ? error['details'] : null;
+  const fieldErrorsValue = details !== null && isRecord(details['fieldErrors']) ? details['fieldErrors'] : null;
+  const fieldErrors: Record<string, readonly string[]> = {};
+  if (fieldErrorsValue !== null) {
+    for (const [field, messages] of Object.entries(fieldErrorsValue)) {
+      if (Array.isArray(messages) && messages.every((message) => typeof message === 'string')) {
+        fieldErrors[field] = messages;
+      }
+    }
+  }
   return {
     code: asSafeCode(error?.['code']),
     requestId: asSafeRequestId(payload['requestId']),
-    retryable: typeof error?.['retryable'] === 'boolean' ? error['retryable'] : null,
-    details: isRecord(error?.['details']) ? error['details'] : null,
+    retryable: error?.['retryable'] === true,
+    fieldErrors: Object.keys(fieldErrors).length === 0 ? null : fieldErrors,
   };
-};
-
-const extractFieldErrors = (
-  details: Record<string, unknown> | null,
-  allowlist: readonly string[],
-): Readonly<Record<string, readonly string[]>> | null => {
-  if (details === null || allowlist.length === 0) {
-    return null;
-  }
-
-  const candidate = isRecord(details['fieldErrors']) ? details['fieldErrors'] : details;
-  const output: Record<string, readonly string[]> = {};
-  for (const field of allowlist) {
-    const messages = candidate[field];
-    if (!Array.isArray(messages)) {
-      continue;
-    }
-    const safeMessages = messages
-      .filter((message): message is string => typeof message === 'string')
-      .slice(0, 8);
-    if (safeMessages.length > 0) {
-      output[field] = safeMessages;
-    }
-  }
-
-  return Object.keys(output).length > 0 ? output : null;
-};
-
-export const parseRetryAfterMs = (value: string | null, nowMs = Date.now()): number | null => {
-  if (value === null) {
-    return null;
-  }
-
-  const seconds = Number(value);
-  const parsed = Number.isFinite(seconds) ? seconds * 1_000 : Date.parse(value) - nowMs;
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed > MAX_RETRY_AFTER_MS) {
-    return null;
-  }
-
-  return Math.ceil(parsed);
 };
 
 const kindForStatus = (status: number): ApiErrorKind => {
-  switch (status) {
-    case 400:
-    case 422:
-      return 'VALIDATION';
-    case 401:
-      return 'AUTHENTICATION';
-    case 403:
-      return 'AUTHORIZATION';
-    case 404:
-      return 'NOT_FOUND';
-    case 409:
-    case 410:
-      return 'CONFLICT';
-    case 429:
-      return 'RATE_LIMIT';
-    default:
-      return 'API';
-  }
+  if (status === 401) return 'AUTHENTICATION';
+  if (status === 403) return 'AUTHORIZATION';
+  if (status === 404) return 'NOT_FOUND';
+  if (status === 409) return 'CONFLICT';
+  if (status === 422 || status === 400) return 'VALIDATION';
+  if (status === 429) return 'RATE_LIMIT';
+  return 'API';
 };
 
-const messageKeyFor = (kind: ApiErrorKind): string => {
-  switch (kind) {
-    case 'AUTHENTICATION':
-      return 'api.error.authentication';
-    case 'AUTHORIZATION':
-      return 'api.error.authorization';
-    case 'VALIDATION':
-      return 'api.error.validation';
-    case 'NOT_FOUND':
-      return 'api.error.notFound';
-    case 'CONFLICT':
-      return 'api.error.conflict';
-    case 'RATE_LIMIT':
-      return 'api.error.rateLimit';
-    case 'TRANSPORT':
-      return 'api.error.transport';
-    case 'TIMEOUT':
-      return 'api.error.timeout';
-    case 'CONTRACT':
-      return 'api.error.contract';
-    case 'API':
-      return 'api.error.server';
-    case 'UNKNOWN':
-      return 'api.error.unknown';
+export const parseRetryAfterMs = (value: string | null): number | null => {
+  if (value === null) return null;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.min(Math.trunc(seconds * 1_000), MAX_RETRY_AFTER_MS);
   }
-};
-
-export type HttpErrorInput = Readonly<{
-  operationId: string;
-  status: number;
-  payload: unknown;
-  responseRequestId?: string | null;
-  retryAfter?: string | null;
-  method: string;
-  allowedFieldErrors?: readonly string[];
-}>;
-
-export const normalizeHttpError = (input: HttpErrorInput): NormalizedApiError => {
-  const envelope = extractEnvelope(input.payload);
-  const kind = kindForStatus(input.status);
-  const isMutation = input.method.toUpperCase() !== 'GET';
-  const serverRetryable = envelope.retryable !== false;
-  const retryableStatus = input.status >= 500 || input.status === 429;
-  const retryAfterMs = kind === 'RATE_LIMIT' ? parseRetryAfterMs(input.retryAfter ?? null) : null;
-  const retryable =
-    !isMutation &&
-    serverRetryable &&
-    retryableStatus &&
-    (kind !== 'RATE_LIMIT' || retryAfterMs !== null);
-
-  return {
-    kind,
-    operationId: input.operationId,
-    status: input.status,
-    code: envelope.code,
-    requestId: asSafeRequestId(input.responseRequestId) ?? envelope.requestId,
-    retryable,
-    retryAfterMs,
-    fieldErrors:
-      kind === 'VALIDATION'
-        ? extractFieldErrors(envelope.details, input.allowedFieldErrors ?? [])
-        : null,
-    requiresAuthoritativeRefresh: kind === 'CONFLICT' || (isMutation && input.status >= 500),
-    userMessageKey: messageKeyFor(kind),
-  };
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return null;
+  return Math.min(Math.max(0, timestamp - Date.now()), MAX_RETRY_AFTER_MS);
 };
 
 export const createLocalError = (
-  kind: Extract<ApiErrorKind, 'AUTHENTICATION' | 'TRANSPORT' | 'TIMEOUT' | 'CONTRACT' | 'UNKNOWN'>,
+  kind: Extract<ApiErrorKind, 'AUTHENTICATION' | 'TRANSPORT' | 'TIMEOUT' | 'CONTRACT'>,
   operationId: string,
   requiresAuthoritativeRefresh = false,
 ): NormalizedApiError => ({
@@ -172,18 +74,57 @@ export const createLocalError = (
   status: null,
   code: null,
   requestId: null,
-  retryable: kind === 'TRANSPORT' && !requiresAuthoritativeRefresh,
+  retryable: kind === 'TRANSPORT' || kind === 'TIMEOUT',
   retryAfterMs: null,
   fieldErrors: null,
   requiresAuthoritativeRefresh,
-  userMessageKey: messageKeyFor(kind),
+  userMessageKey: `api.${kind.toLowerCase()}`,
 });
 
-export class ApiClientError extends Error {
-  readonly normalized: NormalizedApiError;
-  readonly causeValue: unknown;
+export const normalizeHttpError = ({
+  operationId,
+  status,
+  payload,
+  responseRequestId,
+  retryAfter,
+  method,
+  allowedFieldErrors,
+}: Readonly<{
+  operationId: string;
+  status: number;
+  payload: unknown;
+  responseRequestId: string | null;
+  retryAfter: string | null;
+  method: string;
+  allowedFieldErrors?: readonly string[];
+}>): NormalizedApiError => {
+  const envelope = extractEnvelope(payload);
+  const fieldErrors =
+    envelope.fieldErrors === null || allowedFieldErrors === undefined
+      ? null
+      : Object.fromEntries(
+          Object.entries(envelope.fieldErrors).filter(([field]) => allowedFieldErrors.includes(field)),
+        );
+  const kind = kindForStatus(status);
+  return {
+    kind,
+    operationId,
+    status,
+    code: envelope.code,
+    requestId: responseRequestId ?? envelope.requestId,
+    retryable: envelope.retryable || status === 429 || status >= 500,
+    retryAfterMs: parseRetryAfterMs(retryAfter),
+    fieldErrors: fieldErrors !== null && Object.keys(fieldErrors).length > 0 ? fieldErrors : null,
+    requiresAuthoritativeRefresh: method !== 'GET' && (status >= 500 || status === 409),
+    userMessageKey: envelope.code === null ? `api.${kind.toLowerCase()}` : `api.code.${envelope.code}`,
+  };
+};
 
-  constructor(normalized: NormalizedApiError, causeValue?: unknown) {
+export class ApiClientError extends Error {
+  public readonly normalized: NormalizedApiError;
+  public readonly causeValue: unknown;
+
+  public constructor(normalized: NormalizedApiError, causeValue?: unknown) {
     super(normalized.userMessageKey);
     this.name = 'ApiClientError';
     this.normalized = normalized;
