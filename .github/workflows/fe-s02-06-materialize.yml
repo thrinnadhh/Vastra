@@ -47,7 +47,6 @@ jobs:
           pnpm exec prettier --write \
             package.json \
             eslint.config.mjs \
-            .github/workflows/ci.yml \
             playwright.config.ts \
             'packages/frontend-test-harness/**/*.{ts,json}' \
             'e2e/**/*.{ts,json}' \
@@ -62,6 +61,7 @@ jobs:
 
       - name: Commit ticket implementation
         run: |
+          git restore --source=HEAD -- .github/workflows/ci.yml
           git add -A
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
