@@ -1,4 +1,9 @@
-export const VISUAL_BASELINES = {
+interface VisualBaselines {
+  readonly browser: 'chromium';
+  readonly hashes: Readonly<Record<string, string>>;
+}
+
+export const VISUAL_BASELINES: VisualBaselines = {
   browser: 'chromium',
   hashes: {
     'primitive-primary-action-visual':
@@ -20,4 +25,4 @@ export const VISUAL_BASELINES = {
     'admin-overview-shell-visual':
       '4ad4601a00488a8cb721ec2d34f4ed3320fce60ce8445ce59a0f413d8ac6c4e3',
   },
-} as const;
+};
