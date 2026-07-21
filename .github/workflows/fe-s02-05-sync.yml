@@ -25,7 +25,7 @@ jobs:
       - name: Apply repository formatting
         run: >-
           pnpm exec prettier --write
-          packages/app-shells
+          'packages/app-shells/**/*.{ts,tsx,json}'
           apps/customer-app/App.tsx
           apps/customer-app/App.test.tsx
           apps/customer-app/package.json
