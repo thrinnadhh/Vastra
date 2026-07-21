@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { createAdminShellContract, type AdminNavigationItem } from './contracts.js';
+import { createAdminShellContract, type AdminNavigationItem } from './contracts';
 
 export interface AdminApplicationShellProps {
   readonly productLabel: string;
