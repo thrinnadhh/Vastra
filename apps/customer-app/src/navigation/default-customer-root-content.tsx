@@ -13,9 +13,13 @@ import { ApiCustomerPreferencesAdapter } from '../profile/api-customer-preferenc
 import { CustomerProfilePreferencesScreen } from '../profile/customer-profile-preferences.screen';
 
 export function DefaultCustomerHomeRoot({
+  location,
+  onLocationReady,
   openCheckout,
   openDiscover,
 }: {
+  readonly location: CustomerCoordinates | null;
+  readonly onLocationReady: (coordinates: CustomerCoordinates) => void;
   readonly openCheckout: () => void;
   readonly openDiscover: () => void;
 }) {
@@ -27,7 +31,6 @@ export function DefaultCustomerHomeRoot({
   );
   const homePort = useMemo(() => new ApiCustomerHomeAdapter(apiClient), [apiClient]);
   const [locationMode, setLocationMode] = useState(false);
-  const [location, setLocation] = useState<CustomerCoordinates | null>(null);
 
   if (locationMode) {
     return (
@@ -45,7 +48,7 @@ export function DefaultCustomerHomeRoot({
         <CustomerLocationScreen
           locationPort={locationPort}
           onLocationReady={(coordinates) => {
-            setLocation(coordinates);
+            onLocationReady(coordinates);
             setLocationMode(false);
           }}
           serviceabilityPort={serviceabilityPort}
