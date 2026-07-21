@@ -12,9 +12,16 @@
     }
   },
   "scripts": {
+    "generate": "node scripts/generate-openapi-types.mjs",
+    "prelint": "pnpm generate",
     "lint": "eslint . --max-warnings=0",
+    "pretypecheck": "pnpm generate",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "pretest": "pnpm generate",
+    "test": "vitest run",
+    "pretest:coverage": "pnpm generate",
+    "test:coverage": "node scripts/run-coverage.mjs",
+    "prebuild": "pnpm generate",
     "build": "tsc --noEmit"
   }
 }
