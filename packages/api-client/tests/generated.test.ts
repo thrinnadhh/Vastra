@@ -23,5 +23,6 @@ describe('generated OpenAPI boundary', () => {
     expectTypeOf<OperationId>().toEqualTypeOf<keyof operations>();
     expectTypeOf<OperationRequest<OperationId>>().not.toBeNever();
     expectTypeOf<OperationResponse<OperationId>>().not.toBeNever();
+    expect(OPENAPI_OPERATIONS).toBeDefined();
   });
 });
