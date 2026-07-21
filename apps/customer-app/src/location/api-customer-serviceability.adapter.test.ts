@@ -24,7 +24,7 @@ function createApiClient(nearbyShopCount: number): {
     requestId: 'request-id',
   });
 
-  return { apiClient: { request } as unknown as ApiClient, request };
+  return { apiClient: { request }, request };
 }
 
 describe('ApiCustomerServiceabilityAdapter', () => {
@@ -58,7 +58,7 @@ describe('ApiCustomerServiceabilityAdapter', () => {
 
   it('keeps transport and contract failures recoverable', async () => {
     const request = jest.fn().mockRejectedValue(new Error('offline'));
-    const apiClient = { request } as unknown as ApiClient;
+    const apiClient: ApiClient = { request };
 
     await expect(
       new ApiCustomerServiceabilityAdapter(apiClient).checkLocation({
