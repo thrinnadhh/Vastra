@@ -1,0 +1,39 @@
+name: FE-S03-06 query fix
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.head_ref == 'feat/ui-fe-s03-06-root-migration'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'packages/api-client/src/client.ts';
+          const source = fs
+            .readFileSync(path, 'utf8')
+            .replace('params.append(key, String(value));', 'params.append(key, encodeQueryValue(value));');
+          fs.writeFileSync(path, source);
+          NODE
+      - run: pnpm exec prettier --write packages/api-client/src/client.ts
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add packages/api-client/src/client.ts
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "fix(api-client): finalize query serialization"
+          git push
