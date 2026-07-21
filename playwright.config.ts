@@ -45,7 +45,7 @@ export default defineConfig({
     },
     {
       name: 'mobile',
-      testMatch: /mobile-shell\.spec\.ts/,
+      testMatch: /(mobile-shell|customer-access-navigation)\.spec\.ts/,
       use: {
         ...devices['Pixel 7'],
         baseURL: fixtureOrigin,

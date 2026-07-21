@@ -1,5 +1,9 @@
 import { createServer, type Server } from 'node:http';
 
+import {
+  CUSTOMER_ACCESS_NAVIGATION_SCENARIO_ROUTE,
+  renderCustomerAccessNavigationScenario,
+} from './customer-access-navigation-scenario';
 import { FRONTEND_FIXTURES, getFrontendFixture } from './fixtures';
 import { renderFixtureIndex, renderFixturePage } from './html';
 
@@ -50,6 +54,14 @@ export async function startFixtureServer(
     if (requestUrl.pathname === '/') {
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       response.end(renderFixtureIndex(FRONTEND_FIXTURES));
+      return;
+    }
+    if (requestUrl.pathname === CUSTOMER_ACCESS_NAVIGATION_SCENARIO_ROUTE) {
+      response.writeHead(200, {
+        'cache-control': 'no-store',
+        'content-type': 'text/html; charset=utf-8',
+      });
+      response.end(renderCustomerAccessNavigationScenario());
       return;
     }
     const match = /^\/fixtures\/([a-z0-9-]+)$/.exec(requestUrl.pathname);
