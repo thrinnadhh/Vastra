@@ -12,9 +12,11 @@
     }
   },
   "scripts": {
-    "lint": "eslint . --max-warnings=0",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests",
-    "build": "tsc --noEmit"
+    "generate": "node scripts/generate-openapi-types.mjs",
+    "lint": "pnpm generate && eslint . --max-warnings=0",
+    "typecheck": "pnpm generate && tsc --noEmit",
+    "test": "pnpm generate && vitest run",
+    "test:coverage": "pnpm generate && pnpm --dir ../server-state exec vitest run --root ../api-client --coverage --coverage.provider=custom --coverage.customProviderModule=../server-state/node_modules/@vitest/coverage-v8/dist/index.js --coverage.include=src/client.ts --coverage.include=src/errors.ts --coverage.include=src/index.ts --coverage.include=src/logging.ts --coverage.include=src/schema.ts --coverage.thresholds.lines=80 --coverage.thresholds.functions=80 --coverage.thresholds.branches=80 --coverage.thresholds.statements=80",
+    "build": "pnpm generate && tsc --noEmit"
   }
 }
