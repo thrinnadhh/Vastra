@@ -1,0 +1,42 @@
+name: FE-S04-03 merge lint diagnostic
+
+on:
+  pull_request:
+    branches:
+      - feat/ui-fe-s04-02-search-contract
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.head_ref == 'feat/ui-fe-s04-03-shop-experience'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Capture merge-ref lint diagnostics
+        run: |
+          files=(
+            apps/customer-app/src/discovery/api-customer-shop.adapter.test.ts
+            apps/customer-app/src/discovery/api-customer-shop.adapter.ts
+            apps/customer-app/src/discovery/customer-shop.types.ts
+            apps/customer-app/src/discovery/customer-shops.screen.test.tsx
+            apps/customer-app/src/discovery/customer-shops.screen.tsx
+            apps/customer-app/src/discovery/default-customer-search.tsx
+          )
+          pnpm exec eslint "${files[@]}" > lint-report.txt 2>&1 || true
+          if [ ! -s lint-report.txt ]; then
+            echo "Merge-ref lint passed." > lint-report.txt
+          fi
+          cat lint-report.txt
+      - uses: actions/upload-artifact@v6
+        with:
+          name: fe-s04-03-merge-lint
+          path: lint-report.txt
+          if-no-files-found: error
