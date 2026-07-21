@@ -104,7 +104,7 @@ export const response = (
   headers: {
     get: (name) => headers[name.toLowerCase()] ?? null,
   },
-  json: async () => payload,
+  json: () => Promise.resolve(payload),
 });
 
 export const clientOptions = (
