@@ -1,6 +1,8 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 
+import type { CustomerLaunchStore } from './customer-launch-store';
+import { useCustomerSessionActions } from './customer-session-actions';
 import { CustomerSessionRoot } from './customer-session-root';
 import type {
   AuthSessionEvent,
@@ -27,7 +29,10 @@ const AUTHENTICATED_STATE: SessionRestorationState = {
 
 class ObservableAuthSession implements AuthSessionPort {
   private listener:
-    ((event: AuthSessionEvent, session: RestorableSession | null) => void) | undefined;
+    | ((event: AuthSessionEvent, session: RestorableSession | null) => void)
+    | undefined;
+
+  public signOutCalls = 0;
 
   public getSession(): Promise<RestorableSession | null> {
     return Promise.resolve(SESSION);
@@ -44,6 +49,8 @@ class ObservableAuthSession implements AuthSessionPort {
   }
 
   public signOutLocal(): Promise<void> {
+    this.signOutCalls += 1;
+    this.listener?.('SIGNED_OUT', null);
     return Promise.resolve();
   }
 
@@ -71,8 +78,41 @@ class SequencedRestorer implements SessionRestorer {
   }
 }
 
+class LaunchStoreStub implements CustomerLaunchStore {
+  public completed = false;
+
+  public constructor(completed: boolean) {
+    this.completed = completed;
+  }
+
+  public hasCompletedWelcome(): Promise<boolean> {
+    return Promise.resolve(this.completed);
+  }
+
+  public markWelcomeCompleted(): Promise<void> {
+    this.completed = true;
+    return Promise.resolve();
+  }
+}
+
+function SessionActionProbe() {
+  const actions = useCustomerSessionActions();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Sign out of Vastra"
+      onPress={() => {
+        void actions.signOut();
+      }}
+    >
+      <Text>{actions.account.fullName}</Text>
+    </Pressable>
+  );
+}
+
 describe('CustomerSessionRoot', () => {
-  it('shows a loading state and then renders authenticated content', async () => {
+  it('shows a deterministic splash and then renders authenticated content', async () => {
     const authSession = new ObservableAuthSession();
     const sessionRestorer = new SequencedRestorer();
 
@@ -84,6 +124,28 @@ describe('CustomerSessionRoot', () => {
 
     expect(getByLabelText('Restoring Vastra session')).toBeTruthy();
     expect(await findByText('Authenticated customer home')).toBeTruthy();
+  });
+
+  it('shows welcome once for a first launch without a session', async () => {
+    const authSession = new ObservableAuthSession();
+    const sessionRestorer = new SequencedRestorer();
+    const launchStore = new LaunchStoreStub(false);
+    sessionRestorer.states = [{ status: 'SIGNED_OUT' }];
+
+    const { findByRole, findByText } = render(
+      <CustomerSessionRoot
+        authSession={authSession}
+        launchStore={launchStore}
+        sessionRestorer={sessionRestorer}
+      >
+        <Text>Authenticated customer home</Text>
+      </CustomerSessionRoot>,
+    );
+
+    expect(await findByText('Fashion from shops around you')).toBeTruthy();
+    fireEvent.press(await findByRole('button', { name: 'Continue to sign in' }));
+    expect(await findByText('Sign in to continue')).toBeTruthy();
+    expect(launchStore.completed).toBe(true);
   });
 
   it('shows the signed-out state after an auth sign-out event', async () => {
@@ -103,6 +165,21 @@ describe('CustomerSessionRoot', () => {
     });
 
     expect(await findByText('Sign in to continue')).toBeTruthy();
+  });
+
+  it('exposes local logout through the authenticated session boundary', async () => {
+    const authSession = new ObservableAuthSession();
+    const sessionRestorer = new SequencedRestorer();
+    const { findByRole, findByText } = render(
+      <CustomerSessionRoot authSession={authSession} sessionRestorer={sessionRestorer}>
+        <SessionActionProbe />
+      </CustomerSessionRoot>,
+    );
+
+    fireEvent.press(await findByRole('button', { name: 'Sign out of Vastra' }));
+
+    expect(await findByText('Sign in to continue')).toBeTruthy();
+    expect(authSession.signOutCalls).toBe(1);
   });
 
   it('retries a recoverable restoration failure', async () => {
