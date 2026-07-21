@@ -50,20 +50,26 @@ export function CustomerAppContent({ addressId = null }: { readonly addressId?: 
   );
 }
 
-export default function App() {
+export function CustomerApplicationRoot(): React.JSX.Element {
+  return (
+    <MobileApplicationShell
+      accessibilityLabel="Vastra customer application"
+      role="customer"
+      safeAreaStyle={styles.safeArea}
+      testID="customer-application-shell"
+    >
+      <CustomerSessionApp>
+        <CustomerAppContent />
+      </CustomerSessionApp>
+    </MobileApplicationShell>
+  );
+}
+
+export default function App(): React.JSX.Element {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <StatusBar style="dark" />
-      <MobileApplicationShell
-        accessibilityLabel="Vastra customer application"
-        role="customer"
-        safeAreaStyle={styles.safeArea}
-        testID="customer-application-shell"
-      >
-        <CustomerSessionApp>
-          <CustomerAppContent />
-        </CustomerSessionApp>
-      </MobileApplicationShell>
+      <CustomerApplicationRoot />
     </SafeAreaProvider>
   );
 }
