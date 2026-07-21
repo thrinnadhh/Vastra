@@ -46,6 +46,7 @@ stale banner. Cursor values remain opaque and are never decoded by the frontend.
 Adapter tests cover request serialization, null-filter omission, opaque cursor forwarding,
 response mapping, and offline/error classification. Component tests cover location gating,
 query validation, successful search, session suggestions, filter refresh, cursor append,
-deduplication, no-results recovery, product handoff, and stale-result preservation.
+deduplication, no-results recovery, product handoff, and stale-result preservation. Test
+assertions use fully typed request objects rather than unsafe partial matcher assignments.
 `FE-S04-06` retains device/browser discovery E2E, accessibility audit, performance evidence,
 and long-list/low-end verification.
