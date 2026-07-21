@@ -9,11 +9,6 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts",
       "default": "./src/index.ts"
-    },
-    "./native": {
-      "types": "./src/native.ts",
-      "import": "./src/native.ts",
-      "default": "./src/native.ts"
     }
   },
   "scripts": {
