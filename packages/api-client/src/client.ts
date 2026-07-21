@@ -427,9 +427,7 @@ export const createApiClient = (options: ApiClientOptions): ApiClient => {
       input: OperationRequest<Id>,
       requestOptions?: RequestOptions,
     ): Promise<ApiClientResponse<OperationResponse<Id>>> =>
-      client.request(operationId, input, requestOptions) as Promise<
-        ApiClientResponse<OperationResponse<Id>>
-      >,
+      client.request(operationId, input, requestOptions),
   };
 };
 
