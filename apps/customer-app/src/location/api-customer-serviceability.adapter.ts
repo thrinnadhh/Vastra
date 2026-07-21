@@ -1,4 +1,4 @@
-import { ApiClientError, type ApiClient } from '@vastra/api-client';
+import type { ApiClient } from '@vastra/api-client';
 
 import type {
   CustomerCoordinates,
@@ -26,11 +26,7 @@ export class ApiCustomerServiceabilityAdapter implements CustomerServiceabilityP
       return nearbyShopCount > 0
         ? { kind: 'SERVICEABLE', nearbyShopCount }
         : { kind: 'OUTSIDE_SERVICE_AREA' };
-    } catch (error: unknown) {
-      if (error instanceof ApiClientError) {
-        return { kind: 'UNAVAILABLE' };
-      }
-
+    } catch {
       return { kind: 'UNAVAILABLE' };
     }
   }
