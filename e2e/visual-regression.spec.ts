@@ -19,7 +19,9 @@ for (const entryPoint of FRONTEND_VISUAL_ENTRY_POINTS) {
     expect(browserName).toBe(baselineFile.browser);
     await page.setViewportSize(entryPoint.viewport);
     await page.goto(entryPoint.route);
-    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+    });
 
     const screenshot = await page.screenshot({ animations: 'disabled', fullPage: true });
     const actualHash = createHash('sha256').update(screenshot).digest('hex');
