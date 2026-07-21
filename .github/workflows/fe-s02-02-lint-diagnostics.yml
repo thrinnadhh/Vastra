@@ -1,4 +1,4 @@
-name: FE-S02-02 lint diagnostics
+name: FE-S02-02 coverage diagnostics
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  lint-report:
+  coverage-report:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -24,10 +24,13 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - name: Capture exact lint command
-        run: pnpm lint > fe-s02-02-exact-lint.log 2>&1 || true
+      - name: Run API-client coverage
+        run: |
+          set -o pipefail
+          pnpm --filter @vastra/api-client test:coverage | tee fe-s02-02-coverage.log
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: fe-s02-02-diagnostics
-          path: fe-s02-02-exact-lint.log
+          name: fe-s02-02-coverage
+          path: fe-s02-02-coverage.log
           if-no-files-found: error
