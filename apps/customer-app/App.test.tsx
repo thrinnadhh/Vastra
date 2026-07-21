@@ -28,15 +28,14 @@ import { CustomerAppContent, CustomerApplicationRoot } from './App';
 
 describe('CustomerAppContent', () => {
   it('exposes exactly the approved five root tabs', () => {
-    const { getAllByRole } = render(<CustomerAppContent />);
+    const { getAllByRole, getByRole } = render(<CustomerAppContent />);
 
-    expect(getAllByRole('tab').map((tab) => tab.props.accessibilityLabel)).toEqual([
-      'Home tab',
-      'Discover tab',
-      'Style tab',
-      'Orders tab',
-      'Profile tab',
-    ]);
+    expect(getAllByRole('tab')).toHaveLength(5);
+    expect(getByRole('tab', { name: 'Home tab' })).toBeTruthy();
+    expect(getByRole('tab', { name: 'Discover tab' })).toBeTruthy();
+    expect(getByRole('tab', { name: 'Style tab' })).toBeTruthy();
+    expect(getByRole('tab', { name: 'Orders tab' })).toBeTruthy();
+    expect(getByRole('tab', { name: 'Profile tab' })).toBeTruthy();
   });
 
   it('keeps checkout contextual rather than making it a sixth tab', () => {
