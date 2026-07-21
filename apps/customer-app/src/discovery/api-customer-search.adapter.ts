@@ -9,6 +9,21 @@ import type {
   CustomerSearchSort,
 } from './customer-search.types';
 
+interface SearchApiQuery {
+  readonly q: string;
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly categoryId?: string;
+  readonly gender?: CustomerSearchGender;
+  readonly shopId?: string;
+  readonly minPricePaise?: number;
+  readonly maxPricePaise?: number;
+  readonly availableOnly: boolean;
+  readonly sort: CustomerSearchSort;
+  readonly cursor?: string;
+  readonly limit: number;
+}
+
 interface SearchApiProduct {
   readonly id: string;
   readonly shopId: string;
@@ -69,28 +84,27 @@ function isOfflineFailure(error: unknown): boolean {
   return kind === 'TRANSPORT' || kind === 'TIMEOUT';
 }
 
-function compactQuery(request: CustomerSearchRequest) {
-  const query: Record<string, string | number | boolean> = {
+function compactQuery(request: CustomerSearchRequest): SearchApiQuery {
+  return {
     q: request.query,
     latitude: request.location.latitude,
     longitude: request.location.longitude,
     availableOnly: request.filters.availableOnly,
     sort: request.filters.sort,
     limit: request.limit,
+    ...(request.filters.categoryId === null
+      ? {}
+      : { categoryId: request.filters.categoryId }),
+    ...(request.filters.gender === null ? {} : { gender: request.filters.gender }),
+    ...(request.filters.shopId === null ? {} : { shopId: request.filters.shopId }),
+    ...(request.filters.minPricePaise === null
+      ? {}
+      : { minPricePaise: request.filters.minPricePaise }),
+    ...(request.filters.maxPricePaise === null
+      ? {}
+      : { maxPricePaise: request.filters.maxPricePaise }),
+    ...(request.cursor === null ? {} : { cursor: request.cursor }),
   };
-
-  if (request.filters.categoryId !== null) query['categoryId'] = request.filters.categoryId;
-  if (request.filters.gender !== null) query['gender'] = request.filters.gender;
-  if (request.filters.shopId !== null) query['shopId'] = request.filters.shopId;
-  if (request.filters.minPricePaise !== null) {
-    query['minPricePaise'] = request.filters.minPricePaise;
-  }
-  if (request.filters.maxPricePaise !== null) {
-    query['maxPricePaise'] = request.filters.maxPricePaise;
-  }
-  if (request.cursor !== null) query['cursor'] = request.cursor;
-
-  return query;
 }
 
 function mapFilters(filters: SearchApiResponse['data']['data']['filters']): CustomerSearchFilters {
