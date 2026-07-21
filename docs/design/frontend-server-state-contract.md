@@ -14,10 +14,11 @@ Vastra will use **TanStack Query v5** (`@tanstack/react-query`) as the one
 repository-approved query, cache, and mutation coordinator for the customer, merchant,
 captain, and admin frontends.
 
-This is a documentation decision only. The dependency is not currently installed and
-must not be added until the operator approves the production dependency in `FE-S02-03`.
-Until `FE-S02-02` and `FE-S02-03` are complete, runtime readiness remains a
-`PLATFORM-GAP` and the tested hand-written clients remain in place.
+The operator approved the production dependency for `FE-S02-03`, and TanStack Query v5
+is now installed only through `@vastra/server-state`. Application feature integrations
+remain out of scope for this ticket, so the tested hand-written clients stay in place
+until their actor integration tickets are implemented. Runtime readiness remains a
+`PLATFORM-GAP` while `FE-S02-02`, `FE-S02-06`, and those integrations are incomplete.
 
 The decision does not change application behavior, OpenAPI, backend services,
 migrations, RLS, product scope, or production dependencies. It does not make a
@@ -74,9 +75,10 @@ Audit baseline: `40fbb9d` (`origin/main`) on 2026-07-21.
 ### Packages and dependencies
 
 The customer, merchant, and captain manifests use Expo 57, React 19, React Native
-0.86, Supabase, and AsyncStorage. The admin manifest uses Next 16 and React 19. None of
-the four applications, the root workspace, or the shared frontend packages declares a
-query/cache library, Axios, Redux, Zustand, Apollo, urql, SWR, or an equivalent
+0.86, Supabase, and AsyncStorage. The admin manifest uses Next 16 and React 19. At the
+audit baseline, none of the four applications, the root workspace, or the shared
+frontend packages declared a query/cache library. `FE-S02-03` subsequently added
+TanStack Query v5 only to `@vastra/server-state`; no application declares an independent
 server-state owner.
 
 `@vastra/api-client` is an empty, non-generated framework-neutral shell.
@@ -412,7 +414,7 @@ screen copy or preservation tests in the same step.
 |---|---|
 | `FE-S02-01` | Add/confirm preservation tests for customer stale reads and same-intent COD idempotency; merchant 15-second queue polling, 5-second alert verification, ringtone/countdown/ack safety; captain 10-second delivery polling, location sampling, and all lifecycle/COD commands. |
 | `FE-S02-02` | Generate `@vastra/api-client`, implement the exact normalized error/auth/request-ID/logging boundary above, and migrate hand-written decoders without behavior regression. |
-| `FE-S02-03` | Obtain operator approval for and install TanStack Query v5; create `@vastra/server-state`; implement the typed factories, policy classes, retry functions, mutation intent/idempotency helpers, QueryClient lifecycle, `ConnectivityPort`, mobile/web focus adapters, and invalidation utilities defined here. No persisted cache or mutation queue. |
+| `FE-S02-03` | Operator approval obtained and package implemented: TanStack Query v5 is installed through `@vastra/server-state`, which owns the typed factories, policy classes, retry functions, mutation intent/idempotency helpers, QueryClient lifecycle, `ConnectivityPort`, mobile/web focus adapters, and invalidation utilities defined here. No persisted cache or mutation queue was added. |
 | `FE-S02-06` | Add deterministic shared tests for key equality/prefixes, cache partition/clear, retry matrix, stale/GC classes, pagination deduplication, invalidation, no unsafe retry/resume, offline actor policies, and normalized error rendering. |
 | `FE-S03-02` | Integrate customer QueryClient creation/clear with session bootstrap, token refresh, role checks, sign-out, and account change. Reuse this contract for merchant/captain session migration. |
 | `FE-S06-02`, `FE-S06-03`, `FE-S06-04` | Connect merchant push/alert, queue/decision, and packing/ready flows to typed invalidation while preserving ringtone, countdown, authoritative-stop, polling, and no-offline-command rules. |
@@ -428,10 +430,10 @@ replace any of them with direct database access or local success. In particular,
 
 ## Readiness conclusion
 
-The FE-G0-04 architecture decision is frozen. Runtime status is `PLATFORM-GAP` until
-`FE-S02-01`, `FE-S02-02`, `FE-S02-03`, and `FE-S02-06` are complete and the relevant
-actor integration ticket passes. A feature also remains `CONTRACT-GAP` wherever the
-coverage ledger names a `BE-FE-*` dependency.
+The FE-G0-04 architecture decision is frozen, and the FE-S02-03 shared package is
+implemented. Runtime status remains `PLATFORM-GAP` until `FE-S02-01`, `FE-S02-02`, and
+`FE-S02-06` are complete and the relevant actor integration ticket passes. A feature
+also remains `CONTRACT-GAP` wherever the coverage ledger names a `BE-FE-*` dependency.
 
 This contract deliberately fits TanStack Query's current React Native focus/online
 adapters, serializable query-key model, configurable stale/garbage-collection behavior,
