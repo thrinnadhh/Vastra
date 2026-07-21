@@ -18,10 +18,12 @@ import { DefaultCustomerOrders } from './src/orders/default-customer-orders';
 
 export function CustomerAppContent({ addressId = null }: { readonly addressId?: string | null }) {
   const slots: CustomerRootNavigationSlots = {
-    home: (openCheckout) => <DefaultCustomerHomeRoot openCheckout={openCheckout} />,
+    home: ({ openCheckout, openDiscover }) => (
+      <DefaultCustomerHomeRoot openCheckout={openCheckout} openDiscover={openDiscover} />
+    ),
     discover: (
       <CustomerRootPlaceholder
-        description="Discovery routes are ready for the Sprint 04 catalogue implementation."
+        description="Search, shop, and product routes continue in the remaining Sprint 04 tickets."
         title="Discover"
       />
     ),
