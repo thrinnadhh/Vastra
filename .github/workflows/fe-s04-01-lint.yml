@@ -40,7 +40,7 @@ jobs:
           if [ ! -s docs/design/fe-s04-01-lint-report.txt ]; then
             echo "Lint passed after scoped autofix." > docs/design/fe-s04-01-lint-report.txt
           fi
-          pnpm exec prettier --write "${files[@]}" docs/design/fe-s04-01-lint-report.txt
+          pnpm exec prettier --write "${files[@]}"
           rm .github/workflows/fe-s04-01-lint.yml
       - name: Commit lint repair and diagnostics
         run: |
