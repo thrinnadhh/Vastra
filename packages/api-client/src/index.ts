@@ -6,20 +6,20 @@ export {
   type OperationRequest,
   type OperationResponse,
   type operations,
-} from './generated/openapi.js';
+} from './generated/openapi';
 export {
   createApiClient,
   type ApiClient,
   type ApiClientOptions,
   type RequestOptions,
-} from './client.js';
+} from './client';
 export {
   ApiClientError,
   createLocalError,
   normalizeHttpError,
   parseRetryAfterMs,
-} from './errors.js';
-export { validateJsonSchema, type JsonSchema, type SchemaRegistry } from './schema.js';
+} from './errors';
+export { validateJsonSchema, type JsonSchema, type SchemaRegistry } from './schema';
 export type {
   AbortSignalLike,
   AccessTokenProvider,
@@ -34,4 +34,4 @@ export type {
   HeadersLike,
   NormalizedApiError,
   RequestIdProvider,
-} from './types.js';
+} from './types';
