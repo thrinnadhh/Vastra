@@ -156,7 +156,15 @@ describe('ApiCustomerSearchAdapter', () => {
     });
 
     expect(request).toHaveBeenCalledWith('searchCustomerProducts', {
-      query: expect.objectContaining({ cursor: 'opaque-cursor' }),
+      query: {
+        q: 'dress',
+        latitude: 13.6288,
+        longitude: 79.4192,
+        availableOnly: true,
+        sort: 'RELEVANCE',
+        limit: 20,
+        cursor: 'opaque-cursor',
+      },
     });
   });
 

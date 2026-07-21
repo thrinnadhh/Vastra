@@ -149,12 +149,13 @@ describe('CustomerSearchScreen', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Filter by Women' }));
 
     expect(searchPort.requests).toHaveLength(2);
-    expect(searchPort.requests[1]).toEqual(
-      expect.objectContaining({
-        query: 'cotton shirt',
-        filters: expect.objectContaining({ gender: 'WOMEN' }),
-      }),
-    );
+    expect(searchPort.requests[1]).toEqual({
+      query: 'cotton shirt',
+      location,
+      filters: { ...DEFAULT_CUSTOMER_SEARCH_FILTERS, gender: 'WOMEN' },
+      cursor: null,
+      limit: 20,
+    });
   });
 
   it('appends cursor pages and deduplicates product ids', async () => {
