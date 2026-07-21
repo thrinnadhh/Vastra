@@ -2,6 +2,9 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
+    "paths": {
+      "@vastra/frontend-test-harness": ["../packages/frontend-test-harness/src/index.ts"]
+    },
     "noEmit": true
   },
   "include": ["*.ts"]
