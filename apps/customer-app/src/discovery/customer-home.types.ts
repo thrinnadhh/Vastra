@@ -44,6 +44,10 @@ export interface CustomerHomeContent {
 
 export type CustomerHomeFailureKind = 'OFFLINE' | 'ERROR';
 
+export type CustomerHomeLoadResult =
+  | { readonly kind: 'SUCCESS'; readonly content: CustomerHomeContent }
+  | { readonly kind: 'FAILURE'; readonly failureKind: CustomerHomeFailureKind };
+
 export interface CustomerHomePort {
-  loadHome(coordinates: CustomerHomeCoordinates): Promise<CustomerHomeContent>;
+  loadHome(coordinates: CustomerHomeCoordinates): Promise<CustomerHomeLoadResult>;
 }
