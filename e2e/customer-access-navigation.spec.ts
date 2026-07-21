@@ -85,9 +85,7 @@ test('invalid, wrong-role, and unauthorized links fail safely', async ({ page })
   await page.getByRole('button', { name: 'Open unauthorized order link' }).click();
   await expect(page.getByRole('heading', { name: 'Access denied' })).toBeVisible();
   await expect(page.getByText('This destination is unavailable for this account.')).toBeVisible();
-  await expect(page.getByRole('status')).toContainText(
-    'without exposing resource details',
-  );
+  await expect(page.getByRole('status')).toContainText('without exposing resource details');
 });
 
 test('session expiry retains and restores the selected destination', async ({ page }) => {
@@ -101,10 +99,7 @@ test('session expiry retains and restores the selected destination', async ({ pa
   await page.getByRole('button', { name: 'Sign in again' }).click();
   await completeOtp(page);
 
-  await expect(page.getByRole('tab', { name: 'Profile' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
+  await expect(page.getByRole('tab', { name: 'Profile' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tabpanel', { name: 'Profile' })).toContainText(
     'profile identity remains server-owned',
   );
