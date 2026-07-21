@@ -23,27 +23,42 @@ jobs:
       - name: Synchronize workspace lockfile
         run: pnpm install --lockfile-only
       - name: Apply repository formatting
-        run: >-
-          pnpm exec prettier --write
-          'packages/app-shells/**/*.{ts,tsx,json}'
-          apps/customer-app/App.tsx
-          apps/customer-app/App.test.tsx
-          apps/customer-app/package.json
-          apps/merchant-app/App.tsx
-          apps/merchant-app/App.test.tsx
-          apps/merchant-app/package.json
-          apps/captain-app/App.tsx
-          apps/captain-app/App.test.tsx
-          apps/captain-app/package.json
-          apps/admin-dashboard/next.config.ts
-          apps/admin-dashboard/package.json
-          apps/admin-dashboard/src/app/globals.css
-          apps/admin-dashboard/src/app/layout.tsx
-          apps/admin-dashboard/src/app/layout.test.tsx
-          apps/admin-dashboard/src/app/page.tsx
-          apps/admin-dashboard/src/app/page.test.tsx
-          docs/design/frontend-application-shells.md
-          pnpm-lock.yaml
+        id: format
+        shell: bash
+        run: |
+          set +e
+          pnpm exec prettier --write \
+            'packages/app-shells/**/*.{ts,tsx,json}' \
+            apps/customer-app/App.tsx \
+            apps/customer-app/App.test.tsx \
+            apps/customer-app/package.json \
+            apps/merchant-app/App.tsx \
+            apps/merchant-app/App.test.tsx \
+            apps/merchant-app/package.json \
+            apps/captain-app/App.tsx \
+            apps/captain-app/App.test.tsx \
+            apps/captain-app/package.json \
+            apps/admin-dashboard/next.config.ts \
+            apps/admin-dashboard/package.json \
+            apps/admin-dashboard/src/app/globals.css \
+            apps/admin-dashboard/src/app/layout.tsx \
+            apps/admin-dashboard/src/app/layout.test.tsx \
+            apps/admin-dashboard/src/app/page.tsx \
+            apps/admin-dashboard/src/app/page.test.tsx \
+            docs/design/frontend-application-shells.md \
+            pnpm-lock.yaml > fe-s02-05-format.log 2>&1
+          status=$?
+          cat fe-s02-05-format.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fe-s02-05-format-log
+          path: fe-s02-05-format.log
+      - name: Stop on formatter failure
+        if: steps.format.outputs.status != '0'
+        run: exit 1
       - name: Commit deterministic workspace output
         shell: bash
         run: |
