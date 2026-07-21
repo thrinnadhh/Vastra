@@ -1,4 +1,4 @@
-import type { ApiClientLogEvent, ApiClientLogger, ActorType, ApiErrorKind } from './types.js';
+import type { ApiClientLogEvent, ApiClientLogger, ActorType, ApiErrorKind } from './types';
 
 export type LogContext = Readonly<{
   phase: ApiClientLogEvent['phase'];
@@ -21,7 +21,7 @@ export const writeClientLog = (logger: ApiClientLogger | undefined, context: Log
     return;
   }
 
-  const event: ApiClientLogEvent = {
+  logger.log({
     phase: context.phase,
     operationId: context.operationId,
     kind: context.kind ?? null,
@@ -32,7 +32,5 @@ export const writeClientLog = (logger: ApiClientLogger | undefined, context: Log
     durationMs: boundedInteger(context.durationMs, 0),
     actor: context.actor ?? null,
     appVersion: context.appVersion ?? null,
-  };
-
-  logger.log(event);
+  });
 };
