@@ -6,20 +6,26 @@ import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-c
 import { CaptainSessionApp } from './src/auth/default-captain-session';
 import { CaptainOperationsScreen } from './src/captain-operations.screen';
 
-export default function App() {
+export function CaptainApplicationRoot(): React.JSX.Element {
+  return (
+    <MobileApplicationShell
+      accessibilityLabel="Vastra captain application"
+      role="captain"
+      safeAreaStyle={styles.safeArea}
+      testID="captain-application-shell"
+    >
+      <CaptainSessionApp>
+        <CaptainOperationsScreen />
+      </CaptainSessionApp>
+    </MobileApplicationShell>
+  );
+}
+
+export default function App(): React.JSX.Element {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <StatusBar style="dark" />
-      <MobileApplicationShell
-        accessibilityLabel="Vastra captain application"
-        role="captain"
-        safeAreaStyle={styles.safeArea}
-        testID="captain-application-shell"
-      >
-        <CaptainSessionApp>
-          <CaptainOperationsScreen />
-        </CaptainSessionApp>
-      </MobileApplicationShell>
+      <CaptainApplicationRoot />
     </SafeAreaProvider>
   );
 }
