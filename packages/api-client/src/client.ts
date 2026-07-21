@@ -4,10 +4,10 @@ import {
   type OperationId,
   type OperationRequest,
   type OperationResponse,
-} from './generated/openapi.js';
-import { ApiClientError, createLocalError, normalizeHttpError } from './errors.js';
-import { writeClientLog } from './logging.js';
-import { validateJsonSchema, type JsonSchema, type SchemaRegistry } from './schema.js';
+} from './generated/openapi';
+import { ApiClientError, createLocalError, normalizeHttpError } from './errors';
+import { writeClientLog } from './logging';
+import { validateJsonSchema, type JsonSchema, type SchemaRegistry } from './schema';
 import type {
   AbortSignalLike,
   AccessTokenProvider,
@@ -17,7 +17,7 @@ import type {
   FetchLike,
   FetchRequestInitLike,
   RequestIdProvider,
-} from './types.js';
+} from './types';
 
 export type OperationRuntimeContract = Readonly<{
   method: string;
@@ -34,169 +34,123 @@ export type ApiClientOptions = Readonly<{
   accessTokenProvider: AccessTokenProvider;
   requestIdProvider?: RequestIdProvider;
   logger?: ApiClientLogger;
+  actor?: ActorType | null;
+  appVersion?: string | null;
   defaultTimeoutMs?: number;
-  actor?: ActorType;
-  appVersion?: string;
 }>;
 
 export type RequestOptions = Readonly<{
-  timeoutMs?: number;
   signal?: AbortSignalLike;
-  allowedFieldErrors?: readonly string[];
+  timeoutMs?: number;
   attempt?: number;
+  allowedFieldErrors?: readonly string[];
 }>;
 
 export type ApiClient = Readonly<{
   request: <Id extends OperationId>(
     operationId: Id,
     input: OperationRequest<Id>,
-    options?: RequestOptions,
+    requestOptions?: RequestOptions,
   ) => Promise<ApiClientResponse<OperationResponse<Id>>>;
 }>;
 
-export type TestingApiClient = Readonly<{
+type TestingApiClient = Readonly<{
   request: (
     operationId: string,
     input: unknown,
-    options?: RequestOptions,
+    requestOptions?: RequestOptions,
   ) => Promise<ApiClientResponse<unknown>>;
 }>;
 
-type CryptoLike = Readonly<{
-  randomUUID?: () => string;
-  getRandomValues?: (array: Uint8Array) => Uint8Array;
-}>;
+const defaultRequestIdProvider: RequestIdProvider = () => globalThis.crypto.randomUUID();
 
-type AbortControllerLike = Readonly<{
-  signal: AbortSignalLike;
-  abort: () => void;
-}>;
+const asInputRecord = (input: unknown): Readonly<Record<string, unknown>> =>
+  typeof input === 'object' && input !== null && !Array.isArray(input)
+    ? (input as Readonly<Record<string, unknown>>)
+    : {};
 
-type AbortControllerConstructorLike = new () => AbortControllerLike;
-
-const globalRuntime = globalThis as unknown as {
-  crypto?: CryptoLike;
-  AbortController?: AbortControllerConstructorLike;
-  setTimeout: (callback: () => void, delayMs: number) => unknown;
-  clearTimeout: (handle: unknown) => void;
-};
-
-const defaultRequestIdProvider = (): string => {
-  const randomUuid = globalRuntime.crypto?.randomUUID;
-  if (randomUuid !== undefined) {
-    return randomUuid.call(globalRuntime.crypto);
-  }
-
-  const bytes = new Uint8Array(16);
-  if (globalRuntime.crypto?.getRandomValues !== undefined) {
-    globalRuntime.crypto.getRandomValues(bytes);
-  } else {
-    for (let index = 0; index < bytes.length; index += 1) {
-      bytes[index] = Math.floor(Math.random() * 256);
-    }
-  }
-  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
-  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
-  const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const asInputRecord = (input: unknown): Record<string, unknown> => (isRecord(input) ? input : {});
-
-const serializeUrlValue = (value: unknown): string => {
-  if (typeof value === 'string') {
-    return value;
+const encodePathValue = (value: unknown): string => {
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    throw new ApiClientError(createLocalError('CONTRACT', 'unknown'));
   }
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(value);
-  }
-  if (typeof value === 'boolean') {
-    return value ? 'true' : 'false';
-  }
-  throw new Error('URL parameters must be strings, finite numbers, or booleans');
+  return encodeURIComponent(String(value));
 };
 
 const buildPath = (template: string, pathInput: unknown): string => {
-  const values = isRecord(pathInput) ? pathInput : {};
-  return template.replaceAll(/\{([^}]+)\}/gu, (_match, key: string) => {
-    const value = values[key];
-    if (value === undefined || value === null) {
-      throw new Error(`Missing path parameter: ${key}`);
-    }
-    return encodeURIComponent(serializeUrlValue(value));
-  });
+  const path = isRecord(pathInput) ? pathInput : {};
+  return template.replace(/\{([^}]+)\}/gu, (_match, key: string) => encodePathValue(path[key]));
 };
 
 const buildQuery = (queryInput: unknown): string => {
   if (!isRecord(queryInput)) {
     return '';
   }
-
-  const pairs: string[] = [];
-  for (const key of Object.keys(queryInput).sort()) {
-    const rawValue = queryInput[key];
-    const values = Array.isArray(rawValue) ? rawValue : [rawValue];
-    for (const value of values) {
-      if (value !== undefined && value !== null) {
-        pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(serializeUrlValue(value))}`);
-      }
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(queryInput)) {
+    if (value === undefined || value === null) {
+      continue;
     }
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        params.append(key, String(item));
+      }
+      continue;
+    }
+    params.append(key, String(value));
   }
-
-  return pairs.length > 0 ? `?${pairs.join('&')}` : '';
+  const serialized = params.toString();
+  return serialized.length === 0 ? '' : `?${serialized}`;
 };
 
-const SAFE_REQUEST_ID = /^[A-Za-z0-9-]{1,128}$/u;
+const decodePayload = async (response: Awaited<ReturnType<FetchLike>>): Promise<unknown> => {
+  try {
+    return await response.json();
+  } catch {
+    throw new ApiClientError(createLocalError('CONTRACT', 'unknown'));
+  }
+};
 
 const requestIdFromPayload = (payload: unknown): string | null => {
   if (!isRecord(payload)) {
     return null;
   }
-  const meta = isRecord(payload['meta']) ? payload['meta'] : null;
-  const candidate = meta?.['requestId'] ?? payload['requestId'];
-  return typeof candidate === 'string' && SAFE_REQUEST_ID.test(candidate) ? candidate : null;
+  const requestId = payload['requestId'];
+  return typeof requestId === 'string' ? requestId : null;
 };
 
-const schemaForStatus = (contract: OperationRuntimeContract, status: number): JsonSchema | null =>
-  contract.responses[String(status)] ??
-  contract.responses[`${String(Math.floor(status / 100))}XX`] ??
-  contract.responses['default'] ??
-  null;
+const schemaForStatus = (
+  contract: OperationRuntimeContract,
+  status: number,
+): JsonSchema | null => contract.responses[String(status)] ?? contract.responses['default'] ?? null;
 
-const decodePayload = async (response: Awaited<ReturnType<FetchLike>>): Promise<unknown> => {
-  try {
-    return await response.json();
-  } catch (cause) {
-    throw new ApiClientError(createLocalError('CONTRACT', 'unknown'), cause);
-  }
+const globalRuntime = globalThis as typeof globalThis & {
+  setTimeout: (handler: () => void, timeoutMs: number) => unknown;
+  clearTimeout: (handle: unknown) => void;
 };
 
 const withTimeout = async <T>(
-  operation: (signal: AbortSignalLike | undefined) => Promise<T>,
+  execute: (signal: AbortSignalLike | undefined) => Promise<T>,
   timeoutMs: number,
-  externalSignal: AbortSignalLike | undefined,
+  externalSignal?: AbortSignalLike,
 ): Promise<T> => {
-  const Controller = globalRuntime.AbortController;
-  const controller = Controller === undefined ? null : new Controller();
+  const AbortControllerConstructor = globalThis.AbortController;
+  const controller =
+    typeof AbortControllerConstructor === 'function' ? new AbortControllerConstructor() : null;
   let timeoutHandle: unknown;
-
   const abortFromExternal = (): void => controller?.abort();
-  externalSignal?.addEventListener?.('abort', abortFromExternal, { once: true });
-
   try {
-    const timeoutPromise = new Promise<never>((_resolve, reject) => {
-      timeoutHandle = globalRuntime.setTimeout(() => {
-        controller?.abort();
-        reject(new Error('API_CLIENT_TIMEOUT'));
-      }, timeoutMs);
-    });
-
-    return await Promise.race([operation(controller?.signal ?? externalSignal), timeoutPromise]);
+    if (externalSignal?.aborted === true) {
+      controller?.abort();
+    } else {
+      externalSignal?.addEventListener?.('abort', abortFromExternal, { once: true });
+    }
+    timeoutHandle = globalRuntime.setTimeout(() => controller?.abort(), timeoutMs);
+    return await execute(controller?.signal as AbortSignalLike | undefined);
   } catch (cause) {
-    if (cause instanceof Error && cause.message === 'API_CLIENT_TIMEOUT') {
+    if (controller?.signal.aborted === true && externalSignal?.aborted !== true) {
       throw new ApiClientError(createLocalError('TIMEOUT', 'unknown'), cause);
     }
     throw cause;
