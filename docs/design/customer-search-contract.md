@@ -1,6 +1,6 @@
 # FE-S04-02 customer search contract
 
-Status: READY — stacked on FE-S04-01
+Status: READY — formatted and stacked on FE-S04-01
 
 ## Contract boundary
 
