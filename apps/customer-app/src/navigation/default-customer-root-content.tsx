@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useCustomerApiClient } from '../api/use-customer-api-client';
 import { useCustomerSessionActions } from '../auth/customer-session-actions';
+import { ApiCustomerHomeAdapter } from '../discovery/api-customer-home.adapter';
+import { CustomerHomeScreen } from '../discovery/customer-home.screen';
 import { ApiCustomerServiceabilityAdapter } from '../location/api-customer-serviceability.adapter';
 import { CustomerLocationScreen } from '../location/customer-location.screen';
 import type { CustomerCoordinates } from '../location/customer-location.types';
@@ -10,13 +12,20 @@ import { ExpoCustomerLocationAdapter } from '../location/expo-customer-location.
 import { ApiCustomerPreferencesAdapter } from '../profile/api-customer-preferences.adapter';
 import { CustomerProfilePreferencesScreen } from '../profile/customer-profile-preferences.screen';
 
-export function DefaultCustomerHomeRoot({ openCheckout }: { readonly openCheckout: () => void }) {
+export function DefaultCustomerHomeRoot({
+  openCheckout,
+  openDiscover,
+}: {
+  readonly openCheckout: () => void;
+  readonly openDiscover: () => void;
+}) {
   const apiClient = useCustomerApiClient();
   const locationPort = useMemo(() => new ExpoCustomerLocationAdapter(), []);
   const serviceabilityPort = useMemo(
     () => new ApiCustomerServiceabilityAdapter(apiClient),
     [apiClient],
   );
+  const homePort = useMemo(() => new ApiCustomerHomeAdapter(apiClient), [apiClient]);
   const [locationMode, setLocationMode] = useState(false);
   const [location, setLocation] = useState<CustomerCoordinates | null>(null);
 
@@ -45,30 +54,47 @@ export function DefaultCustomerHomeRoot({ openCheckout }: { readonly openCheckou
     );
   }
 
+  if (location !== null) {
+    return (
+      <CustomerHomeScreen
+        coordinates={location}
+        homePort={homePort}
+        onChangeLocation={() => {
+          setLocationMode(true);
+        }}
+        onOpenCheckout={openCheckout}
+        onSearch={openDiscover}
+        onSelectCategory={openDiscover}
+        onSelectProduct={openDiscover}
+        onSelectShop={openDiscover}
+      />
+    );
+  }
+
   return (
     <View style={styles.screen}>
+      <Text style={styles.eyebrow}>LOCAL FASHION STARTS HERE</Text>
       <Text accessibilityRole="header" style={styles.title}>
-        Home
+        Discover fashion from shops around you.
       </Text>
       <Text style={styles.description}>
-        Set a serviceable shopping area, then continue to the preserved checkout flow.
+        Set a shopping location so Vastra can confirm serviceability and load real nearby catalogue
+        data.
       </Text>
       <Text accessibilityLiveRegion="polite" style={styles.status}>
-        {location === null ? 'Shopping location not checked' : 'Shopping location is serviceable'}
+        Shopping location not checked
       </Text>
       <Pressable
         accessibilityRole="button"
         onPress={() => {
           setLocationMode(true);
         }}
-        style={styles.secondaryAction}
+        style={styles.primaryAction}
       >
-        <Text style={styles.secondaryText}>
-          {location === null ? 'Set shopping location' : 'Change shopping location'}
-        </Text>
+        <Text style={styles.primaryText}>Set shopping location</Text>
       </Pressable>
-      <Pressable accessibilityRole="button" onPress={openCheckout} style={styles.primaryAction}>
-        <Text style={styles.primaryText}>Continue to checkout</Text>
+      <Pressable accessibilityRole="button" onPress={openCheckout} style={styles.secondaryAction}>
+        <Text style={styles.secondaryText}>Continue to checkout</Text>
       </Pressable>
     </View>
   );
@@ -123,7 +149,8 @@ export function DefaultCustomerProfileRoot() {
 const styles = StyleSheet.create({
   flow: { flex: 1, backgroundColor: '#FFF8F2' },
   screen: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#FFF8F2' },
-  title: { color: '#241B16', fontSize: 28, fontWeight: '700' },
+  eyebrow: { color: '#8E3B46', fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  title: { marginTop: 8, color: '#241B16', fontSize: 28, fontWeight: '700' },
   description: { marginTop: 10, color: '#665A52', fontSize: 16, lineHeight: 24 },
   status: { marginTop: 16, color: '#3B3029', fontSize: 14, fontWeight: '600' },
   primaryAction: {
