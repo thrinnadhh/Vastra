@@ -1,5 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native';
-import { Pressable as MockPressable, Text as MockText } from 'react-native';
+import { Pressable as MockPressable, Text as MockText, View as MockView } from 'react-native';
 
 jest.mock('./src/auth/default-customer-session', () => ({
   CustomerSessionApp: ({ children }: { readonly children: React.ReactNode }) => children,
@@ -16,10 +16,21 @@ jest.mock('./src/orders/default-customer-orders', () => ({
 }));
 
 jest.mock('./src/navigation/default-customer-root-content', () => ({
-  DefaultCustomerHomeRoot: ({ openCheckout }: { readonly openCheckout: () => void }) => (
-    <MockPressable accessibilityRole="button" onPress={openCheckout}>
-      <MockText>Continue to checkout</MockText>
-    </MockPressable>
+  DefaultCustomerHomeRoot: ({
+    openCheckout,
+    openDiscover,
+  }: {
+    readonly openCheckout: () => void;
+    readonly openDiscover: () => void;
+  }) => (
+    <MockView>
+      <MockPressable accessibilityRole="button" onPress={openDiscover}>
+        <MockText>Browse Home discovery</MockText>
+      </MockPressable>
+      <MockPressable accessibilityRole="button" onPress={openCheckout}>
+        <MockText>Continue to checkout</MockText>
+      </MockPressable>
+    </MockView>
   ),
   DefaultCustomerProfileRoot: () => <MockText>Authenticated customer profile</MockText>,
 }));
@@ -36,6 +47,14 @@ describe('CustomerAppContent', () => {
     expect(getByRole('tab', { name: 'Style tab' })).toBeTruthy();
     expect(getByRole('tab', { name: 'Orders tab' })).toBeTruthy();
     expect(getByRole('tab', { name: 'Profile tab' })).toBeTruthy();
+  });
+
+  it('hands Home discovery actions to the canonical Discover tab', () => {
+    const { getByText } = render(<CustomerAppContent />);
+
+    fireEvent.press(getByText('Browse Home discovery'));
+
+    expect(getByText('Search, shop, and product routes continue in the remaining Sprint 04 tickets.')).toBeTruthy();
   });
 
   it('keeps checkout contextual rather than making it a sixth tab', () => {
