@@ -13,24 +13,22 @@ import {
 } from './fixtures.js';
 
 const expectKind = async (promise: Promise<unknown>, kind: string): Promise<void> => {
-  try {
-    await promise;
-    throw new Error('Expected request to fail');
-  } catch (cause) {
-    expect(cause).toBeInstanceOf(ApiClientError);
-    expect((cause as ApiClientError).normalized.kind).toBe(kind);
-  }
+  const cause: unknown = await promise.catch((error: unknown) => error);
+  expect(cause).toBeInstanceOf(ApiClientError);
+  expect((cause as ApiClientError).normalized.kind).toBe(kind);
 };
 
 describe('typed API transport', () => {
   it('injects bearer auth, protects reserved headers, builds path/query, and propagates request IDs', async () => {
-    const calls: Array<Readonly<{ url: string; init: FetchRequestInitLike }>> = [];
+    const calls: Readonly<{ url: string; init: FetchRequestInitLike }>[] = [];
     const client = createApiClientForTesting(
-      clientOptions(async (url, init) => {
+      clientOptions((url, init) => {
         calls.push({ url, init });
-        return response(200, successPayload('payload-request-id'), {
-          'x-request-id': 'header-request-id',
-        });
+        return Promise.resolve(
+          response(200, successPayload('payload-request-id'), {
+            'x-request-id': 'header-request-id',
+          }),
+        );
       }),
       TEST_OPERATIONS,
       TEST_SCHEMAS,
@@ -64,9 +62,9 @@ describe('typed API transport', () => {
     let called = false;
     const client = createApiClientForTesting(
       clientOptions(
-        async () => {
+        () => {
           called = true;
-          return response(200, successPayload());
+          return Promise.resolve(response(200, successPayload()));
         },
         { accessTokenProvider: { getAccessToken: () => null } },
       ),
@@ -80,7 +78,7 @@ describe('typed API transport', () => {
 
   it('permits explicitly public operations without a session', async () => {
     const client = createApiClientForTesting(
-      clientOptions(async () => response(200, successPayload()), {
+      clientOptions(() => Promise.resolve(response(200, successPayload())), {
         accessTokenProvider: { getAccessToken: () => null },
       }),
       TEST_OPERATIONS,
@@ -91,15 +89,16 @@ describe('typed API transport', () => {
   });
 
   it('classifies malformed success and error envelopes as contract failures', async () => {
+    expect.hasAssertions();
     const successClient = createApiClientForTesting(
-      clientOptions(async () => response(200, { success: true })),
+      clientOptions(() => Promise.resolve(response(200, { success: true }))),
       TEST_OPERATIONS,
       TEST_SCHEMAS,
     );
     await expectKind(successClient.request('getWidget', { path: { widgetId: '1' } }), 'CONTRACT');
 
     const errorClient = createApiClientForTesting(
-      clientOptions(async () => response(500, { error: 'malformed' })),
+      clientOptions(() => Promise.resolve(response(500, { error: 'malformed' }))),
       TEST_OPERATIONS,
       TEST_SCHEMAS,
     );
@@ -107,10 +106,9 @@ describe('typed API transport', () => {
   });
 
   it('normalizes transport failures separately from timeouts', async () => {
+    expect.hasAssertions();
     const transportClient = createApiClientForTesting(
-      clientOptions(async () => {
-        throw new TypeError('network down');
-      }),
+      clientOptions(() => Promise.reject(new TypeError('network down'))),
       TEST_OPERATIONS,
       TEST_SCHEMAS,
     );
@@ -120,7 +118,7 @@ describe('typed API transport', () => {
     );
 
     const timeoutClient = createApiClientForTesting(
-      clientOptions(async () => await new Promise(() => undefined)),
+      clientOptions(() => new Promise(() => undefined)),
       TEST_OPERATIONS,
       TEST_SCHEMAS,
     );
@@ -136,47 +134,47 @@ describe('typed API transport', () => {
 
   it('normalizes a valid API error and allowlists validation fields', async () => {
     const client = createApiClientForTesting(
-      clientOptions(async () =>
-        response(
-          422,
-          errorPayload('INVALID_INPUT', {
-            details: {
-              fieldErrors: {
-                name: ['Required'],
-                phoneNumber: ['must never escape'],
+      clientOptions(() =>
+        Promise.resolve(
+          response(
+            422,
+            errorPayload('INVALID_INPUT', {
+              details: {
+                fieldErrors: {
+                  name: ['Required'],
+                  phoneNumber: ['must never escape'],
+                },
               },
-            },
-          }),
-          { 'x-request-id': 'safe-response-id' },
+            }),
+            { 'x-request-id': 'safe-response-id' },
+          ),
         ),
       ),
       TEST_OPERATIONS,
       TEST_SCHEMAS,
     );
 
-    try {
-      await client.request(
-        'getWidget',
-        { path: { widgetId: '1' } },
-        { allowedFieldErrors: ['name'] },
-      );
-      throw new Error('Expected validation failure');
-    } catch (cause) {
-      const normalized = (cause as ApiClientError).normalized;
-      expect(normalized.kind).toBe('VALIDATION');
-      expect(normalized.requestId).toBe('safe-response-id');
-      expect(normalized.fieldErrors).toEqual({ name: ['Required'] });
-    }
+    const cause: unknown = await client
+      .request('getWidget', { path: { widgetId: '1' } }, { allowedFieldErrors: ['name'] })
+      .catch((error: unknown) => error);
+    expect(cause).toBeInstanceOf(ApiClientError);
+    const normalized = (cause as ApiClientError).normalized;
+    expect(normalized.kind).toBe('VALIDATION');
+    expect(normalized.requestId).toBe('safe-response-id');
+    expect(normalized.fieldErrors).toEqual({ name: ['Required'] });
   });
 
   it('emits only structured allowlisted diagnostics', async () => {
     const events: ApiClientLogEvent[] = [];
     const client = createApiClientForTesting(
-      clientOptions(async () => response(500, errorPayload('SERVICE_DOWN', { retryable: true })), {
-        logger: { log: (event) => events.push(event) },
-        actor: 'merchant',
-        appVersion: '1.2.3',
-      }),
+      clientOptions(
+        () => Promise.resolve(response(500, errorPayload('SERVICE_DOWN', { retryable: true }))),
+        {
+          logger: { log: (event) => events.push(event) },
+          actor: 'merchant',
+          appVersion: '1.2.3',
+        },
+      ),
       TEST_OPERATIONS,
       TEST_SCHEMAS,
     );
