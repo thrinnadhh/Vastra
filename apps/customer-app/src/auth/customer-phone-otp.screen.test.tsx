@@ -82,7 +82,9 @@ describe('CustomerPhoneOtpScreen', () => {
     fireEvent.changeText(getByLabelText('One-time code'), '654321');
     fireEvent.press(getByRole('button', { name: 'Verify secure code' }));
 
-    expect(await findByText('That code has expired. Request a new code and try again.')).toBeTruthy();
+    expect(
+      await findByText('That code has expired. Request a new code and try again.'),
+    ).toBeTruthy();
     await waitFor(() => {
       expect(getByLabelText('One-time code').props.value).toBe('654321');
     });

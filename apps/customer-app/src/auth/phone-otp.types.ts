@@ -1,9 +1,5 @@
 export type PhoneOtpErrorKind =
-  | 'INVALID_PHONE'
-  | 'INVALID_CODE'
-  | 'EXPIRED'
-  | 'RATE_LIMIT'
-  | 'UNAVAILABLE';
+  'INVALID_PHONE' | 'INVALID_CODE' | 'EXPIRED' | 'RATE_LIMIT' | 'UNAVAILABLE';
 
 export class PhoneOtpError extends Error {
   public constructor(

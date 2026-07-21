@@ -85,8 +85,9 @@ function ConfiguredCustomerSessionApp({
 }) {
   useEffect(() => startSupabaseAuthLifecycle(dependencies.client), [dependencies.client]);
 
-  const resolvedSignedOutContent =
-    signedOutContent ?? <CustomerPhoneOtpScreen otpPort={dependencies.phoneOtpPort} />;
+  const resolvedSignedOutContent = signedOutContent ?? (
+    <CustomerPhoneOtpScreen otpPort={dependencies.phoneOtpPort} />
+  );
 
   return (
     <CustomerApiSessionProvider
