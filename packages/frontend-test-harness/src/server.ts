@@ -74,7 +74,7 @@ export async function startFixtureServer(
   }
 
   return {
-    origin: `http://${host}:${address.port}`,
+    origin: `http://${host}:${String(address.port)}`,
     close: () => close(server),
   };
 }
