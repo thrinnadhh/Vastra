@@ -52,9 +52,7 @@ describe('CustomerProfilePreferencesScreen', () => {
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Name editing is not available until Vastra exposes/u),
-      ).toBeTruthy();
+      expect(screen.getByText(/Name editing is not available until Vastra exposes/u)).toBeTruthy();
     });
   });
 
@@ -111,7 +109,9 @@ describe('CustomerProfilePreferencesScreen', () => {
     fireEvent.press(screen.getByText('Save and continue'));
 
     await waitFor(() => {
-      expect(screen.getByText('Preferences were not saved. Try again or skip for now.')).toBeTruthy();
+      expect(
+        screen.getByText('Preferences were not saved. Try again or skip for now.'),
+      ).toBeTruthy();
     });
   });
 });
