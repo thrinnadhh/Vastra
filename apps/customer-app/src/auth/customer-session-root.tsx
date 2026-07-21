@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import {
+  RETURNING_CUSTOMER_LAUNCH_STORE,
+  type CustomerLaunchStore,
+} from './customer-launch-store';
+import { CustomerSessionActionsProvider } from './customer-session-actions';
+import {
+  bootstrapCustomerSession,
+  type CustomerBootstrapState,
+} from './customer-session-bootstrap';
 import type {
   AuthSessionPort,
   RestorableSession,
@@ -11,11 +20,13 @@ import type {
 interface CustomerSessionRootProps {
   readonly authSession: AuthSessionPort;
   readonly sessionRestorer: SessionRestorer;
+  readonly launchStore?: CustomerLaunchStore;
+  readonly signedOutContent?: ReactNode;
   readonly children: ReactNode;
 }
 
-const RESTORING_STATE: SessionRestorationState = Object.freeze({
-  status: 'RESTORING',
+const BOOTSTRAPPING_STATE: CustomerBootstrapState = Object.freeze({
+  status: 'BOOTSTRAPPING',
 });
 
 function StatusScreen({
@@ -60,48 +71,62 @@ function StatusScreen({
 export function CustomerSessionRoot({
   authSession,
   sessionRestorer,
+  launchStore = RETURNING_CUSTOMER_LAUNCH_STORE,
+  signedOutContent,
   children,
 }: CustomerSessionRootProps) {
-  const [state, setState] = useState<SessionRestorationState>(RESTORING_STATE);
+  const [state, setState] = useState<CustomerBootstrapState>(BOOTSTRAPPING_STATE);
   const mounted = useRef(false);
   const operation = useRef(0);
 
-  const applyResult = useCallback(
-    async (
-      task: () => Promise<SessionRestorationState>,
-      showRestoringState: boolean,
-    ): Promise<void> => {
+  const applySessionResult = useCallback(
+    async (task: () => Promise<SessionRestorationState>): Promise<void> => {
       const operationId = ++operation.current;
-
-      if (showRestoringState) {
-        setState(RESTORING_STATE);
-      }
-
-      let nextState: SessionRestorationState;
+      let session: SessionRestorationState;
 
       try {
-        nextState = await task();
+        session = await task();
       } catch {
-        nextState = { status: 'UNAVAILABLE' };
+        session = { status: 'UNAVAILABLE' };
       }
 
       if (mounted.current && operation.current === operationId) {
-        setState(nextState);
+        setState({ status: 'READY', session });
       }
     },
     [],
   );
 
-  const restore = useCallback(
-    () => applyResult(() => sessionRestorer.restore(), true),
-    [applyResult, sessionRestorer],
-  );
+  const bootstrap = useCallback(async (): Promise<void> => {
+    const operationId = ++operation.current;
+    setState(BOOTSTRAPPING_STATE);
+    const nextState = await bootstrapCustomerSession(launchStore, sessionRestorer);
+
+    if (mounted.current && operation.current === operationId) {
+      setState(nextState);
+    }
+  }, [launchStore, sessionRestorer]);
 
   const restoreSession = useCallback(
     (session: RestorableSession) =>
-      applyResult(() => sessionRestorer.restoreSession(session), false),
-    [applyResult, sessionRestorer],
+      applySessionResult(() => sessionRestorer.restoreSession(session)),
+    [applySessionResult, sessionRestorer],
   );
+
+  const completeWelcome = useCallback(async (): Promise<void> => {
+    const operationId = ++operation.current;
+
+    try {
+      await launchStore.markWelcomeCompleted();
+      if (mounted.current && operation.current === operationId) {
+        setState({ status: 'READY', session: { status: 'SIGNED_OUT' } });
+      }
+    } catch {
+      if (mounted.current && operation.current === operationId) {
+        setState({ status: 'UNAVAILABLE' });
+      }
+    }
+  }, [launchStore]);
 
   useEffect(() => {
     mounted.current = true;
@@ -113,36 +138,59 @@ export function CustomerSessionRoot({
 
       if (event === 'SIGNED_OUT' || session === null) {
         operation.current += 1;
-        setState({ status: 'SIGNED_OUT' });
+        setState({ status: 'READY', session: { status: 'SIGNED_OUT' } });
         return;
       }
 
       void restoreSession(session);
     });
 
-    const operationId = ++operation.current;
-
-    void sessionRestorer.restore().then(
-      (nextState) => {
-        if (mounted.current && operation.current === operationId) {
-          setState(nextState);
-        }
-      },
-      () => {
-        if (mounted.current && operation.current === operationId) {
-          setState({ status: 'UNAVAILABLE' });
-        }
-      },
-    );
+    void bootstrap();
 
     return () => {
       mounted.current = false;
       operation.current += 1;
       unsubscribe();
     };
-  }, [authSession, restoreSession, sessionRestorer]);
+  }, [authSession, bootstrap, restoreSession]);
 
-  switch (state.status) {
+  if (state.status === 'BOOTSTRAPPING') {
+    return (
+      <StatusScreen
+        busy
+        title="Opening Vastra"
+        description="Restoring your secure sign-in and first-launch state."
+      />
+    );
+  }
+
+  if (state.status === 'WELCOME') {
+    return (
+      <StatusScreen
+        title="Fashion from shops around you"
+        description="Discover local fashion, track orders, and keep your style tools in one place."
+        actionLabel="Continue to sign in"
+        onAction={() => {
+          void completeWelcome();
+        }}
+      />
+    );
+  }
+
+  if (state.status === 'UNAVAILABLE') {
+    return (
+      <StatusScreen
+        title="We could not open Vastra"
+        description="Your saved sign-in has not been removed. Check your connection and try again."
+        actionLabel="Retry opening Vastra"
+        onAction={() => {
+          void bootstrap();
+        }}
+      />
+    );
+  }
+
+  switch (state.session.status) {
     case 'RESTORING':
       return (
         <StatusScreen
@@ -154,10 +202,12 @@ export function CustomerSessionRoot({
 
     case 'SIGNED_OUT':
       return (
-        <StatusScreen
-          title="Sign in to continue"
-          description="Your saved session is not available. Phone OTP sign-in will be provided by the authentication flow."
-        />
+        signedOutContent ?? (
+          <StatusScreen
+            title="Sign in to continue"
+            description="Use your phone number and a secure one-time code to continue."
+          />
+        )
       );
 
     case 'ACCESS_DENIED':
@@ -175,13 +225,17 @@ export function CustomerSessionRoot({
           description="Check your connection and try again. Your saved sign-in has not been removed."
           actionLabel="Retry session restoration"
           onAction={() => {
-            void restore();
+            void bootstrap();
           }}
         />
       );
 
     case 'AUTHENTICATED':
-      return <>{children}</>;
+      return (
+        <CustomerSessionActionsProvider account={state.session.account} authSession={authSession}>
+          {children}
+        </CustomerSessionActionsProvider>
+      );
   }
 }
 
@@ -211,6 +265,8 @@ const styles = StyleSheet.create({
   },
   action: {
     marginTop: 28,
+    minHeight: 48,
+    justifyContent: 'center',
     paddingHorizontal: 22,
     paddingVertical: 14,
     borderRadius: 14,
