@@ -48,7 +48,6 @@ jobs:
             package.json \
             eslint.config.mjs \
             .github/workflows/ci.yml \
-            .gitignore \
             playwright.config.ts \
             'packages/frontend-test-harness/**/*.{ts,json}' \
             'e2e/**/*.{ts,json}' \
