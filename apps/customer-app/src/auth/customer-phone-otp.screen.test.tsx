@@ -1,11 +1,11 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 import { CustomerPhoneOtpScreen } from './customer-phone-otp.screen';
 import { PhoneOtpError, type PhoneOtpPort } from './phone-otp.types';
 
 class PhoneOtpPortStub implements PhoneOtpPort {
   public requestedPhones: string[] = [];
-  public verifiedCodes: Array<{ readonly phone: string; readonly code: string }> = [];
+  public verifiedCodes: { readonly phone: string; readonly code: string }[] = [];
   public requestError: PhoneOtpError | null = null;
   public verifyError: PhoneOtpError | null = null;
 
@@ -32,9 +32,8 @@ describe('CustomerPhoneOtpScreen', () => {
 
     expect(await findByText('Enter your secure code')).toBeTruthy();
     expect(otpPort.requestedPhones).toEqual(['+919876543210']);
-    expect(getByRole('button', { name: 'Resend secure code' }).props.accessibilityState).toEqual({
-      disabled: true,
-    });
+    fireEvent.press(getByRole('button', { name: 'Resend secure code' }));
+    expect(otpPort.requestedPhones).toEqual(['+919876543210']);
     expect(await findByText('Resend available in 30 seconds')).toBeTruthy();
   });
 
@@ -71,7 +70,7 @@ describe('CustomerPhoneOtpScreen', () => {
   it('shows expired-code recovery without clearing the entered code', async () => {
     const otpPort = new PhoneOtpPortStub();
     otpPort.verifyError = new PhoneOtpError('EXPIRED');
-    const { findByText, getByLabelText, getByRole } = render(
+    const { findByDisplayValue, findByText, getByLabelText, getByRole } = render(
       <CustomerPhoneOtpScreen otpPort={otpPort} />,
     );
 
@@ -85,8 +84,6 @@ describe('CustomerPhoneOtpScreen', () => {
     expect(
       await findByText('That code has expired. Request a new code and try again.'),
     ).toBeTruthy();
-    await waitFor(() => {
-      expect(getByLabelText('One-time code').props.value).toBe('654321');
-    });
+    expect(await findByDisplayValue('654321')).toBeTruthy();
   });
 });
