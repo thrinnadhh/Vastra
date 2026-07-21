@@ -1,0 +1,40 @@
+name: FE-S02-06 browser diagnostics
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-report:
+    if: github.head_ref == 'feat/ui-fe-s02-06-frontend-test-harness'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install chromium
+      - name: Capture browser harness output
+        shell: bash
+        run: |
+          set +e
+          pnpm test:frontend:harness > fe-s02-06-browser.log 2>&1
+          status=$?
+          cat fe-s02-06-browser.log
+          echo "$status" > fe-s02-06-browser.status
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fe-s02-06-browser-residual
+          path: |
+            fe-s02-06-browser.log
+            fe-s02-06-browser.status
+            test-results/playwright
+            playwright-report
