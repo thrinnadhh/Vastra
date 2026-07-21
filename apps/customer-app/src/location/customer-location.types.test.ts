@@ -1,7 +1,4 @@
-import {
-  customerLocationFailureMessage,
-  parseManualCoordinates,
-} from './customer-location.types';
+import { customerLocationFailureMessage, parseManualCoordinates } from './customer-location.types';
 
 describe('customer location contract', () => {
   it('parses valid manual coordinates without creating an address', () => {

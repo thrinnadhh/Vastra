@@ -32,9 +32,9 @@ describe('ApiCustomerServiceabilityAdapter', () => {
     const { apiClient, request } = createApiClient(1);
     const adapter = new ApiCustomerServiceabilityAdapter(apiClient);
 
-    await expect(
-      adapter.checkLocation({ latitude: 13.6288, longitude: 79.4192 }),
-    ).resolves.toEqual({ kind: 'SERVICEABLE', nearbyShopCount: 1 });
+    await expect(adapter.checkLocation({ latitude: 13.6288, longitude: 79.4192 })).resolves.toEqual(
+      { kind: 'SERVICEABLE', nearbyShopCount: 1 },
+    );
     expect(request).toHaveBeenCalledWith('getCustomerHome', {
       query: {
         latitude: 13.6288,

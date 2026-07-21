@@ -221,12 +221,18 @@ importers:
       '@supabase/supabase-js':
         specifier: 2.109.0
         version: 2.109.0
+      '@vastra/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@vastra/app-shells':
         specifier: workspace:*
         version: link:../../packages/app-shells
       expo:
         specifier: 57.0.4
         version: 57.0.4(@babel/core@7.29.7)(@expo/metro-runtime@57.0.3)(react-dom@19.2.3)(react-native-web@0.21.2)(react-native@0.86.0)(react@19.2.3)(typescript@5.9.3)
+      expo-location:
+        specifier: ~57.0.2
+        version: 57.0.5(expo@57.0.4)(typescript@5.9.3)
       expo-status-bar:
         specifier: ~57.0.0
         version: 57.0.0(expo@57.0.4)(react-native@0.86.0)(react@19.2.3)
