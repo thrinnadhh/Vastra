@@ -1,0 +1,43 @@
+name: FE-S04-01 clean file transfer
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  transfer:
+    if: github.head_ref == 'feat/ui-fe-s04-01-home-composition-main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Copy verified Home files
+        run: |
+          git fetch origin feat/ui-fe-s04-01-home-composition
+          files=(
+            apps/customer-app/src/navigation/default-customer-root-content.tsx
+            apps/customer-app/src/discovery/api-customer-home.adapter.test.ts
+            apps/customer-app/src/discovery/api-customer-home.adapter.ts
+            apps/customer-app/src/discovery/customer-home.screen.test.tsx
+            apps/customer-app/src/discovery/customer-home.screen.tsx
+            apps/customer-app/src/discovery/customer-home.types.ts
+            docs/design/customer-home-composition.md
+          )
+          for file in "${files[@]}"; do
+            mkdir -p "$(dirname "$file")"
+            git show "origin/feat/ui-fe-s04-01-home-composition:$file" > "$file"
+          done
+          rm .github/workflows/fe-s04-01-clean-copy.yml
+      - name: Commit clean transfer
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "feat(customer): restore verified FE-S04-01 implementation"
+          git push
