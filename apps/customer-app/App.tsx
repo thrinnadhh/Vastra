@@ -1,11 +1,8 @@
+import { MobileApplicationShell } from '@vastra/app-shells/native';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import {
-  initialWindowMetrics,
-  SafeAreaProvider,
-  SafeAreaView,
-} from 'react-native-safe-area-context';
+import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { CustomerSessionApp } from './src/auth/default-customer-session';
 import { DefaultCustomerCheckoutQuote } from './src/checkout/default-customer-checkout-quote';
@@ -56,12 +53,17 @@ export function CustomerAppContent({ addressId = null }: { readonly addressId?: 
 export default function App() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="dark" />
+      <StatusBar style="dark" />
+      <MobileApplicationShell
+        accessibilityLabel="Vastra customer application"
+        role="customer"
+        safeAreaStyle={styles.safeArea}
+        testID="customer-application-shell"
+      >
         <CustomerSessionApp>
           <CustomerAppContent />
         </CustomerSessionApp>
-      </SafeAreaView>
+      </MobileApplicationShell>
     </SafeAreaProvider>
   );
 }
