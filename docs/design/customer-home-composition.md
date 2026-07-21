@@ -1,6 +1,6 @@
 # FE-S04-01 customer Home composition
 
-Status: READY — implemented on the Sprint 03 root-navigation foundation
+Status: READY — clean-main implementation on the Sprint 03 root-navigation foundation
 
 ## Ownership
 
