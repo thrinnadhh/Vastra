@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
-import { createMobileShellContract, type MobileApplicationRole } from './contracts.js';
+import { createMobileShellContract, type MobileApplicationRole } from './contracts';
 
 const DEFAULT_SAFE_AREA_EDGES: readonly Edge[] = ['top', 'right', 'bottom', 'left'];
 
