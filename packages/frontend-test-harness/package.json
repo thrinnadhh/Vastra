@@ -1,0 +1,32 @@
+{
+  "name": "@vastra/frontend-test-harness",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "serve": "tsx src/cli.ts",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsc --noEmit",
+    "visual:update": "tsx src/update-visual-baselines.ts"
+  },
+  "dependencies": {
+    "@vastra/app-shells": "workspace:*",
+    "@vastra/ui-primitives": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "20",
+    "tsx": "4",
+    "vitest": "3.2.7",
+    "@playwright/test": "1.55.1"
+  }
+}

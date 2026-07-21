@@ -20,12 +20,18 @@
     "pilot:go-no-go": "node scripts/validate-pilot-evidence.mjs --enforce-go",
     "security:client-secrets": "node scripts/scan-client-secrets.mjs",
     "test": "turbo run test",
+    "test:frontend:e2e": "playwright test --project=admin --project=mobile",
+    "test:frontend:fixtures": "pnpm --filter @vastra/frontend-test-harness test",
+    "test:frontend:harness": "pnpm test:frontend:fixtures && playwright test",
+    "test:frontend:visual": "playwright test --project=visual",
+    "test:frontend:visual:update": "pnpm --filter @vastra/frontend-test-harness visual:update",
     "test:integration": "turbo run test:integration",
     "test:pilot-tooling": "node scripts/run-pilot-tooling-tests.mjs",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
+    "@playwright/test": "1.55.1",
     "@redocly/cli": "2",
     "@types/node": "20",
     "@vitest/eslint-plugin": "1.6.23",

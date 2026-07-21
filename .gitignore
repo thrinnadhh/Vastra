@@ -20,6 +20,8 @@ out/
 coverage/
 .next/
 .expo/
+playwright-report/
+test-results/
 *.tsbuildinfo
 *.log
 

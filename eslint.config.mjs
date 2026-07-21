@@ -26,6 +26,8 @@ const nodeFiles = [
   'scripts/**/*.{js,cjs,mjs,ts,cts,mts}',
   'apps/backend/**/*.{js,cjs,mjs,ts,cts,mts}',
   'packages/config/**/*.{js,cjs,mjs,ts,cts,mts}',
+  'packages/frontend-test-harness/**/*.{js,cjs,mjs,ts,cts,mts}',
+  'e2e/**/*.{js,cjs,mjs,ts,cts,mts}',
 ];
 
 const mobileFiles = [
@@ -45,6 +47,8 @@ export default defineConfig([
     '**/coverage/**',
     '**/.next/**',
     '**/.expo/**',
+    '**/playwright-report/**',
+    '**/test-results/**',
     '**/*.tsbuildinfo',
     'supabase/.temp/**',
     'Vastra_Supabase_SQL_and_Env_Pack/**',
