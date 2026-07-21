@@ -1,0 +1,88 @@
+
+/home/runner/work/Vastra/Vastra/apps/customer-app/src/discovery/api-customer-home.adapter.ts
+  34:13  error  Unsafe assignment of an error typed value                               @typescript-eslint/no-unsafe-assignment
+  34:34  error  Unsafe member access .data on a type that cannot be resolved            @typescript-eslint/no-unsafe-member-access
+  39:11  error  Unsafe assignment of an error typed value                               @typescript-eslint/no-unsafe-assignment
+  39:26  error  Unsafe member access .location on a type that cannot be resolved        @typescript-eslint/no-unsafe-member-access
+  40:11  error  Unsafe assignment of an error typed value                               @typescript-eslint/no-unsafe-assignment
+  40:23  error  Unsafe call of a type that could not be resolved                        @typescript-eslint/no-unsafe-call
+  40:28  error  Unsafe member access .categories on a type that cannot be resolved      @typescript-eslint/no-unsafe-member-access
+  41:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  41:26  error  Unsafe member access .id on an `any` value                              @typescript-eslint/no-unsafe-member-access
+  42:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  42:28  error  Unsafe member access .name on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  43:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  43:35  error  Unsafe member access .description on an `any` value                     @typescript-eslint/no-unsafe-member-access
+  45:11  error  Unsafe assignment of an error typed value                               @typescript-eslint/no-unsafe-assignment
+  45:24  error  Unsafe call of a type that could not be resolved                        @typescript-eslint/no-unsafe-call
+  45:29  error  Unsafe member access .nearbyShops on a type that cannot be resolved     @typescript-eslint/no-unsafe-member-access
+  46:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  46:22  error  Unsafe member access .id on an `any` value                              @typescript-eslint/no-unsafe-member-access
+  47:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  47:24  error  Unsafe member access .name on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  48:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  48:37  error  Unsafe member access .operationalStatus on an `any` value               @typescript-eslint/no-unsafe-member-access
+  49:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  49:39  error  Unsafe member access .acceptsOnlineOrders on an `any` value             @typescript-eslint/no-unsafe-member-access
+  50:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  50:34  error  Unsafe member access .distanceMeters on an `any` value                  @typescript-eslint/no-unsafe-member-access
+  51:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  51:37  error  Unsafe member access .minimumOrderPaise on an `any` value               @typescript-eslint/no-unsafe-member-access
+  52:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  52:45  error  Unsafe member access .averagePreparationMinutes on an `any` value       @typescript-eslint/no-unsafe-member-access
+  54:11  error  Unsafe assignment of an error typed value                               @typescript-eslint/no-unsafe-assignment
+  54:27  error  Unsafe call of a type that could not be resolved                        @typescript-eslint/no-unsafe-call
+  54:32  error  Unsafe member access .nearbyProducts on a type that cannot be resolved  @typescript-eslint/no-unsafe-member-access
+  55:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  55:25  error  Unsafe member access .id on an `any` value                              @typescript-eslint/no-unsafe-member-access
+  56:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  56:26  error  Unsafe member access .id on an `any` value                              @typescript-eslint/no-unsafe-member-access
+  57:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  57:28  error  Unsafe member access .name on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  58:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  58:27  error  Unsafe member access .name on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  59:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  59:28  error  Unsafe member access .brand on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  60:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  60:37  error  Unsafe member access .genderCategory on an `any` value                  @typescript-eslint/no-unsafe-member-access
+  61:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  61:38  error  Unsafe member access .primaryImage on an `any` value                    @typescript-eslint/no-unsafe-member-access
+  62:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  62:38  error  Unsafe member access .primaryImage on an `any` value                    @typescript-eslint/no-unsafe-member-access
+  63:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  63:47  error  Unsafe member access .minSellingPricePaise on an `any` value            @typescript-eslint/no-unsafe-member-access
+  64:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  64:47  error  Unsafe member access .maxSellingPricePaise on an `any` value            @typescript-eslint/no-unsafe-member-access
+  65:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  65:44  error  Unsafe member access .availableVariantCount on an `any` value           @typescript-eslint/no-unsafe-member-access
+  66:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  66:45  error  Unsafe member access .totalAvailableQuantity on an `any` value          @typescript-eslint/no-unsafe-member-access
+  67:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  67:34  error  Unsafe member access .isAvailable on an `any` value                     @typescript-eslint/no-unsafe-member-access
+
+/home/runner/work/Vastra/Vastra/apps/customer-app/src/discovery/customer-home.screen.test.tsx
+  141:11  error  Unsafe assignment of an error typed value                      @typescript-eslint/no-unsafe-assignment
+  144:31  error  Unsafe member access .props on a type that cannot be resolved  @typescript-eslint/no-unsafe-member-access
+
+/home/runner/work/Vastra/Vastra/apps/customer-app/src/discovery/customer-home.screen.tsx
+   46:15  error  Invalid type "number" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/restrict-template-expressions
+  185:18  error  Invalid type "number" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/restrict-template-expressions
+  352:10  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/runner/work/Vastra/Vastra/apps/customer-app/src/discovery/customer-home.screen.tsx:352:10
+  350 |
+  351 |   useEffect(() => {
+> 352 |     void loadHome();
+      |          ^^^^^^^^ Avoid calling setState() directly within an effect
+  353 |   }, [loadHome]);
+  354 |
+  355 |   const hasVisibleData =  react-hooks/set-state-in-effect
+
+✖ 64 problems (64 errors, 0 warnings)
+

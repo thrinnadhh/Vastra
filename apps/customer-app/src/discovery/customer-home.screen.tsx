@@ -261,7 +261,9 @@ function HomeContent({
                 accessibilityLabel={`Browse ${category.name}`}
                 accessibilityRole="button"
                 key={category.id}
-                onPress={() => onSelectCategory(category.id)}
+                onPress={() => {
+                  onSelectCategory(category.id);
+                }}
                 style={styles.categoryCard}
               >
                 <Text numberOfLines={1} style={styles.categoryName}>
@@ -286,7 +288,13 @@ function HomeContent({
         />
         <View style={styles.shopList}>
           {content.nearbyShops.map((shop) => (
-            <ShopCard key={shop.id} onPress={() => onSelectShop(shop.id)} shop={shop} />
+            <ShopCard
+              key={shop.id}
+              onPress={() => {
+                onSelectShop(shop.id);
+              }}
+              shop={shop}
+            />
           ))}
         </View>
       </View>
@@ -302,7 +310,9 @@ function HomeContent({
             {content.nearbyProducts.map((product) => (
               <ProductCard
                 key={product.id}
-                onPress={() => onSelectProduct(product.id)}
+                onPress={() => {
+                  onSelectProduct(product.id);
+                }}
                 product={product}
               />
             ))}
