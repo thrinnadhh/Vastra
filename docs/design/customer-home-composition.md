@@ -44,6 +44,8 @@ The client never derives serviceability, stock, shop availability, or price from
 interaction state. A successful response replaces Home content. If a later refresh fails,
 previously visible content may remain on screen only with an explicit stale-data warning.
 An initial transport failure renders the offline recovery state without invented content.
+The adapter narrows the generated client's validated response at one explicit boundary
+before mapping screen-safe fields.
 
 ## Verification ownership
 
