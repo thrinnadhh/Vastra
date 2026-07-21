@@ -24,14 +24,10 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - name: Capture generator report
-        run: pnpm --filter @vastra/api-client generate > fe-s02-02-generator.log 2>&1 || true
-      - name: Capture root ESLint report
-        run: pnpm exec eslint . --format json --output-file fe-s02-02-eslint.json || true
+      - name: Capture exact lint command
+        run: pnpm lint > fe-s02-02-exact-lint.log 2>&1 || true
       - uses: actions/upload-artifact@v4
         with:
           name: fe-s02-02-diagnostics
-          path: |
-            fe-s02-02-generator.log
-            fe-s02-02-eslint.json
+          path: fe-s02-02-exact-lint.log
           if-no-files-found: error
