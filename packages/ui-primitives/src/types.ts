@@ -90,6 +90,14 @@ export interface TouchTargetContract {
   readonly adjacentGap: number;
 }
 
+export function trimToNull(value: string | undefined): string | null {
+  if (value === undefined) {
+    return null;
+  }
+  const normalized = value.trim();
+  return normalized.length === 0 ? null : normalized;
+}
+
 export function requireNonEmpty(value: string, field: string): string {
   const normalized = value.trim();
   if (normalized.length === 0) {
