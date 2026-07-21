@@ -46,7 +46,7 @@ export function CustomerLocationScreen({
     }
   };
 
-  const useCurrentLocation = async (): Promise<void> => {
+  const handleCurrentLocation = async (): Promise<void> => {
     setBusy(true);
     setFailureKind(null);
 
@@ -109,7 +109,7 @@ export function CustomerLocationScreen({
         accessibilityState={{ disabled: busy }}
         disabled={busy}
         onPress={() => {
-          void useCurrentLocation();
+          void handleCurrentLocation();
         }}
         style={({ pressed }) => [
           styles.primaryAction,
