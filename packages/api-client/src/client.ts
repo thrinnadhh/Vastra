@@ -121,10 +121,8 @@ const requestIdFromPayload = (payload: unknown): string | null => {
   return typeof requestId === 'string' ? requestId : null;
 };
 
-const schemaForStatus = (
-  contract: OperationRuntimeContract,
-  status: number,
-): JsonSchema | null => contract.responses[String(status)] ?? contract.responses['default'] ?? null;
+const schemaForStatus = (contract: OperationRuntimeContract, status: number): JsonSchema | null =>
+  contract.responses[String(status)] ?? contract.responses['default'] ?? null;
 
 const globalRuntime = globalThis as typeof globalThis & {
   setTimeout: (handler: () => void, timeoutMs: number) => unknown;

@@ -26,7 +26,8 @@ const extractEnvelope = (
   }
   const error = isRecord(payload['error']) ? payload['error'] : null;
   const details = error !== null && isRecord(error['details']) ? error['details'] : null;
-  const fieldErrorsValue = details !== null && isRecord(details['fieldErrors']) ? details['fieldErrors'] : null;
+  const fieldErrorsValue =
+    details !== null && isRecord(details['fieldErrors']) ? details['fieldErrors'] : null;
   const fieldErrors: Record<string, readonly string[]> = {};
   if (fieldErrorsValue !== null) {
     for (const [field, messages] of Object.entries(fieldErrorsValue)) {
@@ -103,7 +104,9 @@ export const normalizeHttpError = ({
     envelope.fieldErrors === null || allowedFieldErrors === undefined
       ? null
       : Object.fromEntries(
-          Object.entries(envelope.fieldErrors).filter(([field]) => allowedFieldErrors.includes(field)),
+          Object.entries(envelope.fieldErrors).filter(([field]) =>
+            allowedFieldErrors.includes(field),
+          ),
         );
   const kind = kindForStatus(status);
   return {
@@ -116,7 +119,8 @@ export const normalizeHttpError = ({
     retryAfterMs: parseRetryAfterMs(retryAfter),
     fieldErrors: fieldErrors !== null && Object.keys(fieldErrors).length > 0 ? fieldErrors : null,
     requiresAuthoritativeRefresh: method !== 'GET' && (status >= 500 || status === 409),
-    userMessageKey: envelope.code === null ? `api.${kind.toLowerCase()}` : `api.code.${envelope.code}`,
+    userMessageKey:
+      envelope.code === null ? `api.${kind.toLowerCase()}` : `api.code.${envelope.code}`,
   };
 };
 
