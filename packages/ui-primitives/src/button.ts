@@ -3,6 +3,7 @@ import {
   createAccessibilityState,
   requireIdentifier,
   requireNonEmpty,
+  trimToNull,
   type IconName,
   type PrimitiveAccessibility,
   type PrimitiveStyleSlot,
@@ -76,7 +77,7 @@ export function createButtonPrimitive(input: ButtonPrimitiveInput): ButtonPrimit
     busy,
     accessibility: {
       label: accessibilityLabel,
-      hint: input.accessibilityHint?.trim() || null,
+      hint: trimToNull(input.accessibilityHint),
       state: createAccessibilityState({
         disabled,
         busy,
