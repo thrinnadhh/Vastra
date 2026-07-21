@@ -1,7 +1,7 @@
 export default function AdminFoundationPage(): React.JSX.Element {
   return (
-    <main className="foundation">
-      <section aria-labelledby="foundation-title" className="foundation__panel">
+    <section aria-labelledby="foundation-title" className="foundation">
+      <div className="foundation__panel">
         <p className="foundation__eyebrow">Vastra operations</p>
 
         <h1 id="foundation-title">Vastra Admin — foundation ready</h1>
@@ -13,7 +13,7 @@ export default function AdminFoundationPage(): React.JSX.Element {
         <p className="foundation__status" role="status">
           System shell available
         </p>
-      </section>
-    </main>
+      </div>
+    </section>
   );
 }

@@ -1,27 +1,35 @@
+import { MobileApplicationShell } from '@vastra/app-shells/native';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
-import {
-  initialWindowMetrics,
-  SafeAreaProvider,
-  SafeAreaView,
-} from 'react-native-safe-area-context';
+import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { MerchantSessionApp } from './src/auth/default-merchant-session';
 import { DefaultMerchantOrders } from './src/orders/default-merchant-orders';
 
-export function MerchantAppContent() {
+export function MerchantAppContent(): React.JSX.Element {
   return <DefaultMerchantOrders />;
 }
 
-export default function App() {
+export function MerchantApplicationRoot(): React.JSX.Element {
+  return (
+    <MobileApplicationShell
+      accessibilityLabel="Vastra merchant application"
+      role="merchant"
+      safeAreaStyle={styles.safeArea}
+      testID="merchant-application-shell"
+    >
+      <MerchantSessionApp>
+        <MerchantAppContent />
+      </MerchantSessionApp>
+    </MobileApplicationShell>
+  );
+}
+
+export default function App(): React.JSX.Element {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="dark" />
-        <MerchantSessionApp>
-          <MerchantAppContent />
-        </MerchantSessionApp>
-      </SafeAreaView>
+      <StatusBar style="dark" />
+      <MerchantApplicationRoot />
     </SafeAreaProvider>
   );
 }

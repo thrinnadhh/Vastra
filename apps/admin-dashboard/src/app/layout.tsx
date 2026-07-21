@@ -1,3 +1,4 @@
+import { AdminApplicationShell } from '@vastra/app-shells/admin';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
@@ -8,6 +9,8 @@ export const metadata: Metadata = {
   description: 'Vastra administration foundation',
 };
 
+const ADMIN_NAVIGATION = [{ href: '/', label: 'Overview', current: true }] as const;
+
 interface RootLayoutProps {
   readonly children: ReactNode;
 }
@@ -15,7 +18,11 @@ interface RootLayoutProps {
 export default function RootLayout({ children }: RootLayoutProps): React.JSX.Element {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AdminApplicationShell navigation={ADMIN_NAVIGATION} productLabel="Vastra Admin">
+          {children}
+        </AdminApplicationShell>
+      </body>
     </html>
   );
 }

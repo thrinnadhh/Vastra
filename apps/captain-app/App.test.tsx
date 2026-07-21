@@ -1,5 +1,16 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import type { ReactNode } from 'react';
+import { Text as MockText } from 'react-native';
 
+jest.mock('./src/auth/default-captain-session', () => ({
+  CaptainSessionApp: ({ children }: { readonly children: ReactNode }) => children,
+}));
+
+jest.mock('./src/captain-operations.screen', () => ({
+  CaptainOperationsScreen: () => <MockText>Captain operations</MockText>,
+}));
+
+import { CaptainApplicationRoot } from './App';
 import { CaptainPresenceScreen } from './src/presence/captain-presence.screen';
 import type {
   CaptainAvailabilityResult,
@@ -73,6 +84,15 @@ class FakeLocationProvider implements CaptainLocationProvider {
     });
   }
 }
+
+describe('Captain application shell', () => {
+  it('mounts captain operations inside the shared mobile shell', () => {
+    const { getByTestId, getByText } = render(<CaptainApplicationRoot />);
+
+    expect(getByTestId('captain-application-shell')).toBeTruthy();
+    expect(getByText('Captain operations')).toBeTruthy();
+  });
+});
 
 describe('CaptainPresenceScreen', () => {
   it('submits a fresh location before going online', async () => {
