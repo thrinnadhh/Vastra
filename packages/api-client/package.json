@@ -20,7 +20,7 @@
     "pretest": "pnpm generate",
     "test": "vitest run",
     "pretest:coverage": "pnpm generate",
-    "test:coverage": "node scripts/run-coverage.mjs",
+    "test:coverage": "pnpm --dir ../server-state exec vitest run --root ../api-client --coverage --coverage.provider=custom --coverage.customProviderModule=../server-state/node_modules/@vitest/coverage-v8/dist/index.js --coverage.include=src/client.ts --coverage.include=src/errors.ts --coverage.include=src/index.ts --coverage.include=src/logging.ts --coverage.include=src/schema.ts --coverage.thresholds.lines=80 --coverage.thresholds.functions=80 --coverage.thresholds.branches=80 --coverage.thresholds.statements=80",
     "prebuild": "pnpm generate",
     "build": "tsc --noEmit"
   }
