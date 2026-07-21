@@ -94,15 +94,19 @@ export function CustomerSessionRoot({
     [],
   );
 
-  const bootstrap = useCallback(async (): Promise<void> => {
+  const runBootstrap = useCallback(async (): Promise<void> => {
     const operationId = ++operation.current;
-    setState(BOOTSTRAPPING_STATE);
     const nextState = await bootstrapCustomerSession(launchStore, sessionRestorer);
 
     if (mounted.current && operation.current === operationId) {
       setState(nextState);
     }
   }, [launchStore, sessionRestorer]);
+
+  const retryBootstrap = useCallback((): void => {
+    setState(BOOTSTRAPPING_STATE);
+    void runBootstrap();
+  }, [runBootstrap]);
 
   const restoreSession = useCallback(
     (session: RestorableSession) =>
@@ -142,14 +146,14 @@ export function CustomerSessionRoot({
       void restoreSession(session);
     });
 
-    void bootstrap();
+    void runBootstrap();
 
     return () => {
       mounted.current = false;
       operation.current += 1;
       unsubscribe();
     };
-  }, [authSession, bootstrap, restoreSession]);
+  }, [authSession, restoreSession, runBootstrap]);
 
   if (state.status === 'BOOTSTRAPPING') {
     return (
@@ -180,9 +184,7 @@ export function CustomerSessionRoot({
         title="We could not open Vastra"
         description="Your saved sign-in has not been removed. Check your connection and try again."
         actionLabel="Retry opening Vastra"
-        onAction={() => {
-          void bootstrap();
-        }}
+        onAction={retryBootstrap}
       />
     );
   }
@@ -221,9 +223,7 @@ export function CustomerSessionRoot({
           title="We could not restore your session"
           description="Check your connection and try again. Your saved sign-in has not been removed."
           actionLabel="Retry session restoration"
-          onAction={() => {
-            void bootstrap();
-          }}
+          onAction={retryBootstrap}
         />
       );
 
