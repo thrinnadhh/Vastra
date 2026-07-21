@@ -49,6 +49,7 @@ An initial transport failure renders the offline recovery state without invented
 
 Focused component tests cover Home composition, navigation callbacks, unavailable-variant
 protection, service-area emptiness, offline retry, and stale refresh behavior. Adapter tests
-cover generated-operation inputs, response mapping, and failure classification.
-`FE-S04-06` retains ownership of device/browser discovery E2E, pagination, accessibility,
-and low-end media/scroll evidence.
+cover generated-operation inputs, response mapping, and failure classification. The Home
+screen also keeps effect-triggered loading and numeric accessibility copy compatible with
+the repository's strict React and TypeScript lint rules. `FE-S04-06` retains ownership of
+device/browser discovery E2E, pagination, accessibility, and low-end media/scroll evidence.
