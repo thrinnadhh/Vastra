@@ -30,7 +30,7 @@ server-state behavior, or product success paths.
 - `pnpm test:frontend:e2e` runs Chromium keyboard/responsive admin checks and compact
   customer/merchant/captain shell-contract checks.
 - `pnpm test:frontend:visual` captures deterministic Chromium screenshots and compares
-  their SHA-256 hashes with `e2e/visual-baselines.json`.
+  their SHA-256 hashes with `e2e/visual-baselines.ts`.
 - `pnpm test:frontend:harness` runs all three layers.
 
 Playwright is pinned to a Node 20-compatible version. Only Chromium is installed in CI
