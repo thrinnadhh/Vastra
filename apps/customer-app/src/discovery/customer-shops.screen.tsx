@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { CustomerHomeCoordinates } from './customer-home.types';
 import type {
@@ -335,7 +328,9 @@ export function CustomerShopsScreen({
         {isDetailLoading ? (
           <View accessible accessibilityLiveRegion="polite" style={styles.stateCard}>
             <Text style={styles.stateTitle}>Loading shop…</Text>
-            <Text style={styles.stateCopy}>Checking current hours, serviceability, and catalogue.</Text>
+            <Text style={styles.stateCopy}>
+              Checking current hours, serviceability, and catalogue.
+            </Text>
           </View>
         ) : null}
 
@@ -387,10 +382,14 @@ export function CustomerShopsScreen({
 
             <View style={styles.contactCard}>
               <Text style={styles.sectionTitle}>Shop information</Text>
-              <Text style={styles.contactText}>{formatRating(detail.ratingAverage, detail.ratingCount)}</Text>
+              <Text style={styles.contactText}>
+                {formatRating(detail.ratingAverage, detail.ratingCount)}
+              </Text>
               <Text style={styles.contactText}>{String(detail.followerCount)} followers</Text>
               <Text style={styles.contactText}>{detail.phoneNumber}</Text>
-              {detail.email === null ? null : <Text style={styles.contactText}>{detail.email}</Text>}
+              {detail.email === null ? null : (
+                <Text style={styles.contactText}>{detail.email}</Text>
+              )}
               <Text style={styles.contactText}>
                 Service radius {(detail.serviceRadiusMeters / 1000).toFixed(1)} km
               </Text>
@@ -474,7 +473,9 @@ export function CustomerShopsScreen({
       {isDirectoryLoading ? (
         <View accessible accessibilityLiveRegion="polite" style={styles.stateCard}>
           <Text style={styles.stateTitle}>Loading nearby shops…</Text>
-          <Text style={styles.stateCopy}>Checking server-confirmed distance and service areas.</Text>
+          <Text style={styles.stateCopy}>
+            Checking server-confirmed distance and service areas.
+          </Text>
         </View>
       ) : null}
 
@@ -493,9 +494,7 @@ export function CustomerShopsScreen({
           <Text accessibilityRole="header" style={styles.stateTitle}>
             No serviceable shops nearby
           </Text>
-          <Text style={styles.stateCopy}>
-            Change your shopping location to check another area.
-          </Text>
+          <Text style={styles.stateCopy}>Change your shopping location to check another area.</Text>
           <Pressable
             accessibilityLabel="Change nearby shop location"
             accessibilityRole="button"

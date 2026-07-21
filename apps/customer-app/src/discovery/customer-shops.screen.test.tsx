@@ -73,8 +73,10 @@ const product = {
 };
 
 class ShopPortStub implements CustomerShopPort {
-  public readonly nearbyCalls: { readonly location: typeof location; readonly limit: number }[] = [];
-  public readonly detailCalls: { readonly shopId: string; readonly location: typeof location }[] = [];
+  public readonly nearbyCalls: { readonly location: typeof location; readonly limit: number }[] =
+    [];
+  public readonly detailCalls: { readonly shopId: string; readonly location: typeof location }[] =
+    [];
   public readonly productCalls: {
     readonly shopId: string;
     readonly cursor: string | null;
@@ -92,9 +94,7 @@ class ShopPortStub implements CustomerShopPort {
     limit: number,
   ): Promise<CustomerNearbyShopsResult> {
     this.nearbyCalls.push({ location: requestedLocation, limit });
-    return Promise.resolve(
-      this.nearbyResults.shift() ?? { kind: 'FAILURE', failureKind: 'ERROR' },
-    );
+    return Promise.resolve(this.nearbyResults.shift() ?? { kind: 'FAILURE', failureKind: 'ERROR' });
   }
 
   public getDetail(
@@ -102,9 +102,7 @@ class ShopPortStub implements CustomerShopPort {
     requestedLocation: typeof location,
   ): Promise<CustomerShopDetailResult> {
     this.detailCalls.push({ shopId, location: requestedLocation });
-    return Promise.resolve(
-      this.detailResults.shift() ?? { kind: 'FAILURE', failureKind: 'ERROR' },
-    );
+    return Promise.resolve(this.detailResults.shift() ?? { kind: 'FAILURE', failureKind: 'ERROR' });
   }
 
   public listProducts(

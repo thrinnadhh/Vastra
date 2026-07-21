@@ -2,11 +2,7 @@ import type { CustomerHomeCoordinates } from './customer-home.types';
 import type { CustomerSearchGender } from './customer-search.types';
 
 export type CustomerShopOrderingStatus =
-  | 'ACCEPTING_ORDERS'
-  | 'BUSY'
-  | 'CLOSED'
-  | 'OUTSIDE_SERVICE_AREA'
-  | 'ONLINE_ORDERS_DISABLED';
+  'ACCEPTING_ORDERS' | 'BUSY' | 'CLOSED' | 'OUTSIDE_SERVICE_AREA' | 'ONLINE_ORDERS_DISABLED';
 
 export interface CustomerNearbyShop {
   readonly id: string;
@@ -95,14 +91,8 @@ export type CustomerShopProductsResult =
   | { readonly kind: 'FAILURE'; readonly failureKind: CustomerShopFailureKind };
 
 export interface CustomerShopPort {
-  listNearby(
-    location: CustomerHomeCoordinates,
-    limit: number,
-  ): Promise<CustomerNearbyShopsResult>;
-  getDetail(
-    shopId: string,
-    location: CustomerHomeCoordinates,
-  ): Promise<CustomerShopDetailResult>;
+  listNearby(location: CustomerHomeCoordinates, limit: number): Promise<CustomerNearbyShopsResult>;
+  getDetail(shopId: string, location: CustomerHomeCoordinates): Promise<CustomerShopDetailResult>;
   listProducts(
     shopId: string,
     cursor: string | null,
