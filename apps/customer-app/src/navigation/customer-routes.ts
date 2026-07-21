@@ -3,8 +3,12 @@ export const CUSTOMER_TABS = ['Home', 'Discover', 'Style', 'Orders', 'Profile'] 
 export type CustomerTabKey = (typeof CUSTOMER_TABS)[number];
 
 export type UUID = string & { readonly __brand: 'UUID' };
-export type LegalDocumentKey = string & { readonly __brand: 'LegalDocumentKey' };
-export type SensitiveIngressHandle = string & { readonly __brand: 'SensitiveIngressHandle' };
+export type LegalDocumentKey = string & {
+  readonly __brand: 'LegalDocumentKey';
+};
+export type SensitiveIngressHandle = string & {
+  readonly __brand: 'SensitiveIngressHandle';
+};
 
 export interface CustomerTabParamList {
   readonly Home: undefined;
@@ -35,7 +39,9 @@ export interface DiscoveryStackParamList {
   readonly Discover: undefined;
   readonly Search: { readonly initialQuery?: string } | undefined;
   readonly SearchResults: { readonly query: string };
-  readonly Filters: { readonly source: 'SEARCH_RESULTS' | 'SHOP_PRODUCTS' | 'CATEGORY' };
+  readonly Filters: {
+    readonly source: 'SEARCH_RESULTS' | 'SHOP_PRODUCTS' | 'CATEGORY';
+  };
   readonly Categories: undefined;
   readonly NearbyShops: undefined;
   readonly ShopDetail: { readonly shopId: UUID };
@@ -87,12 +93,10 @@ export interface ProfileStackParamList {
 }
 
 export type WardrobeItemFormParams =
-  | { readonly mode: 'CREATE' }
-  | { readonly mode: 'EDIT'; readonly wardrobeItemId: UUID };
+  { readonly mode: 'CREATE' } | { readonly mode: 'EDIT'; readonly wardrobeItemId: UUID };
 
 export type LookFormParams =
-  | { readonly mode: 'CREATE' }
-  | { readonly mode: 'EDIT'; readonly lookId: UUID };
+  { readonly mode: 'CREATE' } | { readonly mode: 'EDIT'; readonly lookId: UUID };
 
 export type GroupStyleJoinParams =
   | { readonly method: 'LINK'; readonly ingressHandle: SensitiveIngressHandle }
@@ -119,13 +123,7 @@ export interface StyleStackParamList {
 }
 
 export type CustomerRouteScope =
-  | 'ACCESS'
-  | 'HOME'
-  | 'DISCOVERY'
-  | 'STYLE'
-  | 'ORDERS'
-  | 'PROFILE'
-  | 'TRANSACTION';
+  'ACCESS' | 'HOME' | 'DISCOVERY' | 'STYLE' | 'ORDERS' | 'PROFILE' | 'TRANSACTION';
 
 type RouteUnion<Scope extends CustomerRouteScope, Params extends object> = {
   readonly [Name in keyof Params]: {
@@ -168,9 +166,7 @@ export function isCustomerTabKey(value: string): value is CustomerTabKey {
 }
 
 export function isUuid(value: string): value is UUID {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
-    value,
-  );
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value);
 }
 
 export function ownerTabForRoute(route: CustomerRoute): CustomerTabKey | null {
