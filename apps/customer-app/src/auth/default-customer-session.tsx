@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { CustomerApiSessionProvider } from './customer-api-session';
+import { AsyncStorageCustomerLaunchStore } from './customer-launch-store';
 import { HttpCurrentAccountClient } from './current-account-client';
 import { CustomerSessionRoot } from './customer-session-root';
 import {
@@ -16,9 +18,9 @@ import {
   type CustomerSupabaseClient,
 } from './supabase-session-adapter';
 import type { AuthSessionPort, SessionRestorer } from './session-restoration.types';
-import { CustomerApiSessionProvider } from './customer-api-session';
 
 interface CustomerSessionAppProps {
+  readonly signedOutContent?: ReactNode;
   readonly children: ReactNode;
 }
 
@@ -27,6 +29,7 @@ interface CustomerSessionDependencies {
   readonly client: CustomerSupabaseClient;
   readonly authSession: AuthSessionPort;
   readonly sessionRestorer: SessionRestorer;
+  readonly launchStore: AsyncStorageCustomerLaunchStore;
 }
 
 type DependencyResult =
@@ -52,6 +55,7 @@ function createDependencies(): DependencyResult {
         client,
         authSession,
         sessionRestorer: new SessionRestorationService(authSession, currentAccount),
+        launchStore: new AsyncStorageCustomerLaunchStore(),
       },
     };
   } catch (error: unknown) {
@@ -67,9 +71,11 @@ function createDependencies(): DependencyResult {
 
 function ConfiguredCustomerSessionApp({
   dependencies,
+  signedOutContent,
   children,
 }: {
   readonly dependencies: CustomerSessionDependencies;
+  readonly signedOutContent?: ReactNode;
   readonly children: ReactNode;
 }) {
   useEffect(() => startSupabaseAuthLifecycle(dependencies.client), [dependencies.client]);
@@ -81,7 +87,9 @@ function ConfiguredCustomerSessionApp({
     >
       <CustomerSessionRoot
         authSession={dependencies.authSession}
+        launchStore={dependencies.launchStore}
         sessionRestorer={dependencies.sessionRestorer}
+        {...(signedOutContent === undefined ? {} : { signedOutContent })}
       >
         {children}
       </CustomerSessionRoot>
@@ -89,7 +97,7 @@ function ConfiguredCustomerSessionApp({
   );
 }
 
-export function CustomerSessionApp({ children }: CustomerSessionAppProps) {
+export function CustomerSessionApp({ signedOutContent, children }: CustomerSessionAppProps) {
   const result = useMemo(() => createDependencies(), []);
 
   if (result.kind === 'CONFIGURATION_ERROR') {
@@ -107,7 +115,10 @@ export function CustomerSessionApp({ children }: CustomerSessionAppProps) {
   }
 
   return (
-    <ConfiguredCustomerSessionApp dependencies={result.dependencies}>
+    <ConfiguredCustomerSessionApp
+      dependencies={result.dependencies}
+      {...(signedOutContent === undefined ? {} : { signedOutContent })}
+    >
       {children}
     </ConfiguredCustomerSessionApp>
   );
