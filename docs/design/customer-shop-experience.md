@@ -1,6 +1,6 @@
 # FE-S04-03 customer shop experience
 
-Status: READY — stacked on FE-S04-02
+Status: READY — formatted and stacked on FE-S04-02
 
 ## Contract boundary
 
