@@ -29,7 +29,7 @@ try {
   const baselineEntries = Object.entries(hashes)
     .map(([id, hash]) => `    '${id}':\n      '${hash}',`)
     .join('\n');
-  const baselineSource = `export const VISUAL_BASELINES = {\n  browser: 'chromium',\n  hashes: {\n${baselineEntries}\n  },\n} as const;\n`;
+  const baselineSource = `interface VisualBaselines {\n  readonly browser: 'chromium';\n  readonly hashes: Readonly<Record<string, string>>;\n}\n\nexport const VISUAL_BASELINES: VisualBaselines = {\n  browser: 'chromium',\n  hashes: {\n${baselineEntries}\n  },\n};\n`;
   const baselinePath = new URL('../../../e2e/visual-baselines.ts', import.meta.url);
   await writeFile(baselinePath, baselineSource, 'utf8');
 } finally {
