@@ -1,13 +1,5 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { CustomerHomeCoordinates } from './customer-home.types';
 import {
@@ -410,7 +402,10 @@ export function CustomerSearchScreen({
               onPress={() => {
                 applyFilters({ ...sessionState.filters, gender: null });
               }}
-              style={[styles.chip, sessionState.filters.gender === null ? styles.chipSelected : null]}
+              style={[
+                styles.chip,
+                sessionState.filters.gender === null ? styles.chipSelected : null,
+              ]}
             >
               <Text style={styles.chipText}>Any</Text>
             </Pressable>
@@ -567,7 +562,8 @@ export function CustomerSearchScreen({
               accessibilityLabel="Clear filters and retry search"
               accessibilityRole="button"
               onPress={() => {
-                const query = sessionState.submittedQuery ?? normalizeQuery(sessionState.draftQuery);
+                const query =
+                  sessionState.submittedQuery ?? normalizeQuery(sessionState.draftQuery);
                 setSessionState((current) => ({
                   ...current,
                   filters: DEFAULT_CUSTOMER_SEARCH_FILTERS,
@@ -687,7 +683,13 @@ const styles = StyleSheet.create({
   actionDisabled: { opacity: 0.55 },
   validationText: { marginTop: 8, color: '#9B2C2C', fontSize: 13, fontWeight: '700' },
   suggestionSection: { marginTop: 18 },
-  sectionLabel: { marginTop: 14, marginBottom: 8, color: '#342620', fontSize: 14, fontWeight: '800' },
+  sectionLabel: {
+    marginTop: 14,
+    marginBottom: 8,
+    color: '#342620',
+    fontSize: 14,
+    fontWeight: '800',
+  },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     minHeight: 42,

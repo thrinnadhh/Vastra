@@ -1,11 +1,6 @@
 import type { CustomerHomeCoordinates } from './customer-home.types';
 
-export const CUSTOMER_SEARCH_SORTS = [
-  'RELEVANCE',
-  'DISTANCE',
-  'PRICE_ASC',
-  'PRICE_DESC',
-] as const;
+export const CUSTOMER_SEARCH_SORTS = ['RELEVANCE', 'DISTANCE', 'PRICE_ASC', 'PRICE_DESC'] as const;
 export type CustomerSearchSort = (typeof CUSTOMER_SEARCH_SORTS)[number];
 
 export const CUSTOMER_SEARCH_GENDERS = ['MEN', 'WOMEN', 'KIDS', 'UNISEX'] as const;

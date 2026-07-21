@@ -92,9 +92,7 @@ function compactQuery(request: CustomerSearchRequest): SearchApiQuery {
     availableOnly: request.filters.availableOnly,
     sort: request.filters.sort,
     limit: request.limit,
-    ...(request.filters.categoryId === null
-      ? {}
-      : { categoryId: request.filters.categoryId }),
+    ...(request.filters.categoryId === null ? {} : { categoryId: request.filters.categoryId }),
     ...(request.filters.gender === null ? {} : { gender: request.filters.gender }),
     ...(request.filters.shopId === null ? {} : { shopId: request.filters.shopId }),
     ...(request.filters.minPricePaise === null

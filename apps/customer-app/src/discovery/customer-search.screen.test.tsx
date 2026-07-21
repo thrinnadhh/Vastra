@@ -52,9 +52,7 @@ class SearchPortStub implements CustomerSearchPort {
 
   public search(request: CustomerSearchRequest): Promise<CustomerSearchResult> {
     this.requests.push(request);
-    return Promise.resolve(
-      this.results.shift() ?? { kind: 'FAILURE', failureKind: 'ERROR' },
-    );
+    return Promise.resolve(this.results.shift() ?? { kind: 'FAILURE', failureKind: 'ERROR' });
   }
 }
 
