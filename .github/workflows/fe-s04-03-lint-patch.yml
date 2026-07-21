@@ -1,0 +1,64 @@
+name: FE-S04-03 lint patch
+
+on:
+  pull_request:
+    branches:
+      - feat/ui-fe-s04-02-search-contract
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.head_ref == 'feat/ui-fe-s04-03-shop-experience'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply exact lint fixes
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/customer-app/src/discovery/customer-shops.screen.tsx')
+          text = path.read_text()
+          old = """  const loadDirectory = useCallback(async () => {\n    if (location === null) {\n      return;\n    }\n\n    const result = await shopPort.listNearby(location, 50);\n    if (result.kind === 'SUCCESS') {\n      setShops(result.shops);\n      setDirectoryFailure(null);\n    } else {\n      setDirectoryFailure(result.failureKind);\n    }\n    setIsDirectoryLoading(false);\n  }, [location, shopPort]);\n\n  useEffect(() => {\n    void loadDirectory();\n  }, [loadDirectory]);\n"""
+          new = """  const applyDirectoryResult = useCallback((result: CustomerNearbyShopsResult): void => {\n    if (result.kind === 'SUCCESS') {\n      setShops(result.shops);\n      setDirectoryFailure(null);\n    } else {\n      setDirectoryFailure(result.failureKind);\n    }\n    setIsDirectoryLoading(false);\n  }, []);\n\n  useEffect(() => {\n    if (location === null) {\n      return undefined;\n    }\n\n    let active = true;\n    void shopPort.listNearby(location, 50).then((result) => {\n      if (active) {\n        applyDirectoryResult(result);\n      }\n    });\n\n    return () => {\n      active = false;\n    };\n  }, [applyDirectoryResult, location, shopPort]);\n\n  const retryDirectory = (): void => {\n    if (location === null) {\n      return;\n    }\n\n    setIsDirectoryLoading(true);\n    void shopPort.listNearby(location, 50).then(applyDirectoryResult);\n  };\n"""
+          if old not in text:
+              raise SystemExit('missing directory loading block')
+          text = text.replace(old, new, 1)
+          text = text.replace(
+              """          onRetry={() => {\n            setIsDirectoryLoading(true);\n            void loadDirectory();\n          }}\n""",
+              """          onRetry={retryDirectory}\n""",
+              1,
+          )
+          text = text.replace(
+              """          <ShopCard key={shop.id} onPress={() => openShop(shop.id)} shop={shop} />\n""",
+              """          <ShopCard\n            key={shop.id}\n            onPress={() => {\n              openShop(shop.id);\n            }}\n            shop={shop}\n          />\n""",
+              1,
+          )
+          text = text.replace(
+              """  CustomerNearbyShop,\n  CustomerShopDetail,\n""",
+              """  CustomerNearbyShop,\n  CustomerNearbyShopsResult,\n  CustomerShopDetail,\n""",
+              1,
+          )
+          path.write_text(text)
+
+          Path('.github/workflows/fe-s04-03-lint-diagnostic.yml').unlink(missing_ok=True)
+          Path('.github/workflows/fe-s04-03-lint-patch.yml').unlink()
+          PY
+          pnpm exec prettier --write apps/customer-app/src/discovery/customer-shops.screen.tsx
+      - name: Commit lint patch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "fix(customer): satisfy FE-S04-03 lint contract"
+          git push
