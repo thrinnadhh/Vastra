@@ -11,8 +11,13 @@ import {
 } from './customer-navigation-state';
 import { CUSTOMER_TABS, type CustomerTabKey } from './customer-routes';
 
+export interface CustomerHomeNavigationActions {
+  readonly openCheckout: () => void;
+  readonly openDiscover: () => void;
+}
+
 export interface CustomerRootNavigationSlots {
-  readonly home: (openCheckout: () => void) => ReactNode;
+  readonly home: (actions: CustomerHomeNavigationActions) => ReactNode;
   readonly discover: ReactNode;
   readonly style: ReactNode;
   readonly orders: ReactNode;
@@ -45,10 +50,14 @@ export function CustomerRootNavigation({
     );
   };
 
+  const openDiscover = (): void => {
+    selectTab('Discover');
+  };
+
   const renderSelectedTab = (): ReactNode => {
     switch (navigation.selectedTab) {
       case 'Home':
-        return slots.home(openCheckout);
+        return slots.home({ openCheckout, openDiscover });
       case 'Discover':
         return slots.discover;
       case 'Style':
