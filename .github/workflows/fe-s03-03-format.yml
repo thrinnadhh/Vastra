@@ -1,0 +1,38 @@
+name: FE-S03-03 format
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.head_ref == 'feat/ui-fe-s03-03-phone-otp'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: >-
+          pnpm exec prettier --write
+          apps/customer-app/src/auth/phone-otp.types.ts
+          apps/customer-app/src/auth/phone-otp.types.test.ts
+          apps/customer-app/src/auth/supabase-phone-otp.adapter.ts
+          apps/customer-app/src/auth/supabase-phone-otp.adapter.test.ts
+          apps/customer-app/src/auth/customer-phone-otp.screen.tsx
+          apps/customer-app/src/auth/customer-phone-otp.screen.test.tsx
+          apps/customer-app/src/auth/default-customer-session.tsx
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/customer-app/src/auth
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "style(customer): format FE-S03-03 phone OTP"
+          git push
