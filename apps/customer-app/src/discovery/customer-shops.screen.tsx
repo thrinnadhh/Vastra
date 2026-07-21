@@ -4,6 +4,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import type { CustomerHomeCoordinates } from './customer-home.types';
 import type {
   CustomerNearbyShop,
+  CustomerNearbyShopsResult,
   CustomerShopDetail,
   CustomerShopFailureKind,
   CustomerShopPort,
@@ -228,12 +229,7 @@ export function CustomerShopsScreen({
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const loadDirectory = useCallback(async () => {
-    if (location === null) {
-      return;
-    }
-
-    const result = await shopPort.listNearby(location, 50);
+  const applyDirectoryResult = useCallback((result: CustomerNearbyShopsResult): void => {
     if (result.kind === 'SUCCESS') {
       setShops(result.shops);
       setDirectoryFailure(null);
@@ -241,11 +237,33 @@ export function CustomerShopsScreen({
       setDirectoryFailure(result.failureKind);
     }
     setIsDirectoryLoading(false);
-  }, [location, shopPort]);
+  }, []);
 
   useEffect(() => {
-    void loadDirectory();
-  }, [loadDirectory]);
+    if (location === null) {
+      return undefined;
+    }
+
+    let active = true;
+    void shopPort.listNearby(location, 50).then((result) => {
+      if (active) {
+        applyDirectoryResult(result);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [applyDirectoryResult, location, shopPort]);
+
+  const retryDirectory = (): void => {
+    if (location === null) {
+      return;
+    }
+
+    setIsDirectoryLoading(true);
+    void shopPort.listNearby(location, 50).then(applyDirectoryResult);
+  };
 
   const loadSelectedShop = useCallback(
     async (shopId: string) => {
@@ -480,13 +498,7 @@ export function CustomerShopsScreen({
       ) : null}
 
       {directoryFailure === null ? null : (
-        <FailureState
-          failureKind={directoryFailure}
-          onRetry={() => {
-            setIsDirectoryLoading(true);
-            void loadDirectory();
-          }}
-        />
+        <FailureState failureKind={directoryFailure} onRetry={retryDirectory} />
       )}
 
       {!isDirectoryLoading && directoryFailure === null && shops.length === 0 ? (
@@ -508,7 +520,13 @@ export function CustomerShopsScreen({
 
       <View style={styles.shopList}>
         {shops.map((shop) => (
-          <ShopCard key={shop.id} onPress={() => openShop(shop.id)} shop={shop} />
+          <ShopCard
+            key={shop.id}
+            onPress={() => {
+              openShop(shop.id);
+            }}
+            shop={shop}
+          />
         ))}
       </View>
     </ScrollView>
