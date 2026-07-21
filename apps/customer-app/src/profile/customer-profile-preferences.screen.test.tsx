@@ -35,7 +35,9 @@ describe('CustomerProfilePreferencesScreen', () => {
       />,
     );
 
-    await waitFor(() => expect(screen.getByText('Trinadh')).toBeTruthy());
+    await waitFor(() => {
+      expect(screen.getByText('Trinadh')).toBeTruthy();
+    });
     fireEvent.press(screen.getByText('Skip for now'));
     expect(onContinue).toHaveBeenCalledTimes(1);
   });
@@ -49,11 +51,11 @@ describe('CustomerProfilePreferencesScreen', () => {
       />,
     );
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(
         screen.getByText(/Name editing is not available until Vastra exposes/u),
-      ).toBeTruthy(),
-    );
+      ).toBeTruthy();
+    });
   });
 
   it('saves selected categories, sizes and integer-paise budgets once', async () => {
@@ -67,7 +69,9 @@ describe('CustomerProfilePreferencesScreen', () => {
       />,
     );
 
-    await waitFor(() => expect(screen.getByText('WOMEN')).toBeTruthy());
+    await waitFor(() => {
+      expect(screen.getByText('WOMEN')).toBeTruthy();
+    });
     fireEvent.press(screen.getByText('WOMEN'));
     fireEvent.changeText(screen.getByLabelText('Preferred sizes'), 'm, L, m');
     fireEvent.changeText(screen.getByLabelText('Minimum budget in rupees'), '500');
@@ -75,7 +79,7 @@ describe('CustomerProfilePreferencesScreen', () => {
     fireEvent.press(screen.getByText('Save and continue'));
     fireEvent.press(screen.getByText('Saving…'));
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(port.save).toHaveBeenCalledWith({
         genderCategories: ['WOMEN'],
         styleTags: ['casual'],
@@ -84,8 +88,8 @@ describe('CustomerProfilePreferencesScreen', () => {
         preferredSizes: ['M', 'L'],
         minPricePaise: 50_000,
         maxPricePaise: 200_050,
-      }),
-    );
+      });
+    });
     expect(port.save).toHaveBeenCalledTimes(1);
     expect(onContinue).toHaveBeenCalledTimes(1);
   });
@@ -101,11 +105,13 @@ describe('CustomerProfilePreferencesScreen', () => {
       />,
     );
 
-    await waitFor(() => expect(screen.getByText('Save and continue')).toBeTruthy());
+    await waitFor(() => {
+      expect(screen.getByText('Save and continue')).toBeTruthy();
+    });
     fireEvent.press(screen.getByText('Save and continue'));
 
-    await waitFor(() =>
-      expect(screen.getByText('Preferences were not saved. Try again or skip for now.')).toBeTruthy(),
-    );
+    await waitFor(() => {
+      expect(screen.getByText('Preferences were not saved. Try again or skip for now.')).toBeTruthy();
+    });
   });
 });
