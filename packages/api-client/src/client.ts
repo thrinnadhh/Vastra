@@ -76,12 +76,20 @@ const encodePathValue = (value: unknown): string => {
   if (typeof value !== 'string' && typeof value !== 'number') {
     throw new ApiClientError(createLocalError('CONTRACT', 'unknown'));
   }
-  return encodeURIComponent(String(value));
+  return encodeURIComponent(encodeQueryValue(value));
 };
 
 const buildPath = (template: string, pathInput: unknown): string => {
   const path = isRecord(pathInput) ? pathInput : {};
   return template.replace(/\{([^}]+)\}/gu, (_match, key: string) => encodePathValue(path[key]));
+};
+
+const encodeQueryValue = (value: unknown): string => {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  throw new ApiClientError(createLocalError('CONTRACT', 'unknown'));
 };
 
 const buildQuery = (queryInput: unknown): string => {
@@ -95,7 +103,7 @@ const buildQuery = (queryInput: unknown): string => {
     }
     if (Array.isArray(value)) {
       for (const item of value) {
-        params.append(key, String(item));
+        params.append(key, encodeQueryValue(item));
       }
       continue;
     }
@@ -146,7 +154,7 @@ const withTimeout = async <T>(
       externalSignal?.addEventListener?.('abort', abortFromExternal, { once: true });
     }
     timeoutHandle = globalRuntime.setTimeout(() => controller?.abort(), timeoutMs);
-    return await execute(controller?.signal as AbortSignalLike | undefined);
+    return await execute(controller?.signal);
   } catch (cause) {
     if (controller?.signal.aborted === true && externalSignal?.aborted !== true) {
       throw new ApiClientError(createLocalError('TIMEOUT', 'unknown'), cause);
