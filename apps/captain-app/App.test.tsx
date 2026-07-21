@@ -10,7 +10,7 @@ jest.mock('./src/captain-operations.screen', () => ({
   CaptainOperationsScreen: () => <MockText>Captain operations</MockText>,
 }));
 
-import App from './App';
+import { CaptainApplicationRoot } from './App';
 import { CaptainPresenceScreen } from './src/presence/captain-presence.screen';
 import type {
   CaptainAvailabilityResult,
@@ -87,7 +87,7 @@ class FakeLocationProvider implements CaptainLocationProvider {
 
 describe('Captain application shell', () => {
   it('mounts captain operations inside the shared mobile shell', () => {
-    const { getByTestId, getByText } = render(<App />);
+    const { getByTestId, getByText } = render(<CaptainApplicationRoot />);
 
     expect(getByTestId('captain-application-shell')).toBeTruthy();
     expect(getByText('Captain operations')).toBeTruthy();
