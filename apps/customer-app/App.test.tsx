@@ -1,49 +1,73 @@
 import { fireEvent, render } from '@testing-library/react-native';
-import { Text as MockText } from 'react-native';
+import { Pressable as MockPressable, Text as MockText } from 'react-native';
 
 jest.mock('./src/auth/default-customer-session', () => ({
   CustomerSessionApp: ({ children }: { readonly children: React.ReactNode }) => children,
 }));
 
-jest.mock('./src/checkout/default-customer-checkout-quote', () => {
-  return {
-    DefaultCustomerCheckoutQuote: ({ addressId }: { readonly addressId: string | null }) => (
-      <MockText>{addressId ?? 'Checkout awaits an address'}</MockText>
-    ),
-  };
-});
+jest.mock('./src/checkout/default-customer-checkout-quote', () => ({
+  DefaultCustomerCheckoutQuote: ({ addressId }: { readonly addressId: string | null }) => (
+    <MockText>{addressId ?? 'Checkout awaits an address'}</MockText>
+  ),
+}));
 
 jest.mock('./src/orders/default-customer-orders', () => ({
   DefaultCustomerOrders: () => <MockText>Authenticated customer orders</MockText>,
 }));
 
+jest.mock('./src/navigation/default-customer-root-content', () => ({
+  DefaultCustomerHomeRoot: ({ openCheckout }: { readonly openCheckout: () => void }) => (
+    <MockPressable accessibilityRole="button" onPress={openCheckout}>
+      <MockText>Continue to checkout</MockText>
+    </MockPressable>
+  ),
+  DefaultCustomerProfileRoot: () => <MockText>Authenticated customer profile</MockText>,
+}));
+
 import { CustomerAppContent, CustomerApplicationRoot } from './App';
 
 describe('CustomerAppContent', () => {
-  it('exposes checkout through an empty address-selection boundary', () => {
-    const { getByText } = render(<CustomerAppContent />);
+  it('exposes exactly the approved five root tabs', () => {
+    const { getAllByRole, getByRole } = render(<CustomerAppContent />);
 
-    expect(getByText('Checkout awaits an address')).toBeTruthy();
+    expect(getAllByRole('tab')).toHaveLength(5);
+    expect(getByRole('tab', { name: 'Home tab' })).toBeTruthy();
+    expect(getByRole('tab', { name: 'Discover tab' })).toBeTruthy();
+    expect(getByRole('tab', { name: 'Style tab' })).toBeTruthy();
+    expect(getByRole('tab', { name: 'Orders tab' })).toBeTruthy();
+    expect(getByRole('tab', { name: 'Profile tab' })).toBeTruthy();
   });
 
-  it('passes a selected address into the checkout boundary', () => {
+  it('keeps checkout contextual rather than making it a sixth tab', () => {
+    const { getByRole, getByText, queryAllByRole } = render(<CustomerAppContent />);
+
+    fireEvent.press(getByText('Continue to checkout'));
+
+    expect(getByText('Checkout awaits an address')).toBeTruthy();
+    expect(queryAllByRole('tab')).toHaveLength(0);
+    fireEvent.press(getByRole('button', { name: 'Back from checkout' }));
+    expect(getByText('Continue to checkout')).toBeTruthy();
+  });
+
+  it('passes a selected address into the preserved checkout boundary', () => {
     const { getByText } = render(<CustomerAppContent addressId="selected-address-id" />);
 
+    fireEvent.press(getByText('Continue to checkout'));
     expect(getByText('selected-address-id')).toBeTruthy();
   });
 
-  it('makes the authenticated order list reachable from the app shell', () => {
+  it('keeps the authenticated order list reachable through Orders', () => {
     const { getByRole, getByText } = render(<CustomerAppContent />);
 
-    fireEvent.press(getByRole('tab', { name: 'My orders' }));
+    fireEvent.press(getByRole('tab', { name: 'Orders tab' }));
 
     expect(getByText('Authenticated customer orders')).toBeTruthy();
   });
 
-  it('mounts the preserved customer routes inside the shared mobile shell', () => {
+  it('mounts the migrated root inside the shared mobile shell', () => {
     const { getByTestId, getByText } = render(<CustomerApplicationRoot />);
 
     expect(getByTestId('customer-application-shell')).toBeTruthy();
-    expect(getByText('Checkout awaits an address')).toBeTruthy();
+    expect(getByText('Continue to checkout')).toBeTruthy();
   });
 });
