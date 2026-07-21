@@ -1,0 +1,58 @@
+name: FE-S02-05 workspace sync
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-branch:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feat/ui-fe-s02-05-application-shells'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Synchronize workspace lockfile
+        run: pnpm install --lockfile-only
+      - name: Apply repository formatting
+        run: >-
+          pnpm exec prettier --write
+          packages/app-shells
+          apps/customer-app/App.tsx
+          apps/customer-app/App.test.tsx
+          apps/customer-app/package.json
+          apps/merchant-app/App.tsx
+          apps/merchant-app/App.test.tsx
+          apps/merchant-app/package.json
+          apps/captain-app/App.tsx
+          apps/captain-app/App.test.tsx
+          apps/captain-app/package.json
+          apps/admin-dashboard/next.config.ts
+          apps/admin-dashboard/package.json
+          apps/admin-dashboard/src/app/globals.css
+          apps/admin-dashboard/src/app/layout.tsx
+          apps/admin-dashboard/src/app/layout.test.tsx
+          apps/admin-dashboard/src/app/page.tsx
+          apps/admin-dashboard/src/app/page.test.tsx
+          docs/design/frontend-application-shells.md
+          pnpm-lock.yaml
+      - name: Commit deterministic workspace output
+        shell: bash
+        run: |
+          git add packages/app-shells apps/customer-app apps/merchant-app apps/captain-app apps/admin-dashboard docs/design/frontend-application-shells.md pnpm-lock.yaml
+          if git diff --cached --quiet; then
+            echo "Workspace already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "FE-S02-05 chore(shells): sync workspace and formatting"
+          git push origin HEAD:${{ github.head_ref }}
