@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 
 import { expect, test } from '@playwright/test';
 
@@ -11,7 +11,7 @@ interface VisualBaselineFile {
 }
 
 const baselineFile = JSON.parse(
-  await readFile(new URL('./visual-baselines.json', import.meta.url), 'utf8'),
+  readFileSync(new URL('./visual-baselines.json', import.meta.url), 'utf8'),
 ) as VisualBaselineFile;
 
 for (const entryPoint of FRONTEND_VISUAL_ENTRY_POINTS) {
