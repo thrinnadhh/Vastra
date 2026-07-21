@@ -2,6 +2,7 @@ import {
   createAccessibilityState,
   requireIdentifier,
   requireNonEmpty,
+  trimToNull,
   type PrimitiveStyleSlot,
 } from './types.js';
 
@@ -58,8 +59,8 @@ export interface FieldPrimitive {
 export function createFieldPrimitive(input: FieldPrimitiveInput): FieldPrimitive {
   const id = requireIdentifier(input.id, 'field id');
   const label = requireNonEmpty(input.label, 'field label');
-  const description = input.description?.trim() || null;
-  const error = input.error?.trim() || null;
+  const description = trimToNull(input.description);
+  const error = trimToNull(input.error);
   const descriptionId = description === null ? null : `${id}-description`;
   const errorId = error === null ? null : `${id}-error`;
   const describedBy = [descriptionId, errorId].filter((value): value is string => value !== null);
@@ -77,7 +78,7 @@ export function createFieldPrimitive(input: FieldPrimitiveInput): FieldPrimitive
     error,
     errorId,
     describedBy,
-    placeholder: input.placeholder?.trim() || null,
+    placeholder: trimToNull(input.placeholder),
     inputMode: input.inputMode ?? 'text',
     autoComplete: input.autoComplete ?? 'off',
     required: input.required ?? false,
