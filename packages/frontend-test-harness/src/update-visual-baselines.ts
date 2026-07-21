@@ -26,12 +26,12 @@ try {
     await page.close();
   }
 
-  const baselinePath = new URL('../../../e2e/visual-baselines.json', import.meta.url);
-  await writeFile(
-    baselinePath,
-    `${JSON.stringify({ browser: 'chromium', hashes }, null, 2)}\n`,
-    'utf8',
-  );
+  const baselineEntries = Object.entries(hashes)
+    .map(([id, hash]) => `    '${id}':\n      '${hash}',`)
+    .join('\n');
+  const baselineSource = `export const VISUAL_BASELINES = {\n  browser: 'chromium',\n  hashes: {\n${baselineEntries}\n  },\n} as const;\n`;
+  const baselinePath = new URL('../../../e2e/visual-baselines.ts', import.meta.url);
+  await writeFile(baselinePath, baselineSource, 'utf8');
 } finally {
   await browser.close();
   await server.close();
