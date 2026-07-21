@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
-import { MerchantAppContent } from './App';
+import App, { MerchantAppContent } from './App';
 
 jest.mock('./src/orders/default-merchant-orders', () => ({
   DefaultMerchantOrders: function MockMerchantOrders() {
@@ -17,5 +17,11 @@ describe('MerchantAppContent', () => {
   it('mounts the real merchant orders feature', () => {
     const view = render(<MerchantAppContent />);
     expect(view.toJSON()).toBeNull();
+  });
+
+  it('mounts merchant fulfilment inside the shared mobile shell', () => {
+    const { getByTestId } = render(<App />);
+
+    expect(getByTestId('merchant-application-shell')).toBeTruthy();
   });
 });
