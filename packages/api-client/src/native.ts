@@ -3,7 +3,7 @@ export {
   type ApiClient,
   type ApiClientOptions,
   type RequestOptions,
-} from './client';
+} from './native-client';
 export type {
   AbortSignalLike,
   AccessTokenProvider,
