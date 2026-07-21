@@ -40,7 +40,8 @@ available.
 Opening a shop requests detail and the first catalogue page together. Both must succeed
 before the full shop experience is shown. Catalogue cursors remain opaque. Additional
 pages append in server order and deduplicate by product ID. A failed page request is
-recoverable and never manufactures products.
+recoverable and never manufactures products. Initial directory loading applies async
+results through an effect-safe completion callback and ignores results after unmount.
 
 ## Verification ownership
 
