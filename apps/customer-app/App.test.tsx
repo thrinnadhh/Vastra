@@ -17,7 +17,7 @@ jest.mock('./src/orders/default-customer-orders', () => ({
   DefaultCustomerOrders: () => <MockText>Authenticated customer orders</MockText>,
 }));
 
-import App, { CustomerAppContent } from './App';
+import { CustomerAppContent, CustomerApplicationRoot } from './App';
 
 describe('CustomerAppContent', () => {
   it('exposes checkout through an empty address-selection boundary', () => {
@@ -41,7 +41,7 @@ describe('CustomerAppContent', () => {
   });
 
   it('mounts the preserved customer routes inside the shared mobile shell', () => {
-    const { getByTestId, getByText } = render(<App />);
+    const { getByTestId, getByText } = render(<CustomerApplicationRoot />);
 
     expect(getByTestId('customer-application-shell')).toBeTruthy();
     expect(getByText('Checkout awaits an address')).toBeTruthy();
