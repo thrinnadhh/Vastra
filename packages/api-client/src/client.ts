@@ -74,7 +74,7 @@ type AbortControllerLike = Readonly<{
 
 type AbortControllerConstructorLike = new () => AbortControllerLike;
 
-const globalRuntime = globalThis as typeof globalThis & {
+const globalRuntime = globalThis as unknown as {
   crypto?: CryptoLike;
   AbortController?: AbortControllerConstructorLike;
   setTimeout: (callback: () => void, delayMs: number) => unknown;
@@ -106,6 +106,19 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const asInputRecord = (input: unknown): Record<string, unknown> => (isRecord(input) ? input : {});
 
+const serializeUrlValue = (value: unknown): string => {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false';
+  }
+  throw new Error('URL parameters must be strings, finite numbers, or booleans');
+};
+
 const buildPath = (template: string, pathInput: unknown): string => {
   const values = isRecord(pathInput) ? pathInput : {};
   return template.replaceAll(/\{([^}]+)\}/gu, (_match, key: string) => {
@@ -113,7 +126,7 @@ const buildPath = (template: string, pathInput: unknown): string => {
     if (value === undefined || value === null) {
       throw new Error(`Missing path parameter: ${key}`);
     }
-    return encodeURIComponent(String(value));
+    return encodeURIComponent(serializeUrlValue(value));
   });
 };
 
@@ -128,7 +141,7 @@ const buildQuery = (queryInput: unknown): string => {
     const values = Array.isArray(rawValue) ? rawValue : [rawValue];
     for (const value of values) {
       if (value !== undefined && value !== null) {
-        pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+        pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(serializeUrlValue(value))}`);
       }
     }
   }
@@ -149,7 +162,7 @@ const requestIdFromPayload = (payload: unknown): string | null => {
 
 const schemaForStatus = (contract: OperationRuntimeContract, status: number): JsonSchema | null =>
   contract.responses[String(status)] ??
-  contract.responses[`${Math.floor(status / 100)}XX`] ??
+  contract.responses[`${String(Math.floor(status / 100))}XX`] ??
   contract.responses['default'] ??
   null;
 
@@ -169,7 +182,6 @@ const withTimeout = async <T>(
   const Controller = globalRuntime.AbortController;
   const controller = Controller === undefined ? null : new Controller();
   let timeoutHandle: unknown;
-  let timedOut = false;
 
   const abortFromExternal = (): void => controller?.abort();
   externalSignal?.addEventListener?.('abort', abortFromExternal, { once: true });
@@ -177,7 +189,6 @@ const withTimeout = async <T>(
   try {
     const timeoutPromise = new Promise<never>((_resolve, reject) => {
       timeoutHandle = globalRuntime.setTimeout(() => {
-        timedOut = true;
         controller?.abort();
         reject(new Error('API_CLIENT_TIMEOUT'));
       }, timeoutMs);
@@ -185,7 +196,7 @@ const withTimeout = async <T>(
 
     return await Promise.race([operation(controller?.signal ?? externalSignal), timeoutPromise]);
   } catch (cause) {
-    if (timedOut || (cause instanceof Error && cause.message === 'API_CLIENT_TIMEOUT')) {
+    if (cause instanceof Error && cause.message === 'API_CLIENT_TIMEOUT') {
       throw new ApiClientError(createLocalError('TIMEOUT', 'unknown'), cause);
     }
     throw cause;
@@ -408,11 +419,7 @@ const createClientForRegistry = (
 };
 
 export const createApiClient = (options: ApiClientOptions): ApiClient => {
-  const client = createClientForRegistry(
-    options,
-    OPENAPI_OPERATIONS as unknown as OperationRegistry,
-    OPENAPI_SCHEMAS as unknown as SchemaRegistry,
-  );
+  const client = createClientForRegistry(options, OPENAPI_OPERATIONS, OPENAPI_SCHEMAS);
 
   return {
     request: <Id extends OperationId>(
