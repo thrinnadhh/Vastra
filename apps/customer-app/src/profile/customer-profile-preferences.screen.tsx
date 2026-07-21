@@ -3,21 +3,34 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   CUSTOMER_GENDER_CATEGORIES,
+  mergeSupportedPreferenceDraft,
+  parseCommaSeparatedSizes,
   parseRupeesToPaise,
   validatePreferenceDraft,
   type CustomerGenderCategory,
   type CustomerPreferenceDraft,
+  type CustomerPreferenceSnapshot,
   type CustomerPreferencesPort,
   type CustomerProfileIdentity,
 } from './customer-profile-preferences.types';
 
-const EMPTY_DRAFT: CustomerPreferenceDraft = {
+const EMPTY_PREFERENCES: CustomerPreferenceSnapshot = {
   genderCategories: [],
+  styleTags: [],
+  occasionTags: [],
   preferredColours: [],
   preferredSizes: [],
   minPricePaise: null,
   maxPricePaise: null,
+  updatedAt: null,
 };
+
+const createDraft = (preferences: CustomerPreferenceSnapshot): CustomerPreferenceDraft => ({
+  genderCategories: preferences.genderCategories,
+  preferredSizes: preferences.preferredSizes,
+  minPricePaise: preferences.minPricePaise,
+  maxPricePaise: preferences.maxPricePaise,
+});
 
 export function CustomerProfilePreferencesScreen({
   identity,
@@ -28,29 +41,37 @@ export function CustomerProfilePreferencesScreen({
   readonly preferencesPort: CustomerPreferencesPort;
   readonly onContinue: () => void;
 }) {
-  const [draft, setDraft] = useState<CustomerPreferenceDraft>(EMPTY_DRAFT);
+  const [existing, setExisting] = useState<CustomerPreferenceSnapshot>(EMPTY_PREFERENCES);
+  const [draft, setDraft] = useState<CustomerPreferenceDraft>(createDraft(EMPTY_PREFERENCES));
+  const [sizesInput, setSizesInput] = useState('');
   const [minimumRupees, setMinimumRupees] = useState('');
   const [maximumRupees, setMaximumRupees] = useState('');
-  const [state, setState] = useState<'LOADING' | 'READY' | 'SAVING' | 'ERROR'>('LOADING');
+  const [state, setState] = useState<'LOADING' | 'READY' | 'SAVING'>('LOADING');
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    void preferencesPort
-      .load()
-      .then((loaded) => {
-        if (!active) return;
-        setDraft(loaded);
-        setMinimumRupees(loaded.minPricePaise === null ? '' : String(loaded.minPricePaise / 100));
-        setMaximumRupees(loaded.maxPricePaise === null ? '' : String(loaded.maxPricePaise / 100));
-        setState('READY');
-      })
-      .catch(() => {
-        if (!active) return;
-        setDraft(EMPTY_DRAFT);
+
+    void preferencesPort.load().then((result) => {
+      if (!active) {
+        return;
+      }
+
+      if (result.kind === 'UNAVAILABLE') {
         setState('READY');
         setMessage('Preferences could not be loaded. You can skip and edit them later.');
-      });
+        return;
+      }
+
+      const loaded = result.preferences;
+      setExisting(loaded);
+      setDraft(createDraft(loaded));
+      setSizesInput(loaded.preferredSizes.join(', '));
+      setMinimumRupees(loaded.minPricePaise === null ? '' : String(loaded.minPricePaise / 100));
+      setMaximumRupees(loaded.maxPricePaise === null ? '' : String(loaded.maxPricePaise / 100));
+      setState('READY');
+    });
+
     return () => {
       active = false;
     };
@@ -66,10 +87,22 @@ export function CustomerProfilePreferencesScreen({
   };
 
   const save = async (): Promise<void> => {
+    if (state !== 'READY') {
+      return;
+    }
+
+    const minPricePaise = parseRupeesToPaise(minimumRupees);
+    const maxPricePaise = parseRupeesToPaise(maximumRupees);
+    if (minPricePaise === undefined || maxPricePaise === undefined) {
+      setMessage('Enter budget amounts in rupees with no more than two decimal places.');
+      return;
+    }
+
     const nextDraft: CustomerPreferenceDraft = {
       ...draft,
-      minPricePaise: parseRupeesToPaise(minimumRupees),
-      maxPricePaise: parseRupeesToPaise(maximumRupees),
+      preferredSizes: parseCommaSeparatedSizes(sizesInput),
+      minPricePaise,
+      maxPricePaise,
     };
     const validationMessage = validatePreferenceDraft(nextDraft);
     if (validationMessage !== null) {
@@ -79,27 +112,34 @@ export function CustomerProfilePreferencesScreen({
 
     setState('SAVING');
     setMessage(null);
-    try {
-      await preferencesPort.save(nextDraft);
-      onContinue();
-    } catch {
-      setState('ERROR');
+    const result = await preferencesPort.save(mergeSupportedPreferenceDraft(nextDraft, existing));
+    if (result.kind === 'UNAVAILABLE') {
+      setState('READY');
       setMessage('Preferences were not saved. Try again or skip for now.');
+      return;
     }
+
+    onContinue();
   };
+
+  const isBusy = state !== 'READY';
 
   return (
     <View style={styles.screen}>
       <Text accessibilityRole="header" style={styles.title}>
         Your Vastra profile
       </Text>
-      <Text style={styles.identity}>
-        {identity.fullName ?? 'Customer'} · {identity.phoneNumberMasked}
-      </Text>
+      <Text style={styles.identity}>{identity.fullName ?? 'Customer profile'}</Text>
       <Text style={styles.note}>
-        Your identity is managed securely by Vastra. Shopping preferences are optional and editable
-        later.
+        Your verified account details remain server-owned. Shopping preferences are optional and
+        editable later.
       </Text>
+      {identity.fullName === null ? (
+        <Text accessibilityLiveRegion="polite" style={styles.contractNotice}>
+          Name editing is not available until Vastra exposes the approved profile update contract.
+          You can continue without creating a false saved profile.
+        </Text>
+      ) : null}
 
       <Text style={styles.sectionTitle}>Who are you shopping for?</Text>
       <View style={styles.options}>
@@ -108,25 +148,35 @@ export function CustomerProfilePreferencesScreen({
           return (
             <Pressable
               accessibilityRole="checkbox"
-              accessibilityState={{ checked: selected, disabled: state !== 'READY' }}
-              disabled={state !== 'READY'}
+              accessibilityState={{ checked: selected, disabled: isBusy }}
+              disabled={isBusy}
               key={category}
-              onPress={() => toggleCategory(category)}
+              onPress={() => {
+                toggleCategory(category);
+              }}
               style={[styles.option, selected ? styles.optionSelected : null]}
             >
-              <Text style={selected ? styles.optionTextSelected : styles.optionText}>
-                {category}
-              </Text>
+              <Text style={selected ? styles.optionTextSelected : styles.optionText}>{category}</Text>
             </Pressable>
           );
         })}
       </View>
 
+      <Text style={styles.sectionTitle}>Preferred sizes</Text>
+      <TextInput
+        accessibilityLabel="Preferred sizes"
+        editable={!isBusy}
+        onChangeText={setSizesInput}
+        placeholder="M, L, XL"
+        style={styles.input}
+        value={sizesInput}
+      />
+
       <Text style={styles.sectionTitle}>Optional budget per item</Text>
       <TextInput
         accessibilityLabel="Minimum budget in rupees"
-        editable={state === 'READY'}
-        keyboardType="number-pad"
+        editable={!isBusy}
+        keyboardType="decimal-pad"
         onChangeText={setMinimumRupees}
         placeholder="Minimum ₹"
         style={styles.input}
@@ -134,8 +184,8 @@ export function CustomerProfilePreferencesScreen({
       />
       <TextInput
         accessibilityLabel="Maximum budget in rupees"
-        editable={state === 'READY'}
-        keyboardType="number-pad"
+        editable={!isBusy}
+        keyboardType="decimal-pad"
         onChangeText={setMaximumRupees}
         placeholder="Maximum ₹"
         style={styles.input}
@@ -150,16 +200,18 @@ export function CustomerProfilePreferencesScreen({
 
       <Pressable
         accessibilityRole="button"
-        disabled={state === 'LOADING' || state === 'SAVING'}
-        onPress={() => void save()}
-        style={styles.primary}
+        accessibilityState={{ disabled: isBusy }}
+        disabled={isBusy}
+        onPress={() => {
+          void save();
+        }}
+        style={[styles.primary, isBusy ? styles.disabled : null]}
       >
-        <Text style={styles.primaryText}>
-          {state === 'SAVING' ? 'Saving…' : 'Save and continue'}
-        </Text>
+        <Text style={styles.primaryText}>{state === 'SAVING' ? 'Saving…' : 'Save and continue'}</Text>
       </Pressable>
       <Pressable
         accessibilityRole="button"
+        accessibilityState={{ disabled: state === 'SAVING' }}
         disabled={state === 'SAVING'}
         onPress={onContinue}
         style={styles.secondary}
@@ -175,6 +227,14 @@ const styles = StyleSheet.create({
   title: { color: '#241B16', fontSize: 28, fontWeight: '700' },
   identity: { marginTop: 8, color: '#3B3029', fontSize: 16, fontWeight: '600' },
   note: { marginTop: 10, color: '#665A52', fontSize: 14, lineHeight: 20 },
+  contractNotice: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
+    color: '#6A4B00',
+    backgroundColor: '#FFF0C2',
+    lineHeight: 20,
+  },
   sectionTitle: { marginTop: 24, color: '#241B16', fontSize: 17, fontWeight: '700' },
   options: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   option: {
@@ -206,6 +266,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: '#8E3B46',
   },
+  disabled: { opacity: 0.55 },
   primaryText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   secondary: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   secondaryText: { color: '#6B2D38', fontWeight: '700' },
