@@ -39,12 +39,12 @@ describe('CustomerAppContent', () => {
   });
 
   it('keeps checkout contextual rather than making it a sixth tab', () => {
-    const { getAllByRole, getByRole, getByText } = render(<CustomerAppContent />);
+    const { getByRole, getByText, queryAllByRole } = render(<CustomerAppContent />);
 
     fireEvent.press(getByText('Continue to checkout'));
 
     expect(getByText('Checkout awaits an address')).toBeTruthy();
-    expect(getAllByRole('tab')).toHaveLength(0);
+    expect(queryAllByRole('tab')).toHaveLength(0);
     fireEvent.press(getByRole('button', { name: 'Back from checkout' }));
     expect(getByText('Continue to checkout')).toBeTruthy();
   });
