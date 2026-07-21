@@ -78,7 +78,8 @@ export function DefaultCustomerHomeRoot({
         Discover fashion from shops around you.
       </Text>
       <Text style={styles.description}>
-        Set a shopping location so Vastra can confirm serviceability and load real nearby catalogue data.
+        Set a shopping location so Vastra can confirm serviceability and load real nearby catalogue
+        data.
       </Text>
       <Text accessibilityLiveRegion="polite" style={styles.status}>
         Shopping location not checked

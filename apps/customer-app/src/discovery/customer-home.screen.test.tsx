@@ -67,9 +67,7 @@ class HomePortStub implements CustomerHomePort {
     readonly longitude: number;
   }): Promise<CustomerHomeLoadResult> {
     this.coordinates.push(coordinates);
-    return Promise.resolve(
-      this.results.shift() ?? { kind: 'FAILURE', failureKind: 'ERROR' },
-    );
+    return Promise.resolve(this.results.shift() ?? { kind: 'FAILURE', failureKind: 'ERROR' });
   }
 }
 

@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CustomerNetworkStateBoundary } from '../ui/customer-network-state';
 import { resolveCustomerNetworkState } from '../ui/resolve-customer-network-state';
@@ -83,7 +76,11 @@ function productPrice(product: CustomerHomeProduct): string {
   return formatRupees(product.minimumSellingPricePaise);
 }
 
-function SectionHeader({ title, actionLabel, onAction }: {
+function SectionHeader({
+  title,
+  actionLabel,
+  onAction,
+}: {
   readonly title: string;
   readonly actionLabel?: string;
   readonly onAction?: () => void;
@@ -107,7 +104,13 @@ function SectionHeader({ title, actionLabel, onAction }: {
   );
 }
 
-function ShopCard({ shop, onPress }: { readonly shop: CustomerHomeShop; readonly onPress: () => void }) {
+function ShopCard({
+  shop,
+  onPress,
+}: {
+  readonly shop: CustomerHomeShop;
+  readonly onPress: () => void;
+}) {
   return (
     <Pressable
       accessibilityLabel={`Open ${shop.name}. ${formatDistance(shop.distanceMeters)}. ${shopStatus(shop)}`}
@@ -126,7 +129,8 @@ function ShopCard({ shop, onPress }: { readonly shop: CustomerHomeShop; readonly
         <Text style={styles.shopMeta}>{formatDistance(shop.distanceMeters)}</Text>
         <Text style={styles.shopMeta}>{shopStatus(shop)}</Text>
         <Text style={styles.shopMeta}>
-          {shop.averagePreparationMinutes} min preparation · Minimum {formatRupees(shop.minimumOrderPaise)}
+          {shop.averagePreparationMinutes} min preparation · Minimum{' '}
+          {formatRupees(shop.minimumOrderPaise)}
         </Text>
       </View>
     </Pressable>
@@ -275,7 +279,11 @@ function HomeContent({
       )}
 
       <View style={styles.section} testID="home-nearby-shops">
-        <SectionHeader actionLabel="See all nearby shops" onAction={onSearch} title="Nearby shops" />
+        <SectionHeader
+          actionLabel="See all nearby shops"
+          onAction={onSearch}
+          title="Nearby shops"
+        />
         <View style={styles.shopList}>
           {content.nearbyShops.map((shop) => (
             <ShopCard key={shop.id} onPress={() => onSelectShop(shop.id)} shop={shop} />
@@ -285,7 +293,11 @@ function HomeContent({
 
       {content.nearbyProducts.length === 0 ? null : (
         <View style={styles.section} testID="home-nearby-products">
-          <SectionHeader actionLabel="Browse all products" onAction={onSearch} title="Available near you" />
+          <SectionHeader
+            actionLabel="Browse all products"
+            onAction={onSearch}
+            title="Available near you"
+          />
           <View style={styles.productGrid}>
             {content.nearbyProducts.map((product) => (
               <ProductCard
@@ -418,7 +430,12 @@ const styles = StyleSheet.create({
   },
   heroActionText: { color: '#241B16', fontSize: 15, fontWeight: '800' },
   section: { marginTop: 28, paddingHorizontal: 20 },
-  sectionHeader: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionHeader: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   sectionTitle: { flex: 1, color: '#241B16', fontSize: 21, fontWeight: '800' },
   sectionAction: { minHeight: 44, justifyContent: 'center', paddingLeft: 12 },
   sectionActionText: { color: '#6B2D38', fontSize: 13, fontWeight: '800' },

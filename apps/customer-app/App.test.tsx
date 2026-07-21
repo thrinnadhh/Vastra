@@ -54,7 +54,9 @@ describe('CustomerAppContent', () => {
 
     fireEvent.press(getByText('Browse Home discovery'));
 
-    expect(getByText('Search, shop, and product routes continue in the remaining Sprint 04 tickets.')).toBeTruthy();
+    expect(
+      getByText('Search, shop, and product routes continue in the remaining Sprint 04 tickets.'),
+    ).toBeTruthy();
   });
 
   it('keeps checkout contextual rather than making it a sixth tab', () => {

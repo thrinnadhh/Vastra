@@ -2,7 +2,10 @@ import type { ApiClient } from '@vastra/api-client';
 
 import { ApiCustomerHomeAdapter } from './api-customer-home.adapter';
 
-function createSuccessfulApiClient(): { readonly apiClient: ApiClient; readonly request: jest.Mock } {
+function createSuccessfulApiClient(): {
+  readonly apiClient: ApiClient;
+  readonly request: jest.Mock;
+} {
   const request = jest.fn().mockResolvedValue({
     data: {
       success: true,
@@ -94,9 +97,7 @@ describe('ApiCustomerHomeAdapter', () => {
     const { apiClient, request } = createSuccessfulApiClient();
     const adapter = new ApiCustomerHomeAdapter(apiClient);
 
-    await expect(
-      adapter.loadHome({ latitude: 13.6288, longitude: 79.4192 }),
-    ).resolves.toEqual({
+    await expect(adapter.loadHome({ latitude: 13.6288, longitude: 79.4192 })).resolves.toEqual({
       kind: 'SUCCESS',
       content: {
         location: { latitude: 13.6288, longitude: 79.4192 },
