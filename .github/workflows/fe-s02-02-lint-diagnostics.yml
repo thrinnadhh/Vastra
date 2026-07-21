@@ -1,0 +1,34 @@
+name: FE-S02-02 lint diagnostics
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'packages/api-client/**'
+      - '.github/workflows/fe-s02-02-lint-diagnostics.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  lint-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @vastra/api-client generate
+      - name: Capture ESLint report
+        run: pnpm exec eslint packages/api-client --format json --output-file fe-s02-02-eslint.json || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fe-s02-02-eslint
+          path: fe-s02-02-eslint.json
+          if-no-files-found: error
