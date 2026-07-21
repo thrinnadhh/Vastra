@@ -73,9 +73,7 @@ export interface StatusBadgePrimitive {
   readonly styleSlots: readonly PrimitiveStyleSlot[];
 }
 
-export function createStatusBadgePrimitive(
-  input: StatusBadgePrimitiveInput,
-): StatusBadgePrimitive {
+export function createStatusBadgePrimitive(input: StatusBadgePrimitiveInput): StatusBadgePrimitive {
   const label = requireNonEmpty(input.label, 'status label');
   const description = input.description?.trim() || null;
   return {

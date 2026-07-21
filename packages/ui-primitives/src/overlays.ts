@@ -100,10 +100,7 @@ function normalizeAction(action: PrimitiveAction, field: string): PrimitiveActio
   return {
     id: requireIdentifier(action.id, `${field} id`),
     label: requireNonEmpty(action.label, `${field} label`),
-    accessibilityLabel: requireNonEmpty(
-      action.accessibilityLabel,
-      `${field} accessibility label`,
-    ),
+    accessibilityLabel: requireNonEmpty(action.accessibilityLabel, `${field} accessibility label`),
   };
 }
 

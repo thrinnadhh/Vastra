@@ -11,8 +11,7 @@ describe('toast primitives', () => {
       createToastPrimitive({ id: 'failed', message: 'Could not save', tone: 'danger' }).live,
     ).toBe('assertive');
     expect(
-      createToastPrimitive({ id: 'persistent', message: 'Offline', durationMs: null })
-        .durationMs,
+      createToastPrimitive({ id: 'persistent', message: 'Offline', durationMs: null }).durationMs,
     ).toBeNull();
   });
 

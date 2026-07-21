@@ -387,6 +387,8 @@ importers:
 
   packages/testing: {}
 
+  packages/ui-primitives: {}
+
   packages/validation: {}
 
 packages:

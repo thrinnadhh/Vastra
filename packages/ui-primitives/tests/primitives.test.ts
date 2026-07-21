@@ -77,9 +77,7 @@ describe('shared primitive contracts', () => {
     expect(price.formatted).toContain('1,299');
     expect(price.discounted).toBe(true);
     expect(price.accessibilityLabel).toContain('reduced from');
-    expect(() => createPricePrimitive({ amountPaise: 10.5 })).toThrow(
-      'integer number of paise',
-    );
+    expect(() => createPricePrimitive({ amountPaise: 10.5 })).toThrow('integer number of paise');
   });
 
   it('requires explicit accessibility for interactive cards', () => {

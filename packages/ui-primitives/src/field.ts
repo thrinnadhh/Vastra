@@ -5,23 +5,10 @@ import {
   type PrimitiveStyleSlot,
 } from './types.js';
 
-export type FieldInputMode =
-  | 'text'
-  | 'tel'
-  | 'email'
-  | 'numeric'
-  | 'decimal'
-  | 'search'
-  | 'url';
+export type FieldInputMode = 'text' | 'tel' | 'email' | 'numeric' | 'decimal' | 'search' | 'url';
 
 export type FieldAutoComplete =
-  | 'off'
-  | 'name'
-  | 'tel'
-  | 'email'
-  | 'street-address'
-  | 'postal-code'
-  | 'one-time-code';
+  'off' | 'name' | 'tel' | 'email' | 'street-address' | 'postal-code' | 'one-time-code';
 
 export interface FieldPrimitiveInput {
   readonly id: string;

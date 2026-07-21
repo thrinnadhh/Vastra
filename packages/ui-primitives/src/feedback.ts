@@ -6,12 +6,7 @@ import {
   type StatusTone,
 } from './types.js';
 
-export type ErrorStateKind =
-  | 'recoverable'
-  | 'fatal'
-  | 'offline'
-  | 'permission'
-  | 'sessionExpired';
+export type ErrorStateKind = 'recoverable' | 'fatal' | 'offline' | 'permission' | 'sessionExpired';
 
 export interface ErrorStatePrimitiveInput {
   readonly id: string;
@@ -34,23 +29,21 @@ export interface ErrorStatePrimitive {
   readonly styleSlots: readonly PrimitiveStyleSlot[];
 }
 
-function normalizeAction(action: PrimitiveAction | undefined, field: string): PrimitiveAction | null {
+function normalizeAction(
+  action: PrimitiveAction | undefined,
+  field: string,
+): PrimitiveAction | null {
   if (action === undefined) {
     return null;
   }
   return {
     id: requireIdentifier(action.id, `${field} id`),
     label: requireNonEmpty(action.label, `${field} label`),
-    accessibilityLabel: requireNonEmpty(
-      action.accessibilityLabel,
-      `${field} accessibility label`,
-    ),
+    accessibilityLabel: requireNonEmpty(action.accessibilityLabel, `${field} accessibility label`),
   };
 }
 
-export function createErrorStatePrimitive(
-  input: ErrorStatePrimitiveInput,
-): ErrorStatePrimitive {
+export function createErrorStatePrimitive(input: ErrorStatePrimitiveInput): ErrorStatePrimitive {
   const primaryAction = normalizeAction(input.primaryAction, 'primary action');
   const secondaryAction = normalizeAction(input.secondaryAction, 'secondary action');
   if (input.kind === 'recoverable' && primaryAction === null) {

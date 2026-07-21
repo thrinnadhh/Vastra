@@ -35,9 +35,9 @@ describe('overlays and error states', () => {
   });
 
   it('requires an explicit close path for dismissible sheets', () => {
-    expect(() =>
-      createSheetPrimitive({ id: 'filters', open: true, title: 'Filters' }),
-    ).toThrow('Dismissible sheets require a close label');
+    expect(() => createSheetPrimitive({ id: 'filters', open: true, title: 'Filters' })).toThrow(
+      'Dismissible sheets require a close label',
+    );
 
     const sheet = createSheetPrimitive({
       id: 'filters',
