@@ -31,14 +31,17 @@ describe('frontend fixture registry', () => {
   });
 
   it('keeps merchant and captain fixture contracts in Commerce mode', () => {
-    for (const fixture of FRONTEND_FIXTURES) {
-      if (
+    const operationalShells = FRONTEND_FIXTURES.filter(
+      (fixture) =>
         fixture.fixtureKind === 'mobileShell' &&
-        (fixture.contract.role === 'merchant' || fixture.contract.role === 'captain')
-      ) {
-        expect(fixture.contract.mode).toBe('commerce');
-      }
-    }
+        (fixture.contract.role === 'merchant' || fixture.contract.role === 'captain'),
+    );
+
+    expect(operationalShells.map((fixture) => fixture.contract.role)).toEqual([
+      'merchant',
+      'captain',
+    ]);
+    expect(operationalShells.every((fixture) => fixture.contract.mode === 'commerce')).toBe(true);
   });
 
   it('maps every E2E and visual entry point to a real fixture', () => {
