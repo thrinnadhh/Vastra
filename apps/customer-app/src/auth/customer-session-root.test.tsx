@@ -29,8 +29,7 @@ const AUTHENTICATED_STATE: SessionRestorationState = {
 
 class ObservableAuthSession implements AuthSessionPort {
   private listener:
-    | ((event: AuthSessionEvent, session: RestorableSession | null) => void)
-    | undefined;
+    ((event: AuthSessionEvent, session: RestorableSession | null) => void) | undefined;
 
   public signOutCalls = 0;
 

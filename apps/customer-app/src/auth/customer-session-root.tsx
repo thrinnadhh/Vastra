@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import {
-  RETURNING_CUSTOMER_LAUNCH_STORE,
-  type CustomerLaunchStore,
-} from './customer-launch-store';
+import { RETURNING_CUSTOMER_LAUNCH_STORE, type CustomerLaunchStore } from './customer-launch-store';
 import { CustomerSessionActionsProvider } from './customer-session-actions';
 import {
   bootstrapCustomerSession,
