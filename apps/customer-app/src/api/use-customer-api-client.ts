@@ -1,4 +1,8 @@
-import { createApiClient, type ApiClient, type FetchLike } from '@vastra/api-client';
+import {
+  createApiClient,
+  type ApiClient,
+  type FetchLike,
+} from '@vastra/api-client/native';
 import { useMemo } from 'react';
 
 import { useCustomerApiSession } from '../auth/customer-api-session';
