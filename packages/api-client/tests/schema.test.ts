@@ -29,13 +29,35 @@ describe('generated schema decoding', () => {
     expect(validateJsonSchema({ const: true }, true, schemas)).toBe(true);
     expect(validateJsonSchema({ enum: ['A', 'B'] }, 'C', schemas)).toBe(false);
     expect(validateJsonSchema({ type: ['string', 'null'] }, null, schemas)).toBe(true);
-    expect(validateJsonSchema({ anyOf: [{ type: 'string' }, { type: 'number' }] }, 5, schemas)).toBe(true);
-    expect(validateJsonSchema({ oneOf: [{ type: 'number' }, { type: 'integer' }] }, 5, schemas)).toBe(false);
-    expect(validateJsonSchema({ allOf: [{ type: 'object' }, { type: 'object', required: ['id'] }] }, { id: '1' }, schemas)).toBe(true);
+    expect(
+      validateJsonSchema({ anyOf: [{ type: 'string' }, { type: 'number' }] }, 5, schemas),
+    ).toBe(true);
+    expect(
+      validateJsonSchema({ oneOf: [{ type: 'number' }, { type: 'integer' }] }, 5, schemas),
+    ).toBe(false);
+    expect(
+      validateJsonSchema(
+        { allOf: [{ type: 'object' }, { type: 'object', required: ['id'] }] },
+        { id: '1' },
+        schemas,
+      ),
+    ).toBe(true);
   });
 
   it('validates typed additional properties', () => {
-    expect(validateJsonSchema({ type: 'object', additionalProperties: { type: 'boolean' } }, { active: true }, schemas)).toBe(true);
-    expect(validateJsonSchema({ type: 'object', additionalProperties: { type: 'boolean' } }, { active: 'yes' }, schemas)).toBe(false);
+    expect(
+      validateJsonSchema(
+        { type: 'object', additionalProperties: { type: 'boolean' } },
+        { active: true },
+        schemas,
+      ),
+    ).toBe(true);
+    expect(
+      validateJsonSchema(
+        { type: 'object', additionalProperties: { type: 'boolean' } },
+        { active: 'yes' },
+        schemas,
+      ),
+    ).toBe(false);
   });
 });
