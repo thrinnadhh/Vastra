@@ -156,7 +156,9 @@ export function CustomerProfilePreferencesScreen({
               }}
               style={[styles.option, selected ? styles.optionSelected : null]}
             >
-              <Text style={selected ? styles.optionTextSelected : styles.optionText}>{category}</Text>
+              <Text style={selected ? styles.optionTextSelected : styles.optionText}>
+                {category}
+              </Text>
             </Pressable>
           );
         })}
@@ -207,7 +209,9 @@ export function CustomerProfilePreferencesScreen({
         }}
         style={[styles.primary, isBusy ? styles.disabled : null]}
       >
-        <Text style={styles.primaryText}>{state === 'SAVING' ? 'Saving…' : 'Save and continue'}</Text>
+        <Text style={styles.primaryText}>
+          {state === 'SAVING' ? 'Saving…' : 'Save and continue'}
+        </Text>
       </Pressable>
       <Pressable
         accessibilityRole="button"
