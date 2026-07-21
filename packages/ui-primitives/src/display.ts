@@ -3,6 +3,7 @@ import {
   createAccessibilityState,
   requireIdentifier,
   requireNonEmpty,
+  trimToNull,
   type IconName,
   type PrimitiveAccessibility,
   type PrimitiveStyleSlot,
@@ -25,7 +26,7 @@ export interface IconPrimitive {
 
 export function createIconPrimitive(input: IconPrimitiveInput): IconPrimitive {
   const decorative = input.decorative ?? false;
-  const label = input.label?.trim() || null;
+  const label = trimToNull(input.label);
   if (!decorative && label === null) {
     throw new Error('Meaningful icons require an accessibility label');
   }
@@ -75,7 +76,7 @@ export interface StatusBadgePrimitive {
 
 export function createStatusBadgePrimitive(input: StatusBadgePrimitiveInput): StatusBadgePrimitive {
   const label = requireNonEmpty(input.label, 'status label');
-  const description = input.description?.trim() || null;
+  const description = trimToNull(input.description);
   return {
     kind: 'statusBadge',
     label,
@@ -187,7 +188,7 @@ export function createCardPrimitive(input: CardPrimitiveInput): CardPrimitive {
   }
   const disabled = input.disabled ?? false;
   const variant = selected ? 'selected' : (input.variant ?? 'default');
-  const accessibilityLabel = input.accessibilityLabel?.trim() || null;
+  const accessibilityLabel = trimToNull(input.accessibilityLabel);
   if (interactive && accessibilityLabel === null) {
     throw new Error('Interactive cards require an accessibility label');
   }
@@ -202,7 +203,7 @@ export function createCardPrimitive(input: CardPrimitiveInput): CardPrimitive {
     kind: 'card',
     id,
     title,
-    description: input.description?.trim() || null,
+    description: trimToNull(input.description),
     variant,
     interactive,
     disabled,
