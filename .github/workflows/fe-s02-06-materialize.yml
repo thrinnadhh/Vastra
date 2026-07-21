@@ -62,17 +62,7 @@ jobs:
 
       - name: Commit ticket implementation
         run: |
-          git add -A \
-            .fe-s02-06 \
-            package.json \
-            pnpm-lock.yaml \
-            eslint.config.mjs \
-            .github/workflows/ci.yml \
-            .gitignore \
-            playwright.config.ts \
-            packages/frontend-test-harness \
-            e2e \
-            docs/design/frontend-test-harness.md
+          git add -A
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'FE-S02-06 feat(testing): establish frontend test harness'
