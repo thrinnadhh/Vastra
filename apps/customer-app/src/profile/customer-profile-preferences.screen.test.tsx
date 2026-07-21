@@ -49,11 +49,15 @@ describe('CustomerProfilePreferencesScreen', () => {
     fireEvent.changeText(screen.getByLabelText('Maximum budget in rupees'), '2000');
     fireEvent.press(screen.getByText('Save and continue'));
 
-    await waitFor(() => expect(port.save).toHaveBeenCalledWith(expect.objectContaining({
-      genderCategories: ['WOMEN'],
-      minPricePaise: 50000,
-      maxPricePaise: 200000,
-    })));
+    await waitFor(() =>
+      expect(port.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          genderCategories: ['WOMEN'],
+          minPricePaise: 50000,
+          maxPricePaise: 200000,
+        }),
+      ),
+    );
     expect(onContinue).toHaveBeenCalledTimes(1);
   });
 });
