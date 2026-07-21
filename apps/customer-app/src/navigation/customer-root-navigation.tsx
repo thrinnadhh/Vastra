@@ -85,7 +85,11 @@ export function CustomerRootNavigation({
       </View>
 
       {isCheckout ? null : (
-        <View accessibilityLabel="Customer primary navigation" accessibilityRole="tablist" style={styles.tabs}>
+        <View
+          accessibilityLabel="Customer primary navigation"
+          accessibilityRole="tablist"
+          style={styles.tabs}
+        >
           {CUSTOMER_TABS.map((tab) => {
             const selected = navigation.selectedTab === tab;
             return (
@@ -109,7 +113,13 @@ export function CustomerRootNavigation({
   );
 }
 
-export function CustomerRootPlaceholder({ title, description }: { readonly title: string; readonly description: string }) {
+export function CustomerRootPlaceholder({
+  title,
+  description,
+}: {
+  readonly title: string;
+  readonly description: string;
+}) {
   return (
     <View style={styles.placeholder}>
       <Text accessibilityRole="header" style={styles.placeholderTitle}>
