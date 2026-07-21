@@ -1,6 +1,7 @@
 import {
   requireIdentifier,
   requireNonEmpty,
+  trimToNull,
   type PrimitiveAction,
   type PrimitiveStyleSlot,
 } from './types.js';
@@ -32,7 +33,7 @@ export interface SheetPrimitive {
 
 export function createSheetPrimitive(input: SheetPrimitiveInput): SheetPrimitive {
   const dismissible = input.dismissible ?? true;
-  const closeLabel = input.closeLabel?.trim() || null;
+  const closeLabel = trimToNull(input.closeLabel);
   if (dismissible && closeLabel === null) {
     throw new Error('Dismissible sheets require a close label');
   }
@@ -42,7 +43,7 @@ export function createSheetPrimitive(input: SheetPrimitiveInput): SheetPrimitive
     id: requireIdentifier(input.id, 'sheet id'),
     open: input.open,
     title: requireNonEmpty(input.title, 'sheet title'),
-    description: input.description?.trim() || null,
+    description: trimToNull(input.description),
     dismissible,
     closeLabel,
     snapPoints,
