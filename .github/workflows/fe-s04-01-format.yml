@@ -1,0 +1,44 @@
+name: FE-S04-01 format
+
+on:
+  push:
+    branches:
+      - feat/ui-fe-s04-01-home-composition
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Format FE-S04-01 files
+        run: |
+          pnpm exec prettier --write \
+            apps/customer-app/App.test.tsx \
+            apps/customer-app/App.tsx \
+            apps/customer-app/src/discovery/api-customer-home.adapter.test.ts \
+            apps/customer-app/src/discovery/api-customer-home.adapter.ts \
+            apps/customer-app/src/discovery/customer-home.screen.test.tsx \
+            apps/customer-app/src/discovery/customer-home.screen.tsx \
+            apps/customer-app/src/discovery/customer-home.types.ts \
+            apps/customer-app/src/navigation/customer-root-navigation.tsx \
+            apps/customer-app/src/navigation/default-customer-root-content.tsx \
+            docs/design/customer-home-composition.md
+          rm .github/workflows/fe-s04-01-format.yml
+      - name: Commit formatted files
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "style(customer): format FE-S04-01"
+          git push
