@@ -4,7 +4,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { AsyncStorageCustomerLaunchStore } from './async-storage-customer-launch-store';
 import { CustomerApiSessionProvider } from './customer-api-session';
+import { CustomerPhoneOtpScreen } from './customer-phone-otp.screen';
 import { HttpCurrentAccountClient } from './current-account-client';
+import type { PhoneOtpPort } from './phone-otp.types';
 import { CustomerSessionRoot } from './customer-session-root';
 import {
   CustomerMobileEnvironmentError,
@@ -17,6 +19,7 @@ import {
   SupabaseAuthSessionAdapter,
   type CustomerSupabaseClient,
 } from './supabase-session-adapter';
+import { SupabasePhoneOtpAdapter } from './supabase-phone-otp.adapter';
 import type { AuthSessionPort, SessionRestorer } from './session-restoration.types';
 
 interface CustomerSessionAppProps {
@@ -30,6 +33,7 @@ interface CustomerSessionDependencies {
   readonly authSession: AuthSessionPort;
   readonly sessionRestorer: SessionRestorer;
   readonly launchStore: AsyncStorageCustomerLaunchStore;
+  readonly phoneOtpPort: PhoneOtpPort;
 }
 
 type DependencyResult =
@@ -56,6 +60,7 @@ function createDependencies(): DependencyResult {
         authSession,
         sessionRestorer: new SessionRestorationService(authSession, currentAccount),
         launchStore: new AsyncStorageCustomerLaunchStore(),
+        phoneOtpPort: new SupabasePhoneOtpAdapter(client),
       },
     };
   } catch (error: unknown) {
@@ -80,6 +85,10 @@ function ConfiguredCustomerSessionApp({
 }) {
   useEffect(() => startSupabaseAuthLifecycle(dependencies.client), [dependencies.client]);
 
+  const resolvedSignedOutContent = signedOutContent ?? (
+    <CustomerPhoneOtpScreen otpPort={dependencies.phoneOtpPort} />
+  );
+
   return (
     <CustomerApiSessionProvider
       apiBaseUrl={dependencies.apiBaseUrl}
@@ -89,7 +98,7 @@ function ConfiguredCustomerSessionApp({
         authSession={dependencies.authSession}
         launchStore={dependencies.launchStore}
         sessionRestorer={dependencies.sessionRestorer}
-        {...(signedOutContent === undefined ? {} : { signedOutContent })}
+        signedOutContent={resolvedSignedOutContent}
       >
         {children}
       </CustomerSessionRoot>
