@@ -1,20 +1,21 @@
 name: FE-S04-01 lint repair
 
 on:
-  push:
+  pull_request:
     branches:
-      - feat/ui-fe-s04-01-home-composition
+      - feat/ui-fe-s03-06-root-migration
 
 permissions:
   contents: write
 
 jobs:
   lint-repair:
+    if: github.head_ref == 'feat/ui-fe-s04-01-home-composition'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.head_ref }}
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
