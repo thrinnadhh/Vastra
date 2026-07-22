@@ -13,13 +13,13 @@ jobs:
   report:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
-    env:
-      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
         with:
           ref: feat/be-fe-001-customer-profile-update
       - name: Capture failed database log
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: gh run view 29892688336 --repo thrinnadhh/Vastra --log-failed > profile-db-failed-log.txt
       - run: rm .github/workflows/temporary-profile-failed-log.yml
       - name: Commit diagnostic report
