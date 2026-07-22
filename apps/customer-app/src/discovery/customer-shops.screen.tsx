@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { CUSTOMER_DISCOVERY_LIMITS } from './customer-discovery-performance';
 import type { CustomerHomeCoordinates } from './customer-home.types';
 import type {
   CustomerNearbyShop,
@@ -19,6 +20,8 @@ export interface CustomerShopsScreenProps {
   readonly favouriteShopIds?: ReadonlySet<string>;
   readonly pendingFavouriteShopIds?: ReadonlySet<string>;
   readonly onSetFavourite?: (shopId: string, isFavourite: boolean) => void;
+  readonly initialShopId?: string;
+  readonly onInitialShopConsumed?: () => void;
 }
 
 function formatRupees(paise: number): string {
@@ -223,6 +226,8 @@ export function CustomerShopsScreen({
   favouriteShopIds,
   pendingFavouriteShopIds,
   onSetFavourite,
+  initialShopId,
+  onInitialShopConsumed,
 }: CustomerShopsScreenProps) {
   const [shops, setShops] = useState<readonly CustomerNearbyShop[]>([]);
   const [directoryFailure, setDirectoryFailure] = useState<CustomerShopFailureKind | null>(null);
@@ -251,7 +256,7 @@ export function CustomerShopsScreen({
     }
 
     let active = true;
-    void shopPort.listNearby(location, 50).then((result) => {
+    void shopPort.listNearby(location, CUSTOMER_DISCOVERY_LIMITS.nearbyShopLimit).then((result) => {
       if (active) {
         applyDirectoryResult(result);
       }
@@ -268,7 +273,9 @@ export function CustomerShopsScreen({
     }
 
     setIsDirectoryLoading(true);
-    void shopPort.listNearby(location, 50).then(applyDirectoryResult);
+    void shopPort
+      .listNearby(location, CUSTOMER_DISCOVERY_LIMITS.nearbyShopLimit)
+      .then(applyDirectoryResult);
   };
 
   const loadSelectedShop = useCallback(
@@ -279,7 +286,7 @@ export function CustomerShopsScreen({
 
       const [detailResult, productsResult] = await Promise.all([
         shopPort.getDetail(shopId, location),
-        shopPort.listProducts(shopId, null, 20),
+        shopPort.listProducts(shopId, null, CUSTOMER_DISCOVERY_LIMITS.shopCataloguePageSize),
       ]);
 
       if (detailResult.kind === 'SUCCESS' && productsResult.kind === 'SUCCESS') {
@@ -297,15 +304,35 @@ export function CustomerShopsScreen({
     [location, shopPort],
   );
 
-  const openShop = (shopId: string): void => {
-    setSelectedShopId(shopId);
-    setDetail(null);
-    setProducts([]);
-    setNextCursor(null);
-    setDetailFailure(null);
-    setIsDetailLoading(true);
-    void loadSelectedShop(shopId);
-  };
+  const openShop = useCallback(
+    (shopId: string): void => {
+      setSelectedShopId(shopId);
+      setDetail(null);
+      setProducts([]);
+      setNextCursor(null);
+      setDetailFailure(null);
+      setIsDetailLoading(true);
+      void loadSelectedShop(shopId);
+    },
+    [loadSelectedShop],
+  );
+
+  useEffect(() => {
+    if (initialShopId === undefined || selectedShopId !== null) {
+      return;
+    }
+
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (!active) return;
+      openShop(initialShopId);
+      onInitialShopConsumed?.();
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [initialShopId, onInitialShopConsumed, openShop, selectedShopId]);
 
   if (location === null) {
     return (
@@ -332,6 +359,7 @@ export function CustomerShopsScreen({
     return (
       <ScrollView
         contentContainerStyle={styles.content}
+        removeClippedSubviews
         showsVerticalScrollIndicator={false}
         testID="customer-shop-detail-scroll"
       >
@@ -483,16 +511,22 @@ export function CustomerShopsScreen({
                 disabled={isLoadingMore}
                 onPress={() => {
                   setIsLoadingMore(true);
-                  void shopPort.listProducts(detail.id, nextCursor, 20).then((result) => {
-                    if (result.kind === 'SUCCESS') {
-                      setProducts((current) => mergeUniqueProducts(current, result.products));
-                      setNextCursor(result.nextCursor);
-                      setDetailFailure(null);
-                    } else {
-                      setDetailFailure(result.failureKind);
-                    }
-                    setIsLoadingMore(false);
-                  });
+                  void shopPort
+                    .listProducts(
+                      detail.id,
+                      nextCursor,
+                      CUSTOMER_DISCOVERY_LIMITS.shopCataloguePageSize,
+                    )
+                    .then((result) => {
+                      if (result.kind === 'SUCCESS') {
+                        setProducts((current) => mergeUniqueProducts(current, result.products));
+                        setNextCursor(result.nextCursor);
+                        setDetailFailure(null);
+                      } else {
+                        setDetailFailure(result.failureKind);
+                      }
+                      setIsLoadingMore(false);
+                    });
                 }}
                 style={[styles.loadMoreAction, isLoadingMore ? styles.actionDisabled : null]}
               >
@@ -510,6 +544,7 @@ export function CustomerShopsScreen({
   return (
     <ScrollView
       contentContainerStyle={styles.content}
+      removeClippedSubviews
       showsVerticalScrollIndicator={false}
       testID="customer-nearby-shops-scroll"
     >

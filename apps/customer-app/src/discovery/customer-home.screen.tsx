@@ -206,6 +206,7 @@ function HomeContent({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
+      removeClippedSubviews
       showsVerticalScrollIndicator={false}
       testID="customer-home-scroll"
     >

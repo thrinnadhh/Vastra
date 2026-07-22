@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { CUSTOMER_DISCOVERY_MEDIA } from './customer-discovery-performance';
 import type {
   CustomerProductDetail,
   CustomerProductFailureKind,
@@ -234,7 +235,11 @@ export function CustomerProductScreen({
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        removeClippedSubviews
+        testID="customer-product-scroll"
+      >
         {isStale ? (
           <View accessibilityLiveRegion="polite" style={styles.warningBanner}>
             <Text style={styles.warningText}>
@@ -470,7 +475,7 @@ const styles = StyleSheet.create({
   refreshText: { color: '#6B2D38', fontSize: 14, fontWeight: '800' },
   content: { padding: 20, paddingBottom: 48 },
   heroMedia: {
-    height: 360,
+    height: CUSTOMER_DISCOVERY_MEDIA.productHeroHeight,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',

@@ -7,6 +7,7 @@ import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-c
 
 import { CustomerSessionApp } from './src/auth/default-customer-session';
 import { DefaultCustomerCheckoutQuote } from './src/checkout/default-customer-checkout-quote';
+import type { CustomerDiscoveryIntent } from './src/discovery/customer-discovery-intent';
 import { DefaultCustomerSearchRoot } from './src/discovery/default-customer-search';
 import { createInitialCustomerSearchSessionState } from './src/discovery/customer-search.types';
 import type { CustomerCoordinates } from './src/location/customer-location.types';
@@ -83,6 +84,8 @@ export function CustomerAppContent({
   const [searchSessionState, setSearchSessionState] = useState(
     createInitialCustomerSearchSessionState,
   );
+  const [discoveryIntent, setDiscoveryIntent] = useState<CustomerDiscoveryIntent | null>(null);
+
   const slots: CustomerRootNavigationSlots = {
     home: ({ openCheckout, openDiscover }) => (
       <DefaultCustomerHomeRoot
@@ -90,11 +93,19 @@ export function CustomerAppContent({
         onLocationReady={setShoppingLocation}
         openCheckout={openCheckout}
         openDiscover={openDiscover}
+        openDiscoverIntent={(intent) => {
+          setDiscoveryIntent(intent);
+          openDiscover();
+        }}
       />
     ),
     discover: (
       <DefaultCustomerSearchRoot
+        initialIntent={discoveryIntent}
         location={shoppingLocation}
+        onIntentConsumed={() => {
+          setDiscoveryIntent(null);
+        }}
         onLocationReady={setShoppingLocation}
         sessionState={searchSessionState}
         setSessionState={setSearchSessionState}

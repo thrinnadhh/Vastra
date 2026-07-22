@@ -33,7 +33,11 @@ export function CustomerFavouriteShopsScreen({
   onBrowseShops,
 }: CustomerFavouriteShopsScreenProps) {
   return (
-    <ScrollView contentContainerStyle={styles.content} testID="customer-favourite-shops-scroll">
+    <ScrollView
+      removeClippedSubviews
+      contentContainerStyle={styles.content}
+      testID="customer-favourite-shops-scroll"
+    >
       <View style={styles.headerRow}>
         <View style={styles.headerCopy}>
           <Text style={styles.eyebrow}>SAVED LOCALLY</Text>
