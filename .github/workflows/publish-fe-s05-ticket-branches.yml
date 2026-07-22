@@ -1,6 +1,9 @@
 name: Publish FE-S05 ticket branches
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - automation/materialize-fe-s05-s07
@@ -14,7 +17,7 @@ concurrency:
 
 jobs:
   publish:
-    if: github.repository == 'thrinnadhh/Vastra'
+    if: github.repository == 'thrinnadhh/Vastra' && (github.head_ref == 'automation/materialize-fe-s05-s07' || github.ref == 'refs/heads/automation/materialize-fe-s05-s07')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
