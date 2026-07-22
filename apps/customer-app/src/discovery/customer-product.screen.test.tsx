@@ -188,9 +188,7 @@ describe('CustomerProductScreen', () => {
     );
 
     await screen.findByText('Blue cotton shirt');
-    expect(screen.getByRole('button', { name: 'Add selected variant to cart' }).props.accessibilityState).toEqual({
-      disabled: true,
-    });
+    expect(screen.getByRole('button', { name: 'Add selected variant to cart' })).toBeDisabled();
     fireEvent.press(screen.getByTestId('product-variant-variant-l'));
     expect(port.cartCalls).toHaveLength(0);
   });
