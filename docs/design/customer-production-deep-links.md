@@ -23,6 +23,7 @@ All identifiers must be UUIDs. The parser carries identity only; it never carrie
 - The session boundary completes authentication and required profile setup before the production linking port is mounted.
 - URLs received while the app is running use the same parser.
 - A linked order opens the existing server-authoritative order detail screen; not-found or ownership denial remains intentionally non-enumerating.
+- Linked order detail is keyed by order identity, so a new valid order link remounts the authoritative detail boundary without copying props into effect-driven state.
 - Product, shop, and look routes are placed into canonical typed navigation. Their current `main`-branch placeholders remain truthful until their owning Sprint 4 and Style screens are merged.
 - Invalid, reserved, and wrong-application links render a generic recovery surface without reflecting identifiers.
 - Back pops the typed linked route and restores its canonical tab.
