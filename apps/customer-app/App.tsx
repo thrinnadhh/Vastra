@@ -75,10 +75,12 @@ export function CustomerAppContent({
   readonly linkingPort?: CustomerLinkingPort;
 }) {
   const slots: CustomerRootNavigationSlots = {
-    home: (openCheckout) => <DefaultCustomerHomeRoot openCheckout={openCheckout} />,
+    home: ({ openCheckout, openDiscover }) => (
+      <DefaultCustomerHomeRoot openCheckout={openCheckout} openDiscover={openDiscover} />
+    ),
     discover: (
       <CustomerRootPlaceholder
-        description="Discovery routes are ready for the Sprint 04 catalogue implementation."
+        description="Search, shop, and product routes continue in the remaining Sprint 04 tickets."
         title="Discover"
       />
     ),
