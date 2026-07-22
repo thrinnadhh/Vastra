@@ -95,7 +95,10 @@ class MutableMeGateway implements MeGateway {
 class MutableCustomerProfileGateway implements CustomerProfileGateway {
   public constructor(private readonly meGateway: MutableMeGateway) {}
 
-  public updateCurrentCustomerProfile(_client: SupabaseClient, input: UpdateCustomerProfileInput) {
+  public updateCurrentCustomerProfile(
+    _client: SupabaseClient,
+    input: UpdateCustomerProfileInput,
+  ) {
     this.meGateway.fullName = input.fullName;
     this.meGateway.profileCompleted = true;
     return Promise.resolve({
@@ -106,9 +109,14 @@ class MutableCustomerProfileGateway implements CustomerProfileGateway {
   }
 }
 
+function isHttpServer(value: unknown): value is Server {
+  return value instanceof Server;
+}
+
 function requireHttpServer(application: INestApplication): Server {
   const server: unknown = application.getHttpServer();
-  if (!(server instanceof Server)) {
+
+  if (!isHttpServer(server)) {
     throw new TypeError('Expected Nest to provide a Node HTTP server');
   }
 
@@ -140,13 +148,15 @@ describe('PATCH /me/profile integration', () => {
   });
 
   afterAll(async () => {
-    await app?.close();
+    if (app !== undefined) {
+      await app.close();
+    }
   });
 
   it('requires authentication', async () => {
-    expect(
-      (await request(httpServer).patch('/me/profile').send({ fullName: 'Trinadh B' })).status,
-    ).toBe(401);
+    const response = await request(httpServer).patch('/me/profile').send({ fullName: 'Trinadh B' });
+
+    expect(response.status).toBe(401);
   });
 
   it('rejects invalid profile input', async () => {
@@ -156,7 +166,16 @@ describe('PATCH /me/profile integration', () => {
       .send({ fullName: ' ' });
 
     expect(response.status).toBe(400);
-    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    expect(response.body).toStrictEqual({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Customer profile input is invalid.',
+        details: null,
+        retryable: false,
+      },
+      requestId: null,
+    });
   });
 
   it('updates required profile data and returns the authoritative account', async () => {
@@ -166,7 +185,28 @@ describe('PATCH /me/profile integration', () => {
       .send({ fullName: '  Trinadh   B ' });
 
     expect(response.status).toBe(200);
-    expect(response.body.data.profile.fullName).toBe('Trinadh B');
-    expect(response.body.data.roleProfile.profileCompleted).toBe(true);
+    expect(response.body).toStrictEqual({
+      success: true,
+      data: {
+        id: USER_ID,
+        email: 'customer@example.test',
+        accountType: 'CUSTOMER',
+        status: 'ACTIVE',
+        profile: {
+          fullName: 'Trinadh B',
+          phoneNumber: '+919999999999',
+          avatarUrl: null,
+        },
+        roleProfile: {
+          kind: 'CUSTOMER',
+          dateOfBirth: null,
+          genderPreference: null,
+          profileCompleted: true,
+          defaultAddressId: null,
+        },
+        scope: { kind: 'CUSTOMER' },
+      },
+      meta: { requestId: null },
+    });
   });
 });
