@@ -71,8 +71,18 @@ values
   ('fa100000-0000-4000-8000-000000000001', 'CUSTOMER', null, 'ACTIVE'),
   ('fa100000-0000-4000-8000-000000000002', 'MERCHANT', 'Profile Merchant', 'ACTIVE');
 
-insert into public.customer_profiles (user_id, profile_completed)
-values ('fa100000-0000-4000-8000-000000000001', false);
+insert into public.customer_profiles (
+  user_id,
+  profile_completed,
+  created_at,
+  updated_at
+)
+values (
+  'fa100000-0000-4000-8000-000000000001',
+  false,
+  '2000-01-01 00:00:00+00'::timestamptz,
+  '2000-01-01 00:00:00+00'::timestamptz
+);
 
 insert into public.merchant_profiles (user_id, legal_name)
 values ('fa100000-0000-4000-8000-000000000002', 'Profile Merchant Legal');
