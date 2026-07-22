@@ -82,18 +82,31 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm --filter @vastra/api-client generate
           mapfile -d '' changed < <(git ls-files --modified --others --exclude-standard -z)
-          if ((${#changed[@]})); then
-            pnpm exec prettier --write "${changed[@]}"
-            code=()
-            for path in "${changed[@]}"; do
-              case "$path" in
-                *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs) code+=("$path") ;;
-              esac
-            done
-            if ((${#code[@]})); then pnpm exec eslint --fix "${code[@]}" || true; fi
-            mapfile -d '' changed_after < <(git ls-files --modified --others --exclude-standard -z)
-            if ((${#changed_after[@]})); then pnpm exec prettier --write "${changed_after[@]}"; fi
-          fi
+          format=()
+          code=()
+          for path in "${changed[@]}"; do
+            case "$path" in
+              *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs)
+                format+=("$path")
+                code+=("$path")
+                ;;
+              *.json|*.md|*.yaml|*.yml)
+                format+=("$path")
+                ;;
+            esac
+          done
+          if ((${#format[@]})); then pnpm exec prettier --write "${format[@]}"; fi
+          if ((${#code[@]})); then pnpm exec eslint --fix "${code[@]}" || true; fi
+          mapfile -d '' changed_after < <(git ls-files --modified --others --exclude-standard -z)
+          format_after=()
+          for path in "${changed_after[@]}"; do
+            case "$path" in
+              *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.json|*.md|*.yaml|*.yml)
+                format_after+=("$path")
+                ;;
+            esac
+          done
+          if ((${#format_after[@]})); then pnpm exec prettier --write "${format_after[@]}"; fi
           pnpm exec prettier --write packages/api-client/src/generated/openapi.ts
 
       - name: Validate static and focused gates
@@ -134,7 +147,7 @@ jobs:
               pnpm exec prettier --write packages/api-client/src/generated/openapi.ts
               ;;
             *)
-              git checkout -- packages/api-client/src/generated/openapi.ts
+              git restore --source=HEAD --worktree -- packages/api-client/src/generated/openapi.ts || true
               ;;
           esac
 
