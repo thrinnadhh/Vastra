@@ -25,15 +25,18 @@ jobs:
           path: payload
           persist-credentials: false
 
-      - name: Detect complete payload set
+      - name: Reconstruct and verify ticket patches
         id: payloads
         shell: bash
         run: |
-          if [[ -f payload/.github/automation/fe-s05-02.patch.b64 && -f payload/.github/automation/fe-s05-05.patch.b64 ]]; then
-            echo 'ready=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'ready=false' >> "$GITHUB_OUTPUT"
-          fi
+          set -euo pipefail
+          cat payload/.github/automation/fe-s05-02.patch.gz.b64.part* > /tmp/fe-s05-02.patch.gz.b64
+          cat payload/.github/automation/fe-s05-05.patch.gz.b64.part* > /tmp/fe-s05-05.patch.gz.b64
+          echo '3257163f25239e00221e41c4002e9bd3e3e970083a27654d89cd2594be06d577  /tmp/fe-s05-02.patch.gz.b64' | sha256sum --check --strict
+          echo '2e3aa7e878cd1d9eb8fb94081d13b575f59a47c4ba3520db31a9373fed07813d  /tmp/fe-s05-05.patch.gz.b64' | sha256sum --check --strict
+          base64 --decode /tmp/fe-s05-02.patch.gz.b64 | gzip --decompress > /tmp/fe-s05-02.patch
+          base64 --decode /tmp/fe-s05-05.patch.gz.b64 | gzip --decompress > /tmp/fe-s05-05.patch
+          echo 'ready=true' >> "$GITHUB_OUTPUT"
 
       - name: Check out main for address ticket
         if: steps.payloads.outputs.ready == 'true'
@@ -47,7 +50,7 @@ jobs:
         if: steps.payloads.outputs.ready == 'true'
         shell: bash
         run: |
-          base64 --decode payload/.github/automation/fe-s05-02.patch.b64 > /tmp/fe-s05-02.patch
+          set -euo pipefail
           cd address
           git switch -c feat/fe-s05-02-address-ui
           git am /tmp/fe-s05-02.patch
@@ -66,7 +69,7 @@ jobs:
         if: steps.payloads.outputs.ready == 'true'
         shell: bash
         run: |
-          base64 --decode payload/.github/automation/fe-s05-05.patch.b64 > /tmp/fe-s05-05.patch
+          set -euo pipefail
           cd orders
           git switch -c feat/ui-fe-s05-05-orders-tracking
           git am /tmp/fe-s05-05.patch
