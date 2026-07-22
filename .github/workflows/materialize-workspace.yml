@@ -1,6 +1,9 @@
 name: Materialize workspace
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - automation/materialize-fe-s05-s07
