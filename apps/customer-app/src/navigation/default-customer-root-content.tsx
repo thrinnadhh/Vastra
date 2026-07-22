@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useCustomerApiClient } from '../api/use-customer-api-client';
 import { useCustomerSessionActions } from '../auth/customer-session-actions';
 import { ApiCustomerServiceabilityAdapter } from '../location/api-customer-serviceability.adapter';
+import { ExpoCustomerLocationAdapter } from '../location/expo-customer-location.adapter';
 import { CustomerLocationScreen } from '../location/customer-location.screen';
 import type { CustomerCoordinates } from '../location/customer-location.types';
 import { ApiCustomerPreferencesAdapter } from '../profile/api-customer-preferences.adapter';
