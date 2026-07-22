@@ -25,10 +25,14 @@ function requireRecord(value: unknown): Record<string, unknown> {
 }
 
 function containsControlCharacter(value: string): boolean {
-  return [...value].some((character) => {
+  for (const character of value) {
     const codePoint = character.codePointAt(0);
-    return codePoint !== undefined && (codePoint < 32 || codePoint === 127);
-  });
+    if (codePoint !== undefined && (codePoint < 32 || codePoint === 127)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export function parseUpdateCustomerProfileInput(value: unknown): UpdateCustomerProfileInput {
