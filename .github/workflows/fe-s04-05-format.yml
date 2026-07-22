@@ -1,0 +1,44 @@
+name: FE-S04-05 format
+
+on:
+  pull_request:
+    branches:
+      - feat/ui-fe-s04-04-product-detail
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.head_ref == 'feat/ui-fe-s04-05-favourites-states'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/ui-fe-s04-05-favourites-states
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Format FE-S04-05 files
+        run: |
+          pnpm exec prettier --write \
+            apps/customer-app/src/discovery/customer-favourite.types.ts \
+            apps/customer-app/src/discovery/api-customer-favourite.adapter.ts \
+            apps/customer-app/src/discovery/customer-favourite-shops.screen.tsx \
+            apps/customer-app/src/discovery/default-customer-search.tsx \
+            apps/customer-app/src/discovery/customer-shops.screen.tsx \
+            apps/customer-app/src/discovery/api-customer-favourite.adapter.test.ts \
+            apps/customer-app/src/discovery/customer-favourite-shops.screen.test.tsx \
+            apps/customer-app/src/discovery/customer-product.screen.test.tsx \
+            docs/design/customer-favourites-discovery-states.md
+          rm .github/workflows/fe-s04-05-format.yml
+      - name: Commit formatted files
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/customer-app/src/discovery docs/design/customer-favourites-discovery-states.md .github/workflows/fe-s04-05-format.yml
+          git diff --cached --quiet || git commit -m "style(customer): format FE-S04-05"
+          git push origin HEAD:feat/ui-fe-s04-05-favourites-states
