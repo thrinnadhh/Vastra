@@ -45,13 +45,16 @@ function parseCurrentAccount(value: unknown): CurrentAccount {
   const accountType = data['accountType'];
   const status = data['status'];
   const profile = data['profile'];
+  const roleProfile = data['roleProfile'];
 
   if (
     typeof id !== 'string' ||
     id.trim().length === 0 ||
     !isMobileAccountType(accountType) ||
     status !== 'ACTIVE' ||
-    !isRecord(profile)
+    !isRecord(profile) ||
+    !isRecord(roleProfile) ||
+    typeof roleProfile['profileCompleted'] !== 'boolean'
   ) {
     throw new TypeError('Invalid current account response');
   }
@@ -61,6 +64,7 @@ function parseCurrentAccount(value: unknown): CurrentAccount {
     accountType,
     status,
     fullName: readNullableString(profile, 'fullName'),
+    profileCompleted: roleProfile['profileCompleted'],
   };
 }
 
