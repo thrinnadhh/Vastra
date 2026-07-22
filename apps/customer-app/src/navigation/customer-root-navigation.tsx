@@ -25,6 +25,17 @@ export interface CustomerRootNavigationSlots {
 
 type LinkFailureKind = Exclude<CustomerDeepLinkResult['kind'], 'ROUTE'>;
 
+function customerLinkFailureCopy(kind: LinkFailureKind): string {
+  switch (kind) {
+    case 'WRONG_APPLICATION':
+      return 'This link belongs to another Vastra application.';
+    case 'RESERVED':
+      return 'This Vastra link is not available in the current release.';
+    case 'INVALID':
+      return 'This Vastra link is invalid or is no longer supported.';
+  }
+}
+
 export function CustomerRootNavigation({
   slots,
   initialState = createInitialCustomerNavigationState(),
@@ -118,20 +129,13 @@ export function CustomerRootNavigation({
   };
 
   if (linkFailure !== null) {
-    const copy =
-      linkFailure === 'WRONG_APPLICATION'
-        ? 'This link belongs to another Vastra application.'
-        : linkFailure === 'RESERVED'
-          ? 'This Vastra link is not available in the current release.'
-          : 'This Vastra link is invalid or is no longer supported.';
-
     return (
       <View style={styles.linkFailure}>
         <Text accessibilityRole="header" style={styles.placeholderTitle}>
           Link unavailable
         </Text>
         <Text accessibilityLiveRegion="polite" style={styles.placeholderDescription}>
-          {copy}
+          {customerLinkFailureCopy(linkFailure)}
         </Text>
         <Pressable
           accessibilityLabel="Return safely"
