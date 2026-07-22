@@ -14,13 +14,8 @@ def replace(path: str, old: str, new: str, count: int = 1) -> None:
 ticket = sys.argv[1]
 if ticket == 'cart':
     adapter = 'apps/customer-app/src/cart/api-customer-cart.adapter.ts'
-    replace(
-        adapter,
-        "interface CustomerCartEnvelope {\n  readonly data: {\n    readonly data: {\n      readonly cart: CustomerCart | null;\n    };\n  };\n}\n\n",
-        '',
-    )
+    replace(adapter, "interface CustomerCartEnvelope {\n  readonly data: {\n    readonly data: {\n      readonly cart: CustomerCart | null;\n    };\n  };\n}\n\n", '')
     replace(adapter, 'return cartFrom(value as CustomerCartEnvelope);', 'return cartFrom(value);')
-
     screen = 'apps/customer-app/src/cart/customer-cart.screen.tsx'
     replacements = [
         ('`${item.productName} quantity updated to ${quantity}`', '`${item.productName} quantity updated to ${String(quantity)}`'),
@@ -38,14 +33,8 @@ if ticket == 'cart':
     ]
     for old, new in replacements:
         replace(screen, old, new)
-
     tests = 'apps/customer-app/src/cart/customer-cart.screen.test.tsx'
-    replace(
-        tests,
-        'const pending = new Promise<CustomerCart | null>((value) => (resolve = value));',
-        'const pending = new Promise<CustomerCart | null>((value) => {\n      resolve = value;\n    });',
-        count=2,
-    )
+    replace(tests, 'const pending = new Promise<CustomerCart | null>((value) => (resolve = value));', 'const pending = new Promise<CustomerCart | null>((value) => {\n      resolve = value;\n    });', count=2)
     test_replacements = [
         ('await act(async () => resolve?.(null));', 'act(() => {\n      resolve?.(null);\n    });'),
         ('await waitFor(() => expect(updateItem).toHaveBeenCalledWith(ITEM.id, 3));', 'await waitFor(() => {\n      expect(updateItem).toHaveBeenCalledWith(ITEM.id, 3);\n    });'),
@@ -61,11 +50,13 @@ if ticket == 'cart':
     ]
     for old, new in test_replacements:
         replace(tests, old, new)
+elif ticket == 'quote':
+    tests = 'apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx'
+    replace(tests, "() => new Promise<CustomerCheckoutQuote>((resolve) => (resolveSecond = resolve)),", "() =>\n          new Promise<CustomerCheckoutQuote>((resolve) => {\n            resolveSecond = resolve;\n          }),")
+    replace(tests, "    const refresh = view.getByRole('button', { name: 'Refresh checkout quote' });\n    fireEvent.press(refresh);\n    fireEvent.press(refresh);", "    fireEvent.press(view.getByRole('button', { name: 'Refresh checkout quote' }));\n    fireEvent.press(view.getByRole('button', { name: 'Refresh checkout quote' }));")
+    replace(tests, '    await act(async () => resolveSecond?.(QUOTE));', '    act(() => {\n      resolveSecond?.(QUOTE);\n    });')
+    replace(tests, "    const quote = {\n      ...QUOTE,\n      items: [{ ...QUOTE.items[0], quantity: 4, availableQuantity: 3 }],\n    };", "    const firstItem = QUOTE.items[0];\n    if (firstItem === undefined) throw new Error('Expected quote item fixture');\n    const quote: CustomerCheckoutQuote = {\n      ...QUOTE,\n      items: [{ ...firstItem, quantity: 4, availableQuantity: 3 }],\n    };")
 elif ticket == 'orders':
-    replace(
-        'apps/customer-app/src/orders/customer-cod-order-journey.test.tsx',
-        "fireEvent.press(await findByRole('button', { name: 'Place COD order for ₹325.00' }));",
-        "fireEvent.press(await findByLabelText('Place COD order for ₹325.00'));",
-    )
+    replace('apps/customer-app/src/orders/customer-cod-order-journey.test.tsx', "fireEvent.press(await findByRole('button', { name: 'Place COD order for ₹325.00' }));", "fireEvent.press(await findByLabelText('Place COD order for ₹325.00'));")
 else:
-    raise SystemExit('expected cart or orders')
+    raise SystemExit('expected cart, quote, or orders')
