@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import { Linking } from 'react-native';
 
 import type {
   CustomerCoordinates,
@@ -6,12 +7,15 @@ import type {
   CustomerLocationPort,
 } from './customer-location.types';
 
-function mapPermission(status: Location.PermissionStatus): CustomerLocationPermission {
+export function mapExpoCustomerLocationPermission(
+  status: Location.PermissionStatus,
+  canAskAgain: boolean,
+): CustomerLocationPermission {
   switch (status) {
     case Location.PermissionStatus.GRANTED:
       return 'GRANTED';
     case Location.PermissionStatus.DENIED:
-      return 'DENIED';
+      return canAskAgain ? 'DENIED' : 'BLOCKED';
     case Location.PermissionStatus.UNDETERMINED:
       return 'UNDETERMINED';
   }
@@ -24,12 +28,16 @@ export class ExpoCustomerLocationAdapter implements CustomerLocationPort {
 
   public async getForegroundPermission(): Promise<CustomerLocationPermission> {
     const response = await Location.getForegroundPermissionsAsync();
-    return mapPermission(response.status);
+    return mapExpoCustomerLocationPermission(response.status, response.canAskAgain);
   }
 
   public async requestForegroundPermission(): Promise<CustomerLocationPermission> {
     const response = await Location.requestForegroundPermissionsAsync();
-    return mapPermission(response.status);
+    return mapExpoCustomerLocationPermission(response.status, response.canAskAgain);
+  }
+
+  public openAppSettings(): Promise<void> {
+    return Linking.openSettings();
   }
 
   public async getCurrentCoordinates(): Promise<CustomerCoordinates> {

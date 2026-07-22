@@ -3,12 +3,13 @@ export interface CustomerCoordinates {
   readonly longitude: number;
 }
 
-export type CustomerLocationPermission = 'GRANTED' | 'DENIED' | 'UNDETERMINED';
+export type CustomerLocationPermission = 'GRANTED' | 'DENIED' | 'BLOCKED' | 'UNDETERMINED';
 
 export interface CustomerLocationPort {
   hasServicesEnabled(): Promise<boolean>;
   getForegroundPermission(): Promise<CustomerLocationPermission>;
   requestForegroundPermission(): Promise<CustomerLocationPermission>;
+  openAppSettings(): Promise<void>;
   getCurrentCoordinates(): Promise<CustomerCoordinates>;
 }
 
@@ -30,6 +31,7 @@ export interface CustomerServiceabilityPort {
 
 export type CustomerLocationFailureKind =
   | 'PERMISSION_DENIED'
+  | 'PERMISSION_BLOCKED'
   | 'GPS_DISABLED'
   | 'INVALID_MANUAL_LOCATION'
   | 'OUTSIDE_SERVICE_AREA'
@@ -61,7 +63,9 @@ export function parseManualCoordinates(
 export function customerLocationFailureMessage(kind: CustomerLocationFailureKind): string {
   switch (kind) {
     case 'PERMISSION_DENIED':
-      return 'Location permission is off. Enter your area manually or allow location in device settings.';
+      return 'Location permission was denied. Try again or enter your area manually.';
+    case 'PERMISSION_BLOCKED':
+      return 'Location permission is blocked. Enable it in device settings or enter your area manually.';
     case 'GPS_DISABLED':
       return 'Device location services are off. Turn them on or enter your area manually.';
     case 'INVALID_MANUAL_LOCATION':

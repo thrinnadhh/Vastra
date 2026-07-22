@@ -15,6 +15,7 @@ class LocationPortStub implements CustomerLocationPort {
   public requestedPermission: CustomerLocationPermission = 'GRANTED';
   public coordinates: CustomerCoordinates = { latitude: 13.6288, longitude: 79.4192 };
   public coordinateReads = 0;
+  public settingsOpens = 0;
 
   public hasServicesEnabled(): Promise<boolean> {
     return Promise.resolve(this.servicesEnabled);
@@ -26,6 +27,11 @@ class LocationPortStub implements CustomerLocationPort {
 
   public requestForegroundPermission(): Promise<CustomerLocationPermission> {
     return Promise.resolve(this.requestedPermission);
+  }
+
+  public openAppSettings(): Promise<void> {
+    this.settingsOpens += 1;
+    return Promise.resolve();
   }
 
   public getCurrentCoordinates(): Promise<CustomerCoordinates> {
@@ -66,9 +72,30 @@ describe('CustomerLocationScreen', () => {
     expect(serviceabilityPort.checkedCoordinates).toEqual(ready);
   });
 
-  it('offers manual fallback without reading coordinates when permission is denied', async () => {
+  it('offers retry and manual fallback when permission is denied', async () => {
     const locationPort = new LocationPortStub();
     locationPort.permission = 'DENIED';
+    const { findByText, getByRole, queryByRole } = render(
+      <CustomerLocationScreen
+        locationPort={locationPort}
+        onLocationReady={() => undefined}
+        serviceabilityPort={new ServiceabilityPortStub()}
+      />,
+    );
+
+    fireEvent.press(getByRole('button', { name: 'Use current location' }));
+
+    expect(
+      await findByText('Location permission was denied. Try again or enter your area manually.'),
+    ).toBeTruthy();
+    expect(await findByText('Manual location')).toBeTruthy();
+    expect(queryByRole('button', { name: 'Open device settings' })).toBeNull();
+    expect(locationPort.coordinateReads).toBe(0);
+  });
+
+  it('offers device settings and manual fallback when permission is blocked', async () => {
+    const locationPort = new LocationPortStub();
+    locationPort.permission = 'BLOCKED';
     const { findByText, getByRole } = render(
       <CustomerLocationScreen
         locationPort={locationPort}
@@ -81,10 +108,11 @@ describe('CustomerLocationScreen', () => {
 
     expect(
       await findByText(
-        'Location permission is off. Enter your area manually or allow location in device settings.',
+        'Location permission is blocked. Enable it in device settings or enter your area manually.',
       ),
     ).toBeTruthy();
-    expect(await findByText('Manual location')).toBeTruthy();
+    fireEvent.press(getByRole('button', { name: 'Open device settings' }));
+    expect(locationPort.settingsOpens).toBe(1);
     expect(locationPort.coordinateReads).toBe(0);
   });
 

@@ -19,7 +19,8 @@ describe('customer location contract', () => {
   });
 
   it('keeps permission, GPS, service-area, and network messages truthful', () => {
-    expect(customerLocationFailureMessage('PERMISSION_DENIED')).toContain('permission');
+    expect(customerLocationFailureMessage('PERMISSION_DENIED')).toContain('denied');
+    expect(customerLocationFailureMessage('PERMISSION_BLOCKED')).toContain('device settings');
     expect(customerLocationFailureMessage('GPS_DISABLED')).toContain('services');
     expect(customerLocationFailureMessage('OUTSIDE_SERVICE_AREA')).toContain('serviceable');
     expect(customerLocationFailureMessage('UNAVAILABLE')).toContain('connection');
