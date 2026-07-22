@@ -1,30 +1,43 @@
-name: Sprint 5 Wave 1 diagnostics
+name: Sprint 5 Wave 1 finalization
 
 on:
   push:
     branches:
       - automation/sprint-5-wave-1-implementation
-  pull_request:
-    branches:
-      - main
 
 concurrency:
-  group: sprint-5-wave-1-diagnostics
+  group: sprint-5-wave-1-finalization
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  diagnose:
-    name: diagnose-${{ matrix.ticket }}
+  finalize:
+    name: finalize-${{ matrix.ticket }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 4
       matrix:
-        ticket: [cart, orders]
+        include:
+          - ticket: cart
+            branch: feat/ui-fe-s05-01-cart
+            commit: "feat(customer): implement authoritative cart experience"
+            implement: true
+          - ticket: addresses
+            branch: feat/be-fe-002-customer-addresses
+            commit: "feat(addresses): add customer address CRUD contract"
+            implement: false
+          - ticket: quote
+            branch: feat/ui-fe-s05-03-quote-fees
+            commit: "feat(customer): harden checkout quote and fees"
+            implement: false
+          - ticket: orders
+            branch: feat/ui-fe-s05-05-orders-tracking
+            commit: "feat(customer): complete orders and tracking experience"
+            implement: true
 
     steps:
       - uses: actions/checkout@v4
@@ -36,81 +49,142 @@ jobs:
         with:
           node-version: 20.20.2
 
+      - uses: supabase/setup-cli@v3
+        with:
+          version: latest
+
       - name: Prepare isolated ticket branch
         shell: bash
         run: |
-          cat scripts/s05-wave1.payload.* | base64 -d | xz -d > /tmp/s05-wave1-implement.py
-          python scripts/s05-wave1-hotfix.py /tmp/s05-wave1-implement.py
-          branch="feat/ui-fe-s05-01-cart"
-          if test "${{ matrix.ticket }}" = orders; then branch="feat/ui-fe-s05-05-orders-tracking"; fi
-          git fetch origin main "$branch"
-          test "$(git rev-parse origin/main)" = "$(git merge-base origin/main origin/$branch)"
-          git switch "$branch"
-          git reset --hard "origin/$branch"
+          git config user.name "Vastra Sprint 5 Agent"
+          git config user.email "actions@users.noreply.github.com"
+          git fetch origin main "${{ matrix.branch }}"
+          test "$(git merge-base origin/main origin/${{ matrix.branch }})" = "$(git rev-parse origin/main)"
+          git switch "${{ matrix.branch }}"
+          git reset --hard "origin/${{ matrix.branch }}"
           test -z "$(git status --short)"
-          python /tmp/s05-wave1-implement.py "${{ matrix.ticket }}"
+          if test "${{ matrix.implement }}" = true; then
+            cat "$GITHUB_WORKSPACE/scripts/s05-wave1.payload."* | base64 -d | xz -d > /tmp/s05-wave1-implement.py
+            python "$GITHUB_WORKSPACE/scripts/s05-wave1-hotfix.py" /tmp/s05-wave1-implement.py
+            python /tmp/s05-wave1-implement.py "${{ matrix.ticket }}"
+            python "$GITHUB_WORKSPACE/scripts/s05-wave1-source-fix.py" "${{ matrix.ticket }}"
+          fi
 
-      - name: Install and format
+      - name: Install, generate, format, and autofix
         shell: bash
         run: |
           corepack enable
           corepack prepare pnpm@8.15.0 --activate
           pnpm install --frozen-lockfile
-          mapfile -d '' changed < <(git diff --name-only -z)
-          if ((${#changed[@]})); then pnpm exec prettier --write "${changed[@]}"; fi
-
-      - name: Focused tests
-        id: focused
-        continue-on-error: true
-        shell: bash
-        run: |
-          mkdir -p /tmp/s05-diagnostics
-          set -o pipefail
-          if test "${{ matrix.ticket }}" = cart; then
-            pnpm --filter @vastra/customer-app exec jest src/cart --runInBand 2>&1 | tee /tmp/s05-diagnostics/focused.log
-          else
-            pnpm --filter @vastra/customer-app exec jest src/orders --runInBand 2>&1 | tee /tmp/s05-diagnostics/focused.log
+          pnpm --filter @vastra/api-client generate
+          mapfile -d '' changed < <(git ls-files --modified --others --exclude-standard -z)
+          if ((${#changed[@]})); then
+            pnpm exec prettier --write "${changed[@]}"
+            code=()
+            for path in "${changed[@]}"; do
+              case "$path" in
+                *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs) code+=("$path") ;;
+              esac
+            done
+            if ((${#code[@]})); then pnpm exec eslint --fix "${code[@]}"; fi
           fi
 
-      - name: Cart repository validation
-        if: matrix.ticket == 'cart' && steps.focused.outcome == 'success'
-        continue-on-error: true
+      - name: Validate and capture evidence
+        id: validation
         shell: bash
         run: |
           set -o pipefail
-          for command in \
-            "pnpm format:check" \
-            "pnpm lint" \
-            "pnpm typecheck" \
-            "pnpm test" \
-            "pnpm test:integration" \
-            "pnpm db:test" \
-            "pnpm openapi:check" \
+          mkdir -p /tmp/s05-evidence
+          status=0
+          case "${{ matrix.ticket }}" in
+            cart) focused="pnpm --filter @vastra/customer-app exec jest src/cart --runInBand" ;;
+            quote) focused="pnpm --filter @vastra/customer-app exec jest src/checkout/customer-checkout-quote --runInBand" ;;
+            orders) focused="pnpm --filter @vastra/customer-app exec jest src/orders --runInBand" ;;
+            addresses) focused="pnpm --filter @vastra/backend exec vitest run src/addresses" ;;
+          esac
+          commands=(
+            "$focused"
+            "pnpm format:check"
+            "pnpm lint"
+            "pnpm typecheck"
+            "pnpm test"
+            "pnpm test:integration"
+            "pnpm db:test"
+            "pnpm openapi:check"
             "pnpm build"
-          do
+          )
+          for command in "${commands[@]}"; do
             slug=$(printf '%s' "$command" | tr ' /:' '___')
-            echo "## $command" | tee -a /tmp/s05-diagnostics/validation-summary.md
-            if bash -lc "$command" 2>&1 | tee "/tmp/s05-diagnostics/${slug}.log"; then
-              echo PASS | tee -a /tmp/s05-diagnostics/validation-summary.md
+            echo "## $command" | tee -a /tmp/s05-evidence/summary.md
+            if bash -lc "$command" 2>&1 | tee "/tmp/s05-evidence/${slug}.log"; then
+              echo PASS | tee -a /tmp/s05-evidence/summary.md
             else
-              echo FAIL | tee -a /tmp/s05-diagnostics/validation-summary.md
+              echo FAIL | tee -a /tmp/s05-evidence/summary.md
+              status=1
             fi
           done
+          git status --short > /tmp/s05-evidence/status.txt
+          git ls-files --modified --others --exclude-standard > /tmp/s05-evidence/changed-files.txt
+          echo "status=$status" >> "$GITHUB_OUTPUT"
 
-      - name: Capture boundary diagnostics
-        if: always()
+      - name: Verify ownership, amend or create ticket commit, and push
+        if: steps.validation.outputs.status == '0'
         shell: bash
+        env:
+          TICKET: ${{ matrix.ticket }}
+          BRANCH: ${{ matrix.branch }}
+          COMMIT_MESSAGE: ${{ matrix.commit }}
         run: |
-          mkdir -p /tmp/s05-diagnostics
-          git status --short > /tmp/s05-diagnostics/status.txt
-          git diff --name-only origin/main > /tmp/s05-diagnostics/changed-files.txt
-          git diff --stat origin/main > /tmp/s05-diagnostics/diff-stat.txt
-          python /tmp/s05-wave1-implement.py verify "${{ matrix.ticket }}" > /tmp/s05-diagnostics/boundary.txt 2>&1 || true
+          python - <<'PY'
+          import os, subprocess
+          ticket = os.environ['TICKET']
+          allowed = {
+              'cart': ('apps/customer-app/src/cart/', 'docs/design/customer-cart.md'),
+              'quote': (
+                  'apps/customer-app/src/checkout/customer-checkout-quote.client.ts',
+                  'apps/customer-app/src/checkout/customer-checkout-quote.client.test.ts',
+                  'apps/customer-app/src/checkout/customer-checkout-quote.screen.tsx',
+                  'apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx',
+                  'apps/customer-app/src/checkout/customer-checkout-quote.types.ts',
+                  'docs/design/customer-checkout-quote.md',
+              ),
+              'orders': ('apps/customer-app/src/orders/', 'docs/design/customer-orders-tracking.md'),
+              'addresses': (
+                  'apps/backend/src/addresses/', 'apps/backend/src/app.module.ts',
+                  'supabase/migrations/20260722120000_customer_address_contract.sql',
+                  'supabase/tests/0092_customer_address_contract.test.sql',
+                  'docs/api/openapi.yaml', 'docs/design/customer-address-contract.md',
+                  'packages/api-client/src/generated/',
+              ),
+          }[ticket]
+          changed = subprocess.check_output(
+              ['git', 'ls-files', '--modified', '--others', '--exclude-standard'], text=True
+          ).splitlines()
+          if not changed:
+              raise SystemExit(f'{ticket}: no ticket changes')
+          foreign = [p for p in changed if not any(p == prefix or p.startswith(prefix) for prefix in allowed)]
+          if foreign:
+              raise SystemExit(f'{ticket}: foreign-owned files: {foreign}')
+          print(f'{ticket}: verified {len(changed)} owned files')
+          print('\n'.join(changed))
+          PY
+          git add --all
+          git diff --cached --check
+          if test "$(git rev-list --count origin/main..HEAD)" -eq 0; then
+            git commit -m "$COMMIT_MESSAGE"
+          else
+            git commit --amend --no-edit
+          fi
+          git push --force-with-lease origin "HEAD:$BRANCH"
 
-      - name: Upload diagnostics
+      - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: s05-${{ matrix.ticket }}-diagnostics
-          path: /tmp/s05-diagnostics
-          if-no-files-found: error
+          name: s05-${{ matrix.ticket }}-finalization
+          path: /tmp/s05-evidence
+          if-no-files-found: warn
+
+      - name: Fail incomplete ticket
+        if: steps.validation.outputs.status != '0'
+        run: exit 1
