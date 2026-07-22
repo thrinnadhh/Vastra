@@ -1,6 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { parseCustomerDeepLink, type CustomerDeepLinkResult } from './customer-deep-link';
+import type { CustomerLinkingPort } from './customer-linking.port';
 import {
   activeCustomerRoute,
   createInitialCustomerNavigationState,
@@ -9,7 +11,11 @@ import {
   selectCustomerTab,
   type CustomerNavigationState,
 } from './customer-navigation-state';
-import { CUSTOMER_TABS, type CustomerTabKey } from './customer-routes';
+import {
+  CUSTOMER_TABS,
+  type CustomerRoute,
+  type CustomerTabKey,
+} from './customer-routes';
 
 export interface CustomerRootNavigationSlots {
   readonly home: (openCheckout: () => void) => ReactNode;
@@ -18,24 +24,35 @@ export interface CustomerRootNavigationSlots {
   readonly orders: ReactNode;
   readonly profile: ReactNode;
   readonly checkout: ReactNode;
+  readonly renderDeepLinkedRoute?: (
+    route: CustomerRoute,
+    onBack: () => void,
+  ) => ReactNode | null;
 }
+
+type LinkFailureKind = Exclude<CustomerDeepLinkResult['kind'], 'ROUTE'>;
 
 export function CustomerRootNavigation({
   slots,
   initialState = createInitialCustomerNavigationState(),
+  linkingPort,
 }: {
   readonly slots: CustomerRootNavigationSlots;
   readonly initialState?: CustomerNavigationState;
+  readonly linkingPort?: CustomerLinkingPort;
 }) {
   const [navigation, setNavigation] = useState(initialState);
+  const [linkFailure, setLinkFailure] = useState<LinkFailureKind | null>(null);
   const activeRoute = activeCustomerRoute(navigation);
   const isCheckout = activeRoute.scope === 'TRANSACTION' && activeRoute.name === 'Checkout';
 
   const selectTab = (tab: CustomerTabKey): void => {
+    setLinkFailure(null);
     setNavigation((current) => selectCustomerTab(current, tab));
   };
 
   const openCheckout = (): void => {
+    setLinkFailure(null);
     setNavigation((current) =>
       openCustomerRoute(current, {
         scope: 'TRANSACTION',
@@ -44,6 +61,53 @@ export function CustomerRootNavigation({
       }),
     );
   };
+
+  const goBack = useCallback((): void => {
+    setLinkFailure(null);
+    setNavigation((current) => goBackCustomerNavigation(current));
+  }, []);
+
+  const applyIncomingUrl = useCallback((url: string): void => {
+    const result = parseCustomerDeepLink(url);
+    if (result.kind === 'ROUTE') {
+      setLinkFailure(null);
+      setNavigation((current) => openCustomerRoute(current, result.route));
+      return;
+    }
+
+    setLinkFailure(result.kind);
+  }, []);
+
+  useEffect(() => {
+    if (linkingPort === undefined) {
+      return undefined;
+    }
+
+    let mounted = true;
+    const unsubscribe = linkingPort.subscribe((url) => {
+      if (mounted) {
+        applyIncomingUrl(url);
+      }
+    });
+
+    void linkingPort
+      .getInitialUrl()
+      .then((url) => {
+        if (mounted && url !== null) {
+          applyIncomingUrl(url);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setLinkFailure('INVALID');
+        }
+      });
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, [applyIncomingUrl, linkingPort]);
 
   const renderSelectedTab = (): ReactNode => {
     switch (navigation.selectedTab) {
@@ -60,6 +124,41 @@ export function CustomerRootNavigation({
     }
   };
 
+  if (linkFailure !== null) {
+    const copy =
+      linkFailure === 'WRONG_APPLICATION'
+        ? 'This link belongs to another Vastra application.'
+        : linkFailure === 'RESERVED'
+          ? 'This Vastra link is not available in the current release.'
+          : 'This Vastra link is invalid or is no longer supported.';
+
+    return (
+      <View style={styles.linkFailure}>
+        <Text accessibilityRole="header" style={styles.placeholderTitle}>
+          Link unavailable
+        </Text>
+        <Text accessibilityLiveRegion="polite" style={styles.placeholderDescription}>
+          {copy}
+        </Text>
+        <Pressable
+          accessibilityLabel="Return safely"
+          accessibilityRole="button"
+          onPress={() => {
+            setLinkFailure(null);
+          }}
+          style={styles.linkFailureAction}
+        >
+          <Text style={styles.linkFailureActionText}>Return safely</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const deepLinkedContent =
+    !isCheckout && slots.renderDeepLinkedRoute !== undefined
+      ? slots.renderDeepLinkedRoute(activeRoute, goBack)
+      : null;
+
   return (
     <View style={styles.root}>
       {isCheckout ? (
@@ -67,9 +166,7 @@ export function CustomerRootNavigation({
           <Pressable
             accessibilityLabel="Back from checkout"
             accessibilityRole="button"
-            onPress={() => {
-              setNavigation((current) => goBackCustomerNavigation(current));
-            }}
+            onPress={goBack}
             style={styles.backAction}
           >
             <Text style={styles.backText}>Back</Text>
@@ -81,10 +178,10 @@ export function CustomerRootNavigation({
       ) : null}
 
       <View style={styles.content} testID="customer-root-route">
-        {isCheckout ? slots.checkout : renderSelectedTab()}
+        {isCheckout ? slots.checkout : (deepLinkedContent ?? renderSelectedTab())}
       </View>
 
-      {isCheckout ? null : (
+      {isCheckout || deepLinkedContent !== null ? null : (
         <View
           accessibilityLabel="Customer primary navigation"
           accessibilityRole="tablist"
@@ -162,4 +259,19 @@ const styles = StyleSheet.create({
   placeholder: { flex: 1, justifyContent: 'center', padding: 24 },
   placeholderTitle: { color: '#1D2939', fontSize: 26, fontWeight: '700' },
   placeholderDescription: { marginTop: 10, color: '#667085', fontSize: 16, lineHeight: 24 },
+  linkFailure: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: '#FFF8F2',
+  },
+  linkFailureAction: {
+    minHeight: 48,
+    marginTop: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: '#8E3B46',
+  },
+  linkFailureActionText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });
