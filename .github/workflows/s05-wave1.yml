@@ -1,0 +1,144 @@
+name: Sprint 5 Wave 1 implementation
+
+on:
+  push:
+    branches:
+      - automation/sprint-5-wave-1-implementation
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    name: ${{ matrix.ticket }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - ticket: cart
+            branch: feat/ui-fe-s05-01-cart
+            commit: "feat(customer): implement authoritative cart experience"
+          - ticket: addresses
+            branch: feat/be-fe-002-customer-addresses
+            commit: "feat(addresses): add customer address CRUD contract"
+          - ticket: quote
+            branch: feat/ui-fe-s05-03-quote-fees
+            commit: "feat(customer): harden checkout quote and fees"
+          - ticket: orders
+            branch: feat/ui-fe-s05-05-orders-tracking
+            commit: "feat(customer): complete orders and tracking experience"
+
+    steps:
+      - name: Checkout implementation coordinator
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: automation/sprint-5-wave-1-implementation
+
+      - name: Use repository Node version
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.2
+
+      - name: Prepare isolated ticket branch
+        shell: bash
+        run: |
+          cat scripts/s05-wave1.payload.* | base64 -d | xz -d > /tmp/s05-wave1-implement.py
+          git fetch origin main "${{ matrix.branch }}"
+          test "$(git rev-parse origin/main)" = "$(git merge-base origin/main origin/${{ matrix.branch }})"
+          git switch "${{ matrix.branch }}"
+          git reset --hard "origin/${{ matrix.branch }}"
+          test -z "$(git status --short)"
+
+      - name: Implement ticket-owned surface
+        run: python /tmp/s05-wave1-implement.py "${{ matrix.ticket }}"
+
+      - name: Install workspace dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@8.15.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Format ticket files
+        shell: bash
+        run: |
+          mapfile -d '' changed < <(git diff --name-only -z)
+          if ((${#changed[@]})); then
+            pnpm exec prettier --write "${changed[@]}"
+          fi
+
+      - name: Focused ticket tests
+        shell: bash
+        run: |
+          case "${{ matrix.ticket }}" in
+            cart)
+              pnpm --filter @vastra/customer-app exec jest src/cart --runInBand
+              ;;
+            quote)
+              pnpm --filter @vastra/customer-app exec jest src/checkout/customer-checkout-quote --runInBand
+              ;;
+            orders)
+              pnpm --filter @vastra/customer-app exec jest src/orders --runInBand
+              ;;
+            addresses)
+              pnpm --filter @vastra/backend exec vitest run src/addresses
+              pnpm --filter @vastra/backend exec vitest run src/addresses/customer-address.integration.test.ts
+              ;;
+          esac
+
+      - name: Repository validation
+        id: validation
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/s05-validation
+          status=0
+          for command in \
+            "pnpm format:check" \
+            "pnpm lint" \
+            "pnpm typecheck" \
+            "pnpm test" \
+            "pnpm test:integration" \
+            "pnpm db:test" \
+            "pnpm openapi:check" \
+            "pnpm build"
+          do
+            slug=$(printf '%s' "$command" | tr ' /:' '___')
+            echo "## $command" | tee -a /tmp/s05-validation/summary.md
+            if bash -lc "$command" 2>&1 | tee "/tmp/s05-validation/${slug}.log"; then
+              echo "PASS" | tee -a /tmp/s05-validation/summary.md
+            else
+              echo "FAIL" | tee -a /tmp/s05-validation/summary.md
+              status=1
+            fi
+          done
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Inspect ticket boundary and commit
+        shell: bash
+        run: |
+          python /tmp/s05-wave1-implement.py verify "${{ matrix.ticket }}"
+          git status --short
+          git diff --stat
+          git diff --check
+          git add --all
+          git commit -m "${{ matrix.commit }}"
+          git push origin "HEAD:${{ matrix.branch }}"
+
+      - name: Publish validation summary
+        if: always()
+        shell: bash
+        run: |
+          if test -f /tmp/s05-validation/summary.md; then
+            cat /tmp/s05-validation/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "Branch: ${{ matrix.branch }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Ticket: ${{ matrix.ticket }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail when repository validation failed
+        if: steps.validation.outputs.status == '1'
+        run: exit 1
