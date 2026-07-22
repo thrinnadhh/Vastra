@@ -16,6 +16,9 @@ export interface CustomerShopsScreenProps {
   readonly shopPort: CustomerShopPort;
   readonly onRequestLocation: () => void;
   readonly onSelectProduct: (productId: string) => void;
+  readonly favouriteShopIds?: ReadonlySet<string>;
+  readonly pendingFavouriteShopIds?: ReadonlySet<string>;
+  readonly onSetFavourite?: (shopId: string, isFavourite: boolean) => void;
 }
 
 function formatRupees(paise: number): string {
@@ -217,6 +220,9 @@ export function CustomerShopsScreen({
   shopPort,
   onRequestLocation,
   onSelectProduct,
+  favouriteShopIds,
+  pendingFavouriteShopIds,
+  onSetFavourite,
 }: CustomerShopsScreenProps) {
   const [shops, setShops] = useState<readonly CustomerNearbyShop[]>([]);
   const [directoryFailure, setDirectoryFailure] = useState<CustomerShopFailureKind | null>(null);
@@ -376,6 +382,33 @@ export function CustomerShopsScreen({
                 {orderingCopy(detail)}
               </Text>
             </View>
+
+            {onSetFavourite === undefined ? null : (
+              <Pressable
+                accessibilityLabel={`${
+                  favouriteShopIds?.has(detail.id) === true ? 'Remove' : 'Add'
+                } ${detail.name} ${
+                  favouriteShopIds?.has(detail.id) === true ? 'from' : 'to'
+                } favourites`}
+                accessibilityRole="button"
+                disabled={pendingFavouriteShopIds?.has(detail.id) === true}
+                onPress={() => {
+                  onSetFavourite(detail.id, favouriteShopIds?.has(detail.id) !== true);
+                }}
+                style={[
+                  styles.secondaryAction,
+                  pendingFavouriteShopIds?.has(detail.id) === true ? styles.actionDisabled : null,
+                ]}
+              >
+                <Text style={styles.secondaryActionText}>
+                  {pendingFavouriteShopIds?.has(detail.id) === true
+                    ? 'Saving…'
+                    : favouriteShopIds?.has(detail.id) === true
+                      ? 'Remove from favourites'
+                      : 'Add to favourites'}
+                </Text>
+              </Pressable>
+            )}
 
             <View style={styles.factGrid}>
               <View style={styles.factCard}>
