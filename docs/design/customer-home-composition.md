@@ -47,6 +47,12 @@ An initial transport failure renders the offline recovery state without invented
 The adapter narrows the generated client's validated response at one explicit boundary
 before mapping screen-safe fields.
 
+## Main reconciliation
+
+The Home composition is rebased on the current `main` application root and preserves the
+profile editor, deep-link handling, shopping-location flow, contextual Checkout route, and
+canonical five-tab navigation without importing later Sprint 4 discovery scope.
+
 ## Verification ownership
 
 Focused component tests cover Home composition, navigation callbacks, unavailable-variant
