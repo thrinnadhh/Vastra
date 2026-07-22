@@ -95,10 +95,7 @@ class MutableMeGateway implements MeGateway {
 class MutableCustomerProfileGateway implements CustomerProfileGateway {
   public constructor(private readonly meGateway: MutableMeGateway) {}
 
-  public updateCurrentCustomerProfile(
-    _client: SupabaseClient,
-    input: UpdateCustomerProfileInput,
-  ) {
+  public updateCurrentCustomerProfile(_client: SupabaseClient, input: UpdateCustomerProfileInput) {
     this.meGateway.fullName = input.fullName;
     this.meGateway.profileCompleted = true;
     return Promise.resolve({

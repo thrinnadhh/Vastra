@@ -80,10 +80,7 @@ function createDependencies(): DependencyResult {
   }
 }
 
-function DefaultCustomerProfileSetup({
-  account,
-  onCompleted,
-}: CustomerProfileSetupComponentProps) {
+function DefaultCustomerProfileSetup({ account, onCompleted }: CustomerProfileSetupComponentProps) {
   const apiClient = useCustomerApiClient();
   const profilePort = useMemo(() => new ApiCustomerProfileSetupAdapter(apiClient), [apiClient]);
 
