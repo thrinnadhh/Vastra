@@ -21,6 +21,7 @@ All identifiers must be UUIDs. The parser carries identity only; it never carrie
 
 - Initial operating-system URLs are consumed after the authenticated customer root mounts, preserving sign-in continuation without persisting the URL.
 - The session boundary completes authentication and required profile setup before the production linking port is mounted.
+- Tests and alternate roots omit the optional linking port entirely rather than passing an explicit `undefined` value.
 - URLs received while the app is running use the same parser.
 - A linked order opens the existing server-authoritative order detail screen; not-found or ownership denial remains intentionally non-enumerating.
 - Linked order detail is keyed by order identity, so a new valid order link remounts the authoritative detail boundary without copying props into effect-driven state.
