@@ -1,8 +1,7 @@
-
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public;
-select plan(20);
+select plan(21);
 select has_function('public','list_customer_addresses',array[]::text[],'list RPC exists');
 select has_function('public','get_customer_address',array['uuid'],'read RPC exists');
 select has_function('public','create_customer_address',array['jsonb','uuid'],'create RPC exists');
