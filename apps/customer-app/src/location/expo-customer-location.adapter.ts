@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import { Linking } from 'react-native';
 
 import type {
   CustomerCoordinates,
@@ -32,6 +33,10 @@ export class ExpoCustomerLocationAdapter implements CustomerLocationPort {
   public async requestForegroundPermission(): Promise<CustomerLocationPermission> {
     const response = await Location.requestForegroundPermissionsAsync();
     return mapPermission(response);
+  }
+
+  public openAppSettings(): Promise<void> {
+    return Linking.openSettings();
   }
 
   public async getCurrentCoordinates(): Promise<CustomerCoordinates> {
