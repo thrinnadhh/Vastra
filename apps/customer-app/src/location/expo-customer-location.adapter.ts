@@ -6,12 +6,14 @@ import type {
   CustomerLocationPort,
 } from './customer-location.types';
 
-function mapPermission(status: Location.PermissionStatus): CustomerLocationPermission {
-  switch (status) {
+function mapPermission(
+  response: Pick<Location.PermissionResponse, 'canAskAgain' | 'status'>,
+): CustomerLocationPermission {
+  switch (response.status) {
     case Location.PermissionStatus.GRANTED:
       return 'GRANTED';
     case Location.PermissionStatus.DENIED:
-      return 'DENIED';
+      return response.canAskAgain ? 'DENIED' : 'BLOCKED';
     case Location.PermissionStatus.UNDETERMINED:
       return 'UNDETERMINED';
   }
@@ -24,12 +26,12 @@ export class ExpoCustomerLocationAdapter implements CustomerLocationPort {
 
   public async getForegroundPermission(): Promise<CustomerLocationPermission> {
     const response = await Location.getForegroundPermissionsAsync();
-    return mapPermission(response.status);
+    return mapPermission(response);
   }
 
   public async requestForegroundPermission(): Promise<CustomerLocationPermission> {
     const response = await Location.requestForegroundPermissionsAsync();
-    return mapPermission(response.status);
+    return mapPermission(response);
   }
 
   public async getCurrentCoordinates(): Promise<CustomerCoordinates> {
