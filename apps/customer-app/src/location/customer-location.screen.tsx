@@ -62,7 +62,13 @@ export function CustomerLocationScreen({
         permission = await locationPort.requestForegroundPermission();
       }
 
-      if (permission !== 'GRANTED') {
+      if (permission === 'BLOCKED') {
+        setFailureKind('PERMISSION_BLOCKED');
+        setManualVisible(true);
+        return;
+      }
+
+      if (permission === 'DENIED') {
         setFailureKind('PERMISSION_DENIED');
         setManualVisible(true);
         return;
@@ -79,6 +85,21 @@ export function CustomerLocationScreen({
     } catch {
       setFailureKind('UNAVAILABLE');
       setManualVisible(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openDeviceSettings = async (): Promise<void> => {
+    if (busy) {
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await locationPort.openAppSettings();
+    } catch {
+      setFailureKind('UNAVAILABLE');
     } finally {
       setBusy(false);
     }
@@ -134,6 +155,21 @@ export function CustomerLocationScreen({
       >
         <Text style={styles.secondaryActionText}>Enter location manually</Text>
       </Pressable>
+
+      {failureKind === 'PERMISSION_BLOCKED' ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open device settings"
+          accessibilityState={{ disabled: busy }}
+          disabled={busy}
+          onPress={() => {
+            void openDeviceSettings();
+          }}
+          style={styles.settingsAction}
+        >
+          <Text style={styles.settingsActionText}>Open device settings</Text>
+        </Pressable>
+      ) : null}
 
       {manualVisible ? (
         <View style={styles.manualPanel}>
@@ -220,6 +256,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   secondaryActionText: { color: '#6B2D38', fontSize: 15, fontWeight: '600' },
+  settingsAction: {
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#6B2D38',
+    borderRadius: 12,
+  },
+  settingsActionText: { color: '#6B2D38', fontSize: 15, fontWeight: '700' },
   manualPanel: { marginTop: 12, padding: 16, borderRadius: 14, backgroundColor: '#FFFFFF' },
   manualTitle: { color: '#241B16', fontSize: 20, fontWeight: '700' },
   manualDescription: { marginTop: 8, color: '#665A52', fontSize: 14, lineHeight: 20 },
