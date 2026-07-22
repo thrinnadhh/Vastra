@@ -1,0 +1,31 @@
+name: Temporary customer profile import fix
+
+on:
+  push:
+    branches:
+      - feat/be-fe-001-customer-profile-update
+
+permissions:
+  contents: write
+
+jobs:
+  fix-import:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/be-fe-001-customer-profile-update
+      - name: Fix customer profile branch import
+        run: python3 scripts/fix-profile-branch-import.py
+      - name: Remove temporary tooling
+        run: |
+          rm scripts/fix-profile-branch-import.py
+          rm .github/workflows/temporary-profile-import-fix.yml
+      - name: Commit clean fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/customer-app/src/navigation/default-customer-root-content.tsx scripts/fix-profile-branch-import.py .github/workflows/temporary-profile-import-fix.yml
+          git commit -m "BE-FE-001 fix(customer): restore Expo location adapter import"
+          git push origin HEAD:feat/be-fe-001-customer-profile-update
