@@ -1,11 +1,14 @@
 import { MobileApplicationShell } from '@vastra/app-shells/native';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { CustomerSessionApp } from './src/auth/default-customer-session';
 import { DefaultCustomerCheckoutQuote } from './src/checkout/default-customer-checkout-quote';
-import { ReactNativeCustomerLinkingPort, type CustomerLinkingPort } from './src/navigation/customer-linking.port';
+import {
+  ReactNativeCustomerLinkingPort,
+  type CustomerLinkingPort,
+} from './src/navigation/customer-linking.port';
 import {
   DefaultCustomerHomeRoot,
   DefaultCustomerProfileRoot,
@@ -20,9 +23,35 @@ import { DefaultCustomerOrders } from './src/orders/default-customer-orders';
 
 const PRODUCTION_LINKING_PORT = new ReactNativeCustomerLinkingPort();
 
+function DeepLinkedUnavailable({ onBack }: { readonly onBack: () => void }) {
+  return (
+    <View style={styles.linkedUnavailable}>
+      <Text accessibilityRole="header" style={styles.linkedUnavailableTitle}>
+        Destination unavailable in this build
+      </Text>
+      <Text style={styles.linkedUnavailableDescription}>
+        This link is recognized securely, but its feature screen belongs to a later approved frontend ticket.
+      </Text>
+      <Pressable
+        accessibilityLabel="Back from linked destination"
+        accessibilityRole="button"
+        onPress={onBack}
+        style={styles.linkedUnavailableAction}
+      >
+        <Text style={styles.linkedUnavailableActionText}>Back</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function renderDeepLinkedRoute(route: CustomerRoute, onBack: () => void) {
   if (route.scope === 'ORDERS' && route.name === 'OrderDetail') {
-    return <DefaultCustomerOrders initialOrderId={route.params.orderId} />;
+    return (
+      <DefaultCustomerOrders
+        initialOrderId={route.params.orderId}
+        onBackFromInitialOrder={onBack}
+      />
+    );
   }
 
   if (
@@ -30,15 +59,9 @@ function renderDeepLinkedRoute(route: CustomerRoute, onBack: () => void) {
       (route.name === 'ProductDetail' || route.name === 'ShopDetail')) ||
     (route.scope === 'STYLE' && route.name === 'LookDetail')
   ) {
-    return (
-      <CustomerRootPlaceholder
-        description="This linked destination is recognized securely but its feature screen belongs to a later approved frontend ticket."
-        title="Destination unavailable in this build"
-      />
-    );
+    return <DeepLinkedUnavailable onBack={onBack} />;
   }
 
-  void onBack;
   return null;
 }
 
@@ -101,4 +124,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F7F8FA',
   },
+  linkedUnavailable: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: '#FFF8F2',
+  },
+  linkedUnavailableTitle: { color: '#1D2939', fontSize: 26, fontWeight: '700' },
+  linkedUnavailableDescription: {
+    marginTop: 10,
+    color: '#667085',
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  linkedUnavailableAction: {
+    minHeight: 48,
+    marginTop: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: '#8E3B46',
+  },
+  linkedUnavailableActionText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });
