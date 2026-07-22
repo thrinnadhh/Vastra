@@ -9,6 +9,7 @@ export interface CustomerLocationPort {
   hasServicesEnabled(): Promise<boolean>;
   getForegroundPermission(): Promise<CustomerLocationPermission>;
   requestForegroundPermission(): Promise<CustomerLocationPermission>;
+  openAppSettings(): Promise<void>;
   getCurrentCoordinates(): Promise<CustomerCoordinates>;
 }
 
