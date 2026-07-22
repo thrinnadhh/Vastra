@@ -63,7 +63,9 @@ describe('CustomerFavouriteShopsScreen', () => {
     );
 
     expect(
-      screen.getByText('Showing the last successful favourite list because the latest refresh failed.'),
+      screen.getByText(
+        'Showing the last successful favourite list because the latest refresh failed.',
+      ),
     ).toBeTruthy();
     expect(screen.getByText('You are offline. Reconnect to refresh favourite shops.')).toBeTruthy();
     expect(screen.getByText('The favourite change was not saved.')).toBeTruthy();
@@ -96,7 +98,9 @@ describe('CustomerFavouriteShopsScreen', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: 'Remove Tirupati Trends from favourites' })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Remove Tirupati Trends from favourites' }),
+    ).toBeDisabled();
     expect(screen.getByText('Removing…')).toBeTruthy();
   });
 });
