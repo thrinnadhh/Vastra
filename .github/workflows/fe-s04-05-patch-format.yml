@@ -1,0 +1,61 @@
+name: FE-S04-05 patch and format
+
+on:
+  pull_request:
+    branches:
+      - feat/ui-fe-s04-04-product-detail
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.head_ref == 'feat/ui-fe-s04-05-favourites-states'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/ui-fe-s04-05-favourites-states
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Add favourite action to shop detail
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('apps/customer-app/src/discovery/customer-shops.screen.tsx')
+          text = path.read_text()
+          text = text.replace(
+          "  readonly onSelectProduct: (productId: string) => void;\n}",
+          "  readonly onSelectProduct: (productId: string) => void;\n  readonly favouriteShopIds?: ReadonlySet<string>;\n  readonly pendingFavouriteShopIds?: ReadonlySet<string>;\n  readonly onSetFavourite?: (shopId: string, isFavourite: boolean) => void;\n}",
+          )
+          text = text.replace(
+          "  onRequestLocation,\n  onSelectProduct,\n}: CustomerShopsScreenProps)",
+          "  onRequestLocation,\n  onSelectProduct,\n  favouriteShopIds,\n  pendingFavouriteShopIds,\n  onSetFavourite,\n}: CustomerShopsScreenProps)",
+          )
+          marker = """            </View>\n\n            <View style={styles.factGrid}>"""
+          insert = """            </View>\n\n            {onSetFavourite === undefined ? null : (\n              <Pressable\n                accessibilityLabel={`${\n                  favouriteShopIds?.has(detail.id) === true ? 'Remove' : 'Add'\n                } ${detail.name} ${\n                  favouriteShopIds?.has(detail.id) === true ? 'from' : 'to'\n                } favourites`}\n                accessibilityRole=\"button\"\n                disabled={pendingFavouriteShopIds?.has(detail.id) === true}\n                onPress={() => {\n                  onSetFavourite(detail.id, favouriteShopIds?.has(detail.id) !== true);\n                }}\n                style={[\n                  styles.secondaryAction,\n                  pendingFavouriteShopIds?.has(detail.id) === true ? styles.actionDisabled : null,\n                ]}\n              >\n                <Text style={styles.secondaryActionText}>\n                  {pendingFavouriteShopIds?.has(detail.id) === true\n                    ? 'Saving…'\n                    : favouriteShopIds?.has(detail.id) === true\n                      ? 'Remove from favourites'\n                      : 'Add to favourites'}\n                </Text>\n              </Pressable>\n            )}\n\n            <View style={styles.factGrid}>"""
+          if marker not in text:
+              raise SystemExit('shop detail insertion marker not found')
+          text = text.replace(marker, insert, 1)
+          path.write_text(text)
+          PY
+      - name: Format FE-S04-05 files
+        run: |
+          pnpm exec prettier --write \
+            apps/customer-app/src/discovery/customer-favourite.types.ts \
+            apps/customer-app/src/discovery/api-customer-favourite.adapter.ts \
+            apps/customer-app/src/discovery/customer-favourite-shops.screen.tsx \
+            apps/customer-app/src/discovery/default-customer-search.tsx \
+            apps/customer-app/src/discovery/customer-shops.screen.tsx
+          rm .github/workflows/fe-s04-05-patch-format.yml
+      - name: Commit patch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/customer-app/src/discovery .github/workflows/fe-s04-05-patch-format.yml
+          git diff --cached --quiet || git commit -m "feat(customer): integrate favourite shop actions"
+          git push origin HEAD:feat/ui-fe-s04-05-favourites-states
