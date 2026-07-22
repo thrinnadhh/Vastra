@@ -19,6 +19,7 @@ Backend follow-up: `BE-FE-001` customer profile update slice
 
 - Account identity comes from the bearer token and `auth.uid()`; the client never submits a customer ID.
 - Only active `CUSTOMER` accounts can use the mutation.
+- A valid non-customer `/me` response remains parseable so the customer session boundary can reject it explicitly as the wrong application.
 - Phone number and avatar remain server-owned and are not changed by this operation.
 - The database RPC is atomic and does not grant direct profile-table update access to authenticated clients.
 
