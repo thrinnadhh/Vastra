@@ -11,7 +11,11 @@ export class ReactNativeCustomerLinkingPort implements CustomerLinkingPort {
   }
 
   public subscribe(listener: (url: string) => void): () => void {
-    const subscription = Linking.addEventListener('url', (event) => { listener(event.url); });
-    return () => { subscription.remove(); };
+    const subscription = Linking.addEventListener('url', (event) => {
+      listener(event.url);
+    });
+    return () => {
+      subscription.remove();
+    };
   }
 }
