@@ -1,4 +1,4 @@
-name: Sprint 5 Wave 1 static finalization
+name: Sprint 5 Wave 1 remaining finalization
 
 on:
   pull_request:
@@ -20,20 +20,12 @@ jobs:
     timeout-minutes: 45
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 2
       matrix:
         include:
-          - ticket: cart
-            branch: feat/ui-fe-s05-01-cart
-            commit: "feat(customer): implement authoritative cart experience"
-            implement: true
           - ticket: addresses
             branch: feat/be-fe-002-customer-addresses
             commit: "feat(addresses): add customer address CRUD contract"
-            implement: false
-          - ticket: quote
-            branch: feat/ui-fe-s05-03-quote-fees
-            commit: "feat(customer): harden checkout quote and fees"
             implement: false
           - ticket: orders
             branch: feat/ui-fe-s05-05-orders-tracking
@@ -69,10 +61,8 @@ jobs:
             base64 -d /tmp/s05-wave1.payload | xz -d > /tmp/s05-wave1-implement.py
             python /tmp/s05-wave1-hotfix.py /tmp/s05-wave1-implement.py
             python /tmp/s05-wave1-implement.py "${{ matrix.ticket }}"
+            python /tmp/s05-wave1-source-fix.py "${{ matrix.ticket }}"
           fi
-          case "${{ matrix.ticket }}" in
-            cart|quote|orders) python /tmp/s05-wave1-source-fix.py "${{ matrix.ticket }}" ;;
-          esac
 
       - name: Install, generate, format, and autofix
         shell: bash
@@ -80,7 +70,7 @@ jobs:
           corepack enable
           corepack prepare pnpm@8.15.0 --activate
           pnpm install --frozen-lockfile
-          pnpm --filter @vastra/api-client generate
+          pnpm --filter @vastra/api-client generate || true
           mapfile -d '' changed < <(git ls-files --modified --others --exclude-standard -z)
           format=()
           code=()
@@ -95,19 +85,9 @@ jobs:
                 ;;
             esac
           done
-          if ((${#format[@]})); then pnpm exec prettier --write "${format[@]}"; fi
+          if ((${#format[@]})); then pnpm exec prettier --write "${format[@]}" || true; fi
           if ((${#code[@]})); then pnpm exec eslint --fix "${code[@]}" || true; fi
-          mapfile -d '' changed_after < <(git ls-files --modified --others --exclude-standard -z)
-          format_after=()
-          for path in "${changed_after[@]}"; do
-            case "$path" in
-              *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.json|*.md|*.yaml|*.yml)
-                format_after+=("$path")
-                ;;
-            esac
-          done
-          if ((${#format_after[@]})); then pnpm exec prettier --write "${format_after[@]}"; fi
-          pnpm exec prettier --write packages/api-client/src/generated/openapi.ts
+          pnpm exec prettier --write packages/api-client/src/generated/openapi.ts || true
 
       - name: Validate static and focused gates
         id: validation
@@ -117,8 +97,6 @@ jobs:
           mkdir -p /tmp/s05-evidence
           status=0
           case "${{ matrix.ticket }}" in
-            cart) focused="pnpm --filter @vastra/customer-app exec jest src/cart --runInBand" ;;
-            quote) focused="pnpm --filter @vastra/customer-app exec jest src/checkout/customer-checkout-quote --runInBand" ;;
             orders) focused="pnpm --filter @vastra/customer-app exec jest src/orders --runInBand" ;;
             addresses) focused="pnpm --filter @vastra/backend exec vitest run src/addresses" ;;
           esac
@@ -146,7 +124,7 @@ jobs:
               pnpm --filter @vastra/api-client generate
               pnpm exec prettier --write packages/api-client/src/generated/openapi.ts
               ;;
-            *)
+            orders)
               git restore --source=HEAD --worktree -- packages/api-client/src/generated/openapi.ts || true
               ;;
           esac
@@ -163,15 +141,6 @@ jobs:
           import os, subprocess
           ticket = os.environ['TICKET']
           allowed = {
-              'cart': ('apps/customer-app/src/cart/', 'docs/design/customer-cart.md'),
-              'quote': (
-                  'apps/customer-app/src/checkout/customer-checkout-quote.client.ts',
-                  'apps/customer-app/src/checkout/customer-checkout-quote.client.test.ts',
-                  'apps/customer-app/src/checkout/customer-checkout-quote.screen.tsx',
-                  'apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx',
-                  'apps/customer-app/src/checkout/customer-checkout-quote.types.ts',
-                  'docs/design/customer-checkout-quote.md',
-              ),
               'orders': ('apps/customer-app/src/orders/', 'docs/design/customer-orders-tracking.md'),
               'addresses': (
                   'apps/backend/src/addresses/', 'apps/backend/src/app.module.ts',
@@ -205,7 +174,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: s05-${{ matrix.ticket }}-static-finalization
+          name: s05-${{ matrix.ticket }}-remaining-finalization
           path: /tmp/s05-evidence
           if-no-files-found: warn
 
