@@ -1,4 +1,4 @@
-name: Sprint 5 Wave 1 implementation
+name: Sprint 5 Wave 1 diagnostics
 
 on:
   push:
@@ -9,44 +9,30 @@ on:
       - main
 
 concurrency:
-  group: sprint-5-wave-1-implementation
+  group: sprint-5-wave-1-diagnostics
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  implement:
-    name: ${{ matrix.ticket }}
+  diagnose:
+    name: diagnose-${{ matrix.ticket }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 2
       matrix:
-        include:
-          - ticket: cart
-            branch: feat/ui-fe-s05-01-cart
-            commit: "feat(customer): implement authoritative cart experience"
-          - ticket: addresses
-            branch: feat/be-fe-002-customer-addresses
-            commit: "feat(addresses): add customer address CRUD contract"
-          - ticket: quote
-            branch: feat/ui-fe-s05-03-quote-fees
-            commit: "feat(customer): harden checkout quote and fees"
-          - ticket: orders
-            branch: feat/ui-fe-s05-05-orders-tracking
-            commit: "feat(customer): complete orders and tracking experience"
+        ticket: [cart, orders]
 
     steps:
-      - name: Checkout implementation coordinator
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: automation/sprint-5-wave-1-implementation
 
-      - name: Use repository Node version
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20.20.2
 
@@ -55,58 +41,43 @@ jobs:
         run: |
           cat scripts/s05-wave1.payload.* | base64 -d | xz -d > /tmp/s05-wave1-implement.py
           python scripts/s05-wave1-hotfix.py /tmp/s05-wave1-implement.py
-          git config user.name "Vastra Sprint 5 Agent"
-          git config user.email "actions@users.noreply.github.com"
-          git fetch origin main "${{ matrix.branch }}"
-          test "$(git rev-parse origin/main)" = "$(git merge-base origin/main origin/${{ matrix.branch }})"
-          git switch "${{ matrix.branch }}"
-          git reset --hard "origin/${{ matrix.branch }}"
+          branch="feat/ui-fe-s05-01-cart"
+          if test "${{ matrix.ticket }}" = orders; then branch="feat/ui-fe-s05-05-orders-tracking"; fi
+          git fetch origin main "$branch"
+          test "$(git rev-parse origin/main)" = "$(git merge-base origin/main origin/$branch)"
+          git switch "$branch"
+          git reset --hard "origin/$branch"
           test -z "$(git status --short)"
+          python /tmp/s05-wave1-implement.py "${{ matrix.ticket }}"
 
-      - name: Implement ticket-owned surface
-        run: python /tmp/s05-wave1-implement.py "${{ matrix.ticket }}"
-
-      - name: Install workspace dependencies
+      - name: Install and format
+        shell: bash
         run: |
           corepack enable
           corepack prepare pnpm@8.15.0 --activate
           pnpm install --frozen-lockfile
+          mapfile -d '' changed < <(git diff --name-only -z)
+          if ((${#changed[@]})); then pnpm exec prettier --write "${changed[@]}"; fi
 
-      - name: Format ticket files
+      - name: Focused tests
+        id: focused
+        continue-on-error: true
         shell: bash
         run: |
-          mapfile -d '' changed < <(git diff --name-only -z)
-          if ((${#changed[@]})); then
-            pnpm exec prettier --write "${changed[@]}"
+          mkdir -p /tmp/s05-diagnostics
+          set -o pipefail
+          if test "${{ matrix.ticket }}" = cart; then
+            pnpm --filter @vastra/customer-app exec jest src/cart --runInBand 2>&1 | tee /tmp/s05-diagnostics/focused.log
+          else
+            pnpm --filter @vastra/customer-app exec jest src/orders --runInBand 2>&1 | tee /tmp/s05-diagnostics/focused.log
           fi
 
-      - name: Focused ticket tests
-        shell: bash
-        run: |
-          case "${{ matrix.ticket }}" in
-            cart)
-              pnpm --filter @vastra/customer-app exec jest src/cart --runInBand
-              ;;
-            quote)
-              pnpm --filter @vastra/customer-app exec jest src/checkout/customer-checkout-quote --runInBand
-              ;;
-            orders)
-              pnpm --filter @vastra/customer-app exec jest src/orders --runInBand
-              ;;
-            addresses)
-              pnpm --filter @vastra/backend exec vitest run src/addresses
-              pnpm --filter @vastra/backend exec vitest run src/addresses/customer-address.integration.test.ts
-              ;;
-          esac
-
-      - name: Repository validation
-        id: validation
+      - name: Cart repository validation
+        if: matrix.ticket == 'cart' && steps.focused.outcome == 'success'
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          mkdir -p /tmp/s05-validation
-          status=0
           for command in \
             "pnpm format:check" \
             "pnpm lint" \
@@ -118,37 +89,28 @@ jobs:
             "pnpm build"
           do
             slug=$(printf '%s' "$command" | tr ' /:' '___')
-            echo "## $command" | tee -a /tmp/s05-validation/summary.md
-            if bash -lc "$command" 2>&1 | tee "/tmp/s05-validation/${slug}.log"; then
-              echo "PASS" | tee -a /tmp/s05-validation/summary.md
+            echo "## $command" | tee -a /tmp/s05-diagnostics/validation-summary.md
+            if bash -lc "$command" 2>&1 | tee "/tmp/s05-diagnostics/${slug}.log"; then
+              echo PASS | tee -a /tmp/s05-diagnostics/validation-summary.md
             else
-              echo "FAIL" | tee -a /tmp/s05-validation/summary.md
-              status=1
+              echo FAIL | tee -a /tmp/s05-diagnostics/validation-summary.md
             fi
           done
-          echo "status=$status" >> "$GITHUB_OUTPUT"
 
-      - name: Inspect ticket boundary and commit
-        shell: bash
-        run: |
-          python /tmp/s05-wave1-implement.py verify "${{ matrix.ticket }}"
-          git status --short
-          git diff --stat
-          git diff --check
-          git add --all
-          git commit -m "${{ matrix.commit }}"
-          git push origin "HEAD:${{ matrix.branch }}"
-
-      - name: Publish validation summary
+      - name: Capture boundary diagnostics
         if: always()
         shell: bash
         run: |
-          if test -f /tmp/s05-validation/summary.md; then
-            cat /tmp/s05-validation/summary.md >> "$GITHUB_STEP_SUMMARY"
-          fi
-          echo "Branch: ${{ matrix.branch }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Ticket: ${{ matrix.ticket }}" >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p /tmp/s05-diagnostics
+          git status --short > /tmp/s05-diagnostics/status.txt
+          git diff --name-only origin/main > /tmp/s05-diagnostics/changed-files.txt
+          git diff --stat origin/main > /tmp/s05-diagnostics/diff-stat.txt
+          python /tmp/s05-wave1-implement.py verify "${{ matrix.ticket }}" > /tmp/s05-diagnostics/boundary.txt 2>&1 || true
 
-      - name: Fail when repository validation failed
-        if: steps.validation.outputs.status == '1'
-        run: exit 1
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s05-${{ matrix.ticket }}-diagnostics
+          path: /tmp/s05-diagnostics
+          if-no-files-found: error
