@@ -34,12 +34,14 @@ jobs:
           corepack prepare pnpm@8.15.0 --activate
       - name: Install workspace
         run: pnpm install --frozen-lockfile
-      - name: Package toolchain and dependencies
+      - name: Package toolchain and workspace dependencies
         shell: bash
         run: |
           node_root="$(dirname "$(dirname "$(command -v node)")")"
           tar -czf /tmp/node20-toolchain.tar.gz -C "$node_root" .
-          tar -czf /tmp/vastra-dependencies.tar.gz node_modules
+          mapfile -d '' node_modules_dirs < <(find . -type d -name node_modules -prune -print0)
+          test "${#node_modules_dirs[@]}" -gt 1
+          tar -czf /tmp/vastra-workspace-dependencies.tar.gz "${node_modules_dirs[@]}"
       - name: Upload toolchain
         uses: actions/upload-artifact@v4
         with:
@@ -50,7 +52,7 @@ jobs:
       - name: Upload dependencies
         uses: actions/upload-artifact@v4
         with:
-          name: vastra-dependencies
-          path: /tmp/vastra-dependencies.tar.gz
+          name: vastra-workspace-dependencies
+          path: /tmp/vastra-workspace-dependencies.tar.gz
           if-no-files-found: error
           retention-days: 1
