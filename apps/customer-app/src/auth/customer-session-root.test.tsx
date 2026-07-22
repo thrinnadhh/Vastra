@@ -3,7 +3,10 @@ import { Pressable, Text } from 'react-native';
 
 import type { CustomerLaunchStore } from './customer-launch-store';
 import { useCustomerSessionActions } from './customer-session-actions';
-import { CustomerSessionRoot } from './customer-session-root';
+import {
+  CustomerSessionRoot,
+  type CustomerProfileSetupComponentProps,
+} from './customer-session-root';
 import type {
   AuthSessionEvent,
   AuthSessionPort,
@@ -24,6 +27,7 @@ const AUTHENTICATED_STATE: SessionRestorationState = {
     accountType: 'CUSTOMER',
     status: 'ACTIVE',
     fullName: 'Customer One',
+    profileCompleted: true,
   },
 };
 
@@ -110,6 +114,14 @@ function SessionActionProbe() {
   );
 }
 
+function ProfileSetupProbe({ onCompleted }: CustomerProfileSetupComponentProps) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onCompleted}>
+      <Text>Save required profile</Text>
+    </Pressable>
+  );
+}
+
 describe('CustomerSessionRoot', () => {
   it('shows a deterministic splash and then renders authenticated content', async () => {
     const authSession = new ObservableAuthSession();
@@ -122,6 +134,33 @@ describe('CustomerSessionRoot', () => {
     );
 
     expect(getByLabelText('Restoring Vastra session')).toBeTruthy();
+    expect(await findByText('Authenticated customer home')).toBeTruthy();
+  });
+
+  it('requires profile setup before rendering authenticated application content', async () => {
+    const authSession = new ObservableAuthSession();
+    const sessionRestorer = new SequencedRestorer();
+    sessionRestorer.states = [
+      {
+        status: 'AUTHENTICATED',
+        account: { ...AUTHENTICATED_STATE.account, fullName: null, profileCompleted: false },
+      },
+      AUTHENTICATED_STATE,
+    ];
+
+    const { findByRole, findByText, queryByText } = render(
+      <CustomerSessionRoot
+        authSession={authSession}
+        ProfileSetupComponent={ProfileSetupProbe}
+        sessionRestorer={sessionRestorer}
+      >
+        <Text>Authenticated customer home</Text>
+      </CustomerSessionRoot>,
+    );
+
+    expect(await findByText('Save required profile')).toBeTruthy();
+    expect(queryByText('Authenticated customer home')).toBeNull();
+    fireEvent.press(await findByRole('button', { name: 'Save required profile' }));
     expect(await findByText('Authenticated customer home')).toBeTruthy();
   });
 

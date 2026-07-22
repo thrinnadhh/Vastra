@@ -4,11 +4,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useCustomerApiClient } from '../api/use-customer-api-client';
 import { useCustomerSessionActions } from '../auth/customer-session-actions';
 import { ApiCustomerServiceabilityAdapter } from '../location/api-customer-serviceability.adapter';
+import { ExpoCustomerLocationAdapter } from '../location/expo-customer-location.adapter';
 import { CustomerLocationScreen } from '../location/customer-location.screen';
 import type { CustomerCoordinates } from '../location/customer-location.types';
-import { ExpoCustomerLocationAdapter } from '../location/expo-customer-location.adapter';
 import { ApiCustomerPreferencesAdapter } from '../profile/api-customer-preferences.adapter';
+import { ApiCustomerProfileSetupAdapter } from '../profile/api-customer-profile-setup.adapter';
 import { CustomerProfilePreferencesScreen } from '../profile/customer-profile-preferences.screen';
+import { CustomerProfileSetupScreen } from '../profile/customer-profile-setup.screen';
 
 export function DefaultCustomerHomeRoot({ openCheckout }: { readonly openCheckout: () => void }) {
   const apiClient = useCustomerApiClient();
@@ -78,12 +80,28 @@ export function DefaultCustomerProfileRoot() {
   const apiClient = useCustomerApiClient();
   const session = useCustomerSessionActions();
   const preferencesPort = useMemo(() => new ApiCustomerPreferencesAdapter(apiClient), [apiClient]);
+  const profilePort = useMemo(() => new ApiCustomerProfileSetupAdapter(apiClient), [apiClient]);
+  const [displayName, setDisplayName] = useState(session.account.fullName);
+  const [editingProfile, setEditingProfile] = useState(false);
   const [editingPreferences, setEditingPreferences] = useState(false);
+
+  if (editingProfile) {
+    return (
+      <CustomerProfileSetupScreen
+        initialFullName={displayName ?? ''}
+        onCompleted={(fullName) => {
+          setDisplayName(fullName);
+          setEditingProfile(false);
+        }}
+        profilePort={profilePort}
+      />
+    );
+  }
 
   if (editingPreferences) {
     return (
       <CustomerProfilePreferencesScreen
-        identity={{ fullName: session.account.fullName }}
+        identity={{ fullName: displayName }}
         onContinue={() => {
           setEditingPreferences(false);
         }}
@@ -97,7 +115,16 @@ export function DefaultCustomerProfileRoot() {
       <Text accessibilityRole="header" style={styles.title}>
         Profile
       </Text>
-      <Text style={styles.description}>{session.account.fullName ?? 'Customer profile'}</Text>
+      <Text style={styles.description}>{displayName ?? 'Customer profile'}</Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => {
+          setEditingProfile(true);
+        }}
+        style={styles.secondaryAction}
+      >
+        <Text style={styles.secondaryText}>Edit profile</Text>
+      </Pressable>
       <Pressable
         accessibilityRole="button"
         onPress={() => {

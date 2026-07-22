@@ -2,17 +2,24 @@ import type { ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useCustomerApiClient } from '../api/use-customer-api-client';
+import { ApiCustomerProfileSetupAdapter } from '../profile/api-customer-profile-setup.adapter';
+import { CustomerProfileSetupScreen } from '../profile/customer-profile-setup.screen';
 import { AsyncStorageCustomerLaunchStore } from './async-storage-customer-launch-store';
 import { CustomerApiSessionProvider } from './customer-api-session';
 import { CustomerPhoneOtpScreen } from './customer-phone-otp.screen';
 import { HttpCurrentAccountClient } from './current-account-client';
 import type { PhoneOtpPort } from './phone-otp.types';
-import { CustomerSessionRoot } from './customer-session-root';
+import {
+  CustomerSessionRoot,
+  type CustomerProfileSetupComponentProps,
+} from './customer-session-root';
 import {
   CustomerMobileEnvironmentError,
   readCustomerMobileEnvironment,
 } from './mobile-environment';
 import { SessionRestorationService } from './session-restoration.service';
+import type { AuthSessionPort, SessionRestorer } from './session-restoration.types';
 import {
   createCustomerSupabaseClient,
   startSupabaseAuthLifecycle,
@@ -20,7 +27,6 @@ import {
   type CustomerSupabaseClient,
 } from './supabase-session-adapter';
 import { SupabasePhoneOtpAdapter } from './supabase-phone-otp.adapter';
-import type { AuthSessionPort, SessionRestorer } from './session-restoration.types';
 
 interface CustomerSessionAppProps {
   readonly signedOutContent?: ReactNode;
@@ -74,6 +80,19 @@ function createDependencies(): DependencyResult {
   }
 }
 
+function DefaultCustomerProfileSetup({ account, onCompleted }: CustomerProfileSetupComponentProps) {
+  const apiClient = useCustomerApiClient();
+  const profilePort = useMemo(() => new ApiCustomerProfileSetupAdapter(apiClient), [apiClient]);
+
+  return (
+    <CustomerProfileSetupScreen
+      initialFullName={account.fullName ?? ''}
+      onCompleted={onCompleted}
+      profilePort={profilePort}
+    />
+  );
+}
+
 function ConfiguredCustomerSessionApp({
   dependencies,
   signedOutContent,
@@ -97,6 +116,7 @@ function ConfiguredCustomerSessionApp({
       <CustomerSessionRoot
         authSession={dependencies.authSession}
         launchStore={dependencies.launchStore}
+        ProfileSetupComponent={DefaultCustomerProfileSetup}
         sessionRestorer={dependencies.sessionRestorer}
         signedOutContent={resolvedSignedOutContent}
       >
