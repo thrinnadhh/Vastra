@@ -29,6 +29,7 @@ export interface CurrentAccount {
   readonly accountType: MobileAccountType;
   readonly status: 'ACTIVE';
   readonly fullName: string | null;
+  readonly profileCompleted: boolean;
 }
 
 export type CurrentAccountLookupResult =
