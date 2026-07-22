@@ -94,7 +94,12 @@ export function CustomerAppContent({
     renderDeepLinkedRoute,
   };
 
-  return <CustomerRootNavigation linkingPort={linkingPort} slots={slots} />;
+  return (
+    <CustomerRootNavigation
+      slots={slots}
+      {...(linkingPort === undefined ? {} : { linkingPort })}
+    />
+  );
 }
 
 export function CustomerApplicationRoot(): React.JSX.Element {
