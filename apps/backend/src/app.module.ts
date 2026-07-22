@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { AdminModule } from './admin/admin.module';
+import { CustomerAddressModule } from './addresses/customer-address.module';
 import { AuthModule } from './auth/auth.module';
 import { CatalogueModule } from './catalogue/catalogue.module';
 import { DispatchModule } from './dispatch/dispatch.module';
@@ -18,6 +19,7 @@ import { WardrobeModule } from './wardrobe/wardrobe.module';
 @Module({
   imports: [
     AdminModule,
+    CustomerAddressModule,
     AuthModule,
     CatalogueModule,
     DispatchModule,
