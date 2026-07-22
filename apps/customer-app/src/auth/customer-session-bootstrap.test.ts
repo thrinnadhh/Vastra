@@ -47,6 +47,7 @@ describe('bootstrapCustomerSession', () => {
         accountType: 'CUSTOMER',
         status: 'ACTIVE',
         fullName: 'Customer One',
+        profileCompleted: true,
       },
     };
 
