@@ -38,7 +38,7 @@ function failureCopy(kind: CustomerProductFailureKind): string {
       return 'The selected variant is no longer available. Refresh before choosing another option.';
     case 'CART_CONFLICT':
       return 'Your cart contains items from another shop.';
-    default:
+    case 'ERROR':
       return 'Product details could not be loaded. Retry the authoritative request.';
   }
 }
