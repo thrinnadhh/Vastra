@@ -132,7 +132,9 @@ export function CustomerFavouriteShopsScreen({
                   }}
                   style={[styles.removeAction, pending ? styles.actionDisabled : null]}
                 >
-                  <Text style={styles.removeText}>{pending ? 'Removing…' : 'Remove favourite'}</Text>
+                  <Text style={styles.removeText}>
+                    {pending ? 'Removing…' : 'Remove favourite'}
+                  </Text>
                 </Pressable>
               </View>
             </View>

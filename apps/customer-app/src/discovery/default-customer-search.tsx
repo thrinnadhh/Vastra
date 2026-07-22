@@ -127,9 +127,13 @@ export function DefaultCustomerSearchRoot({
 
     setFavouriteState((current) => ({
       ...current,
-      shops: result.isFavourite ? current.shops : current.shops.filter((shop) => shop.id !== shopId),
+      shops: result.isFavourite
+        ? current.shops
+        : current.shops.filter((shop) => shop.id !== shopId),
       pendingShopIds: new Set([...current.pendingShopIds].filter((id) => id !== shopId)),
-      statusMessage: result.isFavourite ? 'Shop saved to favourites.' : 'Shop removed from favourites.',
+      statusMessage: result.isFavourite
+        ? 'Shop saved to favourites.'
+        : 'Shop removed from favourites.',
     }));
     await refreshFavourites(true);
   };
