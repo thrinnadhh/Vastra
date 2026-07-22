@@ -1,6 +1,9 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 
-export type MeErrorCode = 'PROFILE_STATE_INVALID' | 'EXTERNAL_SERVICE_UNAVAILABLE';
+export type MeErrorCode =
+  | 'VALIDATION_ERROR'
+  | 'PROFILE_STATE_INVALID'
+  | 'EXTERNAL_SERVICE_UNAVAILABLE';
 
 interface MeApiErrorBody {
   readonly success: false;
@@ -31,6 +34,15 @@ function createMeException(
   };
 
   return new HttpException(response, status);
+}
+
+export function createCustomerProfileValidationException(): HttpException {
+  return createMeException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'Customer profile input is invalid.',
+    false,
+  );
 }
 
 export function createProfileStateInvalidException(): HttpException {
