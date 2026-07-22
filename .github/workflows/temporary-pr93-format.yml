@@ -1,0 +1,42 @@
+name: Temporary PR 93 formatter
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.head_ref == 'feat/ui-fe-s04-01-home-composition-main' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/ui-fe-s04-01-home-composition-main
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Format reconciled FE-S04-01 files
+        run: |
+          pnpm exec prettier --write \
+            apps/customer-app/App.tsx \
+            apps/customer-app/src/navigation/customer-root-navigation.tsx \
+            apps/customer-app/src/navigation/default-customer-root-content.tsx
+          rm .github/workflows/temporary-pr93-format.yml
+      - name: Commit formatter output
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            apps/customer-app/App.tsx \
+            apps/customer-app/src/navigation/customer-root-navigation.tsx \
+            apps/customer-app/src/navigation/default-customer-root-content.tsx \
+            .github/workflows/temporary-pr93-format.yml
+          git commit -m "style(fe-s04-01): format main reconciliation"
+          git push origin HEAD:feat/ui-fe-s04-01-home-composition-main
