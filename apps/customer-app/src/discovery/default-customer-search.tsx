@@ -10,6 +10,7 @@ import { ApiCustomerFavouriteAdapter } from './api-customer-favourite.adapter';
 import { ApiCustomerProductAdapter } from './api-customer-product.adapter';
 import { ApiCustomerSearchAdapter } from './api-customer-search.adapter';
 import { ApiCustomerShopAdapter } from './api-customer-shop.adapter';
+import type { CustomerDiscoveryIntent } from './customer-discovery-intent';
 import { CustomerFavouriteShopsScreen } from './customer-favourite-shops.screen';
 import {
   INITIAL_CUSTOMER_FAVOURITE_STATE,
@@ -27,11 +28,15 @@ export function DefaultCustomerSearchRoot({
   onLocationReady,
   sessionState,
   setSessionState,
+  initialIntent,
+  onIntentConsumed,
 }: {
   readonly location: CustomerCoordinates | null;
   readonly onLocationReady: (coordinates: CustomerCoordinates) => void;
   readonly sessionState: CustomerSearchSessionState;
   readonly setSessionState: Dispatch<SetStateAction<CustomerSearchSessionState>>;
+  readonly initialIntent?: CustomerDiscoveryIntent | null;
+  readonly onIntentConsumed?: () => void;
 }) {
   const apiClient = useCustomerApiClient();
   const searchPort = useMemo(() => new ApiCustomerSearchAdapter(apiClient), [apiClient]);
@@ -46,9 +51,53 @@ export function DefaultCustomerSearchRoot({
   const [locationMode, setLocationMode] = useState(false);
   const [discoverMode, setDiscoverMode] = useState<CustomerDiscoverMode>('SEARCH');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [pendingInitialShopId, setPendingInitialShopId] = useState<string | null>(null);
   const [favouriteState, setFavouriteState] = useState<CustomerFavouriteState>(
     INITIAL_CUSTOMER_FAVOURITE_STATE,
   );
+
+  useEffect(() => {
+    if (initialIntent === null || initialIntent === undefined) {
+      return;
+    }
+
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (!active) return;
+
+      switch (initialIntent.kind) {
+        case 'SEARCH':
+          setDiscoverMode('SEARCH');
+          if (initialIntent.initialQuery !== undefined) {
+            setSessionState((current) => ({
+              ...current,
+              draftQuery: initialIntent.initialQuery ?? '',
+            }));
+          }
+          break;
+        case 'CATEGORY':
+          setDiscoverMode('SEARCH');
+          setSessionState((current) => ({
+            ...current,
+            filters: { ...current.filters, categoryId: initialIntent.categoryId },
+          }));
+          break;
+        case 'SHOP':
+          setDiscoverMode('SHOPS');
+          setPendingInitialShopId(initialIntent.shopId);
+          break;
+        case 'PRODUCT':
+          setSelectedProductId(initialIntent.productId);
+          break;
+      }
+
+      onIntentConsumed?.();
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [initialIntent, onIntentConsumed, setSessionState]);
 
   useEffect(() => {
     let active = true;
@@ -241,7 +290,11 @@ export function DefaultCustomerSearchRoot({
         {discoverMode === 'SHOPS' ? (
           <CustomerShopsScreen
             favouriteShopIds={favouriteShopIds}
+            {...(pendingInitialShopId === null ? {} : { initialShopId: pendingInitialShopId })}
             location={location}
+            onInitialShopConsumed={() => {
+              setPendingInitialShopId(null);
+            }}
             onRequestLocation={requestLocation}
             onSelectProduct={setSelectedProductId}
             onSetFavourite={(shopId, isFavourite) => {

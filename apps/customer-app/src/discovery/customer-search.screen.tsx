@@ -1,6 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { CUSTOMER_DISCOVERY_LIMITS } from './customer-discovery-performance';
 import type { CustomerHomeCoordinates } from './customer-home.types';
 import {
   CUSTOMER_SEARCH_GENDERS,
@@ -193,7 +194,7 @@ export function CustomerSearchScreen({
       location,
       filters,
       cursor,
-      limit: 20,
+      limit: CUSTOMER_DISCOVERY_LIMITS.searchPageSize,
     });
 
     setSessionState((current) => {
@@ -209,7 +210,7 @@ export function CustomerSearchScreen({
       const recentQueries = [
         result.page.normalizedQuery,
         ...current.recentQueries.filter((candidate) => candidate !== result.page.normalizedQuery),
-      ].slice(0, 5);
+      ].slice(0, CUSTOMER_DISCOVERY_LIMITS.recentSearchLimit);
 
       return {
         ...current,
@@ -296,6 +297,7 @@ export function CustomerSearchScreen({
   return (
     <ScrollView
       contentContainerStyle={styles.content}
+      removeClippedSubviews
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       testID="customer-search-scroll"

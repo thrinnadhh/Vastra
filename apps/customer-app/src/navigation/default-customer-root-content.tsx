@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useCustomerApiClient } from '../api/use-customer-api-client';
 import { useCustomerSessionActions } from '../auth/customer-session-actions';
+import type { CustomerDiscoveryIntent } from '../discovery/customer-discovery-intent';
 import { ApiCustomerHomeAdapter } from '../discovery/api-customer-home.adapter';
 import { CustomerHomeScreen } from '../discovery/customer-home.screen';
 import { ApiCustomerServiceabilityAdapter } from '../location/api-customer-serviceability.adapter';
@@ -19,11 +20,13 @@ export function DefaultCustomerHomeRoot({
   onLocationReady,
   openCheckout,
   openDiscover,
+  openDiscoverIntent,
 }: {
   readonly location: CustomerCoordinates | null;
   readonly onLocationReady: (coordinates: CustomerCoordinates) => void;
   readonly openCheckout: () => void;
   readonly openDiscover: () => void;
+  readonly openDiscoverIntent: (intent: CustomerDiscoveryIntent) => void;
 }) {
   const apiClient = useCustomerApiClient();
   const locationPort = useMemo(() => new ExpoCustomerLocationAdapter(), []);
@@ -69,9 +72,15 @@ export function DefaultCustomerHomeRoot({
         }}
         onOpenCheckout={openCheckout}
         onSearch={openDiscover}
-        onSelectCategory={openDiscover}
-        onSelectProduct={openDiscover}
-        onSelectShop={openDiscover}
+        onSelectCategory={(categoryId) => {
+          openDiscoverIntent({ kind: 'CATEGORY', categoryId });
+        }}
+        onSelectProduct={(productId) => {
+          openDiscoverIntent({ kind: 'PRODUCT', productId });
+        }}
+        onSelectShop={(shopId) => {
+          openDiscoverIntent({ kind: 'SHOP', shopId });
+        }}
       />
     );
   }
