@@ -7,6 +7,7 @@ Backend follow-up: `BE-FE-001` customer profile update slice
 
 - The authenticated `/me` result remains the source of truth for customer identity, profile-completion state, and account status.
 - Incomplete customer sessions are routed to required profile setup before the five-tab application is exposed.
+- The setup surface is mounted through an explicit React component boundary rather than a render callback.
 - Required profile setup and later name editing use generated `updateCurrentCustomerProfile` (`PATCH /me/profile`).
 - The server atomically updates the customer-owned display name and marks `profileCompleted` true.
 - Category, preferred-size, and per-item budget preferences remain optional.
