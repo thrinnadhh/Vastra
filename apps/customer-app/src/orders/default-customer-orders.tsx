@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useCustomerApiSession } from '../auth/customer-api-session';
 import { HttpCustomerOrderReadClient } from './customer-order-read.client';
@@ -20,10 +20,6 @@ export function DefaultCustomerOrders({
     () => new HttpCustomerOrderReadClient(apiSession.apiBaseUrl, () => apiSession.getAccessToken()),
     [apiSession],
   );
-
-  useEffect(() => {
-    setSelectedOrderId(initialOrderId);
-  }, [initialOrderId]);
 
   if (selectedOrderId !== null) {
     return (
