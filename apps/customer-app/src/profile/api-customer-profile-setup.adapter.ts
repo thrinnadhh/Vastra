@@ -18,7 +18,7 @@ export class ApiCustomerProfileSetupAdapter implements CustomerProfileSetupPort 
       if (
         account.accountType !== 'CUSTOMER' ||
         account.roleProfile.kind !== 'CUSTOMER' ||
-        account.roleProfile.profileCompleted !== true ||
+        !account.roleProfile.profileCompleted ||
         typeof account.profile.fullName !== 'string'
       ) {
         return { kind: 'UNAVAILABLE' };
