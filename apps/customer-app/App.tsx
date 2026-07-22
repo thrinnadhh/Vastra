@@ -50,6 +50,7 @@ function renderDeepLinkedRoute(route: CustomerRoute, onBack: () => void) {
     return (
       <DefaultCustomerOrders
         initialOrderId={route.params.orderId}
+        key={route.params.orderId}
         onBackFromInitialOrder={onBack}
       />
     );
