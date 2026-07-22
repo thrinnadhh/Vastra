@@ -2,7 +2,10 @@ import { fireEvent, render } from '@testing-library/react-native';
 import { Pressable, Text } from 'react-native';
 
 import type { CustomerLinkingPort } from './customer-linking.port';
-import { CustomerRootNavigation, type CustomerRootNavigationSlots } from './customer-root-navigation';
+import {
+  CustomerRootNavigation,
+  type CustomerRootNavigationSlots,
+} from './customer-root-navigation';
 
 const ORDER_ID = '10000000-0000-4000-8000-000000000001';
 

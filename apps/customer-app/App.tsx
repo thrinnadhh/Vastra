@@ -30,7 +30,8 @@ function DeepLinkedUnavailable({ onBack }: { readonly onBack: () => void }) {
         Destination unavailable in this build
       </Text>
       <Text style={styles.linkedUnavailableDescription}>
-        This link is recognized securely, but its feature screen belongs to a later approved frontend ticket.
+        This link is recognized securely, but its feature screen belongs to a later approved
+        frontend ticket.
       </Text>
       <Pressable
         accessibilityLabel="Back from linked destination"

@@ -11,11 +11,7 @@ import {
   selectCustomerTab,
   type CustomerNavigationState,
 } from './customer-navigation-state';
-import {
-  CUSTOMER_TABS,
-  type CustomerRoute,
-  type CustomerTabKey,
-} from './customer-routes';
+import { CUSTOMER_TABS, type CustomerRoute, type CustomerTabKey } from './customer-routes';
 
 export interface CustomerRootNavigationSlots {
   readonly home: (openCheckout: () => void) => ReactNode;
@@ -24,10 +20,7 @@ export interface CustomerRootNavigationSlots {
   readonly orders: ReactNode;
   readonly profile: ReactNode;
   readonly checkout: ReactNode;
-  readonly renderDeepLinkedRoute?: (
-    route: CustomerRoute,
-    onBack: () => void,
-  ) => ReactNode | null;
+  readonly renderDeepLinkedRoute?: (route: CustomerRoute, onBack: () => void) => ReactNode | null;
 }
 
 type LinkFailureKind = Exclude<CustomerDeepLinkResult['kind'], 'ROUTE'>;

@@ -27,7 +27,13 @@ export function parseCustomerDeepLink(value: string): CustomerDeepLinkResult {
       : { kind: 'INVALID' };
   }
 
-  if (url.username.length > 0 || url.password.length > 0 || url.port.length > 0 || url.search.length > 0 || url.hash.length > 0) {
+  if (
+    url.username.length > 0 ||
+    url.password.length > 0 ||
+    url.port.length > 0 ||
+    url.search.length > 0 ||
+    url.hash.length > 0
+  ) {
     return { kind: 'INVALID' };
   }
 

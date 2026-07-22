@@ -34,10 +34,10 @@ describe('parseCustomerDeepLink', () => {
     },
   );
 
-  it.each([
-    'vastra://group-style/join/invite-token',
-    `vastra://group-style/rooms/${ID}`,
-  ])('keeps Group Style links reserved until their approved contracts exist: %s', (url) => {
-    expect(parseCustomerDeepLink(url)).toStrictEqual({ kind: 'RESERVED' });
-  });
+  it.each(['vastra://group-style/join/invite-token', `vastra://group-style/rooms/${ID}`])(
+    'keeps Group Style links reserved until their approved contracts exist: %s',
+    (url) => {
+      expect(parseCustomerDeepLink(url)).toStrictEqual({ kind: 'RESERVED' });
+    },
+  );
 });
