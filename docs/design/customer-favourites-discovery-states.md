@@ -1,6 +1,6 @@
 # FE-S04-05 favourites and discovery states
 
-Status: READY — formatted, guarded, and integrated on FE-S04-04
+Status: READY — formatted, guarded, integrated on FE-S04-04, and isolated for final CI verification
 
 ## Favourite-shop contract
 
@@ -38,3 +38,5 @@ Previously successful data may remain visible only with a stale or partial-failu
 ## Verification ownership
 
 Adapter tests cover list/add/remove operation routing, response mapping, and error classification. Component tests cover list facts, empty state, removal, pending protection, stale data, and partial failures. Shop-screen integration exposes add/remove actions using the shared authoritative membership set. FE-S04-06 retains full browser/device journey, accessibility audit, pagination, and low-end image/scroll evidence.
+
+The final FE-S04-05 verification runs only against the intended FE-S04-04 base. Temporary reverse stack-synchronization pull requests are not acceptance evidence for this ticket.
