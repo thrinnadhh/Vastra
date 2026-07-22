@@ -440,4 +440,71 @@ describe('CustomerCheckoutQuoteScreen', () => {
       expect(createQuote).toHaveBeenCalledTimes(2);
     });
   });
+
+  it('renders the selected server address and explicit zero discounts', async () => {
+    const quote = {
+      ...QUOTE,
+      totals: { ...QUOTE.totals, productDiscountPaise: 0, couponDiscountPaise: 0 },
+    };
+    const view = render(
+      <CustomerCheckoutQuoteScreen
+        addressId={ADDRESS_ID}
+        now={() => NOW}
+        quoteClient={clientFrom(() => Promise.resolve(quote))}
+      />,
+    );
+
+    expect(await view.findByText('DELIVER TO')).toBeTruthy();
+    expect(view.getByText('Customer')).toBeTruthy();
+    expect(view.getByText('Quote Street')).toBeTruthy();
+    expect(view.getByText('Tirupati, Tirupati, Andhra Pradesh 517501')).toBeTruthy();
+    expect(view.getByLabelText('Product discount ₹0.00')).toBeTruthy();
+    expect(view.getByLabelText('Coupon discount ₹0.00')).toBeTruthy();
+  });
+
+  it('prevents duplicate quote refresh requests', async () => {
+    let resolveSecond: ((quote: CustomerCheckoutQuote) => void) | undefined;
+    const expiredQuote = { ...QUOTE, expiresAt: '2026-07-16T09:59:00.000Z' };
+    const createQuote = jest
+      .fn()
+      .mockResolvedValueOnce(expiredQuote)
+      .mockImplementationOnce(
+        () =>
+          new Promise<CustomerCheckoutQuote>((resolve) => {
+            resolveSecond = resolve;
+          }),
+      );
+    const view = render(
+      <CustomerCheckoutQuoteScreen
+        addressId={ADDRESS_ID}
+        now={() => NOW}
+        quoteClient={clientFrom(createQuote)}
+      />,
+    );
+
+    expect(await view.findByText('Quote Shop')).toBeTruthy();
+    fireEvent.press(view.getByRole('button', { name: 'Refresh checkout quote' }));
+    fireEvent.press(view.getByRole('button', { name: 'Refresh checkout quote' }));
+    expect(createQuote).toHaveBeenCalledTimes(2);
+    act(() => {
+      resolveSecond?.(QUOTE);
+    });
+  });
+
+  it('announces an authoritative stock shortfall', async () => {
+    const firstItem = QUOTE.items[0];
+    if (firstItem === undefined) throw new Error('Expected quote item fixture');
+    const quote: CustomerCheckoutQuote = {
+      ...QUOTE,
+      items: [{ ...firstItem, quantity: 4, availableQuantity: 3 }],
+    };
+    const view = render(
+      <CustomerCheckoutQuoteScreen
+        addressId={ADDRESS_ID}
+        now={() => NOW}
+        quoteClient={clientFrom(() => Promise.resolve(quote))}
+      />,
+    );
+    expect(await view.findByText('STOCK CHANGED')).toBeTruthy();
+  });
 });
