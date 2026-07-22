@@ -1,0 +1,34 @@
+name: FE-S04-04 type diagnostic
+
+on:
+  pull_request:
+    branches:
+      - feat/ui-fe-s04-03-shop-experience
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.head_ref == 'feat/ui-fe-s04-04-product-detail'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Capture merge-ref type diagnostics
+        shell: bash
+        run: |
+          set +e
+          pnpm typecheck > fe-s04-04-type.log 2>&1
+          status=$?
+          echo "exit_status=$status" >> fe-s04-04-type.log
+          exit 0
+      - uses: actions/upload-artifact@v6
+        with:
+          name: fe-s04-04-type
+          path: fe-s04-04-type.log
