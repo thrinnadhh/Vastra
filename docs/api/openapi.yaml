@@ -121,6 +121,112 @@ components:
         success:
           type: boolean
           const: true
+
+    CustomerAddressResponseMeta:
+      type: object
+      additionalProperties: false
+      required: [requestId]
+      properties:
+        requestId:
+          type: ['string', 'null']
+          format: uuid
+
+    CustomerAddress:
+      type: object
+      required: [id, label, recipientName, phoneNumber, line1, line2, landmark, area, city, state, postalCode, countryCode, latitude, longitude, isDefault, serviceable, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        label: {type: ['string', 'null'], maxLength: 80}
+        recipientName: {type: string, minLength: 1, maxLength: 120}
+        phoneNumber: {type: string, pattern: '^\\+?[1-9][0-9]{7,14}$'}
+        line1: {type: string, minLength: 1, maxLength: 250}
+        line2: {type: ['string', 'null'], maxLength: 250}
+        landmark: {type: ['string', 'null'], maxLength: 180}
+        area: {type: string, minLength: 1, maxLength: 120}
+        city: {type: string, minLength: 1, maxLength: 120}
+        state: {type: string, minLength: 1, maxLength: 120}
+        postalCode: {type: string, pattern: '^[0-9]{6}$'}
+        countryCode: {type: string, enum: [IN]}
+        latitude: {type: number, minimum: -90, maximum: 90}
+        longitude: {type: number, minimum: -180, maximum: 180}
+        isDefault: {type: boolean}
+        serviceable:
+          type: boolean
+          description: Server-derived availability of at least one verified online-order shop at this location.
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    CreateCustomerAddressRequest:
+      type: object
+      additionalProperties: false
+      required: [recipientName, phoneNumber, line1, area, city, state, postalCode, countryCode, latitude, longitude]
+      properties:
+        label: {type: ['string', 'null'], maxLength: 80}
+        recipientName: {type: string, minLength: 1, maxLength: 120}
+        phoneNumber: {type: string, pattern: '^\\+?[1-9][0-9]{7,14}$'}
+        line1: {type: string, minLength: 1, maxLength: 250}
+        line2: {type: ['string', 'null'], maxLength: 250}
+        landmark: {type: ['string', 'null'], maxLength: 180}
+        area: {type: string, minLength: 1, maxLength: 120}
+        city: {type: string, minLength: 1, maxLength: 120}
+        state: {type: string, minLength: 1, maxLength: 120}
+        postalCode: {type: string, pattern: '^[0-9]{6}$'}
+        countryCode: {type: string, enum: [IN]}
+        latitude: {type: number, minimum: -90, maximum: 90}
+        longitude: {type: number, minimum: -180, maximum: 180}
+        isDefault: {type: boolean, default: false}
+    UpdateCustomerAddressRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        label: {type: ['string', 'null'], maxLength: 80}
+        recipientName: {type: string, minLength: 1, maxLength: 120}
+        phoneNumber: {type: string, pattern: '^\\+?[1-9][0-9]{7,14}$'}
+        line1: {type: string, minLength: 1, maxLength: 250}
+        line2: {type: ['string', 'null'], maxLength: 250}
+        landmark: {type: ['string', 'null'], maxLength: 180}
+        area: {type: string, minLength: 1, maxLength: 120}
+        city: {type: string, minLength: 1, maxLength: 120}
+        state: {type: string, minLength: 1, maxLength: 120}
+        postalCode: {type: string, pattern: '^[0-9]{6}$'}
+        countryCode: {type: string, enum: [IN]}
+        latitude: {type: number, minimum: -90, maximum: 90}
+        longitude: {type: number, minimum: -180, maximum: 180}
+        isDefault: {type: boolean}
+    ListCustomerAddressesResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [addresses]
+          properties:
+            addresses: {type: array, items: {$ref: '#/components/schemas/CustomerAddress'}}
+        meta: {$ref: '#/components/schemas/CustomerAddressResponseMeta'}
+    CustomerAddressResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [address]
+          properties:
+            address: {$ref: '#/components/schemas/CustomerAddress'}
+        meta: {$ref: '#/components/schemas/CustomerAddressResponseMeta'}
+    DeleteCustomerAddressResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          required: [deletedAddressId, defaultAddressId]
+          properties:
+            deletedAddressId: {type: string, format: uuid}
+            defaultAddressId: {type: ['string', 'null'], format: uuid}
+        meta: {$ref: '#/components/schemas/CustomerAddressResponseMeta'}
     MerchantCatalogueShop:
       type: object
       required:
@@ -3758,6 +3864,131 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ApiError'}
+
+  /customer/addresses:
+    get:
+      tags: [Customer]
+      summary: List customer-owned addresses
+      operationId: listCustomerAddresses
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Customer-owned addresses with server-derived serviceability
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ListCustomerAddressesResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+    post:
+      tags: [Customer]
+      summary: Create a customer-owned address
+      operationId: createCustomerAddress
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateCustomerAddressRequest'}
+      responses:
+        '201':
+          description: Address created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerAddressResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /customer/addresses/{addressId}:
+    parameters:
+    - name: addressId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    get:
+      tags: [Customer]
+      summary: Read one customer-owned address
+      operationId: getCustomerAddress
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Owned address
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerAddressResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+    patch:
+      tags: [Customer]
+      summary: Update a customer-owned address
+      operationId: updateCustomerAddress
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateCustomerAddressRequest'}
+      responses:
+        '200':
+          description: Address updated
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerAddressResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+    delete:
+      tags: [Customer]
+      summary: Delete a customer-owned address
+      operationId: deleteCustomerAddress
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      responses:
+        '200':
+          description: Address deleted with deterministic default selection
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DeleteCustomerAddressResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /customer/addresses/{addressId}/default:
+    put:
+      tags: [Customer]
+      summary: Select the customer default address
+      operationId: setCustomerDefaultAddress
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: addressId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - {$ref: '#/components/parameters/IdempotencyKey'}
+      responses:
+        '200':
+          description: Default address selected
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerAddressResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /customer/cart:
     get:
       operationId: getCustomerCart
