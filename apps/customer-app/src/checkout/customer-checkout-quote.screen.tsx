@@ -186,6 +186,7 @@ function QuoteContent({
   readonly canPlaceOrder: boolean;
 }) {
   const hasPriceChanges = quote.items.some((item) => item.priceChanged);
+  const hasStockShortfall = quote.items.some((item) => item.availableQuantity < item.quantity);
   const retrySameAttempt = placement.failure?.retryable === true;
   const refreshRequired = expired || placement.failure?.kind === 'STALE_QUOTE';
 
@@ -210,6 +211,30 @@ function QuoteContent({
           message="One or more prices changed. The amounts below are the current shop prices."
         />
       ) : null}
+
+      {hasStockShortfall ? (
+        <QuoteNotice
+          label="STOCK CHANGED"
+          message="The shop cannot fulfil the quoted quantity. Refresh or return to your cart."
+        />
+      ) : null}
+
+      <View
+        accessible
+        accessibilityLabel={`Deliver to ${quote.address.recipientName}, ${quote.address.line1}, ${quote.address.area}, ${quote.address.city}`}
+        style={styles.card}
+      >
+        <Text style={styles.sectionLabel}>DELIVER TO</Text>
+        <Text style={styles.shopName}>{quote.address.recipientName}</Text>
+        <Text style={styles.metaText}>{quote.address.line1}</Text>
+        {quote.address.line2 === null ? null : (
+          <Text style={styles.metaText}>{quote.address.line2}</Text>
+        )}
+        <Text style={styles.metaText}>
+          {quote.address.area}, {quote.address.city}, {quote.address.state}{' '}
+          {quote.address.postalCode}
+        </Text>
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.sectionLabel}>SHOP</Text>
@@ -247,7 +272,7 @@ function QuoteContent({
         ))}
       </View>
 
-      <View style={styles.card}>
+      <View accessible accessibilityLiveRegion="polite" style={styles.card}>
         <Text accessibilityRole="header" style={styles.sectionTitle}>
           Price details
         </Text>
@@ -346,6 +371,7 @@ function ActiveCustomerCheckoutQuoteScreen({
   const operation = useRef(0);
   const mounted = useRef(true);
   const placementOperation = useRef(0);
+  const quoteInFlight = useRef(false);
   const placementInFlight = useRef(false);
   const placementKey = useRef<string | null>(null);
   const [placement, setPlacement] = useState<OrderPlacementState>({
@@ -357,12 +383,14 @@ function ActiveCustomerCheckoutQuoteScreen({
     (operationId: number) => {
       void quoteClient.createQuote({ addressId }).then(
         (quote) => {
+          quoteInFlight.current = false;
           if (operation.current === operationId) {
             setClock(now());
             setState({ quote, isLoading: false, failure: null });
           }
         },
         (error: unknown) => {
+          quoteInFlight.current = false;
           if (operation.current === operationId) {
             const failure = toCheckoutError(error);
             setState((current) => ({
@@ -378,9 +406,10 @@ function ActiveCustomerCheckoutQuoteScreen({
   );
 
   const requestQuote = useCallback(() => {
-    if (placementInFlight.current) {
+    if (placementInFlight.current || quoteInFlight.current) {
       return;
     }
+    quoteInFlight.current = true;
     placementKey.current = null;
     setPlacement({ isSubmitting: false, failure: null });
     const operationId = ++operation.current;
@@ -438,10 +467,12 @@ function ActiveCustomerCheckoutQuoteScreen({
 
   useEffect(() => {
     mounted.current = true;
+    quoteInFlight.current = true;
     const operationId = ++operation.current;
     runRequest(operationId);
     return () => {
       mounted.current = false;
+      quoteInFlight.current = false;
       operation.current += 1;
       placementOperation.current += 1;
     };
