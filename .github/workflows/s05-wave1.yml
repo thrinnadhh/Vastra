@@ -1,4 +1,4 @@
-name: Sprint 5 address PR repair
+name: Sprint 5 address database diagnostics
 
 on:
   pull_request:
@@ -6,155 +6,45 @@ on:
       - main
 
 concurrency:
-  group: sprint-5-address-pr-repair
+  group: sprint-5-address-db-diagnostics
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  repair:
+  diagnose:
     if: github.head_ref == 'automation/sprint-5-wave-1-implementation'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: automation/sprint-5-wave-1-implementation
+          ref: feat/be-fe-002-customer-addresses
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20.20.2
 
-      - name: Prepare isolated address branch and apply focused fixes
+      - uses: supabase/setup-cli@v3
+
+      - name: Run database suite and capture output
         shell: bash
         run: |
-          git config user.name "Vastra Sprint 5 Repair"
-          git config user.email "actions@users.noreply.github.com"
-          git fetch origin main feat/be-fe-002-customer-addresses
-          git switch feat/be-fe-002-customer-addresses
-          git reset --hard origin/feat/be-fe-002-customer-addresses
-          test "$(git merge-base origin/main HEAD)" = "$(git rev-parse origin/main)"
-
-          python - <<'PY'
-          from pathlib import Path
-
-          openapi = Path('docs/api/openapi.yaml')
-          source = openapi.read_text(encoding='utf-8')
-          source = source.replace(
-              '#/components/schemas/ResponseMeta',
-              '#/components/schemas/CustomerAddressResponseMeta',
-          )
-          if '    CustomerAddressResponseMeta:\n' not in source:
-              marker = '    CustomerAddress:\n'
-              schema = (
-                  '    CustomerAddressResponseMeta:\n'
-                  '      type: object\n'
-                  '      additionalProperties: false\n'
-                  '      required: [requestId]\n'
-                  '      properties:\n'
-                  '        requestId:\n'
-                  "          type: ['string', 'null']\n"
-                  '          format: uuid\n\n'
-              )
-              if marker not in source:
-                  raise SystemExit('CustomerAddress schema marker not found')
-              source = source.replace(marker, schema + marker, 1)
-          openapi.write_text(source, encoding='utf-8')
-
-          integration = Path('apps/backend/src/addresses/customer-address.integration.test.ts')
-          source = integration.read_text(encoding='utf-8')
-          old = "function server(app: INestApplication): Server { const value: unknown = app.getHttpServer(); if (!(value instanceof Server)) throw new TypeError('Expected server'); return value; }"
-          new = """function isHttpServer(value: unknown): value is Server {
-            return value instanceof Server;
-          }
-
-          function requireHttpServer(app: INestApplication): Server {
-            const value: unknown = app.getHttpServer();
-            if (!isHttpServer(value)) {
-              throw new TypeError('Expected Nest to provide a Node HTTP server');
-            }
-            return value;
-          }"""
-          if old not in source:
-              raise SystemExit('Address integration server helper not found')
-          source = source.replace(old, new, 1)
-          source = source.replace('http = server(application);', 'http = requireHttpServer(application);', 1)
-          integration.write_text(source, encoding='utf-8')
-
-          service_test = Path('apps/backend/src/addresses/customer-address.service.test.ts')
-          source = service_test.read_text(encoding='utf-8')
-          old = 'const provider = gateway(); const service = new CustomerAddressService(provider);'
-          new = """const provider = gateway();
-              const createAddress = vi.spyOn(provider, 'create');
-              const service = new CustomerAddressService(provider);"""
-          if old not in source:
-              raise SystemExit('Address service test setup not found')
-          source = source.replace(old, new, 1)
-          source = source.replace(
-              'expect(provider.create).not.toHaveBeenCalled();',
-              'expect(createAddress).not.toHaveBeenCalled();',
-              1,
-          )
-          service_test.write_text(source, encoding='utf-8')
-          PY
-
-      - name: Install, generate, format, and lint
-        shell: bash
-        run: |
+          mkdir -p /tmp/address-db-diagnostics
           corepack enable
           corepack prepare pnpm@8.15.0 --activate
-          pnpm install --frozen-lockfile
-          pnpm --filter @vastra/api-client generate
-          pnpm exec prettier --write \
-            apps/backend/src/addresses/*.ts \
-            apps/backend/src/app.module.ts \
-            docs/api/openapi.yaml \
-            docs/design/customer-address-contract.md \
-            packages/api-client/src/generated/openapi.ts
-          pnpm exec eslint --fix apps/backend/src/addresses/*.ts apps/backend/src/app.module.ts
+          pnpm install --frozen-lockfile > /tmp/address-db-diagnostics/install.log 2>&1
+          set +e
+          pnpm db:test > /tmp/address-db-diagnostics/db-test.log 2>&1
+          echo $? > /tmp/address-db-diagnostics/db-test.exit
+          set -e
 
-      - name: Validate address repair
-        shell: bash
-        run: |
-          pnpm --filter @vastra/backend exec vitest run src/addresses
-          pnpm format:check
-          pnpm lint
-          pnpm typecheck
-          pnpm openapi:check
-          pnpm build
-
-      - name: Verify ownership and push amended commit
-        shell: bash
-        run: |
-          python - <<'PY'
-          import subprocess
-
-          allowed = (
-              'apps/backend/src/addresses/',
-              'apps/backend/src/app.module.ts',
-              'docs/api/openapi.yaml',
-              'docs/design/customer-address-contract.md',
-              'supabase/migrations/20260722120000_customer_address_contract.sql',
-              'supabase/tests/0092_customer_address_contract.test.sql',
-              'packages/api-client/src/generated/',
-          )
-          paths = sorted(set(
-              subprocess.check_output(
-                  ['git', 'diff', '--name-only', 'origin/main...HEAD'], text=True
-              ).splitlines()
-              + subprocess.check_output(
-                  ['git', 'ls-files', '--modified', '--others', '--exclude-standard'], text=True
-              ).splitlines()
-          ))
-          foreign = [path for path in paths if not any(path == prefix or path.startswith(prefix) for prefix in allowed)]
-          if foreign:
-              raise SystemExit(f'foreign-owned files: {foreign}')
-          print(f'verified {len(paths)} address-owned files')
-          PY
-
-          git add --all
-          git diff --cached --check
-          git commit --amend --no-edit
-          git push --force-with-lease origin HEAD:feat/be-fe-002-customer-addresses
+      - name: Upload database diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s05-address-db-diagnostics
+          path: /tmp/address-db-diagnostics
+          if-no-files-found: error
