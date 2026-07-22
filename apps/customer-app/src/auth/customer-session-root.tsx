@@ -9,6 +9,7 @@ import {
 } from './customer-session-bootstrap';
 import type {
   AuthSessionPort,
+  CurrentAccount,
   RestorableSession,
   SessionRestorationState,
   SessionRestorer,
@@ -19,6 +20,10 @@ interface CustomerSessionRootProps {
   readonly sessionRestorer: SessionRestorer;
   readonly launchStore?: CustomerLaunchStore;
   readonly signedOutContent?: ReactNode;
+  readonly profileSetupContent?: (options: {
+    readonly account: CurrentAccount & { readonly accountType: 'CUSTOMER' };
+    readonly onCompleted: () => void;
+  }) => ReactNode;
   readonly children: ReactNode;
 }
 
@@ -70,6 +75,7 @@ export function CustomerSessionRoot({
   sessionRestorer,
   launchStore = RETURNING_CUSTOMER_LAUNCH_STORE,
   signedOutContent,
+  profileSetupContent,
   children,
 }: CustomerSessionRootProps) {
   const [state, setState] = useState<CustomerBootstrapState>(BOOTSTRAPPING_STATE);
@@ -104,6 +110,11 @@ export function CustomerSessionRoot({
   }, [launchStore, sessionRestorer]);
 
   const retryBootstrap = useCallback((): void => {
+    setState(BOOTSTRAPPING_STATE);
+    void runBootstrap();
+  }, [runBootstrap]);
+
+  const completeProfileSetup = useCallback((): void => {
     setState(BOOTSTRAPPING_STATE);
     void runBootstrap();
   }, [runBootstrap]);
@@ -228,6 +239,20 @@ export function CustomerSessionRoot({
       );
 
     case 'AUTHENTICATED':
+      if (!state.session.account.profileCompleted) {
+        return profileSetupContent === undefined ? (
+          <StatusScreen
+            title="Profile setup unavailable"
+            description="Update Vastra and try again. Your account remains signed in securely."
+          />
+        ) : (
+          profileSetupContent({
+            account: state.session.account,
+            onCompleted: completeProfileSetup,
+          })
+        );
+      }
+
       return (
         <CustomerSessionActionsProvider account={state.session.account} authSession={authSession}>
           {children}
