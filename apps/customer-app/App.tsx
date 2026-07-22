@@ -95,10 +95,7 @@ export function CustomerAppContent({
   };
 
   return (
-    <CustomerRootNavigation
-      slots={slots}
-      {...(linkingPort === undefined ? {} : { linkingPort })}
-    />
+    <CustomerRootNavigation slots={slots} {...(linkingPort === undefined ? {} : { linkingPort })} />
   );
 }
 
