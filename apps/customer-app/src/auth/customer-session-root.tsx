@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { RETURNING_CUSTOMER_LAUNCH_STORE, type CustomerLaunchStore } from './customer-launch-store';
@@ -15,15 +22,17 @@ import type {
   SessionRestorer,
 } from './session-restoration.types';
 
+export interface CustomerProfileSetupComponentProps {
+  readonly account: CurrentAccount & { readonly accountType: 'CUSTOMER' };
+  readonly onCompleted: () => void;
+}
+
 interface CustomerSessionRootProps {
   readonly authSession: AuthSessionPort;
   readonly sessionRestorer: SessionRestorer;
   readonly launchStore?: CustomerLaunchStore;
   readonly signedOutContent?: ReactNode;
-  readonly profileSetupContent?: (options: {
-    readonly account: CurrentAccount & { readonly accountType: 'CUSTOMER' };
-    readonly onCompleted: () => void;
-  }) => ReactNode;
+  readonly ProfileSetupComponent?: ComponentType<CustomerProfileSetupComponentProps>;
   readonly children: ReactNode;
 }
 
@@ -75,7 +84,7 @@ export function CustomerSessionRoot({
   sessionRestorer,
   launchStore = RETURNING_CUSTOMER_LAUNCH_STORE,
   signedOutContent,
-  profileSetupContent,
+  ProfileSetupComponent,
   children,
 }: CustomerSessionRootProps) {
   const [state, setState] = useState<CustomerBootstrapState>(BOOTSTRAPPING_STATE);
@@ -240,16 +249,20 @@ export function CustomerSessionRoot({
 
     case 'AUTHENTICATED':
       if (!state.session.account.profileCompleted) {
-        return profileSetupContent === undefined ? (
-          <StatusScreen
-            title="Profile setup unavailable"
-            description="Update Vastra and try again. Your account remains signed in securely."
+        if (ProfileSetupComponent === undefined) {
+          return (
+            <StatusScreen
+              title="Profile setup unavailable"
+              description="Update Vastra and try again. Your account remains signed in securely."
+            />
+          );
+        }
+
+        return (
+          <ProfileSetupComponent
+            account={state.session.account}
+            onCompleted={completeProfileSetup}
           />
-        ) : (
-          profileSetupContent({
-            account: state.session.account,
-            onCompleted: completeProfileSetup,
-          })
         );
       }
 
