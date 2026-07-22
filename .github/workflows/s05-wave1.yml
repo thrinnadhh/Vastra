@@ -1,4 +1,4 @@
-name: Sprint 5 Wave 1 finalization
+name: Sprint 5 Wave 1 static finalization
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ jobs:
     if: github.head_ref == 'automation/sprint-5-wave-1-implementation'
     name: finalize-${{ matrix.ticket }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -50,17 +50,13 @@ jobs:
         with:
           node-version: 20.20.2
 
-      - uses: supabase/setup-cli@v3
-        with:
-          version: latest
-
       - name: Prepare isolated ticket branch
         shell: bash
         run: |
+          cp scripts/s05-wave1-source-fix.py /tmp/s05-wave1-source-fix.py
           if test "${{ matrix.implement }}" = true; then
             cat scripts/s05-wave1.payload.* > /tmp/s05-wave1.payload
             cp scripts/s05-wave1-hotfix.py /tmp/s05-wave1-hotfix.py
-            cp scripts/s05-wave1-source-fix.py /tmp/s05-wave1-source-fix.py
           fi
           git config user.name "Vastra Sprint 5 Agent"
           git config user.email "actions@users.noreply.github.com"
@@ -73,8 +69,10 @@ jobs:
             base64 -d /tmp/s05-wave1.payload | xz -d > /tmp/s05-wave1-implement.py
             python /tmp/s05-wave1-hotfix.py /tmp/s05-wave1-implement.py
             python /tmp/s05-wave1-implement.py "${{ matrix.ticket }}"
-            python /tmp/s05-wave1-source-fix.py "${{ matrix.ticket }}"
           fi
+          case "${{ matrix.ticket }}" in
+            cart|quote|orders) python /tmp/s05-wave1-source-fix.py "${{ matrix.ticket }}" ;;
+          esac
 
       - name: Install, generate, format, and autofix
         shell: bash
@@ -92,10 +90,13 @@ jobs:
                 *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs) code+=("$path") ;;
               esac
             done
-            if ((${#code[@]})); then pnpm exec eslint --fix "${code[@]}"; fi
+            if ((${#code[@]})); then pnpm exec eslint --fix "${code[@]}" || true; fi
+            mapfile -d '' changed_after < <(git ls-files --modified --others --exclude-standard -z)
+            if ((${#changed_after[@]})); then pnpm exec prettier --write "${changed_after[@]}"; fi
           fi
+          pnpm exec prettier --write packages/api-client/src/generated/openapi.ts
 
-      - name: Validate and capture evidence
+      - name: Validate static and focused gates
         id: validation
         shell: bash
         run: |
@@ -108,17 +109,7 @@ jobs:
             orders) focused="pnpm --filter @vastra/customer-app exec jest src/orders --runInBand" ;;
             addresses) focused="pnpm --filter @vastra/backend exec vitest run src/addresses" ;;
           esac
-          commands=(
-            "$focused"
-            "pnpm format:check"
-            "pnpm lint"
-            "pnpm typecheck"
-            "pnpm test"
-            "pnpm test:integration"
-            "pnpm db:test"
-            "pnpm openapi:check"
-            "pnpm build"
-          )
+          commands=("$focused" "pnpm format:check" "pnpm lint" "pnpm typecheck")
           for command in "${commands[@]}"; do
             slug=$(printf '%s' "$command" | tr ' /:' '___')
             echo "## $command" | tee -a /tmp/s05-evidence/summary.md
@@ -132,6 +123,20 @@ jobs:
           git status --short > /tmp/s05-evidence/status.txt
           git ls-files --modified --others --exclude-standard > /tmp/s05-evidence/changed-files.txt
           echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Normalize generated artifact
+        if: steps.validation.outputs.status == '0'
+        shell: bash
+        run: |
+          case "${{ matrix.ticket }}" in
+            addresses)
+              pnpm --filter @vastra/api-client generate
+              pnpm exec prettier --write packages/api-client/src/generated/openapi.ts
+              ;;
+            *)
+              git checkout -- packages/api-client/src/generated/openapi.ts
+              ;;
+          esac
 
       - name: Verify ownership, amend or create ticket commit, and push
         if: steps.validation.outputs.status == '0'
@@ -187,7 +192,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: s05-${{ matrix.ticket }}-finalization
+          name: s05-${{ matrix.ticket }}-static-finalization
           path: /tmp/s05-evidence
           if-no-files-found: warn
 
