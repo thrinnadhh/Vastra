@@ -60,6 +60,7 @@ elif ticket == 'orders':
     tracking = 'apps/customer-app/src/orders/customer-order-tracking.tsx'
     replace(tracking, '  readonly trackingClient: CustomerOrderTrackingPort | undefined;', '  readonly trackingClient?: CustomerOrderTrackingPort;')
     replace(tracking, '  useEffect(() => {\n    load();\n    return () => { operation.current += 1; };\n  }, [load]);', '  useEffect(() => {\n    const scheduledLoad = Promise.resolve().then(load);\n    void scheduledLoad;\n    return () => {\n      operation.current += 1;\n    };\n  }, [load]);')
-    replace('apps/customer-app/src/orders/customer-order-tracking.client.test.ts', "import { CustomerOrderError } from './customer-order.types';\n", '')
+    replace('apps/customer-app/src/orders/customer-order-tracking.client.test.ts', "import { CustomerOrderError } from './customer-order.types';\n", "import type { CustomerOrderError } from './customer-order.types';\n")
+    replace('apps/customer-app/src/orders/customer-cod-order-journey.test.tsx', "fireEvent.press(await findByRole('button', { name: 'Place COD order for ₹325.00' }));", "fireEvent.press(\n      await findByRole(\n        'button',\n        { name: 'Place COD order for ₹325.00' },\n        { timeout: 5_000 },\n      ),\n    );")
 else:
     raise SystemExit('expected cart, quote, or orders')
