@@ -117,7 +117,9 @@ describe('ApiCustomerProductAdapter', () => {
       createApiClient(jest.fn().mockRejectedValue({ normalized: { code: 'CART_SHOP_CONFLICT' } })),
     );
     const unavailable = new ApiCustomerProductAdapter(
-      createApiClient(jest.fn().mockRejectedValue({ normalized: { code: 'INSUFFICIENT_INVENTORY' } })),
+      createApiClient(
+        jest.fn().mockRejectedValue({ normalized: { code: 'INSUFFICIENT_INVENTORY' } }),
+      ),
     );
     const missing = new ApiCustomerProductAdapter(
       createApiClient(jest.fn().mockRejectedValue({ normalized: { status: 404 } })),

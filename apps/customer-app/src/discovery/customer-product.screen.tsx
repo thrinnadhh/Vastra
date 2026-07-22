@@ -22,7 +22,10 @@ function formatInr(paise: number): string {
 }
 
 function variantLabel(variant: CustomerProductVariant): string {
-  return [variant.sizeLabel, variant.colourName].filter((value) => value !== null).join(' · ') || variant.sku;
+  return (
+    [variant.sizeLabel, variant.colourName].filter((value) => value !== null).join(' · ') ||
+    variant.sku
+  );
 }
 
 function failureCopy(kind: CustomerProductFailureKind): string {
@@ -45,10 +48,17 @@ function choosePrimaryImage(product: CustomerProductDetail): string | null {
 }
 
 function chooseAvailableVariant(product: CustomerProductDetail): string | null {
-  return product.variants.find((variant) => variant.isAvailable && variant.availableQuantity > 0)?.id ?? null;
+  return (
+    product.variants.find((variant) => variant.isAvailable && variant.availableQuantity > 0)?.id ??
+    null
+  );
 }
 
-export function CustomerProductScreen({ productId, productPort, onBack }: CustomerProductScreenProps) {
+export function CustomerProductScreen({
+  productId,
+  productPort,
+  onBack,
+}: CustomerProductScreenProps) {
   const [product, setProduct] = useState<CustomerProductDetail | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
@@ -124,7 +134,11 @@ export function CustomerProductScreen({ productId, productPort, onBack }: Custom
   };
 
   const addToCart = async (replaceExistingCart: boolean): Promise<void> => {
-    if (selectedVariant === null || !selectedVariant.isAvailable || selectedVariant.availableQuantity < quantity) {
+    if (
+      selectedVariant === null ||
+      !selectedVariant.isAvailable ||
+      selectedVariant.availableQuantity < quantity
+    ) {
       setFailureKind('UNAVAILABLE');
       return;
     }
@@ -201,7 +215,11 @@ export function CustomerProductScreen({ productId, productPort, onBack }: Custom
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Pressable accessibilityLabel="Back to discovery" accessibilityRole="button" onPress={onBack}>
+        <Pressable
+          accessibilityLabel="Back to discovery"
+          accessibilityRole="button"
+          onPress={onBack}
+        >
           <Text style={styles.backText}>‹ Back</Text>
         </Pressable>
         <Pressable
@@ -269,7 +287,9 @@ export function CustomerProductScreen({ productId, productPort, onBack }: Custom
         <Text accessibilityRole="header" style={styles.title}>
           {product.name}
         </Text>
-        {product.description === null ? null : <Text style={styles.description}>{product.description}</Text>}
+        {product.description === null ? null : (
+          <Text style={styles.description}>{product.description}</Text>
+        )}
 
         <View style={styles.shopCard}>
           <Text style={styles.sectionTitle}>Sold by {product.shop.name}</Text>
@@ -290,7 +310,10 @@ export function CustomerProductScreen({ productId, productPort, onBack }: Custom
                   available ? `${String(variant.availableQuantity)} available` : 'unavailable'
                 }`}
                 accessibilityRole="button"
-                accessibilityState={{ disabled: !available, selected: variant.id === selectedVariantId }}
+                accessibilityState={{
+                  disabled: !available,
+                  selected: variant.id === selectedVariantId,
+                }}
                 disabled={!available}
                 key={variant.id}
                 onPress={() => {
@@ -322,7 +345,8 @@ export function CustomerProductScreen({ productId, productPort, onBack }: Custom
         <View style={styles.sizeNotice}>
           <Text style={styles.sizeNoticeTitle}>Size information</Text>
           <Text style={styles.metaText}>
-            Available size labels are shown on each variant. A measurement-based size chart is not present in the current catalogue contract.
+            Available size labels are shown on each variant. A measurement-based size chart is not
+            present in the current catalogue contract.
           </Text>
         </View>
 
@@ -372,7 +396,8 @@ export function CustomerProductScreen({ productId, productPort, onBack }: Custom
           <View style={styles.conflictCard}>
             <Text style={styles.sectionTitle}>Replace the existing cart?</Text>
             <Text style={styles.metaText}>
-              Vastra supports one shop per cart. Replacing removes the previous shop’s items before adding this variant.
+              Vastra supports one shop per cart. Replacing removes the previous shop’s items before
+              adding this variant.
             </Text>
             <Pressable
               accessibilityLabel="Replace cart and add selected variant"
@@ -383,7 +408,9 @@ export function CustomerProductScreen({ productId, productPort, onBack }: Custom
               }}
               style={styles.dangerAction}
             >
-              <Text style={styles.primaryActionText}>{isAdding ? 'Replacing…' : 'Replace cart and add'}</Text>
+              <Text style={styles.primaryActionText}>
+                {isAdding ? 'Replacing…' : 'Replace cart and add'}
+              </Text>
             </Pressable>
           </View>
         ) : (
@@ -506,7 +533,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   stepperText: { color: '#3A2D26', fontSize: 22, fontWeight: '700' },
-  quantityText: { minWidth: 28, textAlign: 'center', color: '#2D211B', fontSize: 17, fontWeight: '800' },
+  quantityText: {
+    minWidth: 28,
+    textAlign: 'center',
+    color: '#2D211B',
+    fontSize: 17,
+    fontWeight: '800',
+  },
   primaryAction: {
     minHeight: 54,
     alignItems: 'center',
@@ -533,7 +566,13 @@ const styles = StyleSheet.create({
   errorBanner: { marginTop: 16, padding: 12, borderRadius: 12, backgroundColor: '#FFF0F1' },
   errorText: { color: '#8B1E2D', fontSize: 13, fontWeight: '700', lineHeight: 19 },
   successText: { marginTop: 14, color: '#287A4A', fontSize: 14, fontWeight: '800' },
-  centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#FFFDFB' },
+  centerState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: '#FFFDFB',
+  },
   stateTitle: { color: '#2D211B', fontSize: 23, fontWeight: '800', textAlign: 'center' },
   stateCopy: { marginTop: 9, color: '#74675F', fontSize: 15, lineHeight: 22, textAlign: 'center' },
   linkAction: { minHeight: 48, justifyContent: 'center', marginTop: 8 },

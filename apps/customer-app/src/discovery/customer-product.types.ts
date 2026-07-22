@@ -1,9 +1,5 @@
 export type CustomerProductFailureKind =
-  | 'OFFLINE'
-  | 'NOT_FOUND'
-  | 'CART_CONFLICT'
-  | 'UNAVAILABLE'
-  | 'ERROR';
+  'OFFLINE' | 'NOT_FOUND' | 'CART_CONFLICT' | 'UNAVAILABLE' | 'ERROR';
 
 export interface CustomerProductImage {
   readonly id: string;

@@ -151,7 +151,10 @@ describe('CustomerProductScreen', () => {
 
   it('requires explicit confirmation before replacing another-shop cart', async () => {
     const port = new ProductPortStub(
-      [{ kind: 'SUCCESS', product }, { kind: 'SUCCESS', product }],
+      [
+        { kind: 'SUCCESS', product },
+        { kind: 'SUCCESS', product },
+      ],
       [
         { kind: 'FAILURE', failureKind: 'CART_CONFLICT' },
         { kind: 'SUCCESS', cartItemCount: 1, cartShopId: 'shop-id' },
