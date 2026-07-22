@@ -1,6 +1,6 @@
 # FE-S04-05 favourites and discovery states
 
-Status: READY — stacked on FE-S04-04
+Status: READY — formatted, integrated, and stacked on FE-S04-04
 
 ## Favourite-shop contract
 
