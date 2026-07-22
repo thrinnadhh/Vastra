@@ -20,6 +20,7 @@ All identifiers must be UUIDs. The parser carries identity only; it never carrie
 ## Runtime behavior
 
 - Initial operating-system URLs are consumed after the authenticated customer root mounts, preserving sign-in continuation without persisting the URL.
+- The session boundary completes authentication and required profile setup before the production linking port is mounted.
 - URLs received while the app is running use the same parser.
 - A linked order opens the existing server-authoritative order detail screen; not-found or ownership denial remains intentionally non-enumerating.
 - Product, shop, and look routes are placed into canonical typed navigation. Their current `main`-branch placeholders remain truthful until their owning Sprint 4 and Style screens are merged.
