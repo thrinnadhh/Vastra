@@ -1,0 +1,44 @@
+name: FE-S04-05 fixture guard
+
+on:
+  pull_request:
+    branches:
+      - feat/ui-fe-s04-04-product-detail
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.head_ref == 'feat/ui-fe-s04-05-favourites-states'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/ui-fe-s04-05-favourites-states
+      - name: Replace inherited non-null assertions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('apps/customer-app/src/discovery/customer-product.screen.test.tsx')
+          text = path.read_text()
+          marker = """  it('adds the selected live variant with the chosen quantity and refreshes stock', async () => {\n    const port = new ProductPortStub("""
+          replacement = """  it('adds the selected live variant with the chosen quantity and refreshes stock', async () => {\n    const availableVariant = product.variants[0];\n    const unavailableVariant = product.variants[1];\n    if (availableVariant === undefined || unavailableVariant === undefined) {\n      throw new Error('Product variant fixtures are incomplete');\n    }\n\n    const port = new ProductPortStub("""
+          if marker not in text:
+              raise SystemExit('test marker missing')
+          text = text.replace(marker, replacement, 1)
+          text = text.replace(
+              "variants: [{ ...product.variants[0]!, availableQuantity: 1 }, product.variants[1]!],",
+              "variants: [{ ...availableVariant, availableQuantity: 1 }, unavailableVariant],",
+              1,
+          )
+          path.write_text(text)
+          PY
+          rm .github/workflows/fe-s04-05-fixture-guard.yml
+      - name: Commit inherited fixture guard
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/customer-app/src/discovery/customer-product.screen.test.tsx .github/workflows/fe-s04-05-fixture-guard.yml
+          git diff --cached --quiet || git commit -m "test(customer): guard inherited product fixtures"
+          git push origin HEAD:feat/ui-fe-s04-05-favourites-states
