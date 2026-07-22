@@ -57,6 +57,9 @@ elif ticket == 'quote':
     replace(tests, '    await act(async () => resolveSecond?.(QUOTE));', '    act(() => {\n      resolveSecond?.(QUOTE);\n    });')
     replace(tests, "    const quote = {\n      ...QUOTE,\n      items: [{ ...QUOTE.items[0], quantity: 4, availableQuantity: 3 }],\n    };", "    const firstItem = QUOTE.items[0];\n    if (firstItem === undefined) throw new Error('Expected quote item fixture');\n    const quote: CustomerCheckoutQuote = {\n      ...QUOTE,\n      items: [{ ...firstItem, quantity: 4, availableQuantity: 3 }],\n    };")
 elif ticket == 'orders':
-    replace('apps/customer-app/src/orders/customer-cod-order-journey.test.tsx', "fireEvent.press(await findByRole('button', { name: 'Place COD order for ₹325.00' }));", "fireEvent.press(await findByLabelText('Place COD order for ₹325.00'));")
+    tracking = 'apps/customer-app/src/orders/customer-order-tracking.tsx'
+    replace(tracking, '  readonly trackingClient: CustomerOrderTrackingPort | undefined;', '  readonly trackingClient?: CustomerOrderTrackingPort;')
+    replace(tracking, '  useEffect(() => {\n    load();\n    return () => { operation.current += 1; };\n  }, [load]);', '  useEffect(() => {\n    const scheduledLoad = Promise.resolve().then(load);\n    void scheduledLoad;\n    return () => {\n      operation.current += 1;\n    };\n  }, [load]);')
+    replace('apps/customer-app/src/orders/customer-order-tracking.client.test.ts', "import { CustomerOrderError } from './customer-order.types';\n", '')
 else:
     raise SystemExit('expected cart, quote, or orders')
