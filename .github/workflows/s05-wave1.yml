@@ -1,4 +1,4 @@
-name: Sprint 5 PR repair
+name: Sprint 5 address repair diagnostics
 
 on:
   pull_request:
@@ -6,28 +6,17 @@ on:
       - main
 
 concurrency:
-  group: sprint-5-pr-repair
+  group: sprint-5-address-repair-diagnostics
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  repair:
+  diagnose:
     if: github.head_ref == 'automation/sprint-5-wave-1-implementation'
-    name: repair-${{ matrix.ticket }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        include:
-          - ticket: addresses
-            branch: feat/be-fe-002-customer-addresses
-          - ticket: quote
-            branch: feat/ui-fe-s05-03-quote-fees
-
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,136 +27,79 @@ jobs:
         with:
           node-version: 20.20.2
 
-      - name: Prepare isolated ticket branch
+      - name: Prepare isolated address branch
         shell: bash
-        env:
-          BRANCH: ${{ matrix.branch }}
-          TICKET: ${{ matrix.ticket }}
         run: |
-          git config user.name "Vastra Sprint 5 Repair"
-          git config user.email "actions@users.noreply.github.com"
-          git fetch origin main "$BRANCH"
-          test "$(git merge-base origin/main origin/$BRANCH)" = "$(git rev-parse origin/main)"
-          git switch "$BRANCH"
-          git reset --hard "origin/$BRANCH"
-          test -z "$(git status --short)"
-
-          if test "$TICKET" = addresses; then
-            python - <<'PY'
+          git fetch origin main feat/be-fe-002-customer-addresses
+          git switch feat/be-fe-002-customer-addresses
+          git reset --hard origin/feat/be-fe-002-customer-addresses
+          python - <<'PY'
           from pathlib import Path
 
           path = Path('docs/api/openapi.yaml')
           source = path.read_text(encoding='utf-8')
           source = source.replace(
-              "#/components/schemas/ResponseMeta",
-              "#/components/schemas/CustomerAddressResponseMeta",
+              '#/components/schemas/ResponseMeta',
+              '#/components/schemas/CustomerAddressResponseMeta',
           )
           if '    CustomerAddressResponseMeta:\n' not in source:
               marker = '    CustomerAddress:\n'
-              schema = """    CustomerAddressResponseMeta:
-              type: object
-              additionalProperties: false
-              required: [requestId]
-              properties:
-                requestId:
-                  type: ['string', 'null']
-                  format: uuid
-
-          """
+              schema = (
+                  '    CustomerAddressResponseMeta:\n'
+                  '      type: object\n'
+                  '      additionalProperties: false\n'
+                  '      required: [requestId]\n'
+                  '      properties:\n'
+                  '        requestId:\n'
+                  "          type: ['string', 'null']\n"
+                  '          format: uuid\n\n'
+              )
               if marker not in source:
                   raise SystemExit('CustomerAddress schema marker not found')
               source = source.replace(marker, schema + marker, 1)
           path.write_text(source, encoding='utf-8')
           PY
-          fi
 
-      - name: Install, generate, format, and autofix
+      - name: Capture generator, formatter, and linter diagnostics
         shell: bash
-        env:
-          TICKET: ${{ matrix.ticket }}
         run: |
+          mkdir -p /tmp/address-diagnostics
           corepack enable
           corepack prepare pnpm@8.15.0 --activate
-          pnpm install --frozen-lockfile
+          pnpm install --frozen-lockfile > /tmp/address-diagnostics/install.log 2>&1
 
-          if test "$TICKET" = addresses; then
-            pnpm --filter @vastra/api-client generate
-            pnpm exec prettier --write \
-              apps/backend/src/addresses/*.ts \
-              apps/backend/src/app.module.ts \
-              docs/api/openapi.yaml \
-              docs/design/customer-address-contract.md \
-              packages/api-client/src/generated/openapi.ts
-            pnpm exec eslint --fix apps/backend/src/addresses/*.ts apps/backend/src/app.module.ts
-          else
-            pnpm exec prettier --write \
-              apps/customer-app/src/checkout/customer-checkout-quote.screen.tsx \
-              apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx \
-              docs/design/customer-checkout-quote.md
-            pnpm exec eslint --fix \
-              apps/customer-app/src/checkout/customer-checkout-quote.screen.tsx \
-              apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx
-          fi
+          set +e
+          pnpm --filter @vastra/api-client generate > /tmp/address-diagnostics/generate.log 2>&1
+          echo $? > /tmp/address-diagnostics/generate.exit
 
-      - name: Validate repair
-        shell: bash
-        env:
-          TICKET: ${{ matrix.ticket }}
-        run: |
-          if test "$TICKET" = addresses; then
-            pnpm --filter @vastra/backend exec vitest run src/addresses
-            pnpm format:check
-            pnpm lint
-            pnpm typecheck
-            pnpm openapi:check
-            pnpm build
-          else
-            pnpm --filter @vastra/customer-app exec jest src/checkout/customer-checkout-quote --runInBand
-            pnpm format:check
-            pnpm lint
-            pnpm typecheck
-          fi
+          pnpm exec prettier --write \
+            apps/backend/src/addresses/*.ts \
+            apps/backend/src/app.module.ts \
+            docs/api/openapi.yaml \
+            docs/design/customer-address-contract.md \
+            packages/api-client/src/generated/openapi.ts \
+            > /tmp/address-diagnostics/prettier.log 2>&1
+          echo $? > /tmp/address-diagnostics/prettier.exit
 
-      - name: Verify ownership and push amended ticket commit
-        shell: bash
-        env:
-          BRANCH: ${{ matrix.branch }}
-          TICKET: ${{ matrix.ticket }}
-        run: |
-          python - <<'PY'
-          import os
-          import subprocess
+          pnpm exec eslint --fix apps/backend/src/addresses/*.ts apps/backend/src/app.module.ts \
+            > /tmp/address-diagnostics/eslint.log 2>&1
+          echo $? > /tmp/address-diagnostics/eslint.exit
 
-          ticket = os.environ['TICKET']
-          allowed = {
-              'quote': (
-                  'apps/customer-app/src/checkout/customer-checkout-quote.',
-                  'docs/design/customer-checkout-quote.md',
-              ),
-              'addresses': (
-                  'apps/backend/src/addresses/',
-                  'apps/backend/src/app.module.ts',
-                  'docs/api/openapi.yaml',
-                  'docs/design/customer-address-contract.md',
-                  'supabase/migrations/20260722120000_customer_address_contract.sql',
-                  'supabase/tests/0092_customer_address_contract.test.sql',
-                  'packages/api-client/src/generated/',
-              ),
-          }[ticket]
-          changed = subprocess.check_output(
-              ['git', 'diff', '--name-only', 'origin/main...HEAD'], text=True
-          ).splitlines()
-          working = subprocess.check_output(
-              ['git', 'ls-files', '--modified', '--others', '--exclude-standard'], text=True
-          ).splitlines()
-          paths = sorted(set(changed + working))
-          foreign = [path for path in paths if not any(path == prefix or path.startswith(prefix) for prefix in allowed)]
-          if foreign:
-              raise SystemExit(f'{ticket}: foreign-owned files: {foreign}')
-          print(f'{ticket}: verified {len(paths)} owned files')
-          PY
+          pnpm --filter @vastra/backend exec vitest run src/addresses \
+            > /tmp/address-diagnostics/focused-tests.log 2>&1
+          echo $? > /tmp/address-diagnostics/focused-tests.exit
 
-          git add --all
-          git diff --cached --check
-          git commit --amend --no-edit
-          git push --force-with-lease origin "HEAD:$BRANCH"
+          pnpm openapi:check > /tmp/address-diagnostics/openapi-check.log 2>&1
+          echo $? > /tmp/address-diagnostics/openapi-check.exit
+
+          git status --short > /tmp/address-diagnostics/status.txt
+          git diff > /tmp/address-diagnostics/working.diff
+          set -e
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s05-address-repair-diagnostics
+          path: /tmp/address-diagnostics
+          if-no-files-found: error
