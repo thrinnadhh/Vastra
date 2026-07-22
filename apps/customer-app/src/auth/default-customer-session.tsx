@@ -10,13 +10,16 @@ import { CustomerApiSessionProvider } from './customer-api-session';
 import { CustomerPhoneOtpScreen } from './customer-phone-otp.screen';
 import { HttpCurrentAccountClient } from './current-account-client';
 import type { PhoneOtpPort } from './phone-otp.types';
-import { CustomerSessionRoot } from './customer-session-root';
+import {
+  CustomerSessionRoot,
+  type CustomerProfileSetupComponentProps,
+} from './customer-session-root';
 import {
   CustomerMobileEnvironmentError,
   readCustomerMobileEnvironment,
 } from './mobile-environment';
 import { SessionRestorationService } from './session-restoration.service';
-import type { AuthSessionPort, CurrentAccount, SessionRestorer } from './session-restoration.types';
+import type { AuthSessionPort, SessionRestorer } from './session-restoration.types';
 import {
   createCustomerSupabaseClient,
   startSupabaseAuthLifecycle,
@@ -80,10 +83,7 @@ function createDependencies(): DependencyResult {
 function DefaultCustomerProfileSetup({
   account,
   onCompleted,
-}: {
-  readonly account: CurrentAccount & { readonly accountType: 'CUSTOMER' };
-  readonly onCompleted: () => void;
-}) {
+}: CustomerProfileSetupComponentProps) {
   const apiClient = useCustomerApiClient();
   const profilePort = useMemo(() => new ApiCustomerProfileSetupAdapter(apiClient), [apiClient]);
 
@@ -119,9 +119,7 @@ function ConfiguredCustomerSessionApp({
       <CustomerSessionRoot
         authSession={dependencies.authSession}
         launchStore={dependencies.launchStore}
-        profileSetupContent={({ account, onCompleted }) => (
-          <DefaultCustomerProfileSetup account={account} onCompleted={onCompleted} />
-        )}
+        ProfileSetupComponent={DefaultCustomerProfileSetup}
         sessionRestorer={dependencies.sessionRestorer}
         signedOutContent={resolvedSignedOutContent}
       >
