@@ -111,7 +111,7 @@ describe('CustomerProductScreen', () => {
     expect(screen.getByText('Sold by Tirupati Trends')).toBeTruthy();
     expect(screen.getByText('M · Blue')).toBeTruthy();
     expect(screen.getByText('3 in stock')).toBeTruthy();
-    expect(screen.getByText('Eligible within 7 days')).toBeTruthy();
+    expect(screen.getByText(/Eligible within 7 days/u)).toBeTruthy();
     expect(
       screen.getByText(
         'Available size labels are shown on each variant. A measurement-based size chart is not present in the current catalogue contract.',
@@ -120,6 +120,12 @@ describe('CustomerProductScreen', () => {
   });
 
   it('adds the selected live variant with the chosen quantity and refreshes stock', async () => {
+    const availableVariant = product.variants[0];
+    const unavailableVariant = product.variants[1];
+    if (availableVariant === undefined || unavailableVariant === undefined) {
+      throw new Error('Product variant fixtures are incomplete');
+    }
+
     const port = new ProductPortStub(
       [
         { kind: 'SUCCESS', product },
@@ -127,7 +133,7 @@ describe('CustomerProductScreen', () => {
           kind: 'SUCCESS',
           product: {
             ...product,
-            variants: [{ ...product.variants[0]!, availableQuantity: 1 }, product.variants[1]!],
+            variants: [{ ...availableVariant, availableQuantity: 1 }, unavailableVariant],
           },
         },
       ],
