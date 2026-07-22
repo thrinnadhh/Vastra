@@ -15,7 +15,7 @@ jobs:
   verify:
     name: Diagnose customer profile database test
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
 
     steps:
       - name: Check out repository
@@ -28,14 +28,17 @@ jobs:
         with:
           version: 2.109.1
 
-      - name: Run database diagnostic
+      - name: Start and reset local database
+        shell: bash
+        run: |
+          supabase start > /tmp/profile-db-start.log 2>&1
+          supabase db reset --local > /tmp/profile-db-reset.log 2>&1
+
+      - name: Run customer profile pgTAP diagnostic
         shell: bash
         run: |
           set +e
-          bash scripts/run-db-tests.sh > /tmp/profile-db.log 2>&1
+          supabase test db supabase/tests/0091_customer_profile_update.test.sql --local > /tmp/profile-db-test.log 2>&1
           status=$?
-          echo "--- profile database failure summary ---"
-          grep -n -E '0091_customer_profile_update|not ok|Bail out|ERROR|Error|error|failed|Failed' /tmp/profile-db.log | tail -n 60 || true
-          echo "--- final database output ---"
-          tail -n 80 /tmp/profile-db.log
+          cat /tmp/profile-db-test.log
           exit "$status"
