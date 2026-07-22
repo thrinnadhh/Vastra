@@ -46,6 +46,7 @@ class FakeCurrentAccount implements CurrentAccountPort {
       accountType: 'CUSTOMER',
       status: 'ACTIVE',
       fullName: 'Customer One',
+      profileCompleted: true,
     },
   };
 
@@ -74,6 +75,7 @@ describe('SessionRestorationService', () => {
         accountType: 'CUSTOMER',
         status: 'ACTIVE',
         fullName: 'Customer One',
+        profileCompleted: true,
       },
     });
   });
@@ -105,6 +107,7 @@ describe('SessionRestorationService', () => {
         accountType: 'MERCHANT',
         status: 'ACTIVE',
         fullName: 'Merchant One',
+        profileCompleted: true,
       },
     };
 
@@ -123,6 +126,7 @@ describe('SessionRestorationService', () => {
         accountType: 'CUSTOMER',
         status: 'ACTIVE',
         fullName: 'Another Customer',
+        profileCompleted: true,
       },
     };
 
