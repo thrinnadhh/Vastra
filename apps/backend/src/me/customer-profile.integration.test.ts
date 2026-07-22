@@ -42,9 +42,7 @@ class ProfileAuthenticationGateway implements AuthenticationGateway {
 
   public findProfile(userId: string): Promise<ProfileSnapshot | null> {
     return Promise.resolve(
-      userId === USER_ID
-        ? { id: USER_ID, accountType: 'CUSTOMER', status: 'ACTIVE' }
-        : null,
+      userId === USER_ID ? { id: USER_ID, accountType: 'CUSTOMER', status: 'ACTIVE' } : null,
     );
   }
 
@@ -97,10 +95,7 @@ class MutableMeGateway implements MeGateway {
 class MutableCustomerProfileGateway implements CustomerProfileGateway {
   public constructor(private readonly meGateway: MutableMeGateway) {}
 
-  public updateCurrentCustomerProfile(
-    _client: SupabaseClient,
-    input: UpdateCustomerProfileInput,
-  ) {
+  public updateCurrentCustomerProfile(_client: SupabaseClient, input: UpdateCustomerProfileInput) {
     this.meGateway.fullName = input.fullName;
     this.meGateway.profileCompleted = true;
     return Promise.resolve({
@@ -149,7 +144,9 @@ describe('PATCH /me/profile integration', () => {
   });
 
   it('requires authentication', async () => {
-    expect((await request(httpServer).patch('/me/profile').send({ fullName: 'Trinadh B' })).status).toBe(401);
+    expect(
+      (await request(httpServer).patch('/me/profile').send({ fullName: 'Trinadh B' })).status,
+    ).toBe(401);
   });
 
   it('rejects invalid profile input', async () => {

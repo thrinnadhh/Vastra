@@ -101,33 +101,33 @@ describe('CustomerProfileService', () => {
   });
 
   it('updates the profile and returns the authoritative current account', async () => {
-    await expect(service.updateCurrentCustomerProfile(context, { fullName: '  Trinadh B ' })).resolves.toStrictEqual(
-      accountResponse,
-    );
+    await expect(
+      service.updateCurrentCustomerProfile(context, { fullName: '  Trinadh B ' }),
+    ).resolves.toStrictEqual(accountResponse);
     expect(gateway.inputs).toStrictEqual(['Trinadh B']);
     expect(currentAccountReads).toBe(1);
   });
 
   it('rejects invalid input before calling the gateway', async () => {
-    await expect(service.updateCurrentCustomerProfile(context, { fullName: ' ' })).rejects.toSatisfy(
-      (error: unknown) => errorCode(error) === 'VALIDATION_ERROR',
-    );
+    await expect(
+      service.updateCurrentCustomerProfile(context, { fullName: ' ' }),
+    ).rejects.toSatisfy((error: unknown) => errorCode(error) === 'VALIDATION_ERROR');
     expect(gateway.inputs).toStrictEqual([]);
     expect(currentAccountReads).toBe(0);
   });
 
   it('maps invalid profile state without reading the account again', async () => {
     gateway.error = new CustomerProfileStateInvalidError();
-    await expect(service.updateCurrentCustomerProfile(context, { fullName: 'Trinadh B' })).rejects.toSatisfy(
-      (error: unknown) => errorCode(error) === 'PROFILE_STATE_INVALID',
-    );
+    await expect(
+      service.updateCurrentCustomerProfile(context, { fullName: 'Trinadh B' }),
+    ).rejects.toSatisfy((error: unknown) => errorCode(error) === 'PROFILE_STATE_INVALID');
     expect(currentAccountReads).toBe(0);
   });
 
   it('maps provider failures as retryable service unavailability', async () => {
     gateway.error = new CustomerProfileGatewayUnavailableError();
-    await expect(service.updateCurrentCustomerProfile(context, { fullName: 'Trinadh B' })).rejects.toSatisfy(
-      (error: unknown) => errorCode(error) === 'EXTERNAL_SERVICE_UNAVAILABLE',
-    );
+    await expect(
+      service.updateCurrentCustomerProfile(context, { fullName: 'Trinadh B' }),
+    ).rejects.toSatisfy((error: unknown) => errorCode(error) === 'EXTERNAL_SERVICE_UNAVAILABLE');
   });
 });

@@ -16,11 +16,7 @@ import {
   readCustomerMobileEnvironment,
 } from './mobile-environment';
 import { SessionRestorationService } from './session-restoration.service';
-import type {
-  AuthSessionPort,
-  CurrentAccount,
-  SessionRestorer,
-} from './session-restoration.types';
+import type { AuthSessionPort, CurrentAccount, SessionRestorer } from './session-restoration.types';
 import {
   createCustomerSupabaseClient,
   startSupabaseAuthLifecycle,

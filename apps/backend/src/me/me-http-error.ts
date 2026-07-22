@@ -1,9 +1,7 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 
 export type MeErrorCode =
-  | 'VALIDATION_ERROR'
-  | 'PROFILE_STATE_INVALID'
-  | 'EXTERNAL_SERVICE_UNAVAILABLE';
+  'VALIDATION_ERROR' | 'PROFILE_STATE_INVALID' | 'EXTERNAL_SERVICE_UNAVAILABLE';
 
 interface MeApiErrorBody {
   readonly success: false;
