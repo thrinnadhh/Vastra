@@ -1,9 +1,9 @@
 name: Sprint 5 Wave 1 finalization
 
 on:
-  push:
+  pull_request:
     branches:
-      - automation/sprint-5-wave-1-implementation
+      - main
 
 concurrency:
   group: sprint-5-wave-1-finalization
@@ -14,6 +14,7 @@ permissions:
 
 jobs:
   finalize:
+    if: github.head_ref == 'automation/sprint-5-wave-1-implementation'
     name: finalize-${{ matrix.ticket }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
