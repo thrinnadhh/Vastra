@@ -1,6 +1,6 @@
 # FE-S04-04 customer product detail
 
-Status: READY — formatted, exhaustively typed, and guarded on FE-S04-03
+Status: READY — formatted, exhaustively typed, guarded, and under final unit verification
 
 ## Contract boundary
 
