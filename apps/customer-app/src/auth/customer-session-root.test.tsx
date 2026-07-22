@@ -24,6 +24,7 @@ const AUTHENTICATED_STATE: SessionRestorationState = {
     accountType: 'CUSTOMER',
     status: 'ACTIVE',
     fullName: 'Customer One',
+    profileCompleted: true,
   },
 };
 
@@ -122,6 +123,37 @@ describe('CustomerSessionRoot', () => {
     );
 
     expect(getByLabelText('Restoring Vastra session')).toBeTruthy();
+    expect(await findByText('Authenticated customer home')).toBeTruthy();
+  });
+
+  it('requires profile setup before rendering authenticated application content', async () => {
+    const authSession = new ObservableAuthSession();
+    const sessionRestorer = new SequencedRestorer();
+    sessionRestorer.states = [
+      {
+        status: 'AUTHENTICATED',
+        account: { ...AUTHENTICATED_STATE.account, fullName: null, profileCompleted: false },
+      },
+      AUTHENTICATED_STATE,
+    ];
+
+    const { findByRole, findByText, queryByText } = render(
+      <CustomerSessionRoot
+        authSession={authSession}
+        profileSetupContent={({ onCompleted }) => (
+          <Pressable accessibilityRole="button" onPress={onCompleted}>
+            <Text>Save required profile</Text>
+          </Pressable>
+        )}
+        sessionRestorer={sessionRestorer}
+      >
+        <Text>Authenticated customer home</Text>
+      </CustomerSessionRoot>,
+    );
+
+    expect(await findByText('Save required profile')).toBeTruthy();
+    expect(queryByText('Authenticated customer home')).toBeNull();
+    fireEvent.press(await findByRole('button', { name: 'Save required profile' }));
     expect(await findByText('Authenticated customer home')).toBeTruthy();
   });
 
