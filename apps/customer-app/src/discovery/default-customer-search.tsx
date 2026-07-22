@@ -6,8 +6,10 @@ import { ApiCustomerServiceabilityAdapter } from '../location/api-customer-servi
 import { CustomerLocationScreen } from '../location/customer-location.screen';
 import type { CustomerCoordinates } from '../location/customer-location.types';
 import { ExpoCustomerLocationAdapter } from '../location/expo-customer-location.adapter';
+import { ApiCustomerProductAdapter } from './api-customer-product.adapter';
 import { ApiCustomerSearchAdapter } from './api-customer-search.adapter';
 import { ApiCustomerShopAdapter } from './api-customer-shop.adapter';
+import { CustomerProductScreen } from './customer-product.screen';
 import { CustomerSearchScreen } from './customer-search.screen';
 import type { CustomerSearchSessionState } from './customer-search.types';
 import { CustomerShopsScreen } from './customer-shops.screen';
@@ -28,6 +30,7 @@ export function DefaultCustomerSearchRoot({
   const apiClient = useCustomerApiClient();
   const searchPort = useMemo(() => new ApiCustomerSearchAdapter(apiClient), [apiClient]);
   const shopPort = useMemo(() => new ApiCustomerShopAdapter(apiClient), [apiClient]);
+  const productPort = useMemo(() => new ApiCustomerProductAdapter(apiClient), [apiClient]);
   const locationPort = useMemo(() => new ExpoCustomerLocationAdapter(), []);
   const serviceabilityPort = useMemo(
     () => new ApiCustomerServiceabilityAdapter(apiClient),
@@ -39,25 +42,13 @@ export function DefaultCustomerSearchRoot({
 
   if (selectedProductId !== null) {
     return (
-      <View style={styles.placeholder}>
-        <Text accessibilityRole="header" style={styles.title}>
-          Product details continue in FE-S04-04
-        </Text>
-        <Text style={styles.copy}>
-          Discover preserved product {selectedProductId}. The typed detail route will replace this
-          truthful boundary in its owning ticket.
-        </Text>
-        <Pressable
-          accessibilityLabel="Back to discovery results"
-          accessibilityRole="button"
-          onPress={() => {
-            setSelectedProductId(null);
-          }}
-          style={styles.action}
-        >
-          <Text style={styles.actionText}>Back to discovery</Text>
-        </Pressable>
-      </View>
+      <CustomerProductScreen
+        onBack={() => {
+          setSelectedProductId(null);
+        }}
+        productId={selectedProductId}
+        productPort={productPort}
+      />
     );
   }
 
@@ -174,16 +165,4 @@ const styles = StyleSheet.create({
   flow: { flex: 1, backgroundColor: '#FFFDFB' },
   backAction: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 20 },
   backText: { color: '#8E3B46', fontSize: 14, fontWeight: '800' },
-  placeholder: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#FFFDFB' },
-  title: { color: '#241B16', fontSize: 24, fontWeight: '800' },
-  copy: { marginTop: 10, color: '#75675F', fontSize: 15, lineHeight: 22 },
-  action: {
-    minHeight: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 18,
-    borderRadius: 15,
-    backgroundColor: '#8E3B46',
-  },
-  actionText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
 });
