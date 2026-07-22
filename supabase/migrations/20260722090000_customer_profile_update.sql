@@ -18,6 +18,7 @@ as $$
 declare
   current_customer_id uuid := auth.uid();
   normalized_full_name text := regexp_replace(btrim(p_full_name), '[[:space:]]+', ' ', 'g');
+  mutation_timestamp timestamptz := clock_timestamp();
   profile_updated_at timestamptz;
 begin
   if current_customer_id is null then
@@ -51,13 +52,13 @@ begin
   update public.profiles as profile
   set
     full_name = normalized_full_name,
-    updated_at = now()
+    updated_at = mutation_timestamp
   where profile.id = current_customer_id;
 
   update public.customer_profiles as customer_profile
   set
     profile_completed = true,
-    updated_at = now()
+    updated_at = mutation_timestamp
   where customer_profile.user_id = current_customer_id
   returning customer_profile.updated_at
   into profile_updated_at;
