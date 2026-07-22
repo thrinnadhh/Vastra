@@ -127,7 +127,7 @@ describe('CustomerProductScreen', () => {
           kind: 'SUCCESS',
           product: {
             ...product,
-            variants: [{ ...product.variants[0], availableQuantity: 1 }, product.variants[1]],
+            variants: [{ ...product.variants[0]!, availableQuantity: 1 }, product.variants[1]!],
           },
         },
       ],
