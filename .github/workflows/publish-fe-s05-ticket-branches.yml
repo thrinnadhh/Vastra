@@ -56,6 +56,8 @@ jobs:
           set -euo pipefail
           cd address
           git switch -c feat/fe-s05-02-address-ui
+          git config user.name 'Trinadh B'
+          git config user.email '111868359+thrinnadhh@users.noreply.github.com'
           git am /tmp/fe-s05-02.patch
           git diff --check origin/main..HEAD
           git push origin HEAD:refs/heads/feat/fe-s05-02-address-ui
@@ -75,6 +77,8 @@ jobs:
           set -euo pipefail
           cd orders
           git switch -c feat/ui-fe-s05-05-orders-tracking
+          git config user.name 'Trinadh B'
+          git config user.email '111868359+thrinnadhh@users.noreply.github.com'
           git am /tmp/fe-s05-05.patch
           git diff --check origin/main..HEAD
           git push origin HEAD:refs/heads/feat/ui-fe-s05-05-orders-tracking
