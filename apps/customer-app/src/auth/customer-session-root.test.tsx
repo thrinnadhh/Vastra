@@ -3,7 +3,10 @@ import { Pressable, Text } from 'react-native';
 
 import type { CustomerLaunchStore } from './customer-launch-store';
 import { useCustomerSessionActions } from './customer-session-actions';
-import { CustomerSessionRoot } from './customer-session-root';
+import {
+  CustomerSessionRoot,
+  type CustomerProfileSetupComponentProps,
+} from './customer-session-root';
 import type {
   AuthSessionEvent,
   AuthSessionPort,
@@ -111,6 +114,14 @@ function SessionActionProbe() {
   );
 }
 
+function ProfileSetupProbe({ onCompleted }: CustomerProfileSetupComponentProps) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onCompleted}>
+      <Text>Save required profile</Text>
+    </Pressable>
+  );
+}
+
 describe('CustomerSessionRoot', () => {
   it('shows a deterministic splash and then renders authenticated content', async () => {
     const authSession = new ObservableAuthSession();
@@ -140,11 +151,7 @@ describe('CustomerSessionRoot', () => {
     const { findByRole, findByText, queryByText } = render(
       <CustomerSessionRoot
         authSession={authSession}
-        profileSetupContent={({ onCompleted }) => (
-          <Pressable accessibilityRole="button" onPress={onCompleted}>
-            <Text>Save required profile</Text>
-          </Pressable>
-        )}
+        ProfileSetupComponent={ProfileSetupProbe}
         sessionRestorer={sessionRestorer}
       >
         <Text>Authenticated customer home</Text>
