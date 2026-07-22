@@ -54,6 +54,9 @@ jobs:
         shell: bash
         run: |
           cat scripts/s05-wave1.payload.* | base64 -d | xz -d > /tmp/s05-wave1-implement.py
+          python scripts/s05-wave1-hotfix.py /tmp/s05-wave1-implement.py
+          git config user.name "Vastra Sprint 5 Agent"
+          git config user.email "actions@users.noreply.github.com"
           git fetch origin main "${{ matrix.branch }}"
           test "$(git rev-parse origin/main)" = "$(git merge-base origin/main origin/${{ matrix.branch }})"
           git switch "${{ matrix.branch }}"
