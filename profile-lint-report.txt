@@ -1,0 +1,42 @@
+
+> vastra@0.0.0 lint /home/runner/work/Vastra/Vastra
+> pnpm --filter @vastra/api-client generate && eslint . --max-warnings=0
+
+
+> @vastra/api-client@0.0.0 generate /home/runner/work/Vastra/Vastra/packages/api-client
+> node scripts/generate-openapi-types.mjs
+
+Generated 120 OpenAPI operations at /home/runner/work/Vastra/Vastra/packages/api-client/src/generated/openapi.ts
+
+/home/runner/work/Vastra/Vastra/apps/backend/src/me/customer-profile.integration.test.ts
+  115:3   error  Unsafe return of type `Server<any, any>` from function with return type `Server<typeof IncomingMessage, typeof ServerResponse>`  @typescript-eslint/no-unsafe-return
+  159:26  error  Unsafe member access .error on an `any` value                                                                                    @typescript-eslint/no-unsafe-member-access
+  169:26  error  Unsafe member access .data on an `any` value                                                                                     @typescript-eslint/no-unsafe-member-access
+  170:26  error  Unsafe member access .data on an `any` value                                                                                     @typescript-eslint/no-unsafe-member-access
+
+/home/runner/work/Vastra/Vastra/apps/backend/src/me/customer-profile.validation.ts
+  6:35  error  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+
+/home/runner/work/Vastra/Vastra/apps/customer-app/src/auth/customer-session-root.tsx
+  249:31  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/home/runner/work/Vastra/Vastra/apps/customer-app/src/auth/customer-session-root.tsx:249:31
+  247 |           />
+  248 |         ) : (
+> 249 |           profileSetupContent({
+      |                               ^
+> 250 |             account: state.session.account,
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 251 |             onCompleted: completeProfileSetup,
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 252 |           })
+      | ^^^^^^^^^^^^ Passing a ref to a function may read its value during render
+  253 |         );
+  254 |       }
+  255 |  react-hooks/refs
+
+✖ 6 problems (6 errors, 0 warnings)
+
+ ELIFECYCLE  Command failed with exit code 1.
