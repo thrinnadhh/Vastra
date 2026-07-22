@@ -1,6 +1,6 @@
 # FE-S04-04 customer product detail
 
-Status: READY — stacked on FE-S04-03
+Status: READY — formatted and stacked on FE-S04-03
 
 ## Contract boundary
 
