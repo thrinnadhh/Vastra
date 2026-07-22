@@ -143,52 +143,30 @@ const READY_ORDER: CustomerOrderDetail = {
   totals: TOTALS,
   estimatedDeliveryAt: null,
   customerNote: null,
-  cancellationReasonCode: null,
-  cancellationNote: null,
   history: [
     {
       id: '1',
-      previousStatus: null,
-      newStatus: 'PAYMENT_PENDING',
-      changedByRole: 'SYSTEM',
-      reasonCode: null,
-      note: null,
+      status: 'PAYMENT_PENDING',
       createdAt: '2026-07-16T10:01:00.000Z',
     },
     {
       id: '2',
-      previousStatus: 'PAYMENT_PENDING',
-      newStatus: 'WAITING_FOR_MERCHANT',
-      changedByRole: 'SYSTEM',
-      reasonCode: null,
-      note: null,
+      status: 'WAITING_FOR_MERCHANT',
       createdAt: '2026-07-16T10:01:01.000Z',
     },
     {
       id: '3',
-      previousStatus: 'WAITING_FOR_MERCHANT',
-      newStatus: 'MERCHANT_ACCEPTED',
-      changedByRole: 'MERCHANT',
-      reasonCode: null,
-      note: 'Preparation time: 20 minutes',
+      status: 'MERCHANT_ACCEPTED',
       createdAt: '2026-07-16T10:05:00.000Z',
     },
     {
       id: '4',
-      previousStatus: 'MERCHANT_ACCEPTED',
-      newStatus: 'PACKING',
-      changedByRole: 'MERCHANT',
-      reasonCode: null,
-      note: null,
+      status: 'PACKING',
       createdAt: '2026-07-16T10:10:00.000Z',
     },
     {
       id: '5',
-      previousStatus: 'PACKING',
-      newStatus: 'READY_FOR_PICKUP',
-      changedByRole: 'MERCHANT',
-      reasonCode: null,
-      note: 'Every ordered item was verified',
+      status: 'READY_FOR_PICKUP',
       createdAt: '2026-07-16T10:20:00.000Z',
     },
   ],
@@ -259,7 +237,9 @@ describe('customer COD order journey', () => {
       />,
     );
 
-    fireEvent.press(await findByRole('button', { name: 'Place COD order for ₹325.00' }));
+    fireEvent.press(
+      await findByRole('button', { name: 'Place COD order for ₹325.00' }, { timeout: 5_000 }),
+    );
     expect(await findByText('ORDER NOT PLACED')).toBeTruthy();
     fireEvent.press(await findByRole('button', { name: 'Retry same COD order attempt' }));
 
@@ -273,12 +253,22 @@ describe('customer COD order journey', () => {
 
     fireEvent.press(await findByRole('button', { name: 'View order VAS-JOURNEY-0001' }));
 
-    expect(await findByLabelText('Current order status READY_FOR_PICKUP')).toBeTruthy();
-    expect(getByLabelText('History PAYMENT_PENDING at 2026-07-16T10:01:00.000Z')).toBeTruthy();
-    expect(getByLabelText('History WAITING_FOR_MERCHANT at 2026-07-16T10:01:01.000Z')).toBeTruthy();
-    expect(getByLabelText('History MERCHANT_ACCEPTED at 2026-07-16T10:05:00.000Z')).toBeTruthy();
-    expect(getByLabelText('History PACKING at 2026-07-16T10:10:00.000Z')).toBeTruthy();
-    expect(getByLabelText('History READY_FOR_PICKUP at 2026-07-16T10:20:00.000Z')).toBeTruthy();
+    expect(
+      await findByLabelText(
+        'Current order status Ready for pickup. Your parcel is packed and ready for a delivery partner.',
+      ),
+    ).toBeTruthy();
+    expect(
+      getByLabelText('Order update Confirming payment at 2026-07-16T10:01:00.000Z'),
+    ).toBeTruthy();
+    expect(
+      getByLabelText('Order update Waiting for shop at 2026-07-16T10:01:01.000Z'),
+    ).toBeTruthy();
+    expect(getByLabelText('Order update Order accepted at 2026-07-16T10:05:00.000Z')).toBeTruthy();
+    expect(getByLabelText('Order update Being packed at 2026-07-16T10:10:00.000Z')).toBeTruthy();
+    expect(
+      getByLabelText('Order update Ready for pickup at 2026-07-16T10:20:00.000Z'),
+    ).toBeTruthy();
     expect(getOrder).toHaveBeenCalledWith(ORDER_ID);
     await waitFor(() => {
       expect(getOrder).toHaveBeenCalledTimes(1);

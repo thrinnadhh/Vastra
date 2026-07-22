@@ -53,7 +53,7 @@ describe('CustomerOrdersScreen', () => {
     expect(getByText('Past')).toBeTruthy();
     expect(getByText('Active Shop')).toBeTruthy();
     expect(getByText('Past Shop')).toBeTruthy();
-    expect(getByLabelText('Status PACKING')).toBeTruthy();
+    expect(getByLabelText('Order status Being packed')).toBeTruthy();
     expect(getAllByLabelText('Order total ₹545.00')).toHaveLength(2);
 
     fireEvent.press(await findByLabelText('Open order VAS-ACTIVE'));

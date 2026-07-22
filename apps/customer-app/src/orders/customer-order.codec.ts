@@ -4,7 +4,6 @@ import {
   type CustomerOrderFailureKind,
   type CustomerOrderFulfilmentType,
   type CustomerOrderDetail,
-  type CustomerOrderHistoryActorRole,
   type CustomerOrderHistoryEntry,
   type CustomerOrderItem,
   type CustomerOrderPaymentStatus,
@@ -98,10 +97,12 @@ export function readNullableDateTime(record: Record<string, unknown>, key: strin
 
 export function readStatus(record: Record<string, unknown>, key: string): CustomerOrderStatus {
   const value = record[key];
-  if (!CUSTOMER_ORDER_STATUSES.some((status) => status === value)) {
+  if (typeof value !== 'string' || value.length === 0) {
     throw new TypeError('Invalid customer order response');
   }
-  return value as CustomerOrderStatus;
+  return CUSTOMER_ORDER_STATUSES.some((status) => status === value)
+    ? (value as CustomerOrderStatus)
+    : 'UNKNOWN';
 }
 
 const PAYMENT_STATUSES: readonly CustomerOrderPaymentStatus[] = [
@@ -300,31 +301,17 @@ export function parseCustomerOrdersPageEnvelope(value: unknown): CustomerOrdersP
   };
 }
 
-const HISTORY_ACTOR_ROLES: readonly CustomerOrderHistoryActorRole[] = [
-  'SYSTEM',
-  'CUSTOMER',
-  'MERCHANT',
-  'CAPTAIN',
-  'ADMIN',
-];
-
 function parseCustomerOrderHistoryEntry(value: unknown): CustomerOrderHistoryEntry {
   if (!isRecord(value)) {
     throw new TypeError('Invalid customer order response');
   }
   const id = readString(value, 'id');
-  const previousStatusValue = value['previousStatus'];
-  const changedByRole = value['changedByRole'];
-  if (!/^[1-9][0-9]*$/u.test(id) || !HISTORY_ACTOR_ROLES.some((role) => role === changedByRole)) {
+  if (!/^[1-9][0-9]*$/u.test(id)) {
     throw new TypeError('Invalid customer order response');
   }
   return {
     id,
-    previousStatus: previousStatusValue === null ? null : readStatus(value, 'previousStatus'),
-    newStatus: readStatus(value, 'newStatus'),
-    changedByRole: changedByRole as CustomerOrderHistoryActorRole,
-    reasonCode: readNullableString(value, 'reasonCode'),
-    note: readNullableString(value, 'note'),
+    status: readStatus(value, 'newStatus'),
     createdAt: readDateTime(value, 'createdAt'),
   };
 }
@@ -358,8 +345,6 @@ function parseCustomerOrderDetail(value: unknown): CustomerOrderDetail {
     totals: parseOrderTotals(value['totals']),
     estimatedDeliveryAt: readNullableDateTime(value, 'estimatedDeliveryAt'),
     customerNote: readNullableString(value, 'customerNote'),
-    cancellationReasonCode: readNullableString(value, 'cancellationReasonCode'),
-    cancellationNote: readNullableString(value, 'cancellationNote'),
     history: history.map(parseCustomerOrderHistoryEntry),
     placedAt: readNullableDateTime(value, 'placedAt'),
     acceptedAt: readNullableDateTime(value, 'acceptedAt'),
