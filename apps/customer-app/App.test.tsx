@@ -11,6 +11,29 @@ jest.mock('./src/checkout/default-customer-checkout-quote', () => ({
   ),
 }));
 
+jest.mock('./src/discovery/default-customer-search', () => ({
+  DefaultCustomerSearchRoot: ({
+    sessionState,
+    setSessionState,
+  }: {
+    readonly sessionState: { readonly draftQuery: string };
+    readonly setSessionState: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
+  }) => (
+    <MockView>
+      <MockText>Customer product search</MockText>
+      <MockText>{sessionState.draftQuery}</MockText>
+      <MockPressable
+        accessibilityRole="button"
+        onPress={() => {
+          setSessionState((current) => ({ ...current, draftQuery: 'cotton shirt' }));
+        }}
+      >
+        <MockText>Set preserved query</MockText>
+      </MockPressable>
+    </MockView>
+  ),
+}));
+
 jest.mock('./src/orders/default-customer-orders', () => ({
   DefaultCustomerOrders: () => <MockText>Authenticated customer orders</MockText>,
 }));
@@ -49,14 +72,23 @@ describe('CustomerAppContent', () => {
     expect(getByRole('tab', { name: 'Profile tab' })).toBeTruthy();
   });
 
-  it('hands Home discovery actions to the canonical Discover tab', () => {
+  it('hands Home discovery actions to the canonical Discover search', () => {
     const { getByText } = render(<CustomerAppContent />);
 
     fireEvent.press(getByText('Browse Home discovery'));
 
-    expect(
-      getByText('Search, shop, and product routes continue in the remaining Sprint 04 tickets.'),
-    ).toBeTruthy();
+    expect(getByText('Customer product search')).toBeTruthy();
+  });
+
+  it('preserves Discover query state across root-tab switches', () => {
+    const { getByRole, getByText } = render(<CustomerAppContent />);
+
+    fireEvent.press(getByRole('tab', { name: 'Discover tab' }));
+    fireEvent.press(getByText('Set preserved query'));
+    fireEvent.press(getByRole('tab', { name: 'Home tab' }));
+    fireEvent.press(getByRole('tab', { name: 'Discover tab' }));
+
+    expect(getByText('cotton shirt')).toBeTruthy();
   });
 
   it('keeps checkout contextual rather than making it a sixth tab', () => {

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { MobileApplicationShell } from '@vastra/app-shells/native';
 import { StatusBar } from 'expo-status-bar';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -5,6 +7,9 @@ import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-c
 
 import { CustomerSessionApp } from './src/auth/default-customer-session';
 import { DefaultCustomerCheckoutQuote } from './src/checkout/default-customer-checkout-quote';
+import { DefaultCustomerSearchRoot } from './src/discovery/default-customer-search';
+import { createInitialCustomerSearchSessionState } from './src/discovery/customer-search.types';
+import type { CustomerCoordinates } from './src/location/customer-location.types';
 import {
   ReactNativeCustomerLinkingPort,
   type CustomerLinkingPort,
@@ -74,14 +79,25 @@ export function CustomerAppContent({
   readonly addressId?: string | null;
   readonly linkingPort?: CustomerLinkingPort;
 }) {
+  const [shoppingLocation, setShoppingLocation] = useState<CustomerCoordinates | null>(null);
+  const [searchSessionState, setSearchSessionState] = useState(
+    createInitialCustomerSearchSessionState,
+  );
   const slots: CustomerRootNavigationSlots = {
     home: ({ openCheckout, openDiscover }) => (
-      <DefaultCustomerHomeRoot openCheckout={openCheckout} openDiscover={openDiscover} />
+      <DefaultCustomerHomeRoot
+        location={shoppingLocation}
+        onLocationReady={setShoppingLocation}
+        openCheckout={openCheckout}
+        openDiscover={openDiscover}
+      />
     ),
     discover: (
-      <CustomerRootPlaceholder
-        description="Search, shop, and product routes continue in the remaining Sprint 04 tickets."
-        title="Discover"
+      <DefaultCustomerSearchRoot
+        location={shoppingLocation}
+        onLocationReady={setShoppingLocation}
+        sessionState={searchSessionState}
+        setSessionState={setSearchSessionState}
       />
     ),
     style: (
