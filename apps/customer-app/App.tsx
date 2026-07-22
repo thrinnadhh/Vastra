@@ -5,6 +5,7 @@ import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-c
 
 import { CustomerSessionApp } from './src/auth/default-customer-session';
 import { DefaultCustomerCheckoutQuote } from './src/checkout/default-customer-checkout-quote';
+import { ReactNativeCustomerLinkingPort, type CustomerLinkingPort } from './src/navigation/customer-linking.port';
 import {
   DefaultCustomerHomeRoot,
   DefaultCustomerProfileRoot,
@@ -14,9 +15,40 @@ import {
   CustomerRootPlaceholder,
   type CustomerRootNavigationSlots,
 } from './src/navigation/customer-root-navigation';
+import type { CustomerRoute } from './src/navigation/customer-routes';
 import { DefaultCustomerOrders } from './src/orders/default-customer-orders';
 
-export function CustomerAppContent({ addressId = null }: { readonly addressId?: string | null }) {
+const PRODUCTION_LINKING_PORT = new ReactNativeCustomerLinkingPort();
+
+function renderDeepLinkedRoute(route: CustomerRoute, onBack: () => void) {
+  if (route.scope === 'ORDERS' && route.name === 'OrderDetail') {
+    return <DefaultCustomerOrders initialOrderId={route.params.orderId} />;
+  }
+
+  if (
+    (route.scope === 'DISCOVERY' &&
+      (route.name === 'ProductDetail' || route.name === 'ShopDetail')) ||
+    (route.scope === 'STYLE' && route.name === 'LookDetail')
+  ) {
+    return (
+      <CustomerRootPlaceholder
+        description="This linked destination is recognized securely but its feature screen belongs to a later approved frontend ticket."
+        title="Destination unavailable in this build"
+      />
+    );
+  }
+
+  void onBack;
+  return null;
+}
+
+export function CustomerAppContent({
+  addressId = null,
+  linkingPort,
+}: {
+  readonly addressId?: string | null;
+  readonly linkingPort?: CustomerLinkingPort;
+}) {
   const slots: CustomerRootNavigationSlots = {
     home: (openCheckout) => <DefaultCustomerHomeRoot openCheckout={openCheckout} />,
     discover: (
@@ -34,9 +66,10 @@ export function CustomerAppContent({ addressId = null }: { readonly addressId?: 
     orders: <DefaultCustomerOrders />,
     profile: <DefaultCustomerProfileRoot />,
     checkout: <DefaultCustomerCheckoutQuote addressId={addressId} />,
+    renderDeepLinkedRoute,
   };
 
-  return <CustomerRootNavigation slots={slots} />;
+  return <CustomerRootNavigation linkingPort={linkingPort} slots={slots} />;
 }
 
 export function CustomerApplicationRoot(): React.JSX.Element {
@@ -48,7 +81,7 @@ export function CustomerApplicationRoot(): React.JSX.Element {
       testID="customer-application-shell"
     >
       <CustomerSessionApp>
-        <CustomerAppContent />
+        <CustomerAppContent linkingPort={PRODUCTION_LINKING_PORT} />
       </CustomerSessionApp>
     </MobileApplicationShell>
   );
