@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - automation/sprint-5-wave-1-implementation
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: sprint-5-wave-1-implementation
+  cancel-in-progress: true
 
 permissions:
   contents: write
