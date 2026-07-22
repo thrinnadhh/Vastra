@@ -30,6 +30,21 @@ function readNullableString(record: Record<string, unknown>, key: string): strin
   return value;
 }
 
+function readProfileCompleted(
+  accountType: MobileAccountType,
+  roleProfile: Record<string, unknown>,
+): boolean {
+  if (accountType !== 'CUSTOMER') {
+    return true;
+  }
+
+  if (roleProfile['kind'] !== 'CUSTOMER' || typeof roleProfile['profileCompleted'] !== 'boolean') {
+    throw new TypeError('Invalid current account response');
+  }
+
+  return roleProfile['profileCompleted'];
+}
+
 function parseCurrentAccount(value: unknown): CurrentAccount {
   if (!isRecord(value) || value['success'] !== true) {
     throw new TypeError('Invalid current account response');
@@ -53,8 +68,7 @@ function parseCurrentAccount(value: unknown): CurrentAccount {
     !isMobileAccountType(accountType) ||
     status !== 'ACTIVE' ||
     !isRecord(profile) ||
-    !isRecord(roleProfile) ||
-    typeof roleProfile['profileCompleted'] !== 'boolean'
+    !isRecord(roleProfile)
   ) {
     throw new TypeError('Invalid current account response');
   }
@@ -64,7 +78,7 @@ function parseCurrentAccount(value: unknown): CurrentAccount {
     accountType,
     status,
     fullName: readNullableString(profile, 'fullName'),
-    profileCompleted: roleProfile['profileCompleted'],
+    profileCompleted: readProfileCompleted(accountType, roleProfile),
   };
 }
 
