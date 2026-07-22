@@ -1,0 +1,140 @@
+
+> vastra@0.0.0 typecheck /home/runner/work/Vastra/Vastra
+> turbo run typecheck
+
+
+Attention:
+Turborepo now collects completely anonymous telemetry regarding usage.
+This information is used to shape the Turborepo roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://turborepo.dev/docs/telemetry
+
+
+   • Packages in scope: @vastra/admin-dashboard, @vastra/api-client, @vastra/app-shells, @vastra/backend, @vastra/captain-app, @vastra/config, @vastra/customer-app, @vastra/design-tokens, @vastra/domain-types, @vastra/frontend-test-harness, @vastra/merchant-app, @vastra/server-state, @vastra/testing, @vastra/ui-primitives, @vastra/validation
+   • Running typecheck in 15 packages
+   • Remote caching disabled
+
+::group::@vastra/design-tokens:typecheck
+cache miss, executing 7a5c67015aa0c0d3
+
+> @vastra/design-tokens@0.0.0 typecheck /home/runner/work/Vastra/Vastra/packages/design-tokens
+> tsc --noEmit
+
+::endgroup::
+::group::@vastra/domain-types:typecheck
+cache miss, executing 13b48268b29c8951
+
+> @vastra/domain-types@0.0.0 typecheck /home/runner/work/Vastra/Vastra/packages/domain-types
+> tsc --noEmit
+
+::endgroup::
+::group::@vastra/validation:typecheck
+cache miss, executing 0503aee46b7a169c
+
+> @vastra/validation@0.0.0 typecheck /home/runner/work/Vastra/Vastra/packages/validation
+> tsc --noEmit
+
+::endgroup::
+::group::@vastra/testing:typecheck
+cache miss, executing 3fef41fb49e0fb65
+
+> @vastra/testing@0.0.0 typecheck /home/runner/work/Vastra/Vastra/packages/testing
+> tsc --noEmit
+
+::endgroup::
+::group::@vastra/app-shells:typecheck
+cache miss, executing 380df27e8a4e803a
+
+> @vastra/app-shells@0.0.0 typecheck /home/runner/work/Vastra/Vastra/packages/app-shells
+> tsc --noEmit
+
+::endgroup::
+::group::@vastra/ui-primitives:typecheck
+cache miss, executing 6739469c6762fb00
+
+> @vastra/ui-primitives@0.0.0 typecheck /home/runner/work/Vastra/Vastra/packages/ui-primitives
+> tsc --noEmit
+
+::endgroup::
+::group::@vastra/admin-dashboard:typecheck
+cache miss, executing 54bb16e198b6577e
+
+> @vastra/admin-dashboard@0.0.0 typecheck /home/runner/work/Vastra/Vastra/apps/admin-dashboard
+> tsc --noEmit
+
+::endgroup::
+::group::@vastra/captain-app:typecheck
+cache miss, executing b2b18753c710cae6
+
+> @vastra/captain-app@0.0.0 typecheck /home/runner/work/Vastra/Vastra/apps/captain-app
+> tsc --noEmit
+
+::endgroup::
+::group::@vastra/server-state:typecheck
+cache miss, executing f92f5576bea8b48d
+
+> @vastra/server-state@0.0.0 typecheck /home/runner/work/Vastra/Vastra/packages/server-state
+> tsc --noEmit
+
+::endgroup::
+::group::@vastra/merchant-app:typecheck
+cache miss, executing c9a5f0d4ae314ae4
+
+> @vastra/merchant-app@0.0.0 typecheck /home/runner/work/Vastra/Vastra/apps/merchant-app
+> tsc --noEmit
+
+::endgroup::
+::group::@vastra/config:typecheck
+cache miss, executing 744af567e44d36d0
+
+> @vastra/config@0.0.0 typecheck /home/runner/work/Vastra/Vastra/packages/config
+> tsc --noEmit
+
+::endgroup::
+::group::@vastra/api-client:typecheck
+cache miss, executing 5563b64a07b4fd34
+
+> @vastra/api-client@0.0.0 typecheck /home/runner/work/Vastra/Vastra/packages/api-client
+> pnpm generate && tsc --noEmit
+
+
+> @vastra/api-client@0.0.0 generate /home/runner/work/Vastra/Vastra/packages/api-client
+> node scripts/generate-openapi-types.mjs
+
+Generated 119 OpenAPI operations at /home/runner/work/Vastra/Vastra/packages/api-client/src/generated/openapi.ts
+::endgroup::
+::group::@vastra/frontend-test-harness:typecheck
+cache miss, executing ca5dd83b5494fea9
+
+> @vastra/frontend-test-harness@0.0.0 typecheck /home/runner/work/Vastra/Vastra/packages/frontend-test-harness
+> tsc --noEmit
+
+::endgroup::
+[;31m@vastra/customer-app:typecheck[;0m
+cache miss, executing af3d5e2dd7c916aa
+
+> @vastra/customer-app@0.0.0 typecheck /home/runner/work/Vastra/Vastra/apps/customer-app
+> tsc --noEmit
+
+App.tsx(97,11): error TS2375: Type '{ linkingPort: CustomerLinkingPort | undefined; slots: CustomerRootNavigationSlots; }' is not assignable to type '{ readonly slots: CustomerRootNavigationSlots; readonly initialState?: CustomerNavigationState; readonly linkingPort?: CustomerLinkingPort; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'linkingPort' are incompatible.
+    Type 'CustomerLinkingPort | undefined' is not assignable to type 'CustomerLinkingPort'.
+      Type 'undefined' is not assignable to type 'CustomerLinkingPort'.
+ ELIFECYCLE  Command failed with exit code 2.
+::group::@vastra/backend:typecheck
+cache miss, executing 199d04c516a71558
+
+> @vastra/backend@0.0.0 typecheck /home/runner/work/Vastra/Vastra/apps/backend
+> tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json
+
+::endgroup::
+::error::command (/home/runner/work/Vastra/Vastra/apps/customer-app) /home/runner/setup-pnpm/node_modules/.bin/bin/pnpm run typecheck exited (1)
+@vastra/customer-app#typecheck:  ERROR  command (/home/runner/work/Vastra/Vastra/apps/customer-app) /home/runner/setup-pnpm/node_modules/.bin/bin/pnpm run typecheck exited (1)
+
+ Tasks:    13 successful, 15 total
+Cached:    0 cached, 15 total
+  Time:    40.509s 
+Failed:    @vastra/customer-app#typecheck
+
+ ERROR  run failed: command  exited (1)
+ ELIFECYCLE  Command failed with exit code 1.
