@@ -2,6 +2,9 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -13,47 +16,72 @@ concurrency:
 
 jobs:
   verify:
-    name: Diagnose customer profile database test
+    name: Verify repository
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
         with:
           persist-credentials: false
-          show-progress: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Validate environment templates
+        run: pnpm env:check
+
+      - name: Test Sprint 11 pilot tooling
+        run: pnpm test:pilot-tooling
+
+      - name: Validate Sprint 11 evidence structure
+        run: pnpm pilot:evidence:check
+
+      - name: Scan client apps for privileged secrets
+        run: pnpm security:client-secrets
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+      - name: Run frontend E2E and visual harness
+        run: pnpm test:frontend:harness
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v3
         with:
           version: 2.109.1
 
-      - name: Start and reset local database
-        shell: bash
-        run: |
-          supabase start > /tmp/profile-db-start.log 2>&1
-          supabase db reset --local > /tmp/profile-db-reset.log 2>&1
+      - name: Run database tests
+        run: pnpm db:test
 
-      - name: Run customer profile pgTAP diagnostic
-        id: profile_test
-        shell: bash
-        run: |
-          set +e
-          supabase test db supabase/tests/0091_customer_profile_update.test.sql --local > /tmp/profile-db-test.log 2>&1
-          status=$?
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          exit 0
+      - name: Validate OpenAPI
+        run: pnpm openapi:check
 
-      - name: Upload customer profile pgTAP output
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: customer-profile-pgtap-output
-          path: /tmp/profile-db-test.log
-          if-no-files-found: error
-
-      - name: Propagate pgTAP result
-        if: always()
-        shell: bash
-        run: exit "${{ steps.profile_test.outputs.status }}"
+      - name: Build
+        run: pnpm build
