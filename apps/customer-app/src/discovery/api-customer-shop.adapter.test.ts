@@ -125,6 +125,7 @@ describe('ApiCustomerShopAdapter', () => {
         isServiceable: true,
         todayHours: {
           date: '2026-07-22',
+          dayOfWeek: 3,
           timeZone: 'Asia/Kolkata',
           source: 'WEEKLY',
           isClosed: false,
