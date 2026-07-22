@@ -56,6 +56,11 @@ jobs:
       - name: Prepare isolated ticket branch
         shell: bash
         run: |
+          if test "${{ matrix.implement }}" = true; then
+            cat scripts/s05-wave1.payload.* > /tmp/s05-wave1.payload
+            cp scripts/s05-wave1-hotfix.py /tmp/s05-wave1-hotfix.py
+            cp scripts/s05-wave1-source-fix.py /tmp/s05-wave1-source-fix.py
+          fi
           git config user.name "Vastra Sprint 5 Agent"
           git config user.email "actions@users.noreply.github.com"
           git fetch origin main "${{ matrix.branch }}"
@@ -64,10 +69,10 @@ jobs:
           git reset --hard "origin/${{ matrix.branch }}"
           test -z "$(git status --short)"
           if test "${{ matrix.implement }}" = true; then
-            cat "$GITHUB_WORKSPACE/scripts/s05-wave1.payload."* | base64 -d | xz -d > /tmp/s05-wave1-implement.py
-            python "$GITHUB_WORKSPACE/scripts/s05-wave1-hotfix.py" /tmp/s05-wave1-implement.py
+            base64 -d /tmp/s05-wave1.payload | xz -d > /tmp/s05-wave1-implement.py
+            python /tmp/s05-wave1-hotfix.py /tmp/s05-wave1-implement.py
             python /tmp/s05-wave1-implement.py "${{ matrix.ticket }}"
-            python "$GITHUB_WORKSPACE/scripts/s05-wave1-source-fix.py" "${{ matrix.ticket }}"
+            python /tmp/s05-wave1-source-fix.py "${{ matrix.ticket }}"
           fi
 
       - name: Install, generate, format, and autofix
