@@ -6,12 +6,16 @@ import { CustomerOrderDetailScreen } from './customer-order-detail.screen';
 import { CustomerOrdersScreen } from './customer-orders.screen';
 
 export function DefaultCustomerOrders({
+  initialOrderId = null,
+  onBackFromInitialOrder,
   onSelectOrder,
 }: {
+  readonly initialOrderId?: string | null;
+  readonly onBackFromInitialOrder?: () => void;
   readonly onSelectOrder?: (orderId: string) => void;
 }) {
   const apiSession = useCustomerApiSession();
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(initialOrderId);
   const ordersClient = useMemo(
     () => new HttpCustomerOrderReadClient(apiSession.apiBaseUrl, () => apiSession.getAccessToken()),
     [apiSession],
@@ -21,6 +25,11 @@ export function DefaultCustomerOrders({
     return (
       <CustomerOrderDetailScreen
         onBack={() => {
+          if (initialOrderId !== null && selectedOrderId === initialOrderId) {
+            onBackFromInitialOrder?.();
+            return;
+          }
+
           setSelectedOrderId(null);
         }}
         orderClient={ordersClient}

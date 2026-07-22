@@ -2,6 +2,7 @@
   "expo": {
     "name": "Vastra",
     "slug": "vastra-customer-app",
+    "scheme": "vastra",
     "version": "0.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
