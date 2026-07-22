@@ -1,4 +1,4 @@
-name: Sprint 5 Wave 1 remaining finalization
+name: Sprint 5 PR repair
 
 on:
   pull_request:
@@ -6,16 +6,16 @@ on:
       - main
 
 concurrency:
-  group: sprint-5-wave-1-finalization
+  group: sprint-5-pr-repair
   cancel-in-progress: true
 
 permissions:
   contents: write
 
 jobs:
-  finalize:
+  repair:
     if: github.head_ref == 'automation/sprint-5-wave-1-implementation'
-    name: finalize-${{ matrix.ticket }}
+    name: repair-${{ matrix.ticket }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -25,12 +25,8 @@ jobs:
         include:
           - ticket: addresses
             branch: feat/be-fe-002-customer-addresses
-            commit: "feat(addresses): add customer address CRUD contract"
-            implement: false
-          - ticket: orders
-            branch: feat/ui-fe-s05-05-orders-tracking
-            commit: "feat(customer): complete orders and tracking experience"
-            implement: true
+          - ticket: quote
+            branch: feat/ui-fe-s05-03-quote-fees
 
     steps:
       - uses: actions/checkout@v4
@@ -44,140 +40,134 @@ jobs:
 
       - name: Prepare isolated ticket branch
         shell: bash
+        env:
+          BRANCH: ${{ matrix.branch }}
+          TICKET: ${{ matrix.ticket }}
         run: |
-          cp scripts/s05-wave1-source-fix.py /tmp/s05-wave1-source-fix.py
-          if test "${{ matrix.implement }}" = true; then
-            cat scripts/s05-wave1.payload.* > /tmp/s05-wave1.payload
-            cp scripts/s05-wave1-hotfix.py /tmp/s05-wave1-hotfix.py
-          fi
-          git config user.name "Vastra Sprint 5 Agent"
+          git config user.name "Vastra Sprint 5 Repair"
           git config user.email "actions@users.noreply.github.com"
-          git fetch origin main "${{ matrix.branch }}"
-          test "$(git merge-base origin/main origin/${{ matrix.branch }})" = "$(git rev-parse origin/main)"
-          git switch "${{ matrix.branch }}"
-          git reset --hard "origin/${{ matrix.branch }}"
+          git fetch origin main "$BRANCH"
+          test "$(git merge-base origin/main origin/$BRANCH)" = "$(git rev-parse origin/main)"
+          git switch "$BRANCH"
+          git reset --hard "origin/$BRANCH"
           test -z "$(git status --short)"
-          if test "${{ matrix.implement }}" = true; then
-            base64 -d /tmp/s05-wave1.payload | xz -d > /tmp/s05-wave1-implement.py
-            python /tmp/s05-wave1-hotfix.py /tmp/s05-wave1-implement.py
-            python /tmp/s05-wave1-implement.py "${{ matrix.ticket }}"
-            python /tmp/s05-wave1-source-fix.py "${{ matrix.ticket }}"
+
+          if test "$TICKET" = addresses; then
+            python - <<'PY'
+          from pathlib import Path
+
+          path = Path('docs/api/openapi.yaml')
+          source = path.read_text(encoding='utf-8')
+          source = source.replace(
+              "#/components/schemas/ResponseMeta",
+              "#/components/schemas/CustomerAddressResponseMeta",
+          )
+          if '    CustomerAddressResponseMeta:\n' not in source:
+              marker = '    CustomerAddress:\n'
+              schema = """    CustomerAddressResponseMeta:
+              type: object
+              additionalProperties: false
+              required: [requestId]
+              properties:
+                requestId:
+                  type: ['string', 'null']
+                  format: uuid
+
+          """
+              if marker not in source:
+                  raise SystemExit('CustomerAddress schema marker not found')
+              source = source.replace(marker, schema + marker, 1)
+          path.write_text(source, encoding='utf-8')
+          PY
           fi
 
       - name: Install, generate, format, and autofix
         shell: bash
+        env:
+          TICKET: ${{ matrix.ticket }}
         run: |
           corepack enable
           corepack prepare pnpm@8.15.0 --activate
           pnpm install --frozen-lockfile
-          pnpm --filter @vastra/api-client generate || true
-          mapfile -d '' changed < <(git ls-files --modified --others --exclude-standard -z)
-          format=()
-          code=()
-          for path in "${changed[@]}"; do
-            case "$path" in
-              *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs)
-                format+=("$path")
-                code+=("$path")
-                ;;
-              *.json|*.md|*.yaml|*.yml)
-                format+=("$path")
-                ;;
-            esac
-          done
-          if ((${#format[@]})); then pnpm exec prettier --write "${format[@]}" || true; fi
-          if ((${#code[@]})); then pnpm exec eslint --fix "${code[@]}" || true; fi
-          pnpm exec prettier --write packages/api-client/src/generated/openapi.ts || true
 
-      - name: Validate static and focused gates
-        id: validation
-        shell: bash
-        run: |
-          set -o pipefail
-          mkdir -p /tmp/s05-evidence
-          status=0
-          case "${{ matrix.ticket }}" in
-            orders) focused="pnpm --filter @vastra/customer-app exec jest src/orders --runInBand" ;;
-            addresses) focused="pnpm --filter @vastra/backend exec vitest run src/addresses" ;;
-          esac
-          commands=("$focused" "pnpm format:check" "pnpm lint" "pnpm typecheck")
-          for command in "${commands[@]}"; do
-            slug=$(printf '%s' "$command" | tr ' /:' '___')
-            echo "## $command" | tee -a /tmp/s05-evidence/summary.md
-            if bash -lc "$command" 2>&1 | tee "/tmp/s05-evidence/${slug}.log"; then
-              echo PASS | tee -a /tmp/s05-evidence/summary.md
-            else
-              echo FAIL | tee -a /tmp/s05-evidence/summary.md
-              status=1
-            fi
-          done
-          git status --short > /tmp/s05-evidence/status.txt
-          git ls-files --modified --others --exclude-standard > /tmp/s05-evidence/changed-files.txt
-          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if test "$TICKET" = addresses; then
+            pnpm --filter @vastra/api-client generate
+            pnpm exec prettier --write \
+              apps/backend/src/addresses/*.ts \
+              apps/backend/src/app.module.ts \
+              docs/api/openapi.yaml \
+              docs/design/customer-address-contract.md \
+              packages/api-client/src/generated/openapi.ts
+            pnpm exec eslint --fix apps/backend/src/addresses/*.ts apps/backend/src/app.module.ts
+          else
+            pnpm exec prettier --write \
+              apps/customer-app/src/checkout/customer-checkout-quote.screen.tsx \
+              apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx \
+              docs/design/customer-checkout-quote.md
+            pnpm exec eslint --fix \
+              apps/customer-app/src/checkout/customer-checkout-quote.screen.tsx \
+              apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx
+          fi
 
-      - name: Normalize generated artifact
-        if: steps.validation.outputs.status == '0'
-        shell: bash
-        run: |
-          case "${{ matrix.ticket }}" in
-            addresses)
-              pnpm --filter @vastra/api-client generate
-              pnpm exec prettier --write packages/api-client/src/generated/openapi.ts
-              ;;
-            orders)
-              git restore --source=HEAD --worktree -- packages/api-client/src/generated/openapi.ts || true
-              ;;
-          esac
-
-      - name: Verify ownership, amend or create ticket commit, and push
-        if: steps.validation.outputs.status == '0'
+      - name: Validate repair
         shell: bash
         env:
           TICKET: ${{ matrix.ticket }}
+        run: |
+          if test "$TICKET" = addresses; then
+            pnpm --filter @vastra/backend exec vitest run src/addresses
+            pnpm format:check
+            pnpm lint
+            pnpm typecheck
+            pnpm openapi:check
+            pnpm build
+          else
+            pnpm --filter @vastra/customer-app exec jest src/checkout/customer-checkout-quote --runInBand
+            pnpm format:check
+            pnpm lint
+            pnpm typecheck
+          fi
+
+      - name: Verify ownership and push amended ticket commit
+        shell: bash
+        env:
           BRANCH: ${{ matrix.branch }}
-          COMMIT_MESSAGE: ${{ matrix.commit }}
+          TICKET: ${{ matrix.ticket }}
         run: |
           python - <<'PY'
-          import os, subprocess
+          import os
+          import subprocess
+
           ticket = os.environ['TICKET']
           allowed = {
-              'orders': ('apps/customer-app/src/orders/', 'docs/design/customer-orders-tracking.md'),
+              'quote': (
+                  'apps/customer-app/src/checkout/customer-checkout-quote.',
+                  'docs/design/customer-checkout-quote.md',
+              ),
               'addresses': (
-                  'apps/backend/src/addresses/', 'apps/backend/src/app.module.ts',
+                  'apps/backend/src/addresses/',
+                  'apps/backend/src/app.module.ts',
+                  'docs/api/openapi.yaml',
+                  'docs/design/customer-address-contract.md',
                   'supabase/migrations/20260722120000_customer_address_contract.sql',
                   'supabase/tests/0092_customer_address_contract.test.sql',
-                  'docs/api/openapi.yaml', 'docs/design/customer-address-contract.md',
                   'packages/api-client/src/generated/',
               ),
           }[ticket]
           changed = subprocess.check_output(
+              ['git', 'diff', '--name-only', 'origin/main...HEAD'], text=True
+          ).splitlines()
+          working = subprocess.check_output(
               ['git', 'ls-files', '--modified', '--others', '--exclude-standard'], text=True
           ).splitlines()
-          if not changed:
-              raise SystemExit(f'{ticket}: no ticket changes')
-          foreign = [p for p in changed if not any(p == prefix or p.startswith(prefix) for prefix in allowed)]
+          paths = sorted(set(changed + working))
+          foreign = [path for path in paths if not any(path == prefix or path.startswith(prefix) for prefix in allowed)]
           if foreign:
               raise SystemExit(f'{ticket}: foreign-owned files: {foreign}')
-          print(f'{ticket}: verified {len(changed)} owned files')
-          print('\n'.join(changed))
+          print(f'{ticket}: verified {len(paths)} owned files')
           PY
+
           git add --all
           git diff --cached --check
-          if test "$(git rev-list --count origin/main..HEAD)" -eq 0; then
-            git commit -m "$COMMIT_MESSAGE"
-          else
-            git commit --amend --no-edit
-          fi
+          git commit --amend --no-edit
           git push --force-with-lease origin "HEAD:$BRANCH"
-
-      - name: Upload evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: s05-${{ matrix.ticket }}-remaining-finalization
-          path: /tmp/s05-evidence
-          if-no-files-found: warn
-
-      - name: Fail incomplete ticket
-        if: steps.validation.outputs.status != '0'
-        run: exit 1
