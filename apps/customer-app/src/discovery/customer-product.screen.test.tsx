@@ -120,6 +120,12 @@ describe('CustomerProductScreen', () => {
   });
 
   it('adds the selected live variant with the chosen quantity and refreshes stock', async () => {
+    const availableVariant = product.variants[0];
+    const unavailableVariant = product.variants[1];
+    if (availableVariant === undefined || unavailableVariant === undefined) {
+      throw new Error('Product variant fixtures are incomplete');
+    }
+
     const port = new ProductPortStub(
       [
         { kind: 'SUCCESS', product },
@@ -127,7 +133,7 @@ describe('CustomerProductScreen', () => {
           kind: 'SUCCESS',
           product: {
             ...product,
-            variants: [{ ...product.variants[0]!, availableQuantity: 1 }, product.variants[1]!],
+            variants: [{ ...availableVariant, availableQuantity: 1 }, unavailableVariant],
           },
         },
       ],
