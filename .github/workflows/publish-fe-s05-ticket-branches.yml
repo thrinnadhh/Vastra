@@ -1,4 +1,4 @@
-name: Publish FE-S05-02 post-merge fix
+name: Publish FE-S05-02 web escape repair
 
 on:
   pull_request:
@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: publish-fe-s05-02-post-merge-fix
+  group: publish-fe-s05-02-web-escape-repair
   cancel-in-progress: true
 
 jobs:
@@ -28,29 +28,28 @@ jobs:
           path: payload
           persist-credentials: false
 
-      - name: Reconstruct and verify review fix
+      - name: Reconstruct and verify web Escape repair
         shell: bash
         run: |
           set -euo pipefail
-          cp payload/.github/automation/fe-s05-02-review-fix.patch.gz.b64 /tmp/fe-s05-02-review-fix.patch.gz.b64
-          echo 'c4eea4199796b49b15524c9e975c46ea332219f3bcb8b30c4fb2521f044893b6  /tmp/fe-s05-02-review-fix.patch.gz.b64' | sha256sum --check --strict
-          base64 --decode /tmp/fe-s05-02-review-fix.patch.gz.b64 | gzip --decompress > /tmp/fe-s05-02-review-fix.patch
+          cp payload/.github/automation/fe-s05-02-web-escape.patch.gz.b64 /tmp/fe-s05-02-web-escape.patch.gz.b64
+          echo '7986bb9ba2c217a09eff290498b48245bfdcbe5c34492f323b7cb9a954b717c7  /tmp/fe-s05-02-web-escape.patch.gz.b64' | sha256sum --check --strict
+          base64 --decode /tmp/fe-s05-02-web-escape.patch.gz.b64 | gzip --decompress > /tmp/fe-s05-02-web-escape.patch
 
-      - name: Check out current main
+      - name: Check out FE-S05-02 review branch
         uses: actions/checkout@v7
         with:
-          ref: main
+          ref: fix/fe-s05-02-coderabbit-review
           fetch-depth: 0
           path: address-fix
 
-      - name: Publish clean post-merge fix branch
+      - name: Publish repair as non-force fast-forward
         shell: bash
         run: |
           set -euo pipefail
           cd address-fix
-          git switch -c fix/fe-s05-02-coderabbit-review
           git config user.name 'Trinadh B'
           git config user.email '111868359+thrinnadhh@users.noreply.github.com'
-          git am /tmp/fe-s05-02-review-fix.patch
-          git diff --check origin/main..HEAD
+          git am /tmp/fe-s05-02-web-escape.patch
+          git diff --check origin/fix/fe-s05-02-coderabbit-review..HEAD
           git push origin HEAD:refs/heads/fix/fe-s05-02-coderabbit-review
