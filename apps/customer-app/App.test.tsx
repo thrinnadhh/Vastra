@@ -5,6 +5,39 @@ jest.mock('./src/auth/default-customer-session', () => ({
   CustomerSessionApp: ({ children }: { readonly children: React.ReactNode }) => children,
 }));
 
+jest.mock('./src/cart/default-customer-cart', () => ({
+  DefaultCustomerCart: ({ onCheckout }: { readonly onCheckout: () => void }) => (
+    <MockView>
+      <MockText>Authoritative customer cart</MockText>
+      <MockPressable accessibilityRole="button" onPress={onCheckout}>
+        <MockText>Cart continue to address</MockText>
+      </MockPressable>
+    </MockView>
+  ),
+}));
+
+jest.mock('./src/addresses/default-customer-addresses', () => ({
+  DefaultCustomerAddresses: ({
+    selectedAddressId,
+    onSelectedAddressChange,
+  }: {
+    readonly selectedAddressId: string | null;
+    readonly onSelectedAddressChange: (addressId: string | null) => void;
+  }) => (
+    <MockView>
+      <MockText>{selectedAddressId ?? 'No checkout address selected'}</MockText>
+      <MockPressable
+        accessibilityRole="button"
+        onPress={() => {
+          onSelectedAddressChange('10000000-0000-4000-8000-000000000001');
+        }}
+      >
+        <MockText>Select serviceable address</MockText>
+      </MockPressable>
+    </MockView>
+  ),
+}));
+
 jest.mock('./src/checkout/default-customer-checkout-quote', () => ({
   DefaultCustomerCheckoutQuote: ({ addressId }: { readonly addressId: string | null }) => (
     <MockText>{addressId ?? 'Checkout awaits an address'}</MockText>
@@ -91,21 +124,30 @@ describe('CustomerAppContent', () => {
     expect(getByText('cotton shirt')).toBeTruthy();
   });
 
-  it('keeps checkout contextual rather than making it a sixth tab', () => {
+  it('orchestrates Cart to Address to Checkout without creating a sixth tab', () => {
     const { getByRole, getByText, queryAllByRole } = render(<CustomerAppContent />);
 
     fireEvent.press(getByText('Continue to checkout'));
-
-    expect(getByText('Checkout awaits an address')).toBeTruthy();
+    expect(getByText('Authoritative customer cart')).toBeTruthy();
     expect(queryAllByRole('tab')).toHaveLength(0);
-    fireEvent.press(getByRole('button', { name: 'Back from checkout' }));
-    expect(getByText('Continue to checkout')).toBeTruthy();
+
+    fireEvent.press(getByText('Cart continue to address'));
+    expect(getByText('No checkout address selected')).toBeTruthy();
+
+    fireEvent.press(getByText('Select serviceable address'));
+    expect(getByText('10000000-0000-4000-8000-000000000001')).toBeTruthy();
+
+    fireEvent.press(getByRole('button', { name: 'Back from Checkout' }));
+    expect(getByText('No checkout address selected')).toBeTruthy();
+    fireEvent.press(getByRole('button', { name: 'Back from Delivery address' }));
+    expect(getByText('Authoritative customer cart')).toBeTruthy();
   });
 
-  it('passes a selected address into the preserved checkout boundary', () => {
+  it('seeds a selected address without bypassing address selection', () => {
     const { getByText } = render(<CustomerAppContent addressId="selected-address-id" />);
 
     fireEvent.press(getByText('Continue to checkout'));
+    fireEvent.press(getByText('Cart continue to address'));
     expect(getByText('selected-address-id')).toBeTruthy();
   });
 
