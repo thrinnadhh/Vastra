@@ -9,9 +9,12 @@ import { DefaultCustomerAddresses } from './src/addresses/default-customer-addre
 import { CustomerSessionApp } from './src/auth/default-customer-session';
 import { DefaultCustomerCart } from './src/cart/default-customer-cart';
 import {
+  acceptCustomerCheckoutQuote,
+  confirmCustomerCheckoutOrder,
   createCustomerCheckoutTransaction,
   invalidateCustomerCheckoutQuote,
   selectCustomerCheckoutAddress,
+  setCustomerCheckoutPlacementPhase,
   type CustomerCheckoutTransaction,
 } from './src/checkout/customer-checkout-transaction';
 import { DefaultCustomerCheckoutQuote } from './src/checkout/default-customer-checkout-quote';
@@ -131,6 +134,11 @@ export function CustomerAppContent({
     orders: <DefaultCustomerOrders />,
     profile: <DefaultCustomerProfileRoot />,
     renderTransactionRoute: (route, actions) => {
+      const purgeCheckout = (): void => {
+        setCheckoutTransaction(null);
+        actions.resetToTab('Home');
+      };
+
       switch (route.name) {
         case 'Cart':
           return (
@@ -148,10 +156,7 @@ export function CustomerAppContent({
                   params: { mode: 'SELECT_FOR_CHECKOUT', returnTo: 'Checkout' },
                 });
               }}
-              onSessionExpired={() => {
-                setCheckoutTransaction(null);
-                actions.resetToTab('Home');
-              }}
+              onSessionExpired={purgeCheckout}
             />
           );
         case 'AddressList':
@@ -184,6 +189,30 @@ export function CustomerAppContent({
           return (
             <DefaultCustomerCheckoutQuote
               addressId={checkoutTransaction?.addressId ?? route.params?.addressId ?? null}
+              {...(checkoutTransaction === null
+                ? {}
+                : { idempotencyKey: checkoutTransaction.idempotencyKey })}
+              onOrderConfirmed={(orderId) => {
+                setCheckoutTransaction((current) =>
+                  current === null ? null : confirmCustomerCheckoutOrder(current, orderId),
+                );
+                actions.replaceRoute({
+                  scope: 'TRANSACTION',
+                  name: 'OrderConfirmation',
+                  params: { orderId: orderId as UUID },
+                });
+              }}
+              onPlacementPhaseChange={(phase) => {
+                setCheckoutTransaction((current) =>
+                  current === null ? null : setCustomerCheckoutPlacementPhase(current, phase),
+                );
+              }}
+              onQuoteAccepted={(identity) => {
+                setCheckoutTransaction((current) =>
+                  current === null ? null : acceptCustomerCheckoutQuote(current, identity),
+                );
+              }}
+              onSecurityFailure={purgeCheckout}
             />
           );
         case 'OrderConfirmation':
