@@ -75,13 +75,17 @@ jobs:
             fi
             sleep 1
           done
-          EVIDENCE_OUTPUT="$PWD/docs/evidence/fe-s05-02-address" node capture-fe-s05-02-evidence.cjs
+          EVIDENCE_OUTPUT="$PWD/docs/evidence/fe-s05-02-address" node capture-fe-s05-02-evidence.cjs 2>&1 | tee /tmp/fe-s05-02-evidence-capture.log
           test "$(find docs/evidence/fe-s05-02-address -name '*.png' | wc -l)" -eq 12
 
-      - name: Upload visual evidence
+      - name: Upload visual evidence and diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: fe-s05-02-address-evidence
-          path: workspace/docs/evidence/fe-s05-02-address
-          if-no-files-found: error
+          path: |
+            workspace/docs/evidence/fe-s05-02-address
+            /tmp/fe-s05-02-evidence-capture.log
+            /tmp/fe-s05-02-evidence-server.log
+          if-no-files-found: warn
           retention-days: 7
