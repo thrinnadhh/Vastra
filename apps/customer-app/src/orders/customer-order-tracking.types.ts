@@ -23,6 +23,7 @@ export interface CustomerOrderTrackingSnapshot {
 }
 
 export interface CustomerDeliveryOtp {
+  readonly orderId: string;
   readonly secret: string;
   readonly issuedAt: string;
   readonly expiresAt: string;
