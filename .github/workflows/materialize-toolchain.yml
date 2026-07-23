@@ -1,36 +1,227 @@
-name: Extract FE-S05-04 unit failure
+name: Publish final FE-S05-04 hardening
 
 on:
   push:
     branches:
       - automation/materialize-fe-s05-s07
 
+concurrency:
+  group: publish-final-fe-s05-04-hardening
+  cancel-in-progress: false
+
 permissions:
-  actions: read
   contents: write
 
+env:
+  PNPM_VERSION: 8.15.0
+  EXPECTED_HEAD: 0cf6ad7d18ab395f2527c5651b960a0287ca02eb
+  TARGET_BRANCH: agent/fe-s05-04-confirmation
+
 jobs:
-  extract:
+  validate-and-publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v7
+      - name: Check out exact implementation head
+        uses: actions/checkout@v7
         with:
+          ref: agent/fe-s05-04-confirmation
+          fetch-depth: 0
           persist-credentials: true
-      - name: Download and retain failure tail
-        env:
-          GH_TOKEN: ${{ github.token }}
-          JOB_ID: '89272925879'
+      - name: Verify exact head and apply scoped edits
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --location \
-            --header "Authorization: Bearer ${GH_TOKEN}" \
-            --header 'Accept: application/vnd.github+json' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/jobs/${JOB_ID}/logs" \
-            --output /tmp/unit-job.log
-          tail -n 350 /tmp/unit-job.log > .github/automation/unit-job-89272925879-tail.txt
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              text = target.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected one match in {path}, found {count}: {old[:80]!r}")
+              target.write_text(text.replace(old, new, 1))
+
+          address_screen = 'apps/customer-app/src/addresses/customer-addresses.screen.tsx'
+          replace_once(
+              address_screen,
+              "  const activeMutationKeys = useRef(new Map<string, string>());\n  const securityCallbacks = useRef({",
+              "  const activeMutationKeys = useRef(new Map<string, string>());\n  const securityEpoch = useRef(0);\n  const securityCallbacks = useRef({",
+          )
+          replace_once(
+              address_screen,
+              "  const purgeSensitiveState = useCallback((kind: 'SESSION_EXPIRED' | 'UNAUTHORIZED'): void => {\n    setScreenMode({ kind: 'LIST' });",
+              "  const purgeSensitiveState = useCallback((kind: 'SESSION_EXPIRED' | 'UNAUTHORIZED'): void => {\n    securityEpoch.current += 1;\n    setScreenMode({ kind: 'LIST' });",
+          )
+          replace_once(
+              address_screen,
+              "      setLoading(true);\n      setFailureKind(null);\n      const result = await addressPort.list();\n      setLoading(false);",
+              "      setLoading(true);\n      setFailureKind(null);\n      const operationEpoch = securityEpoch.current;\n      const result = await addressPort.list();\n      if (securityEpoch.current !== operationEpoch) return null;\n      setLoading(false);",
+          )
+          replace_once(
+              address_screen,
+              "  useEffect(() => {\n    let active = true;\n    void addressPort.list().then((result) => {\n      if (!active) return;",
+              "  useEffect(() => {\n    let active = true;\n    const operationEpoch = securityEpoch.current;\n    void addressPort.list().then((result) => {\n      if (!active || securityEpoch.current !== operationEpoch) return;",
+          )
+          replace_once(
+              address_screen,
+              "    setStatusMessage(null);\n    const result = await addressPort.setDefault(address.id, mutationKey(scope));\n    setPendingAddressId(null);",
+              "    setStatusMessage(null);\n    const operationEpoch = securityEpoch.current;\n    const result = await addressPort.setDefault(address.id, mutationKey(scope));\n    if (securityEpoch.current !== operationEpoch) return;\n    setPendingAddressId(null);",
+          )
+          replace_once(
+              address_screen,
+              "    setPendingAddressId(address.id);\n    setStatusMessage(null);\n    const result = await addressPort.remove(address.id, mutationKey(scope));\n    setPendingAddressId(null);",
+              "    setPendingAddressId(address.id);\n    setStatusMessage(null);\n    const operationEpoch = securityEpoch.current;\n    const result = await addressPort.remove(address.id, mutationKey(scope));\n    if (securityEpoch.current !== operationEpoch) return;\n    setPendingAddressId(null);",
+          )
+
+          address_test = 'apps/customer-app/src/addresses/customer-addresses.screen.test.tsx'
+          replace_once(
+              address_test,
+              "import { fireEvent, render, waitFor } from '@testing-library/react-native';",
+              "import { act, fireEvent, render, waitFor } from '@testing-library/react-native';",
+          )
+          replace_once(
+              address_test,
+              "import type { CustomerAddress, CustomerAddressPort } from './customer-address.types';",
+              "import type {\n  CustomerAddress,\n  CustomerAddressListResult,\n  CustomerAddressPort,\n} from './customer-address.types';",
+          )
+          late_response_test = """
+
+  it('ignores late address responses after a security purge', async () => {
+    let resolveRefresh: ((result: CustomerAddressListResult) => void) | undefined;
+    const refresh = new Promise<CustomerAddressListResult>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    const port = createPort();
+    port.list
+      .mockResolvedValueOnce({
+        kind: 'SUCCESS',
+        addresses: [CUSTOMER_ADDRESS_FIXTURE, SECOND],
+      })
+      .mockReturnValueOnce(refresh);
+    port.setDefault.mockResolvedValue({
+      kind: 'FAILURE',
+      failureKind: 'UNAUTHORIZED',
+      fieldErrors: {},
+      requiresRefresh: false,
+    });
+    const screen = render(<CustomerAddressesScreen addressPort={port} />);
+
+    expect(await screen.findByText('Office')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Refresh addresses'));
+    fireEvent.press(screen.getByLabelText('Set Office as default'));
+    expect(await screen.findByText('Address access unavailable')).toBeTruthy();
+
+    await act(async () => {
+      resolveRefresh?.({
+        kind: 'SUCCESS',
+        addresses: [CUSTOMER_ADDRESS_FIXTURE, SECOND],
+      });
+      await refresh;
+    });
+
+    expect(screen.queryByText('Office')).toBeNull();
+    expect(screen.getByText('Address access unavailable')).toBeTruthy();
+  });
+"""
+          replace_once(
+              address_test,
+              "\n  it('purges address snapshots when a default-address mutation loses the session', async () => {",
+              late_response_test
+              + "\n  it('purges address snapshots when a default-address mutation loses the session', async () => {",
+          )
+
+          app_test = 'apps/customer-app/App.test.tsx'
+          replace_once(
+              app_test,
+              "    selectedAddressId,\n    onSelectedAddressChange,\n  }: {\n    readonly selectedAddressId: string | null;\n    readonly onSelectedAddressChange: (addressId: string | null) => void;",
+              "    selectedAddressId,\n    onSelectedAddressChange,\n    onSecurityFailure,\n  }: {\n    readonly selectedAddressId: string | null;\n    readonly onSelectedAddressChange: (addressId: string | null) => void;\n    readonly onSecurityFailure?: () => void;",
+          )
+          replace_once(
+              app_test,
+              "      </MockPressable>\n    </MockView>\n  ),\n}));\n\njest.mock('./src/checkout/default-customer-checkout-quote'",
+              "      </MockPressable>\n      <MockPressable accessibilityRole=\"button\" onPress={onSecurityFailure}>\n        <MockText>Expire address session</MockText>\n      </MockPressable>\n    </MockView>\n  ),\n}));\n\njest.mock('./src/checkout/default-customer-checkout-quote'",
+          )
+          app_security_test = """
+
+  it('purges the checkout transaction when address access expires', () => {
+    const view = render(<CustomerAppContent />);
+
+    fireEvent.press(view.getByText('Continue to checkout'));
+    fireEvent.press(view.getByText('Cart continue to address'));
+    fireEvent.press(view.getByText('Expire address session'));
+
+    expect(view.getByText('Continue to checkout')).toBeTruthy();
+    expect(view.getAllByRole('tab')).toHaveLength(5);
+    expect(view.queryByText('No checkout address selected')).toBeNull();
+  });
+"""
+          replace_once(
+              app_test,
+              "\n  it('seeds a selected address without bypassing address selection', () => {",
+              app_security_test
+              + "\n  it('seeds a selected address without bypassing address selection', () => {",
+          )
+
+          quote_test = 'apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx'
+          replace_once(
+              quote_test,
+              "    expect(view.getByLabelText('Continue to COD order placement in the next step')).toBeDisabled();\n  });\n\n  it('retries an offline quote request without retaining fabricated data', async () => {",
+              "    expect(view.getByLabelText('Continue to COD order placement in the next step')).toBeDisabled();\n  }, 15_000);\n\n  it('retries an offline quote request without retaining fabricated data', async () => {",
+          )
+          PY
+      - name: Use repository Node version
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.2
+      - name: Prepare repository pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+          test "$(pnpm --version)" = "$PNPM_VERSION"
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+      - name: Format scoped files
+        run: |
+          pnpm exec prettier --write \
+            apps/customer-app/App.test.tsx \
+            apps/customer-app/src/addresses/customer-addresses.screen.test.tsx \
+            apps/customer-app/src/addresses/customer-addresses.screen.tsx \
+            apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx
+      - name: Generate API client
+        run: pnpm --filter @vastra/api-client generate
+      - name: Validate customer app
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @vastra/customer-app lint
+          pnpm --filter @vastra/customer-app typecheck
+          pnpm --filter @vastra/customer-app test -- --runInBand --silent
+          pnpm --filter @vastra/customer-app build
+      - name: Validate full unit graph under CI
+        env:
+          CI: 'true'
+        run: pnpm exec turbo run test --force --output-logs=errors-only
+      - name: Validate formatting
+        run: pnpm format:check
+      - name: Commit scoped files
+        shell: bash
+        run: |
+          set -euo pipefail
           git config user.name 'vastra-orchestrator'
           git config user.email 'actions@users.noreply.github.com'
-          git add .github/automation/unit-job-89272925879-tail.txt
-          git commit -m 'chore(automation): retain unit failure tail'
-          git push origin HEAD:automation/materialize-fe-s05-s07
+          git add \
+            apps/customer-app/App.test.tsx \
+            apps/customer-app/src/addresses/customer-addresses.screen.test.tsx \
+            apps/customer-app/src/addresses/customer-addresses.screen.tsx \
+            apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx
+          test -z "$(git diff --name-only)"
+          git diff --cached --check
+          git commit -m 'fix(customer): harden checkout privacy and CI coverage'
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_HEAD"
+      - name: Push exact fast-forward head
+        run: git push origin "HEAD:${TARGET_BRANCH}"
