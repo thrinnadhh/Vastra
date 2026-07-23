@@ -3,6 +3,8 @@ import {
   createInitialCustomerNavigationState,
   goBackCustomerNavigation,
   openCustomerRoute,
+  replaceCustomerRoute,
+  resetCustomerNavigationToTab,
   selectCustomerTab,
 } from './customer-navigation-state';
 import type { UUID } from './customer-routes';
@@ -62,5 +64,46 @@ describe('customer navigation state', () => {
 
     const afterStackBack = goBackCustomerNavigation(afterTransactionBack);
     expect(activeCustomerRoute(afterStackBack).name).toBe('Orders');
+  });
+
+  it('replaces only the active transaction route for deterministic confirmation navigation', () => {
+    const cart = openCustomerRoute(createInitialCustomerNavigationState(), {
+      scope: 'TRANSACTION',
+      name: 'Cart',
+      params: undefined,
+    });
+    const checkout = openCustomerRoute(cart, {
+      scope: 'TRANSACTION',
+      name: 'Checkout',
+      params: undefined,
+    });
+    const orderId = '00000000-0000-4000-8000-000000000003' as UUID;
+    const confirmation = replaceCustomerRoute(checkout, {
+      scope: 'TRANSACTION',
+      name: 'OrderConfirmation',
+      params: { orderId },
+    });
+
+    expect(confirmation.transactionStack.map((route) => route.name)).toEqual([
+      'Cart',
+      'OrderConfirmation',
+    ]);
+    expect(activeCustomerRoute(confirmation)).toMatchObject({
+      name: 'OrderConfirmation',
+      params: { orderId },
+    });
+  });
+
+  it('resets to a canonical tab without retaining transaction routes', () => {
+    const checkout = openCustomerRoute(createInitialCustomerNavigationState(), {
+      scope: 'TRANSACTION',
+      name: 'Checkout',
+      params: undefined,
+    });
+
+    expect(resetCustomerNavigationToTab(checkout, 'Orders')).toMatchObject({
+      selectedTab: 'Orders',
+      transactionStack: [],
+    });
   });
 });
