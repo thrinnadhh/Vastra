@@ -1,22 +1,22 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { CustomerOrderConfirmationScreen } from './customer-order-confirmation.screen';
-import type { PlacedCustomerCodOrder } from './customer-order.types';
+import type { CustomerOrderDetail } from './customer-order.types';
 
-const ORDER: PlacedCustomerCodOrder = {
+const ORDER: CustomerOrderDetail = {
   id: '10000000-0000-4000-8000-000000000001',
-  orderNumber: 'VAS-20260716-0001',
+  orderNumber: 'VAS-SYNTH-0001',
   cartId: '30000000-0000-4000-8000-000000000001',
   quoteId: '40000000-0000-4000-8000-000000000001',
   shop: {
     id: '50000000-0000-4000-8000-000000000001',
-    name: 'Snapshot Shop',
-    slug: 'snapshot-shop',
+    name: 'Synthetic Snapshot Shop',
+    slug: 'synthetic-snapshot-shop',
   },
   address: {
     id: '20000000-0000-4000-8000-000000000001',
     label: 'Home',
-    recipientName: 'Snapshot Customer',
+    recipientName: 'Synthetic Customer',
     phoneNumber: '9000000001',
     line1: '10 Immutable Street',
     line2: 'Second floor',
@@ -31,15 +31,14 @@ const ORDER: PlacedCustomerCodOrder = {
   },
   status: 'WAITING_FOR_MERCHANT',
   paymentStatus: 'COD_PENDING',
-  paymentMethod: 'COD',
   fulfilmentType: 'DELIVERY',
   items: [
     {
       id: '60000000-0000-4000-8000-000000000001',
       productId: '70000000-0000-4000-8000-000000000001',
       variantId: '80000000-0000-4000-8000-000000000001',
-      productName: 'Snapshot Kurta',
-      sku: 'SNAP-KURTA-M',
+      productName: 'Synthetic Kurta',
+      sku: 'SYNTH-KURTA-M',
       colourName: 'Indigo',
       sizeLabel: 'M',
       imageObjectKey: null,
@@ -50,6 +49,7 @@ const ORDER: PlacedCustomerCodOrder = {
       totalPaise: 50_000,
     },
   ],
+  itemCount: 2,
   totals: {
     subtotalPaise: 52_000,
     productDiscountPaise: 2_000,
@@ -61,47 +61,65 @@ const ORDER: PlacedCustomerCodOrder = {
   },
   estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',
   customerNote: null,
+  history: [],
   placedAt: '2026-07-16T10:01:00.000Z',
-  replayed: false,
+  acceptedAt: null,
+  readyAt: null,
+  pickedUpAt: null,
+  deliveredAt: null,
+  completedAt: null,
+  cancelledAt: null,
+  createdAt: '2026-07-16T10:01:00.000Z',
+  updatedAt: '2026-07-16T10:01:00.000Z',
 };
 
 describe('CustomerOrderConfirmationScreen', () => {
-  it('renders only authoritative order snapshots and no delivery promise', () => {
-    const { getByLabelText, getByText, queryByText } = render(
+  it('renders an authoritative order read and customer-safe status copy', () => {
+    const view = render(
       <CustomerOrderConfirmationScreen
         onContinueShopping={() => undefined}
         onViewOrder={() => undefined}
+        onViewOrders={() => undefined}
         order={ORDER}
       />,
     );
 
-    expect(getByLabelText('Order number VAS-20260716-0001')).toBeTruthy();
-    expect(getByLabelText('Current order status WAITING_FOR_MERCHANT')).toBeTruthy();
-    expect(getByText('Snapshot Shop')).toBeTruthy();
-    expect(getByText('Snapshot Kurta')).toBeTruthy();
-    expect(getByText('Indigo · M · SNAP-KURTA-M')).toBeTruthy();
-    expect(getByText('Snapshot Customer')).toBeTruthy();
-    expect(getByText('10 Immutable Street')).toBeTruthy();
-    expect(getByLabelText('COD total ₹535.00')).toBeTruthy();
-    expect(getByText('Payment: Cash on Delivery')).toBeTruthy();
-    expect(queryByText(/arrive|delivery by|guaranteed/iu)).toBeNull();
+    expect(view.getByLabelText('Order number VAS-SYNTH-0001')).toBeTruthy();
+    expect(
+      view.getByLabelText(
+        'Current order status Waiting for shop. The shop is reviewing your order.',
+      ),
+    ).toBeTruthy();
+    expect(view.queryByText('WAITING_FOR_MERCHANT')).toBeNull();
+    expect(view.getByText('Synthetic Snapshot Shop')).toBeTruthy();
+    expect(view.getByText('Synthetic Kurta')).toBeTruthy();
+    expect(view.getByText('Indigo · M · SYNTH-KURTA-M')).toBeTruthy();
+    expect(view.getByText('Synthetic Customer')).toBeTruthy();
+    expect(view.getByText('10 Immutable Street')).toBeTruthy();
+    expect(view.getByLabelText('COD total ₹535.00')).toBeTruthy();
+    expect(view.getByText('Payment: Cash on Delivery')).toBeTruthy();
+    expect(view.queryByText(/arrive|delivery by|guaranteed/iu)).toBeNull();
   });
 
-  it('invokes both navigation actions with the authoritative order id', () => {
+  it('invokes canonical detail, orders and shopping actions', () => {
     const onViewOrder = jest.fn();
+    const onViewOrders = jest.fn();
     const onContinueShopping = jest.fn();
-    const { getByRole } = render(
+    const view = render(
       <CustomerOrderConfirmationScreen
         onContinueShopping={onContinueShopping}
         onViewOrder={onViewOrder}
+        onViewOrders={onViewOrders}
         order={ORDER}
       />,
     );
 
-    fireEvent.press(getByRole('button', { name: 'View order VAS-20260716-0001' }));
-    fireEvent.press(getByRole('button', { name: 'Continue shopping' }));
+    fireEvent.press(view.getByRole('button', { name: 'View order VAS-SYNTH-0001' }));
+    fireEvent.press(view.getByRole('button', { name: 'Open My Orders' }));
+    fireEvent.press(view.getByRole('button', { name: 'Continue shopping' }));
 
     expect(onViewOrder).toHaveBeenCalledWith(ORDER.id);
+    expect(onViewOrders).toHaveBeenCalledTimes(1);
     expect(onContinueShopping).toHaveBeenCalledTimes(1);
   });
 });
