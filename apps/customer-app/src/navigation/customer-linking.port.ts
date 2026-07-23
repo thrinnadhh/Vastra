@@ -6,8 +6,9 @@ export interface CustomerLinkingPort {
 }
 
 export class ReactNativeCustomerLinkingPort implements CustomerLinkingPort {
-  public getInitialUrl(): Promise<string | null> {
-    return Linking.getInitialURL();
+  public async getInitialUrl(): Promise<string | null> {
+    const initialUrl: unknown = await Linking.getInitialURL();
+    return typeof initialUrl === 'string' ? initialUrl : null;
   }
 
   public subscribe(listener: (url: string) => void): () => void {
