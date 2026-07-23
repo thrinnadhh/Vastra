@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   capture:
-    if: false
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - run: echo 'FE-S05-02 evidence is complete and frozen on fix/fe-s05-02-web-escape.'
