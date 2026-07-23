@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CustomerNetworkStateBoundary } from '../ui/customer-network-state';
 import { resolveCustomerNetworkState } from '../ui/resolve-customer-network-state';
@@ -443,7 +443,16 @@ export function CustomerAddressesScreen({
         })}
       </ScrollView>
 
-      {deleteCandidate === null ? null : (
+      <Modal
+        animationType="fade"
+        onRequestClose={() => {
+          setDeleteCandidate(null);
+        }}
+        presentationStyle="overFullScreen"
+        testID="delete-address-modal"
+        transparent
+        visible={deleteCandidate !== null}
+      >
         <View accessible accessibilityViewIsModal style={styles.confirmOverlay}>
           <View style={styles.confirmDialog}>
             <Text accessibilityRole="header" style={styles.confirmTitle}>
@@ -456,7 +465,10 @@ export function CustomerAddressesScreen({
             <Pressable
               accessibilityLabel="Confirm delete address"
               accessibilityRole="button"
-              onPress={() => void remove(deleteCandidate)}
+              disabled={deleteCandidate === null}
+              onPress={() => {
+                if (deleteCandidate !== null) void remove(deleteCandidate);
+              }}
               style={styles.dangerAction}
             >
               <Text style={styles.primaryActionText}>Delete address</Text>
@@ -473,7 +485,7 @@ export function CustomerAddressesScreen({
             </Pressable>
           </View>
         </View>
-      )}
+      </Modal>
     </CustomerNetworkStateBoundary>
   );
 }
