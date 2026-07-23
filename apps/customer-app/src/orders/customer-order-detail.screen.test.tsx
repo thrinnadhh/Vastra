@@ -140,6 +140,28 @@ describe('CustomerOrderDetailScreen', () => {
     ).toBeTruthy();
   });
 
+  it('removes cached address and order data after session expiry', async () => {
+    const getOrder = jest
+      .fn()
+      .mockResolvedValueOnce(ORDER)
+      .mockRejectedValueOnce(new CustomerOrderError('AUTHENTICATION', null, false));
+    const view = render(
+      <CustomerOrderDetailScreen orderClient={{ getOrder }} orderId={ORDER.id} />,
+    );
+
+    expect(await view.findByText('Detail Customer')).toBeTruthy();
+    fireEvent.press(await view.findByLabelText('Refresh order details'));
+    expect(
+      await view.findByText(
+        'Your session is no longer available. Sign in again to view this order.',
+      ),
+    ).toBeTruthy();
+    expect(view.queryByText('Detail Customer')).toBeNull();
+    expect(view.queryByText('10 Snapshot Road')).toBeNull();
+    expect(view.queryByText('Detail Shop')).toBeNull();
+    expect(view.queryByText('STALE DATA')).toBeNull();
+  });
+
   it('lets routed detail screens return to their parent order view', async () => {
     const onBack = jest.fn();
     const { findByLabelText } = render(
