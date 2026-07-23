@@ -113,6 +113,36 @@ describe('CustomerAddressFormScreen', () => {
     expect(createIdempotencyKey).toHaveBeenCalledTimes(1);
   });
 
+  it('clears entered address data after a session failure', async () => {
+    const port = createPort();
+    port.create.mockResolvedValue({
+      kind: 'FAILURE',
+      failureKind: 'SESSION_EXPIRED',
+      fieldErrors: {},
+      requiresRefresh: false,
+    });
+    const onSecurityFailure = jest.fn();
+    const screen = render(
+      <CustomerAddressFormScreen
+        address={null}
+        addressPort={port}
+        onCancel={jest.fn()}
+        onSaved={jest.fn()}
+        onSecurityFailure={onSecurityFailure}
+      />,
+    );
+    fillValidForm(screen);
+
+    fireEvent.press(screen.getByLabelText('Save new address'));
+
+    await waitFor(() => {
+      expect(onSecurityFailure).toHaveBeenCalledWith('SESSION_EXPIRED');
+    });
+    expect(screen.queryByDisplayValue('Customer')).toBeNull();
+    expect(screen.queryByDisplayValue('+919000000001')).toBeNull();
+    expect(screen.getByText(/Your session expired/u)).toBeTruthy();
+  });
+
   it('edits using the server-owned address id', async () => {
     const port = createPort();
     port.update.mockResolvedValue({ kind: 'SUCCESS', address: CUSTOMER_ADDRESS_FIXTURE });

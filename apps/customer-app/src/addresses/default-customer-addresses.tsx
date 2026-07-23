@@ -9,11 +9,13 @@ export function DefaultCustomerAddresses({
   selectedAddressId = null,
   onSelectedAddressChange,
   onInvalidateQuote,
+  onSecurityFailure,
 }: {
   readonly mode?: 'MANAGE' | 'CHECKOUT';
   readonly selectedAddressId?: string | null;
   readonly onSelectedAddressChange?: (addressId: string | null) => void;
   readonly onInvalidateQuote?: () => void;
+  readonly onSecurityFailure?: () => void;
 }) {
   const apiClient = useCustomerApiClient();
   const addressPort = useMemo(() => new ApiCustomerAddressAdapter(apiClient), [apiClient]);
@@ -25,6 +27,7 @@ export function DefaultCustomerAddresses({
       selectedAddressId={selectedAddressId}
       {...(onSelectedAddressChange === undefined ? {} : { onSelectedAddressChange })}
       {...(onInvalidateQuote === undefined ? {} : { onInvalidateQuote })}
+      {...(onSecurityFailure === undefined ? {} : { onSecurityFailure })}
     />
   );
 }
