@@ -1,4 +1,4 @@
-const { chromium } = require('playwright');
+const { chromium } = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 
