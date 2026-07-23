@@ -1,10 +1,10 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { Pressable as MockPressable, Text as MockText, View as MockView } from 'react-native';
 
-const SELECTED_ADDRESS_ID = '10000000-0000-4000-8000-000000000001';
-const CART_ID = '20000000-0000-4000-8000-000000000001';
-const QUOTE_ID = '30000000-0000-4000-8000-000000000001';
-const ORDER_ID = '40000000-0000-4000-8000-000000000001';
+const mockSelectedAddressId = '10000000-0000-4000-8000-000000000001';
+const mockCartId = '20000000-0000-4000-8000-000000000001';
+const mockQuoteId = '30000000-0000-4000-8000-000000000001';
+const mockOrderId = '40000000-0000-4000-8000-000000000001';
 
 jest.mock('./src/auth/default-customer-session', () => ({
   CustomerSessionApp: ({ children }: { readonly children: React.ReactNode }) => children,
@@ -34,7 +34,7 @@ jest.mock('./src/addresses/default-customer-addresses', () => ({
       <MockPressable
         accessibilityRole="button"
         onPress={() => {
-          onSelectedAddressChange(SELECTED_ADDRESS_ID);
+          onSelectedAddressChange(mockSelectedAddressId);
         }}
       >
         <MockText>Select serviceable address</MockText>
@@ -63,8 +63,8 @@ jest.mock('./src/checkout/default-customer-checkout-quote', () => ({
         accessibilityRole="button"
         onPress={() => {
           if (addressId === null) return;
-          onQuoteAccepted?.({ addressId, cartId: CART_ID, quoteId: QUOTE_ID });
-          onOrderConfirmed?.(ORDER_ID);
+          onQuoteAccepted?.({ addressId, cartId: mockCartId, quoteId: mockQuoteId });
+          onOrderConfirmed?.(mockOrderId);
         }}
       >
         <MockText>Complete synthetic COD placement</MockText>
@@ -202,10 +202,10 @@ describe('CustomerAppContent', () => {
     expect(view.getByText('No checkout address selected')).toBeTruthy();
 
     fireEvent.press(view.getByText('Select serviceable address'));
-    expect(view.getByText(SELECTED_ADDRESS_ID)).toBeTruthy();
+    expect(view.getByText(mockSelectedAddressId)).toBeTruthy();
 
     fireEvent.press(view.getByRole('button', { name: 'Back from Checkout' }));
-    expect(view.getByText(SELECTED_ADDRESS_ID)).toBeTruthy();
+    expect(view.getByText(mockSelectedAddressId)).toBeTruthy();
     fireEvent.press(view.getByRole('button', { name: 'Back from Delivery address' }));
     expect(view.getByText('Authoritative customer cart')).toBeTruthy();
   });
@@ -223,11 +223,11 @@ describe('CustomerAppContent', () => {
     reachCheckout(view);
 
     fireEvent.press(view.getByText('Complete synthetic COD placement'));
-    expect(view.getByText(`Authoritative confirmation ${ORDER_ID}`)).toBeTruthy();
+    expect(view.getByText(`Authoritative confirmation ${mockOrderId}`)).toBeTruthy();
     expect(view.queryByRole('button', { name: 'Back from Order confirmed' })).toBeNull();
 
     fireEvent.press(view.getByText('Open confirmed order detail'));
-    expect(view.getByText(`Authoritative order detail ${ORDER_ID}`)).toBeTruthy();
+    expect(view.getByText(`Authoritative order detail ${mockOrderId}`)).toBeTruthy();
     expect(view.getByRole('tab', { name: 'Orders tab' })).toBeTruthy();
   });
 
