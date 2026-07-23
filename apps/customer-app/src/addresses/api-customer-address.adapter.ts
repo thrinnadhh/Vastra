@@ -1,4 +1,4 @@
-import type { ApiClient } from '@vastra/api-client';
+import type { ApiClient, OperationResponse } from '@vastra/api-client';
 
 import type {
   CustomerAddress,
@@ -11,39 +11,7 @@ import type {
   SaveCustomerAddressInput,
 } from './customer-address.types';
 
-interface ApiAddress {
-  readonly id: string;
-  readonly label: string | null;
-  readonly recipientName: string;
-  readonly phoneNumber: string;
-  readonly line1: string;
-  readonly line2: string | null;
-  readonly landmark: string | null;
-  readonly area: string;
-  readonly city: string;
-  readonly state: string;
-  readonly postalCode: string;
-  readonly countryCode: 'IN';
-  readonly latitude: number;
-  readonly longitude: number;
-  readonly isDefault: boolean;
-  readonly serviceable: boolean;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-}
-
-interface ListResponse {
-  readonly data: Readonly<{ readonly addresses: readonly ApiAddress[] }>;
-}
-interface AddressResponse {
-  readonly data: Readonly<{ readonly address: ApiAddress }>;
-}
-interface DeleteResponse {
-  readonly data: Readonly<{
-    readonly deletedAddressId: string;
-    readonly defaultAddressId: string | null;
-  }>;
-}
+type ApiAddress = OperationResponse<'listCustomerAddresses'>['data']['addresses'][number];
 
 const FIELD_NAMES = [
   'label',
@@ -147,8 +115,7 @@ export class ApiCustomerAddressAdapter implements CustomerAddressPort {
 
   public async list(): Promise<CustomerAddressListResult> {
     try {
-      const responseValue: unknown = await this.apiClient.request('listCustomerAddresses', {});
-      const response = responseValue as Readonly<{ readonly data: ListResponse }>;
+      const response = await this.apiClient.request('listCustomerAddresses', {});
       return { kind: 'SUCCESS', addresses: response.data.data.addresses.map(mapAddress) };
     } catch (error: unknown) {
       return failure(error);
@@ -160,7 +127,7 @@ export class ApiCustomerAddressAdapter implements CustomerAddressPort {
     idempotencyKey: string,
   ): Promise<CustomerAddressMutationResult> {
     try {
-      const responseValue: unknown = await this.apiClient.request(
+      const response = await this.apiClient.request(
         'createCustomerAddress',
         {
           headers: { 'Idempotency-Key': idempotencyKey },
@@ -168,7 +135,6 @@ export class ApiCustomerAddressAdapter implements CustomerAddressPort {
         },
         { allowedFieldErrors: FIELD_NAMES },
       );
-      const response = responseValue as Readonly<{ readonly data: AddressResponse }>;
       return { kind: 'SUCCESS', address: mapAddress(response.data.data.address) };
     } catch (error: unknown) {
       return failure(error);
@@ -181,7 +147,7 @@ export class ApiCustomerAddressAdapter implements CustomerAddressPort {
     idempotencyKey: string,
   ): Promise<CustomerAddressMutationResult> {
     try {
-      const responseValue: unknown = await this.apiClient.request(
+      const response = await this.apiClient.request(
         'updateCustomerAddress',
         {
           path: { addressId },
@@ -190,7 +156,6 @@ export class ApiCustomerAddressAdapter implements CustomerAddressPort {
         },
         { allowedFieldErrors: FIELD_NAMES },
       );
-      const response = responseValue as Readonly<{ readonly data: AddressResponse }>;
       return { kind: 'SUCCESS', address: mapAddress(response.data.data.address) };
     } catch (error: unknown) {
       return failure(error);
@@ -202,11 +167,10 @@ export class ApiCustomerAddressAdapter implements CustomerAddressPort {
     idempotencyKey: string,
   ): Promise<DeleteCustomerAddressResult> {
     try {
-      const responseValue: unknown = await this.apiClient.request('deleteCustomerAddress', {
+      const response = await this.apiClient.request('deleteCustomerAddress', {
         path: { addressId },
         headers: { 'Idempotency-Key': idempotencyKey },
       });
-      const response = responseValue as Readonly<{ readonly data: DeleteResponse }>;
       return { kind: 'SUCCESS', ...response.data.data };
     } catch (error: unknown) {
       return failure(error);
@@ -218,11 +182,10 @@ export class ApiCustomerAddressAdapter implements CustomerAddressPort {
     idempotencyKey: string,
   ): Promise<CustomerAddressMutationResult> {
     try {
-      const responseValue: unknown = await this.apiClient.request('setCustomerDefaultAddress', {
+      const response = await this.apiClient.request('setCustomerDefaultAddress', {
         path: { addressId },
         headers: { 'Idempotency-Key': idempotencyKey },
       });
-      const response = responseValue as Readonly<{ readonly data: AddressResponse }>;
       return { kind: 'SUCCESS', address: mapAddress(response.data.data.address) };
     } catch (error: unknown) {
       return failure(error);
