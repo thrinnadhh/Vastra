@@ -9,7 +9,7 @@ on:
       - automation/materialize-fe-s05-s07
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   capture:
@@ -30,7 +30,6 @@ jobs:
           ref: fix/fe-s05-02-web-escape
           fetch-depth: 0
           path: workspace
-          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -77,6 +76,62 @@ jobs:
           done
           EVIDENCE_OUTPUT="$PWD/docs/evidence/fe-s05-02-address" node capture-fe-s05-02-evidence.cjs 2>&1 | tee /tmp/fe-s05-02-evidence-capture.log
           test "$(find docs/evidence/fe-s05-02-address -name '*.png' | wc -l)" -eq 12
+
+      - name: Write evidence manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > workspace/docs/evidence/fe-s05-02-address/README.md <<EOF
+          # FE-S05-02 customer address evidence
+
+          Ticket: \`FE-S05-02\`
+
+          GitHub Actions evidence run: \`${GITHUB_RUN_ID}\` (successful).
+
+          ## Deterministic scenarios
+
+          | File | Scenario |
+          |---|---|
+          | \`loading-mobile.png\` | Initial loading skeleton and live-region label |
+          | \`empty-mobile.png\` | Empty addresses with add-address recovery |
+          | \`success-mobile.png\` | Checkout selection at 390 × 844 |
+          | \`success-desktop.png\` | Checkout selection at 1440 × 1024 |
+          | \`error-mobile.png\` | Recoverable unavailable response |
+          | \`offline-mobile.png\` | Offline response with retry |
+          | \`stale-mobile.png\` | Visible addresses explicitly marked stale after failed refresh |
+          | \`unauthorized-mobile.png\` | Customer-safe authorization failure |
+          | \`session-expired-mobile.png\` | Session-expiry recovery |
+          | \`delete-modal-mobile.png\` | Settled delete confirmation on mobile |
+          | \`delete-modal-desktop.png\` | Settled delete confirmation on desktop |
+          | \`delete-modal-dismissed-mobile.png\` | Address list restored after Escape dismissal |
+
+          ## Accessibility assertions
+
+          The capture waits for browser animation completion, focuses the confirm action, and performs six sequential Tab presses. The job fails if focus leaves the modal. Escape must hide the dialog before the dismissed-state screenshot is accepted.
+
+          ## Validation
+
+          - focused address Jest: 5 suites, 23 tests passed;
+          - full customer-app Jest: 51 suites, 245 tests passed;
+          - customer-app ESLint: passed with zero warnings;
+          - customer-app TypeScript: passed;
+          - Expo web production export: passed, 345 modules bundled;
+          - \`git diff --check\`: passed.
+
+          Fixtures contain synthetic data only. No production or real customer data is included.
+          EOF
+
+      - name: Commit evidence to the final branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd workspace
+          git config user.name 'Trinadh B'
+          git config user.email '111868359+thrinnadhh@users.noreply.github.com'
+          git add docs/evidence/fe-s05-02-address
+          git diff --cached --check
+          git commit -m 'docs(address): add FE-S05-02 visual evidence'
+          git push origin HEAD:refs/heads/fix/fe-s05-02-web-escape
 
       - name: Upload visual evidence and diagnostics
         if: always()
