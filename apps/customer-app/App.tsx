@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { MobileApplicationShell } from '@vastra/app-shells/native';
 import { StatusBar } from 'expo-status-bar';
@@ -15,6 +15,8 @@ import {
   invalidateCustomerCheckoutQuote,
   selectCustomerCheckoutAddress,
   setCustomerCheckoutPlacementPhase,
+  type CustomerCheckoutPlacementPhase,
+  type CustomerCheckoutQuoteIdentity,
   type CustomerCheckoutTransaction,
 } from './src/checkout/customer-checkout-transaction';
 import { DefaultCustomerCheckoutQuote } from './src/checkout/default-customer-checkout-quote';
@@ -34,6 +36,7 @@ import {
   CustomerRootNavigation,
   CustomerRootPlaceholder,
   type CustomerRootNavigationSlots,
+  type CustomerTransactionNavigationActions,
 } from './src/navigation/customer-root-navigation';
 import type { CustomerRoute, UUID } from './src/navigation/customer-routes';
 import { DefaultCustomerOrderConfirmation } from './src/orders/default-customer-order-confirmation';
@@ -113,6 +116,35 @@ export function CustomerAppContent({
   const [discoveryIntent, setDiscoveryIntent] = useState<CustomerDiscoveryIntent | null>(null);
   const [checkoutTransaction, setCheckoutTransaction] =
     useState<CustomerCheckoutTransaction | null>(null);
+  const transactionActionsRef = useRef<CustomerTransactionNavigationActions | null>(null);
+
+  const purgeCheckout = useCallback((): void => {
+    setCheckoutTransaction(null);
+    transactionActionsRef.current?.resetToTab('Home');
+  }, []);
+
+  const acceptQuote = useCallback((identity: CustomerCheckoutQuoteIdentity): void => {
+    setCheckoutTransaction((current) =>
+      current === null ? null : acceptCustomerCheckoutQuote(current, identity),
+    );
+  }, []);
+
+  const updatePlacementPhase = useCallback((phase: CustomerCheckoutPlacementPhase): void => {
+    setCheckoutTransaction((current) =>
+      current === null ? null : setCustomerCheckoutPlacementPhase(current, phase),
+    );
+  }, []);
+
+  const openConfirmedOrder = useCallback((orderId: string): void => {
+    setCheckoutTransaction((current) =>
+      current === null ? null : confirmCustomerCheckoutOrder(current, orderId),
+    );
+    transactionActionsRef.current?.replaceRoute({
+      scope: 'TRANSACTION',
+      name: 'OrderConfirmation',
+      params: { orderId: orderId as UUID },
+    });
+  }, []);
 
   const slots: CustomerRootNavigationSlots = {
     home: ({ openCheckout, openDiscover }) => (
@@ -148,10 +180,7 @@ export function CustomerAppContent({
     orders: <DefaultCustomerOrders />,
     profile: <DefaultCustomerProfileRoot />,
     renderTransactionRoute: (route, actions) => {
-      const purgeCheckout = (): void => {
-        setCheckoutTransaction(null);
-        actions.resetToTab('Home');
-      };
+      transactionActionsRef.current = actions;
 
       switch (route.name) {
         case 'Cart':
@@ -223,26 +252,9 @@ export function CustomerAppContent({
               {...(checkoutTransaction === null
                 ? {}
                 : { idempotencyKey: checkoutTransaction.idempotencyKey })}
-              onOrderConfirmed={(orderId) => {
-                setCheckoutTransaction((current) =>
-                  current === null ? null : confirmCustomerCheckoutOrder(current, orderId),
-                );
-                actions.replaceRoute({
-                  scope: 'TRANSACTION',
-                  name: 'OrderConfirmation',
-                  params: { orderId: orderId as UUID },
-                });
-              }}
-              onPlacementPhaseChange={(phase) => {
-                setCheckoutTransaction((current) =>
-                  current === null ? null : setCustomerCheckoutPlacementPhase(current, phase),
-                );
-              }}
-              onQuoteAccepted={(identity) => {
-                setCheckoutTransaction((current) =>
-                  current === null ? null : acceptCustomerCheckoutQuote(current, identity),
-                );
-              }}
+              onOrderConfirmed={openConfirmedOrder}
+              onPlacementPhaseChange={updatePlacementPhase}
+              onQuoteAccepted={acceptQuote}
               onSecurityFailure={purgeCheckout}
             />
           );
@@ -291,6 +303,7 @@ export function CustomerAppContent({
     renderDeepLinkedRoute,
     onTransactionExit: () => {
       setCheckoutTransaction(null);
+      transactionActionsRef.current = null;
     },
   };
 
