@@ -1,0 +1,87 @@
+name: Capture FE-S05-02 evidence
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - automation/materialize-fe-s05-s07
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    if: github.head_ref == 'automation/materialize-fe-s05-s07' || github.ref == 'refs/heads/automation/materialize-fe-s05-s07'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out evidence tooling
+        uses: actions/checkout@v7
+        with:
+          ref: automation/materialize-fe-s05-s07
+          path: automation
+          persist-credentials: false
+
+      - name: Check out FE-S05-02 fix branch
+        uses: actions/checkout@v7
+        with:
+          ref: fix/fe-s05-02-coderabbit-review
+          fetch-depth: 0
+          path: workspace
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 8.15.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: workspace/pnpm-lock.yaml
+
+      - name: Install workspace
+        working-directory: workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        working-directory: workspace
+        run: pnpm exec playwright install chromium
+
+      - name: Build deterministic address evidence app
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp automation/.github/automation/fe-s05-02-evidence-App.tsx workspace/apps/customer-app/App.tsx
+          cp automation/.github/automation/capture-fe-s05-02-evidence.cjs workspace/capture-fe-s05-02-evidence.cjs
+          cd workspace
+          pnpm --filter @vastra/customer-app build
+
+      - name: Capture required states
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd workspace
+          python3 -m http.server 4182 --bind 127.0.0.1 --directory apps/customer-app/dist >/tmp/fe-s05-02-evidence-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4182/ >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          EVIDENCE_OUTPUT="$PWD/docs/evidence/fe-s05-02-address" node capture-fe-s05-02-evidence.cjs
+          test "$(find docs/evidence/fe-s05-02-address -name '*.png' | wc -l)" -eq 11
+
+      - name: Upload visual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: fe-s05-02-address-evidence
+          path: workspace/docs/evidence/fe-s05-02-address
+          if-no-files-found: error
+          retention-days: 7
