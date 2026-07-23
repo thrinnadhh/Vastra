@@ -1,0 +1,350 @@
+2026-07-23T16:52:08.9733058Z      [90m 597 |[39m           })[33m;[39m[0m
+2026-07-23T16:52:08.9733256Z 
+2026-07-23T16:52:08.9733809Z       at ../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+2026-07-23T16:52:08.9734966Z       at runWithFiberInDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+2026-07-23T16:52:08.9736260Z       at warnIfUpdatesNotWrappedWithActDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+2026-07-23T16:52:08.9737551Z       at scheduleUpdateOnFiber (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+2026-07-23T16:52:08.9739451Z       at dispatchSetStateInternal (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6208:13)
+2026-07-23T16:52:08.9742042Z       at dispatchSetState (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6165:7)
+2026-07-23T16:52:08.9743673Z       at setPlacement (src/checkout/customer-checkout-quote.screen.tsx:594:11)
+2026-07-23T16:52:08.9744240Z 
+2026-07-23T16:52:08.9744389Z     console.error
+2026-07-23T16:52:08.9745179Z       An update to ActiveCustomerCheckoutQuoteScreen inside a test was not wrapped in act(...).
+2026-07-23T16:52:08.9745991Z       
+2026-07-23T16:52:08.9746759Z       When testing, code that causes React state updates should be wrapped into act(...):
+2026-07-23T16:52:08.9747485Z       
+2026-07-23T16:52:08.9747819Z       act(() => {
+2026-07-23T16:52:08.9748313Z         /* fire events that update state */
+2026-07-23T16:52:08.9748769Z       });
+2026-07-23T16:52:08.9749152Z       /* assert on the output */
+2026-07-23T16:52:08.9749548Z       
+2026-07-23T16:52:08.9750948Z       This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+2026-07-23T16:52:08.9751802Z 
+2026-07-23T16:52:08.9752561Z     [0m [90m 592 |[39m           placementInFlight[33m.[39mcurrent [33m=[39m [36mfalse[39m[33m;[39m
+2026-07-23T16:52:08.9753740Z      [90m 593 |[39m           [36mconst[39m failure [33m=[39m toOrderError(error)[33m;[39m
+2026-07-23T16:52:08.9754891Z     [31m[1m>[22m[39m[90m 594 |[39m           setPlacement({
+2026-07-23T16:52:08.9755751Z      [90m     |[39m           [31m[1m^[22m[39m
+2026-07-23T16:52:08.9756589Z      [90m 595 |[39m             phase[33m:[39m isUncertainCustomerOrderFailure(failure) [33m?[39m [32m'UNCERTAIN'[39m [33m:[39m [32m'FAILED'[39m[33m,[39m
+2026-07-23T16:52:08.9757296Z      [90m 596 |[39m             failure[33m,[39m
+2026-07-23T16:52:08.9757660Z      [90m 597 |[39m           })[33m;[39m[0m
+2026-07-23T16:52:08.9757854Z 
+2026-07-23T16:52:08.9758546Z       at ../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+2026-07-23T16:52:08.9760093Z       at runWithFiberInDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+2026-07-23T16:52:08.9761455Z       at warnIfUpdatesNotWrappedWithActDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+2026-07-23T16:52:08.9763574Z       at scheduleUpdateOnFiber (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+2026-07-23T16:52:08.9765986Z       at dispatchSetStateInternal (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6208:13)
+2026-07-23T16:52:08.9768392Z       at dispatchSetState (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6165:7)
+2026-07-23T16:52:08.9770188Z       at setPlacement (src/checkout/customer-checkout-quote.screen.tsx:594:11)
+2026-07-23T16:52:08.9770533Z 
+2026-07-23T16:52:08.9770633Z     console.error
+2026-07-23T16:52:08.9771096Z       An update to ActiveCustomerCheckoutQuoteScreen inside a test was not wrapped in act(...).
+2026-07-23T16:52:08.9771542Z       
+2026-07-23T16:52:08.9771932Z       When testing, code that causes React state updates should be wrapped into act(...):
+2026-07-23T16:52:08.9772345Z       
+2026-07-23T16:52:08.9772530Z       act(() => {
+2026-07-23T16:52:08.9772776Z         /* fire events that update state */
+2026-07-23T16:52:08.9773052Z       });
+2026-07-23T16:52:08.9773269Z       /* assert on the output */
+2026-07-23T16:52:08.9773503Z       
+2026-07-23T16:52:08.9774117Z       This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+2026-07-23T16:52:08.9774631Z 
+2026-07-23T16:52:08.9775093Z     [0m [90m 592 |[39m           placementInFlight[33m.[39mcurrent [33m=[39m [36mfalse[39m[33m;[39m
+2026-07-23T16:52:08.9775780Z      [90m 593 |[39m           [36mconst[39m failure [33m=[39m toOrderError(error)[33m;[39m
+2026-07-23T16:52:08.9776313Z     [31m[1m>[22m[39m[90m 594 |[39m           setPlacement({
+2026-07-23T16:52:08.9776717Z      [90m     |[39m           [31m[1m^[22m[39m
+2026-07-23T16:52:08.9777532Z      [90m 595 |[39m             phase[33m:[39m isUncertainCustomerOrderFailure(failure) [33m?[39m [32m'UNCERTAIN'[39m [33m:[39m [32m'FAILED'[39m[33m,[39m
+2026-07-23T16:52:08.9778233Z      [90m 596 |[39m             failure[33m,[39m
+2026-07-23T16:52:08.9778609Z      [90m 597 |[39m           })[33m;[39m[0m
+2026-07-23T16:52:08.9778798Z 
+2026-07-23T16:52:08.9779348Z       at ../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+2026-07-23T16:52:08.9780739Z       at runWithFiberInDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+2026-07-23T16:52:08.9782028Z       at warnIfUpdatesNotWrappedWithActDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+2026-07-23T16:52:08.9783541Z       at scheduleUpdateOnFiber (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+2026-07-23T16:52:08.9784795Z       at dispatchSetStateInternal (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6208:13)
+2026-07-23T16:52:08.9786143Z       at dispatchSetState (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6165:7)
+2026-07-23T16:52:08.9787003Z       at setPlacement (src/checkout/customer-checkout-quote.screen.tsx:594:11)
+2026-07-23T16:52:08.9787320Z 
+2026-07-23T16:52:08.9787779Z   ● CustomerCheckoutQuoteScreen › renders server-owned items, fees, address and accessible COD total
+2026-07-23T16:52:08.9788187Z 
+2026-07-23T16:52:08.9788357Z     thrown: "Exceeded timeout of 5000 ms for a test.
+2026-07-23T16:52:08.9789076Z     Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+2026-07-23T16:52:08.9789599Z 
+2026-07-23T16:52:08.9790015Z     [0m [90m 157 |[39m   })[33m;[39m
+2026-07-23T16:52:08.9790326Z      [90m 158 |[39m
+2026-07-23T16:52:08.9791099Z     [31m[1m>[22m[39m[90m 159 |[39m   it([32m'renders server-owned items, fees, address and accessible COD total'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+2026-07-23T16:52:08.9791795Z      [90m     |[39m   [31m[1m^[22m[39m
+2026-07-23T16:52:08.9792200Z      [90m 160 |[39m     [36mconst[39m view [33m=[39m render(
+2026-07-23T16:52:08.9792708Z      [90m 161 |[39m       [33m<[39m[33mCustomerCheckoutQuoteScreen[39m
+2026-07-23T16:52:08.9793230Z      [90m 162 |[39m         addressId[33m=[39m{[33mADDRESS_ID[39m}[0m
+2026-07-23T16:52:08.9793485Z 
+2026-07-23T16:52:08.9793727Z       at it (src/checkout/customer-checkout-quote.screen.test.tsx:159:3)
+2026-07-23T16:52:08.9794291Z       at Object.describe (src/checkout/customer-checkout-quote.screen.test.tsx:131:1)
+2026-07-23T16:52:08.9794636Z 
+2026-07-23T16:52:08.9794853Z PASS src/discovery/customer-discovery.journey.test.tsx
+2026-07-23T16:52:08.9795293Z PASS src/addresses/customer-addresses.screen.test.tsx
+2026-07-23T16:52:08.9795710Z PASS src/orders/customer-cod-order-journey.test.tsx
+2026-07-23T16:52:08.9796036Z PASS ./App.test.tsx
+2026-07-23T16:52:08.9796358Z PASS src/discovery/customer-search.screen.test.tsx
+2026-07-23T16:52:08.9796698Z   ● Console
+2026-07-23T16:52:08.9796808Z 
+2026-07-23T16:52:08.9796899Z     console.error
+2026-07-23T16:52:08.9797250Z       An update to SearchHarness inside a test was not wrapped in act(...).
+2026-07-23T16:52:08.9797610Z       
+2026-07-23T16:52:08.9797994Z       When testing, code that causes React state updates should be wrapped into act(...):
+2026-07-23T16:52:08.9798398Z       
+2026-07-23T16:52:08.9798579Z       act(() => {
+2026-07-23T16:52:08.9798819Z         /* fire events that update state */
+2026-07-23T16:52:08.9799091Z       });
+2026-07-23T16:52:08.9799313Z       /* assert on the output */
+2026-07-23T16:52:08.9799547Z       
+2026-07-23T16:52:08.9800473Z       This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+2026-07-23T16:52:08.9800986Z 
+2026-07-23T16:52:08.9801158Z     [0m [90m 198 |[39m     })[33m;[39m
+2026-07-23T16:52:08.9801448Z      [90m 199 |[39m
+2026-07-23T16:52:08.9801874Z     [31m[1m>[22m[39m[90m 200 |[39m     setSessionState((current) [33m=>[39m {
+2026-07-23T16:52:08.9802313Z      [90m     |[39m     [31m[1m^[22m[39m
+2026-07-23T16:52:08.9802836Z      [90m 201 |[39m       [36mif[39m (result[33m.[39mkind [33m===[39m [32m'FAILURE'[39m) {
+2026-07-23T16:52:08.9803327Z      [90m 202 |[39m         [36mreturn[39m {
+2026-07-23T16:52:08.9803746Z      [90m 203 |[39m           [33m...[39mcurrent[33m,[39m[0m
+2026-07-23T16:52:08.9803976Z 
+2026-07-23T16:52:08.9804522Z       at ../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+2026-07-23T16:52:08.9805861Z       at runWithFiberInDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+2026-07-23T16:52:08.9807267Z       at warnIfUpdatesNotWrappedWithActDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+2026-07-23T16:52:08.9808571Z       at scheduleUpdateOnFiber (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+2026-07-23T16:52:08.9810137Z       at dispatchSetStateInternal (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6208:13)
+2026-07-23T16:52:08.9811385Z       at dispatchSetState (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6165:7)
+2026-07-23T16:52:08.9812229Z       at setSessionState (src/discovery/customer-search.screen.tsx:200:5)
+2026-07-23T16:52:08.9812982Z       at asyncGeneratorStep (../../node_modules/.pnpm/@babel+runtime@7.29.7/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+2026-07-23T16:52:08.9813860Z       at _next (../../node_modules/.pnpm/@babel+runtime@7.29.7/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+2026-07-23T16:52:08.9814289Z 
+2026-07-23T16:52:08.9814477Z PASS src/discovery/customer-shops.screen.test.tsx
+2026-07-23T16:52:08.9814880Z PASS src/orders/customer-order-tracking.test.tsx
+2026-07-23T16:52:08.9815296Z PASS src/discovery/customer-product.screen.test.tsx
+2026-07-23T16:52:08.9815709Z PASS src/orders/api-customer-order.adapter.test.ts
+2026-07-23T16:52:08.9816099Z PASS src/auth/customer-session-root.test.tsx
+2026-07-23T16:52:08.9816464Z PASS src/cart/customer-cart.screen.test.tsx
+2026-07-23T16:52:08.9816786Z   ● Console
+2026-07-23T16:52:08.9816889Z 
+2026-07-23T16:52:08.9816982Z     console.error
+2026-07-23T16:52:08.9817354Z       An update to CustomerCartScreen inside a test was not wrapped in act(...).
+2026-07-23T16:52:08.9817732Z       
+2026-07-23T16:52:08.9818109Z       When testing, code that causes React state updates should be wrapped into act(...):
+2026-07-23T16:52:08.9818512Z       
+2026-07-23T16:52:08.9818695Z       act(() => {
+2026-07-23T16:52:08.9818939Z         /* fire events that update state */
+2026-07-23T16:52:08.9819203Z       });
+2026-07-23T16:52:08.9819416Z       /* assert on the output */
+2026-07-23T16:52:08.9819878Z       
+2026-07-23T16:52:08.9820489Z       This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+2026-07-23T16:52:08.9820992Z 
+2026-07-23T16:52:08.9821116Z     [0m [90m 89 |[39m
+2026-07-23T16:52:08.9821977Z      [90m 90 |[39m   [36mconst[39m applyCart [33m=[39m useCallback((cart[33m:[39m [33mCustomerCart[39m [33m|[39m [36mnull[39m[33m,[39m announcement[33m:[39m string) [33m=>[39m {
+2026-07-23T16:52:08.9822803Z     [31m[1m>[22m[39m[90m 91 |[39m     setQuantityDrafts(
+2026-07-23T16:52:08.9823187Z      [90m    |[39m     [31m[1m^[22m[39m
+2026-07-23T16:52:08.9824235Z      [90m 92 |[39m       [33mObject[39m[33m.[39mfromEntries((cart[33m?[39m[33m.[39mitems [33m?[39m[33m?[39m [])[33m.[39mmap((item) [33m=>[39m [item[33m.[39mid[33m,[39m [33mString[39m(item[33m.[39mquantity)]))[33m,[39m
+2026-07-23T16:52:08.9825075Z      [90m 93 |[39m     )[33m;[39m
+2026-07-23T16:52:08.9825391Z      [90m 94 |[39m     setState({[0m
+2026-07-23T16:52:08.9825568Z 
+2026-07-23T16:52:08.9826108Z       at ../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+2026-07-23T16:52:08.9827261Z       at runWithFiberInDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+2026-07-23T16:52:08.9829146Z       at warnIfUpdatesNotWrappedWithActDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+2026-07-23T16:52:08.9832139Z       at scheduleUpdateOnFiber (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+2026-07-23T16:52:08.9834694Z       at dispatchSetStateInternal (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6208:13)
+2026-07-23T16:52:08.9837158Z       at dispatchSetState (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6165:7)
+2026-07-23T16:52:08.9838764Z       at setQuantityDrafts (src/cart/customer-cart.screen.tsx:91:5)
+2026-07-23T16:52:08.9839895Z       at applyCart (src/cart/customer-cart.screen.tsx:163:50)
+2026-07-23T16:52:08.9840380Z 
+2026-07-23T16:52:08.9840574Z     console.error
+2026-07-23T16:52:08.9841327Z       An update to CustomerCartScreen inside a test was not wrapped in act(...).
+2026-07-23T16:52:08.9842061Z       
+2026-07-23T16:52:08.9842810Z       When testing, code that causes React state updates should be wrapped into act(...):
+2026-07-23T16:52:08.9843597Z       
+2026-07-23T16:52:08.9843921Z       act(() => {
+2026-07-23T16:52:08.9844386Z         /* fire events that update state */
+2026-07-23T16:52:08.9844887Z       });
+2026-07-23T16:52:08.9845297Z       /* assert on the output */
+2026-07-23T16:52:08.9845757Z       
+2026-07-23T16:52:08.9846968Z       This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+2026-07-23T16:52:08.9847957Z 
+2026-07-23T16:52:08.9849946Z     [0m [90m 92 |[39m       [33mObject[39m[33m.[39mfromEntries((cart[33m?[39m[33m.[39mitems [33m?[39m[33m?[39m [])[33m.[39mmap((item) [33m=>[39m [item[33m.[39mid[33m,[39m [33mString[39m(item[33m.[39mquantity)]))[33m,[39m
+2026-07-23T16:52:08.9851573Z      [90m 93 |[39m     )[33m;[39m
+2026-07-23T16:52:08.9852260Z     [31m[1m>[22m[39m[90m 94 |[39m     setState({
+2026-07-23T16:52:08.9852928Z      [90m    |[39m     [31m[1m^[22m[39m
+2026-07-23T16:52:08.9853567Z      [90m 95 |[39m       cart[33m,[39m
+2026-07-23T16:52:08.9854360Z      [90m 96 |[39m       loaded[33m:[39m [36mtrue[39m[33m,[39m
+2026-07-23T16:52:08.9855304Z      [90m 97 |[39m       isLoading[33m:[39m [36mfalse[39m[33m,[39m[0m
+2026-07-23T16:52:08.9855779Z 
+2026-07-23T16:52:08.9856782Z       at ../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+2026-07-23T16:52:08.9858965Z       at runWithFiberInDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+2026-07-23T16:52:08.9861641Z       at warnIfUpdatesNotWrappedWithActDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+2026-07-23T16:52:08.9864094Z       at scheduleUpdateOnFiber (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+2026-07-23T16:52:08.9866401Z       at dispatchSetStateInternal (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6208:13)
+2026-07-23T16:52:08.9868845Z       at dispatchSetState (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6165:7)
+2026-07-23T16:52:08.9870378Z       at setState (src/cart/customer-cart.screen.tsx:94:5)
+2026-07-23T16:52:08.9871400Z       at applyCart (src/cart/customer-cart.screen.tsx:163:50)
+2026-07-23T16:52:08.9871819Z 
+2026-07-23T16:52:08.9872126Z PASS src/discovery/customer-home.screen.test.tsx
+2026-07-23T16:52:08.9872783Z PASS src/discovery/api-customer-shop.adapter.test.ts
+2026-07-23T16:52:08.9873502Z PASS src/orders/customer-order-detail.screen.test.tsx
+2026-07-23T16:52:08.9874318Z PASS src/orders/customer-orders.screen.test.tsx
+2026-07-23T16:52:08.9875015Z PASS src/checkout/customer-checkout-quote.client.test.ts
+2026-07-23T16:52:08.9875738Z PASS src/location/customer-location.screen.test.tsx
+2026-07-23T16:52:08.9876203Z   ● Console
+2026-07-23T16:52:08.9876323Z 
+2026-07-23T16:52:08.9876412Z     console.error
+2026-07-23T16:52:08.9876818Z       An update to CustomerLocationScreen inside a test was not wrapped in act(...).
+2026-07-23T16:52:08.9877215Z       
+2026-07-23T16:52:08.9877591Z       When testing, code that causes React state updates should be wrapped into act(...):
+2026-07-23T16:52:08.9878004Z       
+2026-07-23T16:52:08.9878201Z       act(() => {
+2026-07-23T16:52:08.9878446Z         /* fire events that update state */
+2026-07-23T16:52:08.9878724Z       });
+2026-07-23T16:52:08.9878941Z       /* assert on the output */
+2026-07-23T16:52:08.9879184Z       
+2026-07-23T16:52:08.9880121Z       This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+2026-07-23T16:52:08.9880656Z 
+2026-07-23T16:52:08.9880984Z     [0m [90m 102 |[39m       setFailureKind([32m'UNAVAILABLE'[39m)[33m;[39m
+2026-07-23T16:52:08.9881445Z      [90m 103 |[39m     } [36mfinally[39m {
+2026-07-23T16:52:08.9881909Z     [31m[1m>[22m[39m[90m 104 |[39m       setBusy([36mfalse[39m)[33m;[39m
+2026-07-23T16:52:08.9882337Z      [90m     |[39m       [31m[1m^[22m[39m
+2026-07-23T16:52:08.9882649Z      [90m 105 |[39m     }
+2026-07-23T16:52:08.9882936Z      [90m 106 |[39m   }[33m;[39m
+2026-07-23T16:52:08.9883219Z      [90m 107 |[39m[0m
+2026-07-23T16:52:08.9883362Z 
+2026-07-23T16:52:08.9883910Z       at ../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+2026-07-23T16:52:08.9885103Z       at runWithFiberInDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+2026-07-23T16:52:08.9886392Z       at warnIfUpdatesNotWrappedWithActDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+2026-07-23T16:52:08.9887682Z       at scheduleUpdateOnFiber (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+2026-07-23T16:52:08.9888929Z       at dispatchSetStateInternal (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6208:13)
+2026-07-23T16:52:08.9890452Z       at dispatchSetState (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6165:7)
+2026-07-23T16:52:08.9891305Z       at setBusy (src/location/customer-location.screen.tsx:104:7)
+2026-07-23T16:52:08.9892038Z       at asyncGeneratorStep (../../node_modules/.pnpm/@babel+runtime@7.29.7/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+2026-07-23T16:52:08.9892920Z       at _next (../../node_modules/.pnpm/@babel+runtime@7.29.7/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+2026-07-23T16:52:08.9893346Z 
+2026-07-23T16:52:08.9893565Z PASS src/addresses/customer-address-form.screen.test.tsx
+2026-07-23T16:52:08.9894024Z PASS src/orders/customer-order-placement.client.test.ts
+2026-07-23T16:52:08.9894462Z PASS src/discovery/api-customer-search.adapter.test.ts
+2026-07-23T16:52:08.9894884Z PASS src/discovery/api-customer-home.adapter.test.ts
+2026-07-23T16:52:08.9895506Z PASS src/addresses/api-customer-address.adapter.test.ts
+2026-07-23T16:52:08.9895972Z PASS src/orders/default-customer-order-confirmation.test.tsx
+2026-07-23T16:52:08.9896439Z PASS src/discovery/api-customer-product.adapter.test.ts
+2026-07-23T16:52:08.9896853Z PASS src/auth/session-restoration.service.test.ts
+2026-07-23T16:52:08.9897299Z PASS src/orders/customer-order-confirmation.screen.test.tsx
+2026-07-23T16:52:08.9897843Z PASS src/auth/customer-phone-otp.screen.test.tsx
+2026-07-23T16:52:08.9898311Z PASS src/profile/customer-profile-preferences.screen.test.tsx
+2026-07-23T16:52:08.9898777Z PASS src/checkout/customer-checkout-transaction.test.ts
+2026-07-23T16:52:08.9899207Z PASS src/navigation/customer-navigation-state.test.ts
+2026-07-23T16:52:08.9899593Z PASS src/ui/customer-network-state.test.tsx
+2026-07-23T16:52:08.9900288Z PASS src/discovery/customer-favourite-shops.screen.test.tsx
+2026-07-23T16:52:08.9900797Z PASS src/navigation/customer-root-navigation.deep-link.test.tsx
+2026-07-23T16:52:08.9901220Z   ● Console
+2026-07-23T16:52:08.9901329Z 
+2026-07-23T16:52:08.9901423Z     console.error
+2026-07-23T16:52:08.9901814Z       An update to CustomerRootNavigation inside a test was not wrapped in act(...).
+2026-07-23T16:52:08.9902218Z       
+2026-07-23T16:52:08.9902593Z       When testing, code that causes React state updates should be wrapped into act(...):
+2026-07-23T16:52:08.9902996Z       
+2026-07-23T16:52:08.9903182Z       act(() => {
+2026-07-23T16:52:08.9903431Z         /* fire events that update state */
+2026-07-23T16:52:08.9903701Z       });
+2026-07-23T16:52:08.9903927Z       /* assert on the output */
+2026-07-23T16:52:08.9904167Z       
+2026-07-23T16:52:08.9904755Z       This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+2026-07-23T16:52:08.9905256Z 
+2026-07-23T16:52:08.9905619Z     [0m [90m 155 |[39m     [36mif[39m (result[33m.[39mkind [33m===[39m [32m'ROUTE'[39m) {
+2026-07-23T16:52:08.9906185Z      [90m 156 |[39m       setLinkFailure([36mnull[39m)[33m;[39m
+2026-07-23T16:52:08.9907000Z     [31m[1m>[22m[39m[90m 157 |[39m       setNavigation((current) [33m=>[39m openCustomerRoute(current[33m,[39m result[33m.[39mroute))[33m;[39m
+2026-07-23T16:52:08.9907653Z      [90m     |[39m       [31m[1m^[22m[39m
+2026-07-23T16:52:08.9908033Z      [90m 158 |[39m       [36mreturn[39m[33m;[39m
+2026-07-23T16:52:08.9908351Z      [90m 159 |[39m     }
+2026-07-23T16:52:08.9908760Z      [90m 160 |[39m     setLinkFailure(result[33m.[39mkind)[33m;[39m[0m
+2026-07-23T16:52:08.9909029Z 
+2026-07-23T16:52:08.9909566Z       at ../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+2026-07-23T16:52:08.9910985Z       at runWithFiberInDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+2026-07-23T16:52:08.9912378Z       at warnIfUpdatesNotWrappedWithActDEV (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+2026-07-23T16:52:08.9914804Z       at scheduleUpdateOnFiber (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+2026-07-23T16:52:08.9917005Z       at dispatchSetStateInternal (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6208:13)
+2026-07-23T16:52:08.9918317Z       at dispatchSetState (../../node_modules/.pnpm/react-test-renderer@19.2.3_react@19.2.3/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6165:7)
+2026-07-23T16:52:08.9919164Z       at setNavigation (src/navigation/customer-root-navigation.tsx:157:7)
+2026-07-23T16:52:08.9920234Z       at LinkingPortStub.applyIncomingUrl [as listener] (src/navigation/customer-root-navigation.tsx:167:20)
+2026-07-23T16:52:08.9921276Z       at LinkingPortStub.emit (src/navigation/customer-root-navigation.deep-link.test.tsx:29:18)
+2026-07-23T16:52:08.9921947Z       at Object.emit (src/navigation/customer-root-navigation.deep-link.test.tsx:71:17)
+2026-07-23T16:52:08.9922884Z       at asyncGeneratorStep (../../node_modules/.pnpm/@babel+runtime@7.29.7/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+2026-07-23T16:52:08.9923768Z       at _next (../../node_modules/.pnpm/@babel+runtime@7.29.7/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+2026-07-23T16:52:08.9924557Z       at ../../node_modules/.pnpm/@babel+runtime@7.29.7/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+2026-07-23T16:52:08.9925432Z       at Object.<anonymous> (../../node_modules/.pnpm/@babel+runtime@7.29.7/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+2026-07-23T16:52:08.9925923Z 
+2026-07-23T16:52:08.9926168Z PASS src/profile/api-customer-preferences.adapter.test.ts
+2026-07-23T16:52:08.9926624Z PASS src/ui/resolve-customer-network-state.test.ts
+2026-07-23T16:52:08.9927071Z PASS src/discovery/api-customer-favourite.adapter.test.ts
+2026-07-23T16:52:08.9927528Z PASS src/profile/customer-profile-setup.screen.test.tsx
+2026-07-23T16:52:08.9927939Z PASS src/cart/api-customer-cart.adapter.test.ts
+2026-07-23T16:52:08.9928334Z PASS src/checkout/customer-cod-placement.test.ts
+2026-07-23T16:52:08.9928730Z PASS src/auth/customer-session-bootstrap.test.ts
+2026-07-23T16:52:08.9929169Z PASS src/profile/api-customer-profile-setup.adapter.test.ts
+2026-07-23T16:52:08.9929918Z PASS src/location/api-customer-serviceability.adapter.test.ts
+2026-07-23T16:52:08.9930403Z PASS src/auth/supabase-phone-otp.adapter.test.ts
+2026-07-23T16:52:08.9930848Z PASS src/profile/customer-profile-preferences.types.test.ts
+2026-07-23T16:52:08.9931270Z PASS src/navigation/customer-deep-link.test.ts
+2026-07-23T16:52:08.9931689Z PASS src/addresses/customer-address.validation.test.ts
+2026-07-23T16:52:08.9932090Z PASS src/navigation/customer-routes.test.ts
+2026-07-23T16:52:08.9932434Z PASS src/auth/phone-otp.types.test.ts
+2026-07-23T16:52:08.9932764Z PASS src/auth/mobile-environment.test.ts
+2026-07-23T16:52:08.9933150Z PASS src/addresses/customer-address-selection.test.ts
+2026-07-23T16:52:08.9933561Z PASS src/location/customer-location.types.test.ts
+2026-07-23T16:52:08.9933946Z PASS src/orders/customer-order-status.test.ts
+2026-07-23T16:52:08.9934375Z PASS src/discovery/customer-discovery-performance.test.ts
+2026-07-23T16:52:08.9934828Z PASS src/location/expo-customer-location.adapter.test.ts
+2026-07-23T16:52:08.9935207Z PASS src/checkout/format-inr.test.ts
+2026-07-23T16:52:08.9935391Z 
+2026-07-23T16:52:08.9935507Z Summary of all failing tests
+2026-07-23T16:52:08.9935927Z FAIL src/checkout/customer-checkout-quote.screen.test.tsx (21.258 s)
+2026-07-23T16:52:08.9936705Z   ● CustomerCheckoutQuoteScreen › renders server-owned items, fees, address and accessible COD total
+2026-07-23T16:52:08.9937156Z 
+2026-07-23T16:52:08.9937321Z     thrown: "Exceeded timeout of 5000 ms for a test.
+2026-07-23T16:52:08.9938037Z     Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+2026-07-23T16:52:08.9938571Z 
+2026-07-23T16:52:08.9938729Z     [0m [90m 157 |[39m   })[33m;[39m
+2026-07-23T16:52:08.9939018Z      [90m 158 |[39m
+2026-07-23T16:52:08.9940027Z     [31m[1m>[22m[39m[90m 159 |[39m   it([32m'renders server-owned items, fees, address and accessible COD total'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+2026-07-23T16:52:08.9940738Z      [90m     |[39m   [31m[1m^[22m[39m
+2026-07-23T16:52:08.9941142Z      [90m 160 |[39m     [36mconst[39m view [33m=[39m render(
+2026-07-23T16:52:08.9941628Z      [90m 161 |[39m       [33m<[39m[33mCustomerCheckoutQuoteScreen[39m
+2026-07-23T16:52:08.9942141Z      [90m 162 |[39m         addressId[33m=[39m{[33mADDRESS_ID[39m}[0m
+2026-07-23T16:52:08.9942550Z 
+2026-07-23T16:52:08.9942789Z       at it (src/checkout/customer-checkout-quote.screen.test.tsx:159:3)
+2026-07-23T16:52:08.9943350Z       at Object.describe (src/checkout/customer-checkout-quote.screen.test.tsx:131:1)
+2026-07-23T16:52:08.9943691Z 
+2026-07-23T16:52:08.9943697Z 
+2026-07-23T16:52:08.9943862Z Test Suites: 1 failed, 55 passed, 56 total
+2026-07-23T16:52:08.9944209Z Tests:       1 failed, 288 passed, 289 total
+2026-07-23T16:52:08.9944620Z Snapshots:   0 total
+2026-07-23T16:52:08.9944850Z Time:        40.368 s
+2026-07-23T16:52:08.9945073Z Ran all test suites.
+2026-07-23T16:52:08.9945470Z  ELIFECYCLE  Test failed. See above for more details.
+2026-07-23T16:52:08.9945709Z 
+2026-07-23T16:52:08.9945839Z  Tasks:    14 successful, 15 total
+2026-07-23T16:52:08.9946127Z Cached:    0 cached, 15 total
+2026-07-23T16:52:08.9946368Z   Time:    59.954s 
+2026-07-23T16:52:08.9946686Z Failed:    @vastra/customer-app#test
+2026-07-23T16:52:08.9946866Z 
+2026-07-23T16:52:08.9947142Z  ELIFECYCLE  Test failed. See above for more details.
+2026-07-23T16:52:08.9951037Z ##[error]Process completed with exit code 1.
+2026-07-23T16:52:09.0062610Z Post job cleanup.
+2026-07-23T16:52:09.1574846Z Pruning is unnecessary.
+2026-07-23T16:52:09.1786852Z Post job cleanup.
+2026-07-23T16:52:09.2682862Z [command]/usr/bin/git version
+2026-07-23T16:52:09.2760921Z git version 2.54.0
+2026-07-23T16:52:09.2801209Z Temporarily overriding HOME='/home/runner/work/_temp/253db822-58eb-44d4-a469-021e76d762ee' before making global git config changes
+2026-07-23T16:52:09.2802847Z Adding repository directory to the temporary git global config as a safe directory
+2026-07-23T16:52:09.2807863Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Vastra/Vastra
+2026-07-23T16:52:09.2845319Z Removing SSH command configuration
+2026-07-23T16:52:09.2859500Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-07-23T16:52:09.2902467Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-07-23T16:52:09.3161423Z Removing HTTP extra header
+2026-07-23T16:52:09.3173728Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-07-23T16:52:09.3224062Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-07-23T16:52:09.3488379Z Removing includeIf entries pointing to credentials config files
+2026-07-23T16:52:09.3494833Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-07-23T16:52:09.3542997Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-07-23T16:52:09.3971300Z Cleaning up orphan processes
