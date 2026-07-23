@@ -1,56 +1,14 @@
-name: Publish final FE-S05-02 web escape branch
+name: Publish FE-S05 ticket branch
 
 on:
-  pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - automation/materialize-fe-s05-s07
+  workflow_dispatch:
 
 permissions:
-  contents: write
-
-concurrency:
-  group: publish-final-fe-s05-02-web-escape
-  cancel-in-progress: true
+  contents: read
 
 jobs:
   publish:
-    if: github.repository == 'thrinnadhh/Vastra' && (github.head_ref == 'automation/materialize-fe-s05-s07' || github.ref == 'refs/heads/automation/materialize-fe-s05-s07')
+    if: false
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
-      - name: Check out audited payload
-        uses: actions/checkout@v7
-        with:
-          ref: automation/materialize-fe-s05-s07
-          path: payload
-          persist-credentials: false
-
-      - name: Reconstruct and verify web Escape repair
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp payload/.github/automation/fe-s05-02-web-escape.patch.gz.b64 /tmp/fe-s05-02-web-escape.patch.gz.b64
-          echo '7986bb9ba2c217a09eff290498b48245bfdcbe5c34492f323b7cb9a954b717c7  /tmp/fe-s05-02-web-escape.patch.gz.b64' | sha256sum --check --strict
-          base64 --decode /tmp/fe-s05-02-web-escape.patch.gz.b64 | gzip --decompress > /tmp/fe-s05-02-web-escape.patch
-
-      - name: Check out current main
-        uses: actions/checkout@v7
-        with:
-          ref: main
-          fetch-depth: 0
-          path: address-fix
-
-      - name: Publish clean final repair branch
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd address-fix
-          git switch -c fix/fe-s05-02-web-escape
-          git config user.name 'Trinadh B'
-          git config user.email '111868359+thrinnadhh@users.noreply.github.com'
-          git am /tmp/fe-s05-02-web-escape.patch
-          git diff --check origin/main..HEAD
-          git push origin HEAD:refs/heads/fix/fe-s05-02-web-escape
+      - run: echo 'FE-S05-02 repair and evidence have already been published.'
