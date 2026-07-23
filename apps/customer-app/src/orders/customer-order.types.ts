@@ -16,7 +16,8 @@ export const CUSTOMER_ORDER_STATUSES = [
   'CANCELLED',
 ] as const;
 
-export type CustomerOrderStatus = (typeof CUSTOMER_ORDER_STATUSES)[number];
+export type CustomerOrderKnownStatus = (typeof CUSTOMER_ORDER_STATUSES)[number];
+export type CustomerOrderStatus = CustomerOrderKnownStatus | 'UNKNOWN';
 
 export interface CustomerOrderAddress {
   readonly id: string;
@@ -139,16 +140,9 @@ export interface CustomerOrdersListPort {
   listOrders(input?: ListCustomerOrdersInput): Promise<CustomerOrdersPage>;
 }
 
-export type CustomerOrderHistoryActorRole =
-  'SYSTEM' | 'CUSTOMER' | 'MERCHANT' | 'CAPTAIN' | 'ADMIN';
-
 export interface CustomerOrderHistoryEntry {
   readonly id: string;
-  readonly previousStatus: CustomerOrderStatus | null;
-  readonly newStatus: CustomerOrderStatus;
-  readonly changedByRole: CustomerOrderHistoryActorRole;
-  readonly reasonCode: string | null;
-  readonly note: string | null;
+  readonly status: CustomerOrderStatus;
   readonly createdAt: string;
 }
 
@@ -167,8 +161,6 @@ export interface CustomerOrderDetail {
   readonly totals: CustomerOrderTotals;
   readonly estimatedDeliveryAt: string | null;
   readonly customerNote: string | null;
-  readonly cancellationReasonCode: string | null;
-  readonly cancellationNote: string | null;
   readonly history: readonly CustomerOrderHistoryEntry[];
   readonly placedAt: string | null;
   readonly acceptedAt: string | null;

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 
-import { useCustomerApiSession } from '../auth/customer-api-session';
-import { HttpCustomerOrderReadClient } from './customer-order-read.client';
+import { useCustomerApiClient } from '../api/use-customer-api-client';
+import { ApiCustomerOrderAdapter } from './api-customer-order.adapter';
 import { CustomerOrderDetailScreen } from './customer-order-detail.screen';
 import { CustomerOrdersScreen } from './customer-orders.screen';
 
@@ -14,12 +14,9 @@ export function DefaultCustomerOrders({
   readonly onBackFromInitialOrder?: () => void;
   readonly onSelectOrder?: (orderId: string) => void;
 }) {
-  const apiSession = useCustomerApiSession();
+  const apiClient = useCustomerApiClient();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(initialOrderId);
-  const ordersClient = useMemo(
-    () => new HttpCustomerOrderReadClient(apiSession.apiBaseUrl, () => apiSession.getAccessToken()),
-    [apiSession],
-  );
+  const ordersClient = useMemo(() => new ApiCustomerOrderAdapter(apiClient), [apiClient]);
 
   if (selectedOrderId !== null) {
     return (
@@ -29,11 +26,11 @@ export function DefaultCustomerOrders({
             onBackFromInitialOrder?.();
             return;
           }
-
           setSelectedOrderId(null);
         }}
         orderClient={ordersClient}
         orderId={selectedOrderId}
+        trackingClient={ordersClient}
       />
     );
   }

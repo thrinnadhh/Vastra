@@ -4,9 +4,9 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { formatPaiseAsInr } from '../checkout/format-inr';
 import { CustomerNetworkStateBoundary } from '../ui/customer-network-state';
 import { resolveCustomerNetworkState } from '../ui/resolve-customer-network-state';
+import { getCustomerOrderStatusPresentation } from './customer-order-status';
 import {
   CustomerOrderError,
-  type CustomerOrderStatus,
   type CustomerOrderSummary,
   type CustomerOrdersListPort,
 } from './customer-order.types';
@@ -23,8 +23,6 @@ interface OrdersState {
   readonly isLoadingMore: boolean;
   readonly failure: CustomerOrderError | null;
 }
-
-const TERMINAL_STATUSES: readonly CustomerOrderStatus[] = ['COMPLETED', 'CANCELLED'];
 
 function toOrderError(error: unknown): CustomerOrderError {
   return error instanceof CustomerOrderError
@@ -52,10 +50,6 @@ function failureMessage(error: CustomerOrderError): string {
   }
 }
 
-function formatStatus(status: CustomerOrderStatus): string {
-  return status.replaceAll('_', ' ');
-}
-
 function formatPlacedAt(order: CustomerOrderSummary): string {
   return new Date(order.placedAt ?? order.createdAt).toLocaleString('en-IN', {
     day: 'numeric',
@@ -73,6 +67,7 @@ function OrderCard({
   readonly order: CustomerOrderSummary;
   readonly onSelect: (orderId: string) => void;
 }) {
+  const status = getCustomerOrderStatusPresentation(order.status);
   return (
     <Pressable
       accessibilityLabel={`Open order ${order.orderNumber}`}
@@ -87,8 +82,8 @@ function OrderCard({
           <Text style={styles.orderNumber}>{order.orderNumber}</Text>
           <Text style={styles.shopName}>{order.shop.name}</Text>
         </View>
-        <Text accessibilityLabel={`Status ${order.status}`} style={styles.status}>
-          {formatStatus(order.status)}
+        <Text accessibilityLabel={`Order status ${status.title}`} style={styles.status}>
+          {status.title}
         </Text>
       </View>
       <Text style={styles.meta}>
@@ -218,11 +213,11 @@ export function CustomerOrdersScreen({ ordersClient, onSelectOrder }: CustomerOr
 
   const orders = useMemo(() => state.orders ?? [], [state.orders]);
   const activeOrders = useMemo(
-    () => orders.filter((order) => !TERMINAL_STATUSES.includes(order.status)),
+    () => orders.filter((order) => !getCustomerOrderStatusPresentation(order.status).terminal),
     [orders],
   );
   const pastOrders = useMemo(
-    () => orders.filter((order) => TERMINAL_STATUSES.includes(order.status)),
+    () => orders.filter((order) => getCustomerOrderStatusPresentation(order.status).terminal),
     [orders],
   );
   const networkState = useMemo(
