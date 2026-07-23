@@ -27,6 +27,10 @@ function toOrderError(error: unknown): CustomerOrderError {
     : new CustomerOrderError('UNKNOWN', null, false);
 }
 
+function canRetainStaleData(error: CustomerOrderError): boolean {
+  return error.kind === 'TRANSPORT' || error.kind === 'TEMPORARILY_UNAVAILABLE' || error.retryable;
+}
+
 function failureMessage(error: CustomerOrderError): string {
   switch (error.kind) {
     case 'AUTHENTICATION':
@@ -223,10 +227,11 @@ function ActiveCustomerOrderDetailScreen({
         },
         (error: unknown) => {
           if (operation.current === operationId) {
+            const failure = toOrderError(error);
             setState((current) => ({
-              order: current.order,
+              order: canRetainStaleData(failure) ? current.order : null,
               isLoading: false,
-              failure: toOrderError(error),
+              failure,
             }));
           }
         },
@@ -256,7 +261,8 @@ function ActiveCustomerOrderDetailScreen({
         isOffline: state.failure?.kind === 'TRANSPORT',
         errorMessage: state.failure === null ? null : failureMessage(state.failure),
         hasData: state.order !== null,
-        hasStaleData: state.order !== null && state.failure !== null,
+        hasStaleData:
+          state.order !== null && state.failure !== null && canRetainStaleData(state.failure),
         loadingLabel: 'Loading order details and history',
         emptyTitle: 'Order unavailable',
         emptyMessage: 'This order could not be found.',
