@@ -61,25 +61,15 @@ const ORDER: CustomerOrderDetail = {
   },
   estimatedDeliveryAt: null,
   customerNote: null,
-  cancellationReasonCode: null,
-  cancellationNote: null,
   history: [
     {
       id: '1',
-      previousStatus: null,
-      newStatus: 'WAITING_FOR_MERCHANT',
-      changedByRole: 'SYSTEM',
-      reasonCode: null,
-      note: null,
+      status: 'WAITING_FOR_MERCHANT',
       createdAt: '2026-07-16T10:01:00.000Z',
     },
     {
       id: '4',
-      previousStatus: 'PACKING',
-      newStatus: 'READY_FOR_PICKUP',
-      changedByRole: 'MERCHANT',
-      reasonCode: null,
-      note: 'All items verified',
+      status: 'READY_FOR_PICKUP',
       createdAt: '2026-07-16T10:30:00.000Z',
     },
   ],
@@ -114,11 +104,17 @@ describe('CustomerOrderDetailScreen', () => {
     expect(getByText('Detail Customer')).toBeTruthy();
     expect(getByText('10 Snapshot Road')).toBeTruthy();
     expect(getByLabelText('Order total ₹325.00')).toBeTruthy();
-    expect(getByLabelText('Current order status READY_FOR_PICKUP')).toBeTruthy();
     expect(
-      await findByLabelText('History WAITING_FOR_MERCHANT at 2026-07-16T10:01:00.000Z'),
+      getByLabelText(
+        'Current order status Ready for pickup. Your parcel is packed and ready for a delivery partner.',
+      ),
     ).toBeTruthy();
-    expect(getByLabelText('History READY_FOR_PICKUP at 2026-07-16T10:30:00.000Z')).toBeTruthy();
+    expect(
+      await findByLabelText('Order update Waiting for shop at 2026-07-16T10:01:00.000Z'),
+    ).toBeTruthy();
+    expect(
+      getByLabelText('Order update Ready for pickup at 2026-07-16T10:30:00.000Z'),
+    ).toBeTruthy();
     expect(queryByText('MERCHANT ACCEPTED')).toBeNull();
   });
 
@@ -137,7 +133,11 @@ describe('CustomerOrderDetailScreen', () => {
     expect(await findByText('STALE DATA')).toBeTruthy();
     expect(await findByText('Detail Shop')).toBeTruthy();
     fireEvent.press(await findByLabelText('Refresh order details'));
-    expect(await findByLabelText('Current order status CAPTAIN_SEARCHING')).toBeTruthy();
+    expect(
+      await findByLabelText(
+        'Current order status Finding a delivery partner. We are matching a delivery partner to your order.',
+      ),
+    ).toBeTruthy();
   });
 
   it('lets routed detail screens return to their parent order view', async () => {

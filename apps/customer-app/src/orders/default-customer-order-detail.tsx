@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 
-import { useCustomerApiSession } from '../auth/customer-api-session';
+import { useCustomerApiClient } from '../api/use-customer-api-client';
+import { ApiCustomerOrderAdapter } from './api-customer-order.adapter';
 import { CustomerOrderDetailScreen } from './customer-order-detail.screen';
-import { HttpCustomerOrderReadClient } from './customer-order-read.client';
 
 export function DefaultCustomerOrderDetail({
   orderId,
@@ -11,17 +11,15 @@ export function DefaultCustomerOrderDetail({
   readonly orderId: string;
   readonly onBack?: () => void;
 }) {
-  const apiSession = useCustomerApiSession();
-  const orderClient = useMemo(
-    () => new HttpCustomerOrderReadClient(apiSession.apiBaseUrl, () => apiSession.getAccessToken()),
-    [apiSession],
-  );
+  const apiClient = useCustomerApiClient();
+  const orderClient = useMemo(() => new ApiCustomerOrderAdapter(apiClient), [apiClient]);
 
   return (
     <CustomerOrderDetailScreen
       {...(onBack === undefined ? {} : { onBack })}
       orderClient={orderClient}
       orderId={orderId}
+      trackingClient={orderClient}
     />
   );
 }

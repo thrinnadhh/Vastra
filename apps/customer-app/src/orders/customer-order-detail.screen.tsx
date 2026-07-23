@@ -4,6 +4,9 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { formatPaiseAsInr } from '../checkout/format-inr';
 import { CustomerNetworkStateBoundary } from '../ui/customer-network-state';
 import { resolveCustomerNetworkState } from '../ui/resolve-customer-network-state';
+import { getCustomerOrderStatusPresentation } from './customer-order-status';
+import { CustomerOrderTracking } from './customer-order-tracking';
+import type { CustomerOrderTrackingPort } from './customer-order-tracking.types';
 import {
   CustomerOrderError,
   type CustomerOrderDetail,
@@ -54,10 +57,6 @@ function formatDateTime(value: string): string {
   });
 }
 
-function formatStatus(value: string): string {
-  return value.replaceAll('_', ' ');
-}
-
 function variantLabel(item: CustomerOrderItem): string {
   return [item.colourName, item.sizeLabel, item.sku]
     .filter((value): value is string => value !== null)
@@ -65,25 +64,18 @@ function variantLabel(item: CustomerOrderItem): string {
 }
 
 function HistoryEntry({ entry }: { readonly entry: CustomerOrderHistoryEntry }) {
+  const status = getCustomerOrderStatusPresentation(entry.status);
   return (
     <View
       accessible
-      accessibilityLabel={`History ${entry.newStatus} at ${entry.createdAt}`}
+      accessibilityLabel={`Order update ${status.title} at ${entry.createdAt}`}
       style={styles.historyEntry}
     >
       <View style={styles.timelineDot} />
       <View style={styles.historyCopy}>
-        <Text style={styles.historyStatus}>{formatStatus(entry.newStatus)}</Text>
-        <Text style={styles.meta}>
-          {formatDateTime(entry.createdAt)} · {entry.changedByRole}
-        </Text>
-        {entry.previousStatus === null ? null : (
-          <Text style={styles.meta}>From {formatStatus(entry.previousStatus)}</Text>
-        )}
-        {entry.reasonCode === null ? null : (
-          <Text style={styles.historyNote}>{entry.reasonCode.replaceAll('_', ' ')}</Text>
-        )}
-        {entry.note === null ? null : <Text style={styles.historyNote}>{entry.note}</Text>}
+        <Text style={styles.historyStatus}>{status.title}</Text>
+        <Text style={styles.meta}>{formatDateTime(entry.createdAt)}</Text>
+        <Text style={styles.historyNote}>{status.description}</Text>
       </View>
     </View>
   );
@@ -93,11 +85,14 @@ function OrderDetailContent({
   order,
   onRefresh,
   onBack,
+  trackingClient,
 }: {
   readonly order: CustomerOrderDetail;
   readonly onRefresh: () => void;
   readonly onBack?: () => void;
+  readonly trackingClient?: CustomerOrderTrackingPort;
 }) {
+  const status = getCustomerOrderStatusPresentation(order.status);
   return (
     <ScrollView contentContainerStyle={styles.content}>
       {onBack === undefined ? null : (
@@ -127,13 +122,18 @@ function OrderDetailContent({
         </Pressable>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionLabel}>CURRENT BACKEND STATUS</Text>
-        <Text accessibilityLabel={`Current order status ${order.status}`} style={styles.status}>
-          {formatStatus(order.status)}
+      <View
+        accessible
+        accessibilityLabel={`Current order status ${status.title}. ${status.description}`}
+        style={styles.card}
+      >
+        <Text style={styles.sectionLabel}>CURRENT STATUS</Text>
+        <Text style={styles.status}>{status.title}</Text>
+        <Text style={styles.meta}>{status.description}</Text>
+        <Text style={styles.meta}>
+          Payment:{' '}
+          {order.paymentStatus === 'COD_PENDING' ? 'Cash on delivery pending' : 'Payment updated'}
         </Text>
-        <Text style={styles.meta}>Payment: {formatStatus(order.paymentStatus)}</Text>
-        <Text style={styles.meta}>Fulfilment: {formatStatus(order.fulfilmentType)}</Text>
       </View>
 
       <View style={styles.card}>
@@ -177,6 +177,12 @@ function OrderDetailContent({
         </Text>
       </View>
 
+      <CustomerOrderTracking
+        orderId={order.id}
+        orderStatus={order.status}
+        {...(trackingClient === undefined ? {} : { trackingClient })}
+      />
+
       <View style={styles.card}>
         <Text accessibilityRole="header" style={styles.sectionTitle}>
           Status history
@@ -193,10 +199,12 @@ function ActiveCustomerOrderDetailScreen({
   orderId,
   orderClient,
   onBack,
+  trackingClient,
 }: {
   readonly orderId: string;
   readonly orderClient: CustomerOrderDetailPort;
   readonly onBack?: () => void;
+  readonly trackingClient?: CustomerOrderTrackingPort;
 }) {
   const operation = useRef(0);
   const [state, setState] = useState<DetailState>({
@@ -264,6 +272,7 @@ function ActiveCustomerOrderDetailScreen({
           {...(onBack === undefined ? {} : { onBack })}
           onRefresh={refresh}
           order={state.order}
+          {...(trackingClient === undefined ? {} : { trackingClient })}
         />
       )}
     </CustomerNetworkStateBoundary>
@@ -274,10 +283,12 @@ export function CustomerOrderDetailScreen({
   orderId,
   orderClient,
   onBack,
+  trackingClient,
 }: {
   readonly orderId: string;
   readonly orderClient: CustomerOrderDetailPort;
   readonly onBack?: () => void;
+  readonly trackingClient?: CustomerOrderTrackingPort;
 }) {
   return (
     <ActiveCustomerOrderDetailScreen
@@ -285,6 +296,7 @@ export function CustomerOrderDetailScreen({
       {...(onBack === undefined ? {} : { onBack })}
       orderClient={orderClient}
       orderId={orderId}
+      {...(trackingClient === undefined ? {} : { trackingClient })}
     />
   );
 }
