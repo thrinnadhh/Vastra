@@ -1,94 +1,36 @@
-name: Publish validated FE-S05-04 address privacy patch
+name: Extract FE-S05-04 unit failure
 
 on:
   push:
     branches:
       - automation/materialize-fe-s05-s07
 
-concurrency:
-  group: publish-fe-s05-04-address-privacy-patch
-  cancel-in-progress: false
-
 permissions:
+  actions: read
   contents: write
 
-env:
-  PNPM_VERSION: 8.15.0
-  EXPECTED_HEAD: 59232d1650a4a83173ea6dcafead9ab9a20d7281
-  TARGET_BRANCH: agent/fe-s05-04-confirmation
-
 jobs:
-  validate-and-publish:
+  extract:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
     steps:
-      - name: Check out patch source
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
-          path: patch-source
-          persist-credentials: false
-      - name: Check out exact implementation head
-        uses: actions/checkout@v7
-        with:
-          ref: agent/fe-s05-04-confirmation
-          fetch-depth: 0
-          path: workspace
           persist-credentials: true
-      - name: Verify and apply validated patch
+      - name: Download and retain failure tail
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_ID: '89272925879'
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git -C workspace rev-parse HEAD)" = "$EXPECTED_HEAD"
-          base64 --decode patch-source/.github/automation/pr122-fixes.patch.gz.b64 | gunzip > /tmp/pr122-address-security.patch
-          echo 'e116ec87af0ce763e55f9faa857b4c18abf7c7c09faed80ad97d38217fb853b4  /tmp/pr122-address-security.patch' | sha256sum --check
-          git -C workspace apply --check /tmp/pr122-address-security.patch
-          git -C workspace apply /tmp/pr122-address-security.patch
-      - name: Use repository Node version
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.20.2
-      - name: Prepare repository pnpm
-        shell: bash
-        run: |
-          set -euo pipefail
-          corepack enable
-          corepack prepare "pnpm@${PNPM_VERSION}" --activate
-          test "$(pnpm --version)" = "$PNPM_VERSION"
-      - name: Install workspace
-        working-directory: workspace
-        run: pnpm install --frozen-lockfile
-      - name: Validate formatting
-        working-directory: workspace
-        run: pnpm format:check
-      - name: Generate API client
-        working-directory: workspace
-        run: pnpm --filter @vastra/api-client generate
-      - name: Validate customer app
-        working-directory: workspace
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm --filter @vastra/customer-app lint
-          pnpm --filter @vastra/customer-app typecheck
-          pnpm --filter @vastra/customer-app test -- --silent
-          pnpm --filter @vastra/customer-app build
-      - name: Commit scoped files
-        working-directory: workspace
-        shell: bash
-        run: |
-          set -euo pipefail
+          curl --fail --location \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/jobs/${JOB_ID}/logs" \
+            --output /tmp/unit-job.log
+          tail -n 350 /tmp/unit-job.log > .github/automation/unit-job-89272925879-tail.txt
           git config user.name 'vastra-orchestrator'
           git config user.email 'actions@users.noreply.github.com'
-          git add \
-            apps/customer-app/src/addresses/customer-address-form.screen.test.tsx \
-            apps/customer-app/src/addresses/customer-address-form.screen.tsx \
-            apps/customer-app/src/addresses/customer-addresses.screen.test.tsx \
-            apps/customer-app/src/addresses/customer-addresses.screen.tsx \
-            apps/customer-app/src/addresses/default-customer-addresses.tsx
-          test -z "$(git diff --name-only)"
-          git diff --cached --check
-          git commit -m 'fix(customer): purge address state on access failure'
-          test "$(git rev-parse HEAD^)" = "$EXPECTED_HEAD"
-      - name: Push exact fast-forward head
-        working-directory: workspace
-        run: git push origin "HEAD:${TARGET_BRANCH}"
+          git add .github/automation/unit-job-89272925879-tail.txt
+          git commit -m 'chore(automation): retain unit failure tail'
+          git push origin HEAD:automation/materialize-fe-s05-s07
