@@ -22,6 +22,30 @@ function evidenceLocator(page, kind, value) {
     : page.getByText(value, { exact: true }).first();
 }
 
+async function waitForModalSettled(page) {
+  const modal = page.locator('[role="dialog"], [aria-modal="true"]').first();
+  await modal.waitFor({ state: 'visible' });
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every((animation) => animation.playState === 'finished' || animation.playState === 'idle'),
+  );
+  return modal;
+}
+
+async function assertModalFocusContainment(page, modal) {
+  await page.getByLabel('Confirm delete address').focus();
+  for (let index = 0; index < 6; index += 1) {
+    await page.keyboard.press('Tab');
+    const focusInsideModal = await modal.evaluate((element) =>
+      element.contains(document.activeElement),
+    );
+    if (!focusInsideModal) {
+      throw new Error(`Keyboard focus escaped the delete modal after ${index + 1} Tab presses.`);
+    }
+  }
+}
+
 (async () => {
   const browser = await chromium.launch({ headless: true });
   try {
@@ -56,6 +80,8 @@ function evidenceLocator(page, kind, value) {
       await page.getByText('Home', { exact: true }).waitFor({ state: 'visible' });
       await page.getByLabel('Delete Home').click();
       await page.getByText('Delete this address?', { exact: true }).waitFor({ state: 'visible' });
+      const modal = await waitForModalSettled(page);
+      await assertModalFocusContainment(page, modal);
       await page.screenshot({ path: path.join(output, 'delete-modal-mobile.png'), fullPage: true });
       await page.keyboard.press('Escape');
       await page.getByText('Delete this address?', { exact: true }).waitFor({ state: 'hidden' });
@@ -79,6 +105,8 @@ function evidenceLocator(page, kind, value) {
       await page.screenshot({ path: path.join(output, 'success-desktop.png'), fullPage: true });
       await page.getByLabel('Delete Home').click();
       await page.getByText('Delete this address?', { exact: true }).waitFor({ state: 'visible' });
+      const modal = await waitForModalSettled(page);
+      await assertModalFocusContainment(page, modal);
       await page.screenshot({ path: path.join(output, 'delete-modal-desktop.png'), fullPage: true });
       await page.close();
     }
