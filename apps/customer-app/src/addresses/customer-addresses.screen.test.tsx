@@ -95,6 +95,22 @@ describe('CustomerAddressesScreen', () => {
     expect(port.setDefault).toHaveBeenCalledWith(SECOND.id, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
   });
 
+  it('dismisses delete confirmation through the modal close request', async () => {
+    const port = createPort();
+    port.list.mockResolvedValue({ kind: 'SUCCESS', addresses: [CUSTOMER_ADDRESS_FIXTURE] });
+    const screen = render(<CustomerAddressesScreen addressPort={port} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Home')).toBeTruthy();
+    });
+    fireEvent.press(screen.getByLabelText('Delete Home'));
+    expect(screen.getByText('Delete this address?')).toBeTruthy();
+
+    fireEvent(screen.getByTestId('delete-address-modal'), 'requestClose');
+    expect(screen.queryByText('Delete this address?')).toBeNull();
+    expect(port.remove).not.toHaveBeenCalled();
+  });
+
   it('uses the server deletion fallback and invalidates the checkout quote', async () => {
     const port = createPort();
     port.list
