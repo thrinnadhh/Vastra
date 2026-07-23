@@ -101,13 +101,18 @@ async function assertModalFocusContainment(page, modal) {
       console.log('Capturing desktop address and modal states');
       const page = await desktop.newPage();
       await page.goto(`${origin}/?scenario=success`, { waitUntil: 'networkidle' });
-      await page.getByText('Choose delivery address', { exact: true }).waitFor({ state: 'visible' });
+      await page
+        .getByText('Choose delivery address', { exact: true })
+        .waitFor({ state: 'visible' });
       await page.screenshot({ path: path.join(output, 'success-desktop.png'), fullPage: true });
       await page.getByLabel('Delete Home').click();
       await page.getByText('Delete this address?', { exact: true }).waitFor({ state: 'visible' });
       const modal = await waitForModalSettled(page);
       await assertModalFocusContainment(page, modal);
-      await page.screenshot({ path: path.join(output, 'delete-modal-desktop.png'), fullPage: true });
+      await page.screenshot({
+        path: path.join(output, 'delete-modal-desktop.png'),
+        fullPage: true,
+      });
       await page.close();
     }
     await desktop.close();
