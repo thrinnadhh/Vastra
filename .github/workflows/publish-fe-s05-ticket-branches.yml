@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   publish:
-    if: false
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - run: echo 'FE-S05-02 repair and evidence have already been published.'
