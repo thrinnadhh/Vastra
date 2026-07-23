@@ -1,0 +1,50 @@
+name: Sprint 5 address database diagnostics
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: sprint-5-address-db-diagnostics
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.head_ref == 'automation/sprint-5-wave-1-implementation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: feat/be-fe-002-customer-addresses
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.2
+
+      - uses: supabase/setup-cli@v3
+
+      - name: Run database suite and capture output
+        shell: bash
+        run: |
+          mkdir -p /tmp/address-db-diagnostics
+          corepack enable
+          corepack prepare pnpm@8.15.0 --activate
+          pnpm install --frozen-lockfile > /tmp/address-db-diagnostics/install.log 2>&1
+          set +e
+          pnpm db:test > /tmp/address-db-diagnostics/db-test.log 2>&1
+          echo $? > /tmp/address-db-diagnostics/db-test.exit
+          set -e
+
+      - name: Upload database diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s05-address-db-diagnostics
+          path: /tmp/address-db-diagnostics
+          if-no-files-found: error
