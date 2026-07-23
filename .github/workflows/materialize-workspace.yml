@@ -13,21 +13,23 @@ permissions:
 
 jobs:
   package:
+    if: github.head_ref == 'automation/materialize-fe-s05-s07' || github.ref == 'refs/heads/automation/materialize-fe-s05-s07'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out repository
+      - name: Check out FE-S05-02 branch
         uses: actions/checkout@v7
         with:
+          ref: feat/fe-s05-02-address-ui
           fetch-depth: 0
           persist-credentials: false
       - name: Package complete checkout
         shell: bash
-        run: tar -czf /tmp/vastra-workspace.tar.gz .
+        run: tar -czf /tmp/vastra-fe-s05-02-workspace.tar.gz .
       - name: Upload workspace
         uses: actions/upload-artifact@v4
         with:
-          name: vastra-workspace
-          path: /tmp/vastra-workspace.tar.gz
+          name: vastra-fe-s05-02-workspace
+          path: /tmp/vastra-fe-s05-02-workspace.tar.gz
           if-no-files-found: error
           retention-days: 1
