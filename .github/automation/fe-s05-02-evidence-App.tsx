@@ -21,7 +21,8 @@ const SECOND_ADDRESS: CustomerAddress = {
   isDefault: false,
 };
 
-const scenario = new URLSearchParams(globalThis.location?.search ?? '').get('scenario') ?? 'success';
+const scenario =
+  new URLSearchParams(globalThis.location?.search ?? '').get('scenario') ?? 'success';
 
 function failed(failureKind: CustomerAddressFailure['failureKind']): CustomerAddressFailure {
   return { kind: 'FAILURE', failureKind, fieldErrors: {}, requiresRefresh: false };
