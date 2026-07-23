@@ -30,6 +30,10 @@ function toOrderError(error: unknown): CustomerOrderError {
     : new CustomerOrderError('UNKNOWN', null, false);
 }
 
+function canRetainStaleData(error: CustomerOrderError): boolean {
+  return error.kind === 'TRANSPORT' || error.kind === 'TEMPORARILY_UNAVAILABLE' || error.retryable;
+}
+
 function failureMessage(error: CustomerOrderError): string {
   switch (error.kind) {
     case 'AUTHENTICATION':
@@ -149,11 +153,14 @@ export function CustomerOrdersScreen({ ordersClient, onSelectOrder }: CustomerOr
         },
         (error: unknown) => {
           if (operation.current === operationId) {
+            const failure = toOrderError(error);
             setState((current) => ({
               ...current,
+              orders: canRetainStaleData(failure) ? current.orders : null,
+              nextCursor: canRetainStaleData(failure) ? current.nextCursor : null,
               isLoading: false,
               isLoadingMore: false,
-              failure: toOrderError(error),
+              failure,
             }));
           }
         },
@@ -201,10 +208,13 @@ export function CustomerOrdersScreen({ ordersClient, onSelectOrder }: CustomerOr
       },
       (error: unknown) => {
         if (operation.current === operationId) {
+          const failure = toOrderError(error);
           setState((current) => ({
             ...current,
+            orders: canRetainStaleData(failure) ? current.orders : null,
+            nextCursor: canRetainStaleData(failure) ? current.nextCursor : null,
             isLoadingMore: false,
-            failure: toOrderError(error),
+            failure,
           }));
         }
       },
@@ -227,7 +237,8 @@ export function CustomerOrdersScreen({ ordersClient, onSelectOrder }: CustomerOr
         isOffline: state.failure?.kind === 'TRANSPORT',
         errorMessage: state.failure === null ? null : failureMessage(state.failure),
         hasData: orders.length > 0,
-        hasStaleData: orders.length > 0 && state.failure !== null,
+        hasStaleData:
+          orders.length > 0 && state.failure !== null && canRetainStaleData(state.failure),
         loadingLabel: 'Loading your orders',
         emptyTitle: 'No orders yet',
         emptyMessage: 'Your Vastra orders will appear here after checkout.',

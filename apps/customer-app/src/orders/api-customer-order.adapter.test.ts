@@ -1,6 +1,7 @@
 import type { ApiClient } from '@vastra/api-client';
 
 import { ApiCustomerOrderAdapter } from './api-customer-order.adapter';
+import type { CustomerOrderError } from './customer-order.types';
 
 const ORDER_ID = '10000000-0000-4000-8000-000000000001';
 const ADDRESS_ID = '20000000-0000-4000-8000-000000000001';
@@ -138,5 +139,103 @@ describe('ApiCustomerOrderAdapter', () => {
     });
     const page = await new ApiCustomerOrderAdapter(client).listOrders();
     expect(page.orders[0]?.status).toBe('UNKNOWN');
+  });
+
+  it('maps tracking and OTP only when the response belongs to the requested order', async () => {
+    const request = jest
+      .fn()
+      .mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: {
+            tracking: {
+              orderId: ORDER_ID,
+              deliveryTaskId: '70000000-0000-4000-8000-000000000001',
+              orderNumber: 'VAS-1',
+              orderStatus: 'OUT_FOR_DELIVERY',
+              taskStatus: 'IN_TRANSIT',
+              captain: null,
+              location: null,
+              estimatedArrivalAt: null,
+              updatedAt: '2026-07-22T10:00:00.000Z',
+            },
+          },
+          meta: { requestId: null },
+        },
+        status: 200,
+        requestId: 'req',
+      })
+      .mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: {
+            secret: {
+              orderId: ORDER_ID,
+              deliveryTaskId: '70000000-0000-4000-8000-000000000001',
+              kind: 'DELIVERY_OTP',
+              secret: '123456',
+              issuedAt: '2026-07-22T10:00:00.000Z',
+              expiresAt: '2026-07-22T10:05:00.000Z',
+            },
+          },
+          meta: { requestId: null },
+        },
+        status: 200,
+        requestId: 'req',
+      });
+    const adapter = new ApiCustomerOrderAdapter({ request } as ApiClient);
+
+    await expect(adapter.getTracking(ORDER_ID)).resolves.toMatchObject({ orderId: ORDER_ID });
+    await expect(adapter.getDeliveryOtp(ORDER_ID)).resolves.toMatchObject({
+      orderId: ORDER_ID,
+      secret: '123456',
+    });
+  });
+
+  it('rejects a tracking response scoped to a different order', async () => {
+    const { client } = clientReturning({
+      success: true,
+      data: {
+        tracking: {
+          orderId: '10000000-0000-4000-8000-000000000099',
+          deliveryTaskId: '70000000-0000-4000-8000-000000000001',
+          orderNumber: 'VAS-WRONG',
+          orderStatus: 'OUT_FOR_DELIVERY',
+          taskStatus: 'IN_TRANSIT',
+          captain: null,
+          location: null,
+          estimatedArrivalAt: null,
+          updatedAt: '2026-07-22T10:00:00.000Z',
+        },
+      },
+      meta: { requestId: null },
+    });
+
+    await expect(new ApiCustomerOrderAdapter(client).getTracking(ORDER_ID)).rejects.toMatchObject({
+      kind: 'MALFORMED_RESPONSE',
+    } satisfies Partial<CustomerOrderError>);
+  });
+
+  it('rejects a delivery OTP response scoped to a different order', async () => {
+    const { client } = clientReturning({
+      success: true,
+      data: {
+        secret: {
+          orderId: '10000000-0000-4000-8000-000000000099',
+          deliveryTaskId: '70000000-0000-4000-8000-000000000001',
+          kind: 'DELIVERY_OTP',
+          secret: '123456',
+          issuedAt: '2026-07-22T10:00:00.000Z',
+          expiresAt: '2026-07-22T10:05:00.000Z',
+        },
+      },
+      meta: { requestId: null },
+    });
+
+    await expect(
+      new ApiCustomerOrderAdapter(client).getDeliveryOtp(ORDER_ID),
+    ).rejects.toMatchObject({
+      kind: 'MALFORMED_RESPONSE',
+    } satisfies Partial<CustomerOrderError>);
   });
 });

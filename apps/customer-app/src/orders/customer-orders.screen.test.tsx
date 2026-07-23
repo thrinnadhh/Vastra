@@ -125,6 +125,26 @@ describe('CustomerOrdersScreen', () => {
     });
   });
 
+  it('removes cached orders after session expiry instead of marking them stale', async () => {
+    const listOrders = jest
+      .fn()
+      .mockResolvedValueOnce({ orders: [ACTIVE_ORDER], nextCursor: null })
+      .mockRejectedValueOnce(new CustomerOrderError('AUTHENTICATION', null, false));
+    const view = render(
+      <CustomerOrdersScreen onSelectOrder={() => undefined} ordersClient={{ listOrders }} />,
+    );
+
+    expect(await view.findByText('Active Shop')).toBeTruthy();
+    fireEvent.press(await view.findByLabelText('Refresh my orders'));
+    expect(
+      await view.findByText(
+        'Your session is no longer available. Sign in again to view your orders.',
+      ),
+    ).toBeTruthy();
+    expect(view.queryByText('Active Shop')).toBeNull();
+    expect(view.queryByText('STALE DATA')).toBeNull();
+  });
+
   it('shows an offline retry state when no cached orders are available', async () => {
     const listOrders = jest
       .fn()
