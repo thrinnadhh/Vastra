@@ -1,35 +1,14 @@
 name: Materialize workspace
 
 on:
-  pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - automation/materialize-fe-s05-s07
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   package:
-    if: github.head_ref == 'automation/materialize-fe-s05-s07' || github.ref == 'refs/heads/automation/materialize-fe-s05-s07'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Check out current main
-        uses: actions/checkout@v7
-        with:
-          ref: main
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Package complete checkout
-        shell: bash
-        run: tar -czf /tmp/vastra-main-workspace.tar.gz .
-      - name: Upload workspace
-        uses: actions/upload-artifact@v4
-        with:
-          name: vastra-main-workspace
-          path: /tmp/vastra-main-workspace.tar.gz
-          if-no-files-found: error
-          retention-days: 1
+      - run: echo 'Workspace materialization is consolidated into materialize-toolchain.yml.'
