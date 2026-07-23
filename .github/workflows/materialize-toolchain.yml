@@ -1,0 +1,108 @@
+name: Materialize workspace and exact toolchain
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - automation/materialize-fe-s05-s07
+
+concurrency:
+  group: materialize-workspace-toolchain-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PNPM_VERSION: 8.15.0
+
+jobs:
+  package:
+    if: github.head_ref == 'automation/materialize-fe-s05-s07' || github.ref == 'refs/heads/automation/materialize-fe-s05-s07'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out one main snapshot
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Record and package source snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_sha="$(git rev-parse HEAD)"
+          printf 'source_sha=%s\nworkflow_run_id=%s\n' "$source_sha" "$GITHUB_RUN_ID" > .vastra-materialization-source
+          echo "SOURCE_SHA=$source_sha" >> "$GITHUB_ENV"
+          tar -czf /tmp/vastra-main-workspace.tar.gz .
+      - name: Use repository Node version
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.2
+      - name: Prepare repository pnpm inside the toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          toolchain_root="${RUNNER_TEMP}/vastra-toolchain"
+          corepack_home="${toolchain_root}/corepack"
+          mkdir -p "$corepack_home"
+          echo "COREPACK_HOME=$corepack_home" >> "$GITHUB_ENV"
+          corepack enable
+          COREPACK_HOME="$corepack_home" corepack prepare "pnpm@${PNPM_VERSION}" --activate
+          test "$(COREPACK_HOME="$corepack_home" COREPACK_ENABLE_NETWORK=0 pnpm --version)" = "$PNPM_VERSION"
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+      - name: Package toolchain and workspace dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          node_root="$(dirname "$(dirname "$(command -v node)")")"
+          toolchain_root="${RUNNER_TEMP}/vastra-toolchain"
+          mkdir -p "$toolchain_root/node"
+          cp -a "$node_root"/. "$toolchain_root/node/"
+          cp .vastra-materialization-source "$toolchain_root/source"
+          tar -czf /tmp/node20-toolchain.tar.gz -C "$toolchain_root" .
+          mapfile -d '' node_modules_dirs < <(find . -type d -name node_modules -prune -print0)
+          test "${#node_modules_dirs[@]}" -gt 1
+          tar -czf /tmp/vastra-workspace-dependencies.tar.gz \
+            .vastra-materialization-source \
+            "${node_modules_dirs[@]}"
+      - name: Validate restored toolchain without network
+        shell: bash
+        run: |
+          set -euo pipefail
+          restore_root="${RUNNER_TEMP}/vastra-toolchain-restore"
+          mkdir -p "$restore_root"
+          tar -xzf /tmp/node20-toolchain.tar.gz -C "$restore_root"
+          grep -Fx "source_sha=${SOURCE_SHA}" "$restore_root/source"
+          restored_version="$(
+            PATH="$restore_root/node/bin:$PATH" \
+              COREPACK_HOME="$restore_root/corepack" \
+              COREPACK_ENABLE_NETWORK=0 \
+              "$restore_root/node/bin/pnpm" --version
+          )"
+          test "$restored_version" = "$PNPM_VERSION"
+      - name: Upload workspace
+        uses: actions/upload-artifact@v4
+        with:
+          name: vastra-main-workspace
+          path: /tmp/vastra-main-workspace.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+      - name: Upload toolchain
+        uses: actions/upload-artifact@v4
+        with:
+          name: node20-toolchain
+          path: /tmp/node20-toolchain.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+      - name: Upload dependencies
+        uses: actions/upload-artifact@v4
+        with:
+          name: vastra-workspace-dependencies
+          path: /tmp/vastra-workspace-dependencies.tar.gz
+          if-no-files-found: error
+          retention-days: 1

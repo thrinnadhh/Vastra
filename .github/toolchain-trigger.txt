@@ -1,0 +1,1 @@
+Materialize the exact Node 20.20.2 and pnpm 8.15.0 validation environment for FE-S05–S07 work.

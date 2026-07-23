@@ -28,6 +28,7 @@ const nodeFiles = [
   'packages/config/**/*.{js,cjs,mjs,ts,cts,mts}',
   'packages/frontend-test-harness/**/*.{js,cjs,mjs,ts,cts,mts}',
   'e2e/**/*.{js,cjs,mjs,ts,cts,mts}',
+  '.github/automation/**/*.{js,cjs,mjs}',
 ];
 
 const mobileFiles = [
@@ -97,6 +98,14 @@ export default defineConfig([
   },
 
   {
+    files: ['.github/automation/fe-s05-02-evidence-App.tsx'],
+    extends: [tseslint.configs.disableTypeChecked],
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
+  },
+
+  {
     files: reactFiles,
     extends: [
       reactPlugin.configs.flat.recommended,
@@ -144,6 +153,15 @@ export default defineConfig([
       'n/no-deprecated-api': 'error',
       'n/no-process-exit': 'error',
       'n/prefer-node-protocol': 'error',
+    },
+  },
+
+  {
+    files: ['.github/automation/capture-fe-s05-02-evidence.cjs'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
     },
   },
 

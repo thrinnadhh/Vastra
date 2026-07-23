@@ -1,0 +1,14 @@
+name: Materialize workspace
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Workspace materialization is consolidated into materialize-toolchain.yml.'
