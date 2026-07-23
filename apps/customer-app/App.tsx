@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { MobileApplicationShell } from '@vastra/app-shells/native';
 import { StatusBar } from 'expo-status-bar';
@@ -36,6 +36,7 @@ import {
   type CustomerRootNavigationSlots,
 } from './src/navigation/customer-root-navigation';
 import type { CustomerRoute, UUID } from './src/navigation/customer-routes';
+import { DefaultCustomerOrderConfirmation } from './src/orders/default-customer-order-confirmation';
 import { createCustomerOrderIdempotencyKey } from './src/orders/customer-order-placement.client';
 import { DefaultCustomerOrders } from './src/orders/default-customer-orders';
 
@@ -60,6 +61,19 @@ function DeepLinkedUnavailable({ onBack }: { readonly onBack: () => void }) {
         <Text style={styles.linkedUnavailableActionText}>Back</Text>
       </Pressable>
     </View>
+  );
+}
+
+function CheckoutRouteRejected({ onReject }: { readonly onReject: () => void }) {
+  useEffect(() => {
+    onReject();
+  }, [onReject]);
+
+  return (
+    <CustomerRootPlaceholder
+      description="This checkout route could not be verified for the active account."
+      title="Checkout unavailable"
+    />
   );
 }
 
@@ -159,32 +173,49 @@ export function CustomerAppContent({
               onSessionExpired={purgeCheckout}
             />
           );
-        case 'AddressList':
+        case 'AddressList': {
+          const selectedAddressId = checkoutTransaction?.addressId ?? null;
+          const openCheckoutForAddress = (nextAddressId: string): void => {
+            actions.openRoute({
+              scope: 'TRANSACTION',
+              name: 'Checkout',
+              params: { addressId: nextAddressId as UUID },
+            });
+          };
           return (
-            <DefaultCustomerAddresses
-              mode="CHECKOUT"
-              onInvalidateQuote={() => {
-                setCheckoutTransaction((current) =>
-                  current === null ? null : invalidateCustomerCheckoutQuote(current),
-                );
-              }}
-              onSelectedAddressChange={(selectedAddressId) => {
-                setCheckoutTransaction((current) =>
-                  current === null
-                    ? null
-                    : selectCustomerCheckoutAddress(current, selectedAddressId),
-                );
-                if (selectedAddressId !== null) {
-                  actions.openRoute({
-                    scope: 'TRANSACTION',
-                    name: 'Checkout',
-                    params: { addressId: selectedAddressId as UUID },
-                  });
-                }
-              }}
-              selectedAddressId={checkoutTransaction?.addressId ?? null}
-            />
+            <View style={styles.transactionFlow}>
+              <DefaultCustomerAddresses
+                mode="CHECKOUT"
+                onInvalidateQuote={() => {
+                  setCheckoutTransaction((current) =>
+                    current === null ? null : invalidateCustomerCheckoutQuote(current),
+                  );
+                }}
+                onSelectedAddressChange={(nextAddressId) => {
+                  setCheckoutTransaction((current) =>
+                    current === null
+                      ? null
+                      : selectCustomerCheckoutAddress(current, nextAddressId),
+                  );
+                  if (nextAddressId !== null) openCheckoutForAddress(nextAddressId);
+                }}
+                selectedAddressId={selectedAddressId}
+              />
+              {selectedAddressId === null ? null : (
+                <Pressable
+                  accessibilityLabel="Continue with selected delivery address"
+                  accessibilityRole="button"
+                  onPress={() => {
+                    openCheckoutForAddress(selectedAddressId);
+                  }}
+                  style={styles.checkoutContinueAction}
+                >
+                  <Text style={styles.checkoutContinueText}>Continue with selected address</Text>
+                </Pressable>
+              )}
+            </View>
           );
+        }
         case 'Checkout':
           return (
             <DefaultCustomerCheckoutQuote
@@ -216,10 +247,29 @@ export function CustomerAppContent({
             />
           );
         case 'OrderConfirmation':
+          if (
+            checkoutTransaction === null ||
+            checkoutTransaction.placementPhase !== 'SUCCEEDED' ||
+            checkoutTransaction.orderId !== route.params.orderId
+          ) {
+            return <CheckoutRouteRejected onReject={purgeCheckout} />;
+          }
           return (
-            <CustomerRootPlaceholder
-              description="The order confirmation route requires a server-confirmed order."
-              title="Order confirmation unavailable"
+            <DefaultCustomerOrderConfirmation
+              expectedAddressId={checkoutTransaction.addressId}
+              expectedCartId={checkoutTransaction.cartId}
+              expectedQuoteId={checkoutTransaction.quoteId}
+              onContinueShopping={() => {
+                actions.resetToTab('Discover');
+              }}
+              onSecurityFailure={purgeCheckout}
+              onViewOrder={(confirmedOrderId) => {
+                actions.openOrderDetail(confirmedOrderId);
+              }}
+              onViewOrders={() => {
+                actions.resetToTab('Orders');
+              }}
+              orderId={route.params.orderId}
             />
           );
         case 'AddressForm':
@@ -278,6 +328,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F7F8FA',
   },
+  transactionFlow: { flex: 1, backgroundColor: '#F7F8FA' },
+  checkoutContinueAction: {
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: '#6C3AA8',
+  },
+  checkoutContinueText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   linkedUnavailable: {
     flex: 1,
     justifyContent: 'center',
