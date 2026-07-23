@@ -1,7 +1,10 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { CUSTOMER_ADDRESS_FIXTURE } from './customer-address.fixtures';
-import { CustomerAddressesScreen } from './customer-addresses.screen';
+import {
+  CustomerAddressesScreen,
+  registerCustomerAddressEscapeDismiss,
+} from './customer-addresses.screen';
 import type { CustomerAddress, CustomerAddressPort } from './customer-address.types';
 
 const SECOND: CustomerAddress = {
@@ -36,6 +39,41 @@ function createPort(): CustomerAddressPort & {
     setDefault: jest.fn(),
   };
 }
+
+describe('registerCustomerAddressEscapeDismiss', () => {
+  it('dismisses only Escape and unregisters the key listener', () => {
+    const listeners = new Set<(event: { key: string; preventDefault(): void }) => void>();
+    const target = {
+      addEventListener: jest.fn(
+        (_type: 'keydown', listener: (event: { key: string; preventDefault(): void }) => void) => {
+          listeners.add(listener);
+        },
+      ),
+      removeEventListener: jest.fn(
+        (_type: 'keydown', listener: (event: { key: string; preventDefault(): void }) => void) => {
+          listeners.delete(listener);
+        },
+      ),
+    };
+    const onDismiss = jest.fn();
+    const unregister = registerCustomerAddressEscapeDismiss(target, onDismiss);
+    const preventDefault = jest.fn();
+    const listener = [...listeners][0];
+    if (listener === undefined) throw new Error('Expected keydown listener');
+
+    listener({ key: 'Enter', preventDefault });
+    expect(onDismiss).not.toHaveBeenCalled();
+    expect(preventDefault).not.toHaveBeenCalled();
+
+    listener({ key: 'Escape', preventDefault });
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+
+    unregister();
+    expect(target.removeEventListener).toHaveBeenCalledWith('keydown', listener);
+    expect(listeners.size).toBe(0);
+  });
+});
 
 describe('CustomerAddressesScreen', () => {
   it('shows the empty state and opens the add form', async () => {

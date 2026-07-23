@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CustomerNetworkStateBoundary } from '../ui/customer-network-state';
 import { resolveCustomerNetworkState } from '../ui/resolve-customer-network-state';
@@ -25,6 +25,35 @@ type ScreenMode =
   | { readonly kind: 'LIST' }
   | { readonly kind: 'ADD' }
   | { readonly kind: 'EDIT'; readonly address: CustomerAddress };
+
+interface CustomerAddressKeyDownEvent {
+  readonly key: string;
+  preventDefault(): void;
+}
+
+interface CustomerAddressKeyDownTarget {
+  addEventListener(type: 'keydown', listener: (event: CustomerAddressKeyDownEvent) => void): void;
+  removeEventListener(
+    type: 'keydown',
+    listener: (event: CustomerAddressKeyDownEvent) => void,
+  ): void;
+}
+
+export function registerCustomerAddressEscapeDismiss(
+  target: CustomerAddressKeyDownTarget,
+  onDismiss: () => void,
+): () => void {
+  const onKeyDown = (event: CustomerAddressKeyDownEvent): void => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    onDismiss();
+  };
+
+  target.addEventListener('keydown', onKeyDown);
+  return () => {
+    target.removeEventListener('keydown', onKeyDown);
+  };
+}
 
 function failureCopy(kind: CustomerAddressFailureKind | null): string | null {
   switch (kind) {
@@ -124,6 +153,24 @@ export function CustomerAddressesScreen({
   const [pendingAddressId, setPendingAddressId] = useState<string | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<CustomerAddress | null>(null);
   const activeMutationKeys = useRef(new Map<string, string>());
+  const dismissDeleteConfirmation = useCallback(() => {
+    setDeleteCandidate(null);
+  }, []);
+
+  useEffect(() => {
+    if (deleteCandidate === null || Platform.OS !== 'web') return;
+    const target = globalThis as unknown as Partial<CustomerAddressKeyDownTarget>;
+    if (
+      typeof target.addEventListener !== 'function' ||
+      typeof target.removeEventListener !== 'function'
+    ) {
+      return;
+    }
+    return registerCustomerAddressEscapeDismiss(
+      target as CustomerAddressKeyDownTarget,
+      dismissDeleteConfirmation,
+    );
+  }, [deleteCandidate, dismissDeleteConfirmation]);
 
   const load = useCallback(
     async (preserveVisible: boolean): Promise<readonly CustomerAddress[] | null> => {
@@ -445,9 +492,7 @@ export function CustomerAddressesScreen({
 
       <Modal
         animationType="fade"
-        onRequestClose={() => {
-          setDeleteCandidate(null);
-        }}
+        onRequestClose={dismissDeleteConfirmation}
         presentationStyle="overFullScreen"
         testID="delete-address-modal"
         transparent
@@ -476,9 +521,7 @@ export function CustomerAddressesScreen({
             <Pressable
               accessibilityLabel="Cancel delete address"
               accessibilityRole="button"
-              onPress={() => {
-                setDeleteCandidate(null);
-              }}
+              onPress={dismissDeleteConfirmation}
               style={styles.secondaryAction}
             >
               <Text style={styles.secondarySmallText}>Keep address</Text>
