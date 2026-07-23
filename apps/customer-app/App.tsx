@@ -5,7 +5,15 @@ import { StatusBar } from 'expo-status-bar';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { DefaultCustomerAddresses } from './src/addresses/default-customer-addresses';
 import { CustomerSessionApp } from './src/auth/default-customer-session';
+import { DefaultCustomerCart } from './src/cart/default-customer-cart';
+import {
+  createCustomerCheckoutTransaction,
+  invalidateCustomerCheckoutQuote,
+  selectCustomerCheckoutAddress,
+  type CustomerCheckoutTransaction,
+} from './src/checkout/customer-checkout-transaction';
 import { DefaultCustomerCheckoutQuote } from './src/checkout/default-customer-checkout-quote';
 import type { CustomerDiscoveryIntent } from './src/discovery/customer-discovery-intent';
 import { DefaultCustomerSearchRoot } from './src/discovery/default-customer-search';
@@ -24,7 +32,8 @@ import {
   CustomerRootPlaceholder,
   type CustomerRootNavigationSlots,
 } from './src/navigation/customer-root-navigation';
-import type { CustomerRoute } from './src/navigation/customer-routes';
+import type { CustomerRoute, UUID } from './src/navigation/customer-routes';
+import { createCustomerOrderIdempotencyKey } from './src/orders/customer-order-placement.client';
 import { DefaultCustomerOrders } from './src/orders/default-customer-orders';
 
 const PRODUCTION_LINKING_PORT = new ReactNativeCustomerLinkingPort();
@@ -85,6 +94,8 @@ export function CustomerAppContent({
     createInitialCustomerSearchSessionState,
   );
   const [discoveryIntent, setDiscoveryIntent] = useState<CustomerDiscoveryIntent | null>(null);
+  const [checkoutTransaction, setCheckoutTransaction] =
+    useState<CustomerCheckoutTransaction | null>(null);
 
   const slots: CustomerRootNavigationSlots = {
     home: ({ openCheckout, openDiscover }) => (
@@ -119,8 +130,89 @@ export function CustomerAppContent({
     ),
     orders: <DefaultCustomerOrders />,
     profile: <DefaultCustomerProfileRoot />,
-    checkout: <DefaultCustomerCheckoutQuote addressId={addressId} />,
+    renderTransactionRoute: (route, actions) => {
+      switch (route.name) {
+        case 'Cart':
+          return (
+            <DefaultCustomerCart
+              onCheckout={() => {
+                const started = createCustomerCheckoutTransaction(
+                  createCustomerOrderIdempotencyKey(),
+                );
+                setCheckoutTransaction(
+                  addressId === null ? started : selectCustomerCheckoutAddress(started, addressId),
+                );
+                actions.openRoute({
+                  scope: 'TRANSACTION',
+                  name: 'AddressList',
+                  params: { mode: 'SELECT_FOR_CHECKOUT', returnTo: 'Checkout' },
+                });
+              }}
+              onSessionExpired={() => {
+                setCheckoutTransaction(null);
+                actions.resetToTab('Home');
+              }}
+            />
+          );
+        case 'AddressList':
+          return (
+            <DefaultCustomerAddresses
+              mode="CHECKOUT"
+              onInvalidateQuote={() => {
+                setCheckoutTransaction((current) =>
+                  current === null ? null : invalidateCustomerCheckoutQuote(current),
+                );
+              }}
+              onSelectedAddressChange={(selectedAddressId) => {
+                setCheckoutTransaction((current) =>
+                  current === null
+                    ? null
+                    : selectCustomerCheckoutAddress(current, selectedAddressId),
+                );
+                if (selectedAddressId !== null) {
+                  actions.openRoute({
+                    scope: 'TRANSACTION',
+                    name: 'Checkout',
+                    params: { addressId: selectedAddressId as UUID },
+                  });
+                }
+              }}
+              selectedAddressId={checkoutTransaction?.addressId ?? null}
+            />
+          );
+        case 'Checkout':
+          return (
+            <DefaultCustomerCheckoutQuote
+              addressId={checkoutTransaction?.addressId ?? route.params?.addressId ?? null}
+            />
+          );
+        case 'OrderConfirmation':
+          return (
+            <CustomerRootPlaceholder
+              description="The order confirmation route requires a server-confirmed order."
+              title="Order confirmation unavailable"
+            />
+          );
+        case 'AddressForm':
+          return (
+            <CustomerRootPlaceholder
+              description="Address forms are presented inside the authoritative address flow."
+              title="Address form"
+            />
+          );
+        case 'Payment':
+          return (
+            <CustomerRootPlaceholder
+              description="Cash on Delivery does not open a separate payment route."
+              title="Payment route unavailable"
+            />
+          );
+      }
+    },
     renderDeepLinkedRoute,
+    onTransactionExit: () => {
+      setCheckoutTransaction(null);
+    },
   };
 
   return (
