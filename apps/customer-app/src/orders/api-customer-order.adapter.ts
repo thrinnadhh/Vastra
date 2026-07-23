@@ -1,4 +1,4 @@
-import type { ApiClient } from '@vastra/api-client';
+import type { ApiClient, OperationResponse } from '@vastra/api-client';
 
 import {
   parseCustomerOrderDetailEnvelope,
@@ -18,8 +18,17 @@ import type {
   CustomerOrderTrackingSnapshot,
 } from './customer-order-tracking.types';
 
+type ListOrdersResponse = OperationResponse<'listCustomerOrders'>;
+type GetOrderResponse = OperationResponse<'getCustomerOrder'>;
+type TrackingResponse = OperationResponse<'getCustomerOrderTracking'>;
+type DeliveryOtpResponse = OperationResponse<'getCustomerDeliveryOtp'>;
+
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+function field(record: Readonly<Record<string, unknown>>, key: string): unknown {
+  return record[key];
+}
 
 function mapApiFailure(error: unknown): CustomerOrderError {
   const normalized = isRecord(error) && isRecord(error['normalized']) ? error['normalized'] : null;
@@ -82,11 +91,20 @@ function nullableString(record: Readonly<Record<string, unknown>>, key: string):
   return value;
 }
 
-function parseTrackingEnvelope(value: unknown): CustomerOrderTrackingSnapshot {
-  if (!isRecord(value) || value['success'] !== true || !isRecord(value['data'])) {
+function parseTrackingEnvelope(value: TrackingResponse): CustomerOrderTrackingSnapshot {
+  const envelope: unknown = value;
+  if (
+    !isRecord(envelope) ||
+    field(envelope, 'success') !== true ||
+    !isRecord(field(envelope, 'data'))
+  ) {
     throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
   }
-  const tracking = value['data']['tracking'];
+  const data = field(envelope, 'data');
+  if (!isRecord(data)) {
+    throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
+  }
+  const tracking = field(data, 'tracking');
   if (!isRecord(tracking)) {
     throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
   }
@@ -134,15 +152,25 @@ function parseTrackingEnvelope(value: unknown): CustomerOrderTrackingSnapshot {
   };
 }
 
-function parseDeliveryOtpEnvelope(value: unknown): CustomerDeliveryOtp {
-  if (!isRecord(value) || value['success'] !== true || !isRecord(value['data'])) {
+function parseDeliveryOtpEnvelope(value: DeliveryOtpResponse): CustomerDeliveryOtp {
+  const envelope: unknown = value;
+  if (
+    !isRecord(envelope) ||
+    field(envelope, 'success') !== true ||
+    !isRecord(field(envelope, 'data'))
+  ) {
     throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
   }
-  const secret = value['data']['secret'];
+  const data = field(envelope, 'data');
+  if (!isRecord(data)) {
+    throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
+  }
+  const secret = field(data, 'secret');
   if (!isRecord(secret) || secret['kind'] !== 'DELIVERY_OTP') {
     throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
   }
   return {
+    orderId: stringValue(secret, 'orderId'),
     secret: stringValue(secret, 'secret'),
     issuedAt: stringValue(secret, 'issuedAt'),
     expiresAt: stringValue(secret, 'expiresAt'),
@@ -160,7 +188,7 @@ export class ApiCustomerOrderAdapter implements CustomerOrderReadPort, CustomerO
           ...(input.cursor === undefined ? {} : { cursor: input.cursor }),
         },
       });
-      return parseCustomerOrdersPageEnvelope(response.data);
+      return parseCustomerOrdersPageEnvelope(response.data satisfies ListOrdersResponse);
     } catch (error: unknown) {
       if (error instanceof CustomerOrderError) throw error;
       throw mapApiFailure(error);
@@ -170,7 +198,7 @@ export class ApiCustomerOrderAdapter implements CustomerOrderReadPort, CustomerO
   public async getOrder(orderId: string): Promise<CustomerOrderDetail> {
     try {
       const response = await this.apiClient.request('getCustomerOrder', { path: { orderId } });
-      return parseCustomerOrderDetailEnvelope(response.data);
+      return parseCustomerOrderDetailEnvelope(response.data satisfies GetOrderResponse);
     } catch (error: unknown) {
       if (error instanceof CustomerOrderError) throw error;
       throw mapApiFailure(error);
@@ -182,7 +210,11 @@ export class ApiCustomerOrderAdapter implements CustomerOrderReadPort, CustomerO
       const response = await this.apiClient.request('getCustomerOrderTracking', {
         path: { orderId },
       });
-      return parseTrackingEnvelope(response.data);
+      const tracking = parseTrackingEnvelope(response.data);
+      if (tracking.orderId !== orderId) {
+        throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
+      }
+      return tracking;
     } catch (error: unknown) {
       if (error instanceof CustomerOrderError) throw error;
       throw mapApiFailure(error);
@@ -194,7 +226,11 @@ export class ApiCustomerOrderAdapter implements CustomerOrderReadPort, CustomerO
       const response = await this.apiClient.request('getCustomerDeliveryOtp', {
         path: { orderId },
       });
-      return parseDeliveryOtpEnvelope(response.data);
+      const otp = parseDeliveryOtpEnvelope(response.data);
+      if (otp.orderId !== orderId) {
+        throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
+      }
+      return otp;
     } catch (error: unknown) {
       if (error instanceof CustomerOrderError) throw error;
       throw mapApiFailure(error);
