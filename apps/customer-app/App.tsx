@@ -220,6 +220,7 @@ export function CustomerAppContent({
                     current === null ? null : invalidateCustomerCheckoutQuote(current),
                   );
                 }}
+                onSecurityFailure={purgeCheckout}
                 onSelectedAddressChange={(nextAddressId) => {
                   setCheckoutTransaction((current) =>
                     current === null ? null : selectCustomerCheckoutAddress(current, nextAddressId),
