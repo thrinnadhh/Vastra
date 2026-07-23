@@ -24,10 +24,10 @@ jobs:
           path: automation
           persist-credentials: false
 
-      - name: Check out FE-S05-02 fix branch
+      - name: Check out final FE-S05-02 repair branch
         uses: actions/checkout@v7
         with:
-          ref: fix/fe-s05-02-coderabbit-review
+          ref: fix/fe-s05-02-web-escape
           fetch-depth: 0
           path: workspace
           persist-credentials: false
