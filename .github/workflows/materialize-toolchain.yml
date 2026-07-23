@@ -1,4 +1,4 @@
-name: Publish validated FE-S05-04 patch
+name: Publish validated FE-S05-04 address privacy patch
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - automation/materialize-fe-s05-s07
 
 concurrency:
-  group: publish-fe-s05-04-validated-patch
+  group: publish-fe-s05-04-address-privacy-patch
   cancel-in-progress: false
 
 permissions:
@@ -14,7 +14,7 @@ permissions:
 
 env:
   PNPM_VERSION: 8.15.0
-  EXPECTED_HEAD: 76f27d4834e9297eac4b1e06489984e5e12ae3a4
+  EXPECTED_HEAD: 59232d1650a4a83173ea6dcafead9ab9a20d7281
   TARGET_BRANCH: agent/fe-s05-04-confirmation
 
 jobs:
@@ -39,10 +39,10 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C workspace rev-parse HEAD)" = "$EXPECTED_HEAD"
-          base64 --decode patch-source/.github/automation/pr122-fixes.patch.gz.b64 | gunzip > /tmp/pr122-fixes.patch
-          echo 'd96eb0acc9a16fa6ca2ac6a6d92abcc06db081d7e9a823db95dfb73db2615a1d  /tmp/pr122-fixes.patch' | sha256sum --check
-          git -C workspace apply --check /tmp/pr122-fixes.patch
-          git -C workspace apply /tmp/pr122-fixes.patch
+          base64 --decode patch-source/.github/automation/pr122-fixes.patch.gz.b64 | gunzip > /tmp/pr122-address-security.patch
+          echo 'e116ec87af0ce763e55f9faa857b4c18abf7c7c09faed80ad97d38217fb853b4  /tmp/pr122-address-security.patch' | sha256sum --check
+          git -C workspace apply --check /tmp/pr122-address-security.patch
+          git -C workspace apply /tmp/pr122-address-security.patch
       - name: Use repository Node version
         uses: actions/setup-node@v4
         with:
@@ -80,21 +80,14 @@ jobs:
           git config user.name 'vastra-orchestrator'
           git config user.email 'actions@users.noreply.github.com'
           git add \
-            apps/customer-app/App.test.tsx \
-            apps/customer-app/App.tsx \
-            apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx \
-            apps/customer-app/src/checkout/customer-checkout-quote.screen.tsx \
-            apps/customer-app/src/checkout/customer-checkout-transaction.test.ts \
-            apps/customer-app/src/checkout/customer-checkout-transaction.ts \
-            apps/customer-app/src/checkout/customer-cod-placement.test.ts \
-            apps/customer-app/src/checkout/customer-cod-placement.ts \
-            apps/customer-app/src/navigation/customer-root-navigation.tsx \
-            apps/customer-app/src/orders/customer-cod-order-journey.test.tsx \
-            apps/customer-app/src/orders/default-customer-order-confirmation.test.tsx \
-            apps/customer-app/src/orders/default-customer-order-confirmation.tsx
+            apps/customer-app/src/addresses/customer-address-form.screen.test.tsx \
+            apps/customer-app/src/addresses/customer-address-form.screen.tsx \
+            apps/customer-app/src/addresses/customer-addresses.screen.test.tsx \
+            apps/customer-app/src/addresses/customer-addresses.screen.tsx \
+            apps/customer-app/src/addresses/default-customer-addresses.tsx
           test -z "$(git diff --name-only)"
           git diff --cached --check
-          git commit -m 'fix(customer): validate COD orchestration integration'
+          git commit -m 'fix(customer): purge address state on access failure'
           test "$(git rev-parse HEAD^)" = "$EXPECTED_HEAD"
       - name: Push exact fast-forward head
         working-directory: workspace
