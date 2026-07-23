@@ -24,10 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Check out one main snapshot
+      - name: Check out FE-S05-04 implementation head
         uses: actions/checkout@v7
         with:
-          ref: main
+          ref: agent/fe-s05-04-confirmation
           fetch-depth: 0
           persist-credentials: false
       - name: Record and package source snapshot
