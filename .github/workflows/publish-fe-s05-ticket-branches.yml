@@ -1,4 +1,4 @@
-name: Publish FE-S05 ticket branches
+name: Publish FE-S05-02 review fix
 
 on:
   pull_request:
@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: publish-fe-s05-ticket-branches
+  group: publish-fe-s05-02-review-fix
   cancel-in-progress: true
 
 jobs:
@@ -21,64 +21,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Check out audited payloads
+      - name: Check out audited payload
         uses: actions/checkout@v7
         with:
           ref: automation/materialize-fe-s05-s07
           path: payload
           persist-credentials: false
 
-      - name: Reconstruct and verify ticket patches
-        id: payloads
+      - name: Reconstruct and verify review fix
         shell: bash
         run: |
           set -euo pipefail
-          cat payload/.github/automation/fe-s05-02.patch.gz.b64.part* > /tmp/fe-s05-02.patch.gz.b64
-          cat payload/.github/automation/fe-s05-05.patch.gz.b64.part* > /tmp/fe-s05-05.patch.gz.b64
-          echo '3257163f25239e00221e41c4002e9bd3e3e970083a27654d89cd2594be06d577  /tmp/fe-s05-02.patch.gz.b64' | sha256sum --check --strict
-          echo '2e3aa7e878cd1d9eb8fb94081d13b575f59a47c4ba3520db31a9373fed07813d  /tmp/fe-s05-05.patch.gz.b64' | sha256sum --check --strict
-          base64 --decode /tmp/fe-s05-02.patch.gz.b64 | gzip --decompress > /tmp/fe-s05-02.patch
-          base64 --decode /tmp/fe-s05-05.patch.gz.b64 | gzip --decompress > /tmp/fe-s05-05.patch
-          echo 'ready=true' >> "$GITHUB_OUTPUT"
+          cp payload/.github/automation/fe-s05-02-review-fix.patch.gz.b64 /tmp/fe-s05-02-review-fix.patch.gz.b64
+          echo 'c4eea4199796b49b15524c9e975c46ea332219f3bcb8b30c4fb2521f044893b6  /tmp/fe-s05-02-review-fix.patch.gz.b64' | sha256sum --check --strict
+          base64 --decode /tmp/fe-s05-02-review-fix.patch.gz.b64 | gzip --decompress > /tmp/fe-s05-02-review-fix.patch
 
-      - name: Check out main for address ticket
-        if: steps.payloads.outputs.ready == 'true'
+      - name: Check out FE-S05-02 branch
         uses: actions/checkout@v7
         with:
-          ref: main
+          ref: feat/fe-s05-02-address-ui
           fetch-depth: 0
           path: address
 
-      - name: Publish FE-S05-02 as a non-force fast-forward
-        if: steps.payloads.outputs.ready == 'true'
+      - name: Publish review fix as non-force fast-forward
         shell: bash
         run: |
           set -euo pipefail
           cd address
-          git switch -c feat/fe-s05-02-address-ui
           git config user.name 'Trinadh B'
           git config user.email '111868359+thrinnadhh@users.noreply.github.com'
-          git am /tmp/fe-s05-02.patch
-          git diff --check origin/main..HEAD
+          git am /tmp/fe-s05-02-review-fix.patch
+          git diff --check origin/feat/fe-s05-02-address-ui..HEAD
           git push origin HEAD:refs/heads/feat/fe-s05-02-address-ui
-
-      - name: Check out main for orders ticket
-        if: steps.payloads.outputs.ready == 'true'
-        uses: actions/checkout@v7
-        with:
-          ref: main
-          fetch-depth: 0
-          path: orders
-
-      - name: Publish FE-S05-05 as a non-force fast-forward
-        if: steps.payloads.outputs.ready == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd orders
-          git switch -c feat/ui-fe-s05-05-orders-tracking
-          git config user.name 'Trinadh B'
-          git config user.email '111868359+thrinnadhh@users.noreply.github.com'
-          git am /tmp/fe-s05-05.patch
-          git diff --check origin/main..HEAD
-          git push origin HEAD:refs/heads/feat/ui-fe-s05-05-orders-tracking
