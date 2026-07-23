@@ -76,7 +76,7 @@ jobs:
             sleep 1
           done
           EVIDENCE_OUTPUT="$PWD/docs/evidence/fe-s05-02-address" node capture-fe-s05-02-evidence.cjs
-          test "$(find docs/evidence/fe-s05-02-address -name '*.png' | wc -l)" -eq 11
+          test "$(find docs/evidence/fe-s05-02-address -name '*.png' | wc -l)" -eq 12
 
       - name: Upload visual evidence
         uses: actions/upload-artifact@v4
