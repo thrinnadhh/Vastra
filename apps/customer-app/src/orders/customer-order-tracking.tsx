@@ -10,6 +10,7 @@ import type {
 import { getCustomerOrderStatusPresentation } from './customer-order-status';
 
 interface TrackingState {
+  readonly scopeOrderId: string;
   readonly tracking: CustomerOrderTrackingSnapshot | null;
   readonly otp: CustomerDeliveryOtp | null;
   readonly loading: boolean;
@@ -20,6 +21,15 @@ function toError(error: unknown): CustomerOrderError {
   return error instanceof CustomerOrderError
     ? error
     : new CustomerOrderError('UNKNOWN', null, false);
+}
+
+function isSensitiveFailure(error: CustomerOrderError): boolean {
+  return error.kind === 'AUTHENTICATION' || error.kind === 'FORBIDDEN';
+}
+
+function isOtpCurrent(otp: CustomerDeliveryOtp, orderId: string): boolean {
+  const expiresAt = Date.parse(otp.expiresAt);
+  return otp.orderId === orderId && Number.isFinite(expiresAt) && expiresAt > Date.now();
 }
 
 function formatTime(value: string): string {
@@ -46,6 +56,7 @@ export function CustomerOrderTracking({
   const canShowOtp = presentation.deliveryOtpVisibility === 'VISIBLE';
   const operation = useRef(0);
   const [state, setState] = useState<TrackingState>({
+    scopeOrderId: orderId,
     tracking: null,
     otp: null,
     loading: canTrack && trackingClient !== undefined,
@@ -53,36 +64,100 @@ export function CustomerOrderTracking({
   });
 
   const load = useCallback(() => {
-    if (!canTrack || trackingClient === undefined) return;
+    if (!canTrack || trackingClient === undefined) {
+      operation.current += 1;
+      setState({
+        scopeOrderId: orderId,
+        tracking: null,
+        otp: null,
+        loading: false,
+        failure: null,
+      });
+      return;
+    }
+
     const current = ++operation.current;
     setState((previous) => ({
-      ...previous,
+      scopeOrderId: orderId,
+      tracking: previous.scopeOrderId === orderId ? previous.tracking : null,
+      otp:
+        canShowOtp && previous.scopeOrderId === orderId && previous.otp !== null
+          ? previous.otp
+          : null,
       loading: true,
       failure: null,
-      otp: canShowOtp ? previous.otp : null,
     }));
+
     void trackingClient.getTracking(orderId).then(
       (tracking) => {
         if (operation.current !== current) return;
-        setState((previous) => ({ ...previous, tracking, loading: false, failure: null }));
+        if (tracking.orderId !== orderId) {
+          setState({
+            scopeOrderId: orderId,
+            tracking: null,
+            otp: null,
+            loading: false,
+            failure: new CustomerOrderError('MALFORMED_RESPONSE', null, false),
+          });
+          return;
+        }
+
+        setState((previous) => ({
+          ...previous,
+          scopeOrderId: orderId,
+          tracking,
+          loading: false,
+          failure: null,
+        }));
         if (!canShowOtp) return;
+
         void trackingClient.getDeliveryOtp(orderId).then(
           (otp) => {
-            if (operation.current === current) setState((previous) => ({ ...previous, otp }));
+            if (operation.current !== current) return;
+            if (otp.orderId !== orderId) {
+              setState((previous) => ({
+                ...previous,
+                otp: null,
+                failure: new CustomerOrderError('MALFORMED_RESPONSE', null, false),
+              }));
+              return;
+            }
+            setState((previous) => ({
+              ...previous,
+              otp: isOtpCurrent(otp, orderId) ? otp : null,
+            }));
           },
           (error: unknown) => {
             if (operation.current !== current) return;
             const failure = toError(error);
-            if (failure.kind === 'AUTHENTICATION') {
-              setState((previous) => ({ ...previous, failure }));
-            }
+            setState((previous) =>
+              isSensitiveFailure(failure)
+                ? {
+                    scopeOrderId: orderId,
+                    tracking: null,
+                    otp: null,
+                    loading: false,
+                    failure,
+                  }
+                : { ...previous, otp: null, failure },
+            );
           },
         );
       },
       (error: unknown) => {
-        if (operation.current === current) {
-          setState((previous) => ({ ...previous, loading: false, failure: toError(error) }));
-        }
+        if (operation.current !== current) return;
+        const failure = toError(error);
+        setState((previous) =>
+          isSensitiveFailure(failure)
+            ? {
+                scopeOrderId: orderId,
+                tracking: null,
+                otp: null,
+                loading: false,
+                failure,
+              }
+            : { ...previous, loading: false, failure },
+        );
       },
     );
   }, [canShowOtp, canTrack, orderId, trackingClient]);
@@ -95,6 +170,32 @@ export function CustomerOrderTracking({
     };
   }, [load]);
 
+  const visibleTracking = canTrack && state.scopeOrderId === orderId ? state.tracking : null;
+  const visibleOtp =
+    canShowOtp &&
+    state.scopeOrderId === orderId &&
+    state.otp !== null &&
+    isOtpCurrent(state.otp, orderId)
+      ? state.otp
+      : null;
+
+  useEffect(() => {
+    if (visibleOtp === null) return;
+    const remainingMs = Date.parse(visibleOtp.expiresAt) - Date.now();
+    if (remainingMs <= 0) return;
+    const timer = setTimeout(
+      () => {
+        setState((previous) =>
+          previous.scopeOrderId === orderId ? { ...previous, otp: null } : previous,
+        );
+      },
+      Math.min(remainingMs, 2_147_483_647),
+    );
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [orderId, visibleOtp]);
+
   const message = useMemo(() => {
     if (trackingAvailability === 'NOT_STARTED') {
       return 'Live delivery tracking has not started yet.';
@@ -104,18 +205,19 @@ export function CustomerOrderTracking({
     }
     if (trackingClient === undefined)
       return 'Live delivery tracking is not connected on this surface.';
-    if (state.loading && state.tracking === null) return 'Loading current delivery tracking.';
+    if (state.loading && visibleTracking === null) return 'Loading current delivery tracking.';
     if (state.failure?.kind === 'AUTHENTICATION')
       return 'Your session expired. Sign in again to view tracking.';
+    if (state.failure?.kind === 'FORBIDDEN') return 'Tracking is unavailable for this account.';
     if (state.failure?.kind === 'TRANSPORT') return 'Tracking could not refresh while offline.';
-    if (state.failure !== null && state.tracking === null)
+    if (state.failure !== null && visibleTracking === null)
       return 'Live tracking is temporarily unavailable.';
-    if (state.tracking?.location === null)
+    if (visibleTracking?.location === null)
       return 'The delivery partner location is not available yet.';
-    if (state.tracking?.location.stale === true)
+    if (visibleTracking?.location.stale === true)
       return 'The last location is old. The delivery partner may have moved.';
     return 'The location below is the latest update from the delivery service.';
-  }, [state, trackingAvailability, trackingClient]);
+  }, [state.failure, state.loading, trackingAvailability, trackingClient, visibleTracking]);
 
   return (
     <View accessible accessibilityLiveRegion="polite" style={styles.card}>
@@ -123,48 +225,52 @@ export function CustomerOrderTracking({
         Delivery tracking
       </Text>
       <Text style={styles.message}>{message}</Text>
-      {state.tracking?.captain === null || state.tracking === null ? null : (
+      {visibleTracking?.captain === null || visibleTracking === null ? null : (
         <View style={styles.section}>
           <Text style={styles.strong}>
-            {state.tracking.captain.displayName ?? 'Delivery partner'}
+            {visibleTracking.captain.displayName ?? 'Delivery partner'}
           </Text>
           <Text style={styles.meta}>
             {[
-              state.tracking.captain.vehicleType,
-              state.tracking.captain.vehicleNumberLast4 === null
+              visibleTracking.captain.vehicleType,
+              visibleTracking.captain.vehicleNumberLast4 === null
                 ? null
-                : `vehicle ending ${state.tracking.captain.vehicleNumberLast4}`,
-              state.tracking.captain.phoneLast4 === null
+                : `vehicle ending ${visibleTracking.captain.vehicleNumberLast4}`,
+              visibleTracking.captain.phoneLast4 === null
                 ? null
-                : `phone ending ${state.tracking.captain.phoneLast4}`,
+                : `phone ending ${visibleTracking.captain.phoneLast4}`,
             ]
               .filter((value): value is string => value !== null)
               .join(' · ')}
           </Text>
         </View>
       )}
-      {state.tracking?.location === null || state.tracking === null ? null : (
+      {visibleTracking?.location === null || visibleTracking === null ? null : (
         <Text
-          accessibilityLabel={`Location updated ${state.tracking.location.recordedAt}${state.tracking.location.stale ? ', stale' : ''}`}
+          accessibilityLabel={`Location updated ${visibleTracking.location.recordedAt}${visibleTracking.location.stale ? ', stale' : ''}`}
           style={styles.meta}
         >
-          Location updated {formatTime(state.tracking.location.recordedAt)}
-          {state.tracking.location.stale ? ' · STALE' : ''}
+          Location updated {formatTime(visibleTracking.location.recordedAt)}
+          {visibleTracking.location.stale ? ' · STALE' : ''}
         </Text>
       )}
-      {state.tracking?.estimatedArrivalAt === null || state.tracking === null ? null : (
+      {visibleTracking?.estimatedArrivalAt === null || visibleTracking === null ? null : (
         <Text style={styles.meta}>
-          Estimated arrival {formatTime(state.tracking.estimatedArrivalAt)}
+          Estimated arrival {formatTime(visibleTracking.estimatedArrivalAt)}
         </Text>
       )}
-      {!canShowOtp ? null : state.otp === null ? (
+      {!canShowOtp ? null : visibleOtp === null ? (
         <Text accessibilityLabel="Delivery OTP unavailable" style={styles.otpUnavailable}>
           Delivery OTP is not available yet. Do not share any other code.
         </Text>
       ) : (
-        <View accessible accessibilityLabel={`Delivery OTP ${state.otp.secret}`} style={styles.otp}>
+        <View
+          accessible
+          accessibilityLabel={`Delivery OTP ${visibleOtp.secret}`}
+          style={styles.otp}
+        >
           <Text style={styles.otpLabel}>DELIVERY OTP</Text>
-          <Text style={styles.otpValue}>{state.otp.secret}</Text>
+          <Text style={styles.otpValue}>{visibleOtp.secret}</Text>
           <Text style={styles.meta}>Share only after checking the parcel.</Text>
         </View>
       )}
