@@ -38,9 +38,9 @@ describe('customer COD placement rules', () => {
   );
 
   it('identifies authentication and authorization failures for state purging', () => {
-    expect(isCustomerOrderSecurityFailure(new CustomerOrderError('AUTHENTICATION', null, false))).toBe(
-      true,
-    );
+    expect(
+      isCustomerOrderSecurityFailure(new CustomerOrderError('AUTHENTICATION', null, false)),
+    ).toBe(true);
     expect(isCustomerOrderSecurityFailure(new CustomerOrderError('FORBIDDEN', null, false))).toBe(
       true,
     );

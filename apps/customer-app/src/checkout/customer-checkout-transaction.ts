@@ -1,11 +1,5 @@
 export type CustomerCheckoutPlacementPhase =
-  | 'IDLE'
-  | 'CONFIRMING'
-  | 'SUBMITTING'
-  | 'UNCERTAIN'
-  | 'RECONCILING'
-  | 'SUCCEEDED'
-  | 'FAILED';
+  'IDLE' | 'CONFIRMING' | 'SUBMITTING' | 'UNCERTAIN' | 'RECONCILING' | 'SUCCEEDED' | 'FAILED';
 
 export interface CustomerCheckoutTransaction {
   readonly cartId: string | null;

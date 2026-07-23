@@ -94,9 +94,8 @@ export function CustomerOrderConfirmationRoute({
     failure: null,
   });
 
-  const load = useCallback(() => {
+  const runLoad = useCallback(() => {
     const operationId = ++operation.current;
-    setState({ order: null, isLoading: true, failure: null });
     void orderClient.getOrder(orderId).then(
       (order) => {
         if (operation.current !== operationId) return;
@@ -125,21 +124,19 @@ export function CustomerOrderConfirmationRoute({
         if (isSecurityFailure(failure)) onSecurityFailure();
       },
     );
-  }, [
-    expectedAddressId,
-    expectedCartId,
-    expectedQuoteId,
-    onSecurityFailure,
-    orderClient,
-    orderId,
-  ]);
+  }, [expectedAddressId, expectedCartId, expectedQuoteId, onSecurityFailure, orderClient, orderId]);
+
+  const retry = useCallback(() => {
+    setState({ order: null, isLoading: true, failure: null });
+    runLoad();
+  }, [runLoad]);
 
   useEffect(() => {
-    load();
+    runLoad();
     return () => {
       operation.current += 1;
     };
-  }, [load]);
+  }, [runLoad]);
 
   const networkState = useMemo(
     () =>
@@ -158,7 +155,7 @@ export function CustomerOrderConfirmationRoute({
   );
 
   return (
-    <CustomerNetworkStateBoundary onRetry={load} state={networkState}>
+    <CustomerNetworkStateBoundary onRetry={retry} state={networkState}>
       {state.order === null ? null : (
         <CustomerOrderConfirmationScreen
           onContinueShopping={onContinueShopping}

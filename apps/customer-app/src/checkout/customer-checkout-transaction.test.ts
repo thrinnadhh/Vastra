@@ -27,15 +27,18 @@ describe('customer checkout transaction', () => {
   });
 
   it('invalidates server quote identifiers when the selected address changes', () => {
-    const selected = selectCustomerCheckoutAddress(createCustomerCheckoutTransaction(KEY), ADDRESS_A);
+    const selected = selectCustomerCheckoutAddress(
+      createCustomerCheckoutTransaction(KEY),
+      ADDRESS_A,
+    );
     const quoted = acceptCustomerCheckoutQuote(selected, {
       addressId: ADDRESS_A,
       cartId: CART,
       quoteId: QUOTE,
     });
 
-    expect(quoted).not.toBeNull();
-    expect(selectCustomerCheckoutAddress(quoted!, ADDRESS_B)).toEqual({
+    if (quoted === null) throw new Error('Expected accepted checkout quote');
+    expect(selectCustomerCheckoutAddress(quoted, ADDRESS_B)).toEqual({
       cartId: null,
       addressId: ADDRESS_B,
       quoteId: null,
@@ -46,7 +49,10 @@ describe('customer checkout transaction', () => {
   });
 
   it('rejects a quote produced for a different address', () => {
-    const selected = selectCustomerCheckoutAddress(createCustomerCheckoutTransaction(KEY), ADDRESS_A);
+    const selected = selectCustomerCheckoutAddress(
+      createCustomerCheckoutTransaction(KEY),
+      ADDRESS_A,
+    );
 
     expect(
       acceptCustomerCheckoutQuote(selected, {
@@ -58,12 +64,16 @@ describe('customer checkout transaction', () => {
   });
 
   it('preserves the transaction key across uncertainty and reconciliation', () => {
-    const selected = selectCustomerCheckoutAddress(createCustomerCheckoutTransaction(KEY), ADDRESS_A);
+    const selected = selectCustomerCheckoutAddress(
+      createCustomerCheckoutTransaction(KEY),
+      ADDRESS_A,
+    );
     const quoted = acceptCustomerCheckoutQuote(selected, {
       addressId: ADDRESS_A,
       cartId: CART,
       quoteId: QUOTE,
-    })!;
+    });
+    if (quoted === null) throw new Error('Expected accepted checkout quote');
     const uncertain = setCustomerCheckoutPlacementPhase(quoted, 'UNCERTAIN');
     const reconciling = setCustomerCheckoutPlacementPhase(uncertain, 'RECONCILING');
 
@@ -73,12 +83,16 @@ describe('customer checkout transaction', () => {
   });
 
   it('clears quote identity without replacing the transaction key', () => {
-    const selected = selectCustomerCheckoutAddress(createCustomerCheckoutTransaction(KEY), ADDRESS_A);
+    const selected = selectCustomerCheckoutAddress(
+      createCustomerCheckoutTransaction(KEY),
+      ADDRESS_A,
+    );
     const quoted = acceptCustomerCheckoutQuote(selected, {
       addressId: ADDRESS_A,
       cartId: CART,
       quoteId: QUOTE,
-    })!;
+    });
+    if (quoted === null) throw new Error('Expected accepted checkout quote');
 
     expect(invalidateCustomerCheckoutQuote(quoted)).toMatchObject({
       addressId: ADDRESS_A,

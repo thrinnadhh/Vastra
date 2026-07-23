@@ -1,6 +1,13 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { CustomerOrderConfirmationRoute } from './default-customer-order-confirmation';
+
+jest.mock('../api/use-customer-api-client', () => ({
+  useCustomerApiClient: jest.fn(),
+}));
+jest.mock('./api-customer-order.adapter', () => ({
+  ApiCustomerOrderAdapter: jest.fn(),
+}));
 import { CustomerOrderError, type CustomerOrderDetail } from './customer-order.types';
 
 const ORDER_ID = '10000000-0000-4000-8000-000000000001';

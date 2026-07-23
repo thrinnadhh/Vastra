@@ -176,9 +176,7 @@ describe('CustomerCheckoutQuoteScreen', () => {
     expect(view.getByLabelText('Tax ₹0.00')).toBeTruthy();
     expect(view.getByLabelText('Final COD total ₹535.00')).toBeTruthy();
     expect(view.getByText('PRICE UPDATED')).toBeTruthy();
-    expect(
-      view.getByLabelText('Continue to COD order placement in the next step'),
-    ).toBeDisabled();
+    expect(view.getByLabelText('Continue to COD order placement in the next step')).toBeDisabled();
   });
 
   it('retries an offline quote request without retaining fabricated data', async () => {
@@ -201,6 +199,65 @@ describe('CustomerCheckoutQuoteScreen', () => {
     fireEvent.press(await view.findByRole('button', { name: 'Try again' }));
     expect(await view.findByText('Synthetic Quote Shop')).toBeTruthy();
     expect(createQuote).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ['VALIDATION', 'The selected delivery address or checkout request is invalid.'],
+    ['CONFLICT', 'Your cart changed while checkout was loading. Refresh and review it again.'],
+    [
+      'UNAVAILABLE_ITEM',
+      'One or more cart items are no longer available. Review your cart and try again.',
+    ],
+  ] as const)('renders a recoverable %s quote failure', async (kind, message) => {
+    const view = render(
+      <CustomerCheckoutQuoteScreen
+        addressId={ADDRESS_ID}
+        now={() => NOW}
+        quoteClient={clientFrom(() =>
+          Promise.reject(new CustomerCheckoutQuoteError(kind, null, false)),
+        )}
+      />,
+    );
+
+    expect(await view.findByText(message)).toBeTruthy();
+    expect(await view.findByRole('button', { name: 'Try again' })).toBeTruthy();
+  });
+
+  it('renders a missing backend cart as an empty checkout state', async () => {
+    const view = render(
+      <CustomerCheckoutQuoteScreen
+        addressId={ADDRESS_ID}
+        now={() => NOW}
+        quoteClient={clientFrom(() =>
+          Promise.reject(new CustomerCheckoutQuoteError('EMPTY_CART', 'CART_NOT_FOUND', false)),
+        )}
+      />,
+    );
+
+    expect(await view.findByText('Your cart is empty')).toBeTruthy();
+    expect(view.getByText('Add an item from one shop before opening checkout.')).toBeTruthy();
+  });
+
+  it('marks an expired quote stale and requires a refresh before COD confirmation', async () => {
+    const createQuote = jest.fn(() =>
+      Promise.resolve({
+        ...QUOTE,
+        expiresAt: '2026-07-16T09:59:59.000Z',
+      }),
+    );
+    const view = render(
+      <CustomerCheckoutQuoteScreen
+        addressId={ADDRESS_ID}
+        now={() => NOW}
+        orderClient={{ placeCodOrder: () => Promise.resolve(PLACED_ORDER) }}
+        quoteClient={clientFrom(createQuote)}
+      />,
+    );
+
+    expect(await view.findByText('QUOTE EXPIRED')).toBeTruthy();
+    expect(await view.findByRole('button', { name: 'Refresh checkout quote' })).toBeTruthy();
+    expect(view.queryByRole('button', { name: 'Review COD order for ₹535.00' })).toBeNull();
+    expect(createQuote).toHaveBeenCalledWith({ addressId: ADDRESS_ID });
   });
 
   it('reports the accepted cart quote and address identifiers', async () => {
@@ -241,7 +298,9 @@ describe('CustomerCheckoutQuoteScreen', () => {
       />,
     );
 
-    expect(await view.findByText('We could not verify checkout totals. Please try again.')).toBeTruthy();
+    expect(
+      await view.findByText('We could not verify checkout totals. Please try again.'),
+    ).toBeTruthy();
     expect(onSecurityFailure).toHaveBeenCalledTimes(1);
   });
 
@@ -308,9 +367,8 @@ describe('CustomerCheckoutQuoteScreen', () => {
     );
 
     fireEvent.press(await view.findByRole('button', { name: 'Review COD order for ₹535.00' }));
-    const confirm = await view.findByRole('button', { name: 'Confirm COD order for ₹535.00' });
-    fireEvent.press(confirm);
-    fireEvent.press(confirm);
+    await view.findByText('CONFIRM CASH ON DELIVERY');
+    fireEvent.press(view.getByRole('button', { name: 'Confirm COD order for ₹535.00' }));
 
     expect(placeCodOrder).toHaveBeenCalledTimes(1);
     expect(
@@ -413,7 +471,9 @@ describe('CustomerCheckoutQuoteScreen', () => {
     await beginAndConfirm(view);
 
     expect(onSecurityFailure).toHaveBeenCalledTimes(1);
-    expect(await view.findByText('This order is unavailable for the current account.')).toBeTruthy();
+    expect(
+      await view.findByText('This order is unavailable for the current account.'),
+    ).toBeTruthy();
   });
 
   it('forces a fresh quote after a definitive stale-quote failure', async () => {
@@ -425,9 +485,7 @@ describe('CustomerCheckoutQuoteScreen', () => {
         now={() => NOW}
         orderClient={{
           placeCodOrder: () =>
-            Promise.reject(
-              new CustomerOrderError('STALE_QUOTE', 'CHECKOUT_QUOTE_EXPIRED', false),
-            ),
+            Promise.reject(new CustomerOrderError('STALE_QUOTE', 'CHECKOUT_QUOTE_EXPIRED', false)),
         }}
         quoteClient={clientFrom(createQuote)}
       />,
@@ -472,9 +530,7 @@ describe('CustomerCheckoutQuoteScreen', () => {
       act(() => {
         jest.advanceTimersByTime(1_001);
       });
-      fireEvent.press(
-        view.getByRole('button', { name: 'Reconcile uncertain COD order attempt' }),
-      );
+      fireEvent.press(view.getByRole('button', { name: 'Reconcile uncertain COD order attempt' }));
 
       await waitFor(() => {
         expect(placeCodOrder).toHaveBeenCalledTimes(2);
@@ -484,6 +540,59 @@ describe('CustomerCheckoutQuoteScreen', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('prevents duplicate quote refresh requests', async () => {
+    let resolveSecond: ((quote: CustomerCheckoutQuote) => void) | undefined;
+    const expiredQuote = { ...QUOTE, expiresAt: '2026-07-16T09:59:00.000Z' };
+    const createQuote = jest
+      .fn<
+        ReturnType<CustomerCheckoutQuotePort['createQuote']>,
+        Parameters<CustomerCheckoutQuotePort['createQuote']>
+      >()
+      .mockResolvedValueOnce(expiredQuote)
+      .mockImplementationOnce(
+        () =>
+          new Promise<CustomerCheckoutQuote>((resolve) => {
+            resolveSecond = resolve;
+          }),
+      );
+    const view = render(
+      <CustomerCheckoutQuoteScreen
+        addressId={ADDRESS_ID}
+        now={() => NOW}
+        quoteClient={clientFrom(createQuote)}
+      />,
+    );
+
+    expect(await view.findByText('Synthetic Quote Shop')).toBeTruthy();
+    fireEvent.press(view.getByRole('button', { name: 'Refresh checkout quote' }));
+    fireEvent.press(view.getByRole('button', { name: 'Refresh checkout quote' }));
+    expect(createQuote).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      resolveSecond?.(QUOTE);
+      await Promise.resolve();
+    });
+  });
+
+  it('announces an authoritative stock shortfall and blocks COD confirmation', async () => {
+    const firstItem = QUOTE.items[0];
+    if (firstItem === undefined) throw new Error('Expected quote item fixture');
+    const quote: CustomerCheckoutQuote = {
+      ...QUOTE,
+      items: [{ ...firstItem, quantity: 4, availableQuantity: 3 }],
+    };
+    const view = render(
+      <CustomerCheckoutQuoteScreen
+        addressId={ADDRESS_ID}
+        now={() => NOW}
+        orderClient={{ placeCodOrder: () => Promise.resolve(PLACED_ORDER) }}
+        quoteClient={clientFrom(() => Promise.resolve(quote))}
+      />,
+    );
+
+    expect(await view.findByText('STOCK CHANGED')).toBeTruthy();
+    expect(view.getByLabelText('Continue to COD order placement in the next step')).toBeDisabled();
   });
 
   it('renders explicit zero discounts from the selected server quote', async () => {

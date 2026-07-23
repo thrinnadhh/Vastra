@@ -8,6 +8,13 @@ import type {
 } from '../checkout/customer-checkout-quote.types';
 import { CustomerOrderDetailScreen } from './customer-order-detail.screen';
 import { CustomerOrderConfirmationRoute } from './default-customer-order-confirmation';
+
+jest.mock('../api/use-customer-api-client', () => ({
+  useCustomerApiClient: jest.fn(),
+}));
+jest.mock('./api-customer-order.adapter', () => ({
+  ApiCustomerOrderAdapter: jest.fn(),
+}));
 import {
   CustomerOrderError,
   type CustomerOrderDetail,
@@ -249,9 +256,7 @@ describe('customer COD order journey', () => {
     expect(placeCodOrder.mock.calls[1]?.[0].idempotencyKey).toBe(IDEMPOTENCY_KEY);
     expect(confirmationGetOrder).toHaveBeenCalledWith(ORDER_ID);
 
-    fireEvent.press(
-      await view.findByRole('button', { name: 'View order VAS-SYNTH-JOURNEY-0001' }),
-    );
+    fireEvent.press(await view.findByRole('button', { name: 'View order VAS-SYNTH-JOURNEY-0001' }));
 
     expect(
       await view.findByLabelText(
@@ -267,7 +272,9 @@ describe('customer COD order journey', () => {
     expect(
       view.getByLabelText('Order update Order accepted at 2026-07-16T10:05:00.000Z'),
     ).toBeTruthy();
-    expect(view.getByLabelText('Order update Being packed at 2026-07-16T10:10:00.000Z')).toBeTruthy();
+    expect(
+      view.getByLabelText('Order update Being packed at 2026-07-16T10:10:00.000Z'),
+    ).toBeTruthy();
     expect(
       view.getByLabelText('Order update Ready for pickup at 2026-07-16T10:20:00.000Z'),
     ).toBeTruthy();

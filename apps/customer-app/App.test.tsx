@@ -87,7 +87,12 @@ jest.mock('./src/orders/default-customer-order-confirmation', () => ({
   }) => (
     <MockView>
       <MockText>{`Authoritative confirmation ${orderId}`}</MockText>
-      <MockPressable accessibilityRole="button" onPress={() => onViewOrder(orderId)}>
+      <MockPressable
+        accessibilityRole="button"
+        onPress={() => {
+          onViewOrder(orderId);
+        }}
+      >
         <MockText>Open confirmed order detail</MockText>
       </MockPressable>
       <MockPressable accessibilityRole="button" onPress={onViewOrders}>
@@ -228,7 +233,7 @@ describe('CustomerAppContent', () => {
 
     fireEvent.press(view.getByText('Open confirmed order detail'));
     expect(view.getByText(`Authoritative order detail ${mockOrderId}`)).toBeTruthy();
-    expect(view.getByRole('tab', { name: 'Orders tab' })).toBeTruthy();
+    expect(view.queryByText('Complete synthetic COD placement')).toBeNull();
   });
 
   it('keeps the authenticated order list reachable through Orders', () => {

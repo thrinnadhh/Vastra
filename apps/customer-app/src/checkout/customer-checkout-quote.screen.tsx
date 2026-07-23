@@ -41,7 +41,10 @@ interface CustomerCheckoutQuoteScreenProps {
   readonly now?: () => number;
 }
 
-interface ActiveCheckoutQuoteScreenProps extends Omit<CustomerCheckoutQuoteScreenProps, 'addressId'> {
+interface ActiveCheckoutQuoteScreenProps extends Omit<
+  CustomerCheckoutQuoteScreenProps,
+  'addressId'
+> {
   readonly addressId: string;
   readonly createIdempotencyKey: () => string;
   readonly now: () => number;
@@ -272,7 +275,8 @@ function QuoteContent({
           <Text style={styles.metaText}>{quote.address.line2}</Text>
         )}
         <Text style={styles.metaText}>
-          {quote.address.area}, {quote.address.city}, {quote.address.state} {quote.address.postalCode}
+          {quote.address.area}, {quote.address.city}, {quote.address.state}{' '}
+          {quote.address.postalCode}
         </Text>
       </View>
 
@@ -428,7 +432,7 @@ function QuoteContent({
         >
           <Text style={styles.primaryActionText}>Order confirmed</Text>
         </Pressable>
-      ) : canPlaceOrder && !expired && !hasStockShortfall ? (
+      ) : canPlaceOrder && !hasStockShortfall ? (
         <Pressable
           accessibilityLabel={`Review COD order for ${total}`}
           accessibilityRole="button"
@@ -624,9 +628,12 @@ function ActiveCustomerCheckoutQuoteScreen({
     if (state.quote === null) return;
     const expiresIn = Date.parse(state.quote.expiresAt) - now();
     if (expiresIn <= 0) return;
-    const timer = setTimeout(() => {
-      setClock(now());
-    }, Math.min(expiresIn + 1, 2_147_483_647));
+    const timer = setTimeout(
+      () => {
+        setClock(now());
+      },
+      Math.min(expiresIn + 1, 2_147_483_647),
+    );
     return () => {
       clearTimeout(timer);
     };

@@ -222,9 +222,7 @@ export function CustomerAppContent({
                 }}
                 onSelectedAddressChange={(nextAddressId) => {
                   setCheckoutTransaction((current) =>
-                    current === null
-                      ? null
-                      : selectCustomerCheckoutAddress(current, nextAddressId),
+                    current === null ? null : selectCustomerCheckoutAddress(current, nextAddressId),
                   );
                   if (nextAddressId !== null) openCheckoutForAddress(nextAddressId);
                 }}
@@ -260,8 +258,7 @@ export function CustomerAppContent({
           );
         case 'OrderConfirmation':
           if (
-            checkoutTransaction === null ||
-            checkoutTransaction.placementPhase !== 'SUCCEEDED' ||
+            checkoutTransaction?.placementPhase !== 'SUCCEEDED' ||
             checkoutTransaction.orderId !== route.params.orderId
           ) {
             return <CheckoutRouteRejected onReject={purgeCheckout} />;

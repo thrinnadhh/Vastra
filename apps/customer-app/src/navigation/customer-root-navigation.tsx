@@ -226,7 +226,7 @@ export function CustomerRootNavigation({
     transactionRoute === null
       ? null
       : (slots.renderTransactionRoute?.(transactionRoute, transactionActions) ??
-        (transactionRoute.name === 'Checkout' ? slots.checkout ?? null : null));
+        (transactionRoute.name === 'Checkout' ? (slots.checkout ?? null) : null));
 
   return (
     <View style={styles.root}>

@@ -1,8 +1,5 @@
 import type { CustomerCheckoutQuoteIdentity } from './customer-checkout-transaction';
-import type {
-  CustomerOrderError,
-  PlacedCustomerCodOrder,
-} from '../orders/customer-order.types';
+import type { CustomerOrderError, PlacedCustomerCodOrder } from '../orders/customer-order.types';
 
 export function isUncertainCustomerOrderFailure(error: CustomerOrderError): boolean {
   return (
