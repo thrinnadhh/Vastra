@@ -9,6 +9,7 @@ import { HttpMerchantOrderAlertClient } from '../alerts/merchant-order-alert.cli
 import { MerchantUrgentAlertModal } from '../alerts/merchant-urgent-alert.modal';
 import { useMerchantApiSession } from '../auth/merchant-api-session';
 import { MerchantReadinessGate } from '../readiness/merchant-readiness-gate';
+import { DeduplicatingMerchantOrderReadPort } from './deduplicating-merchant-order-read.port';
 import { HttpMerchantOrderClient } from './merchant-order.client';
 import { MerchantOrderQueueScreen } from './merchant-order.screen';
 
@@ -20,6 +21,10 @@ function MerchantOrdersWithAlertRuntime(): React.JSX.Element {
   const orderClient = useMemo(
     () => new HttpMerchantOrderClient(session.apiBaseUrl, () => session.getAccessToken()),
     [session],
+  );
+  const orderReadPort = useMemo(
+    () => new DeduplicatingMerchantOrderReadPort(orderClient),
+    [orderClient],
   );
   const alertClient = useMemo(() => new HttpMerchantOrderAlertClient(session), [session]);
 
@@ -53,7 +58,7 @@ function MerchantOrdersWithAlertRuntime(): React.JSX.Element {
         onRequestedOrderHandled={() => {
           setRequestedOrderId(null);
         }}
-        orderClient={orderClient}
+        orderClient={orderReadPort}
         packingClient={orderClient}
         requestedOrderId={requestedOrderId}
       />
@@ -62,7 +67,7 @@ function MerchantOrdersWithAlertRuntime(): React.JSX.Element {
         onOpenOrder={(orderId) => {
           setRequestedOrderId(orderId);
         }}
-        orderClient={orderClient}
+        orderClient={orderReadPort}
       />
     </>
   );
