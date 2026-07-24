@@ -38,8 +38,7 @@ export const MERCHANT_ALERT_PRESENTATION_STATES = [
   'DECISION_PENDING',
   'DECISION_COMPLETED',
 ] as const;
-export type MerchantAlertPresentationState =
-  (typeof MERCHANT_ALERT_PRESENTATION_STATES)[number];
+export type MerchantAlertPresentationState = (typeof MERCHANT_ALERT_PRESENTATION_STATES)[number];
 
 export type MerchantDecisionPresentationContext = 'ORDER_DETAIL' | 'URGENT_ALERT';
 
@@ -163,13 +162,7 @@ export const MERCHANT_SPRINT_06_FILE_OWNERSHIP = {
 } as const;
 
 export const MERCHANT_SENSITIVE_VALUE_POLICY = {
-  values: [
-    'ACCESS_TOKEN',
-    'FCM_PUSH_TOKEN',
-    'DEVICE_FINGERPRINT',
-    'ALERT_PAYLOAD',
-    'PICKUP_CODE',
-  ],
+  values: ['ACCESS_TOKEN', 'FCM_PUSH_TOKEN', 'DEVICE_FINGERPRINT', 'ALERT_PAYLOAD', 'PICKUP_CODE'],
   prohibitedLocations: [
     'LOGS',
     'ANALYTICS',
