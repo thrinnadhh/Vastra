@@ -84,7 +84,11 @@ export function MerchantAlertDiagnosticsScreen({
         Check the exact Android path used for urgent Vastra orders. Battery optimisation and
         manufacturer background restrictions must still be reviewed in device settings.
       </Text>
-      <View accessible accessibilityLabel={`Current readiness state ${runtime.setupState}`} style={styles.state}>
+      <View
+        accessible
+        accessibilityLabel={`Current readiness state ${runtime.setupState}`}
+        style={styles.state}
+      >
         <Text style={styles.stateLabel}>CURRENT STATE</Text>
         <Text style={styles.stateValue}>{runtime.setupState.replaceAll('_', ' ')}</Text>
       </View>
@@ -177,7 +181,9 @@ export function MerchantAlertDiagnosticsScreen({
 
       <View style={styles.guidance}>
         <Text style={styles.guidanceTitle}>Background delivery checklist</Text>
-        <Text style={styles.guidanceCopy}>• Allow notifications and sound for Vastra Merchant.</Text>
+        <Text style={styles.guidanceCopy}>
+          • Allow notifications and sound for Vastra Merchant.
+        </Text>
         <Text style={styles.guidanceCopy}>
           • Keep the urgent order channel enabled at high importance.
         </Text>

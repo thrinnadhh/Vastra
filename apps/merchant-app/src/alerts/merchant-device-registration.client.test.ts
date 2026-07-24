@@ -32,11 +32,11 @@ describe('HttpMerchantDeviceRegistrationClient', () => {
   });
 
   it('classifies a missing session without sending the private token', async () => {
-    const client = new HttpMerchantDeviceRegistrationClient(
-      session(() => Promise.resolve(null)),
-    );
+    const client = new HttpMerchantDeviceRegistrationClient(session(() => Promise.resolve(null)));
 
-    await expect(client.register(INPUT)).rejects.toMatchObject<Partial<MerchantDeviceRegistrationError>>({
+    await expect(client.register(INPUT)).rejects.toMatchObject<
+      Partial<MerchantDeviceRegistrationError>
+    >({
       kind: 'SESSION_EXPIRED',
       status: null,
     });
@@ -50,7 +50,9 @@ describe('HttpMerchantDeviceRegistrationClient', () => {
       session(() => Promise.resolve('access-token')),
     );
 
-    await expect(client.register(INPUT)).rejects.toMatchObject<Partial<MerchantDeviceRegistrationError>>({
+    await expect(client.register(INPUT)).rejects.toMatchObject<
+      Partial<MerchantDeviceRegistrationError>
+    >({
       kind: 'OFFLINE_STALE',
     });
   });
@@ -67,7 +69,9 @@ describe('HttpMerchantDeviceRegistrationClient', () => {
       session(() => Promise.resolve('access-token')),
     );
 
-    await expect(client.register(INPUT)).rejects.toMatchObject<Partial<MerchantDeviceRegistrationError>>({
+    await expect(client.register(INPUT)).rejects.toMatchObject<
+      Partial<MerchantDeviceRegistrationError>
+    >({
       kind,
       status,
     });

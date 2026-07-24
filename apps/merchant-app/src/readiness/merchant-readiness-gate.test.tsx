@@ -1,7 +1,10 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { Linking } from 'react-native';
 
-import type { MerchantAlertRuntimeValue, MerchantAlertSetupState } from '../alerts/merchant-alert-notification.types';
+import type {
+  MerchantAlertRuntimeValue,
+  MerchantAlertSetupState,
+} from '../alerts/merchant-alert-notification.types';
 import { MerchantReadinessGate } from './merchant-readiness-gate';
 
 const mockUseMerchantAlertRuntime = jest.fn<MerchantAlertRuntimeValue, []>();

@@ -31,7 +31,8 @@ export const MERCHANT_READINESS_COPY: Readonly<Record<MerchantAlertSetupState, R
   },
   PERMISSION_BLOCKED: {
     title: 'Notifications are blocked',
-    description: 'Android will not ask again. Enable Vastra Merchant notifications in device settings.',
+    description:
+      'Android will not ask again. Enable Vastra Merchant notifications in device settings.',
     settingsRecovery: true,
   },
   UNSUPPORTED_PLATFORM: {
@@ -46,12 +47,14 @@ export const MERCHANT_READINESS_COPY: Readonly<Record<MerchantAlertSetupState, R
   },
   CHANNEL_MISCONFIGURED: {
     title: 'Urgent order channel needs attention',
-    description: 'Restore maximum importance, the Vastra ringtone and vibration in Android settings.',
+    description:
+      'Restore maximum importance, the Vastra ringtone and vibration in Android settings.',
     settingsRecovery: true,
   },
   TOKEN_UNAVAILABLE: {
     title: 'FCM token unavailable',
-    description: 'The device could not obtain a native Firebase token. Check connectivity and retry.',
+    description:
+      'The device could not obtain a native Firebase token. Check connectivity and retry.',
     settingsRecovery: false,
   },
   BACKEND_REGISTRATION_FAILED: {
