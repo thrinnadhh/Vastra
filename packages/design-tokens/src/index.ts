@@ -1,5 +1,4 @@
-/**
- * Platform-neutral design tokens will be exported here after the approved
- * design system is implemented.
- */
-export {};
+export * from './colors.js';
+export * from './foundations.js';
+export * from './presentation.js';
+export * from './theme.js';
