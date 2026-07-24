@@ -1,0 +1,50 @@
+name: Materialize FE-S06 foundation formatting
+
+on:
+  push:
+    branches:
+      - agent/fe-s06-integration
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    name: Format FE-S06 foundation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format Sprint 06 foundation
+        run: |
+          pnpm exec prettier --write \
+            apps/merchant-app/src/sprint-06/merchant-fulfilment.integration-contract.ts
+
+      - name: Commit formatted file
+        if: github.event_name == 'push'
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/merchant-app/src/sprint-06/merchant-fulfilment.integration-contract.ts
+          git commit -m "style(merchant): apply exact Sprint 06 foundation formatting"
+          git push origin HEAD:${GITHUB_REF_NAME}
