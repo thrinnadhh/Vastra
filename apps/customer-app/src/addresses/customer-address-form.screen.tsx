@@ -12,11 +12,16 @@ import type {
 import { EMPTY_CUSTOMER_ADDRESS_DRAFT } from './customer-address.types';
 import { validateCustomerAddressDraft } from './customer-address.validation';
 
+const NOOP_SECURITY_FAILURE = (kind: 'SESSION_EXPIRED' | 'UNAUTHORIZED'): void => {
+  void kind;
+};
+
 interface CustomerAddressFormScreenProps {
   readonly address: CustomerAddress | null;
   readonly addressPort: CustomerAddressPort;
   readonly onCancel: () => void;
   readonly onSaved: (address: CustomerAddress) => void;
+  readonly onSecurityFailure?: (kind: 'SESSION_EXPIRED' | 'UNAUTHORIZED') => void;
   readonly createIdempotencyKey?: () => string;
 }
 
@@ -107,6 +112,7 @@ export function CustomerAddressFormScreen({
   addressPort,
   onCancel,
   onSaved,
+  onSecurityFailure = NOOP_SECURITY_FAILURE,
   createIdempotencyKey = createCustomerAddressIdempotencyKey,
 }: CustomerAddressFormScreenProps) {
   const [draft, setDraft] = useState<CustomerAddressDraft>(() => toDraft(address));
@@ -154,6 +160,14 @@ export function CustomerAddressFormScreen({
       return;
     }
 
+    if (result.failureKind === 'SESSION_EXPIRED' || result.failureKind === 'UNAUTHORIZED') {
+      activeSubmissionKey.current = null;
+      setDraft(EMPTY_CUSTOMER_ADDRESS_DRAFT);
+      setFieldErrors({});
+      setMessage(failureMessage(result.failureKind));
+      onSecurityFailure(result.failureKind);
+      return;
+    }
     if (Object.keys(result.fieldErrors).length > 0) setFieldErrors(result.fieldErrors);
     if (result.failureKind === 'CONFLICT' || result.failureKind === 'NOT_FOUND') {
       activeSubmissionKey.current = null;

@@ -9,6 +9,15 @@ import {
   type CustomerOrderPlacementPort,
   type PlacedCustomerCodOrder,
 } from '../orders/customer-order.types';
+import {
+  isCustomerOrderSecurityFailure,
+  isUncertainCustomerOrderFailure,
+  matchesCustomerCheckoutTransaction,
+} from './customer-cod-placement';
+import type {
+  CustomerCheckoutPlacementPhase,
+  CustomerCheckoutQuoteIdentity,
+} from './customer-checkout-transaction';
 import { formatPaiseAsInr } from './format-inr';
 import {
   CustomerCheckoutQuoteError,
@@ -22,16 +31,21 @@ interface CustomerCheckoutQuoteScreenProps {
   readonly addressId: string | null;
   readonly quoteClient: CustomerCheckoutQuotePort;
   readonly orderClient?: CustomerOrderPlacementPort;
+  readonly idempotencyKey?: string;
+  readonly onQuoteAccepted?: (identity: CustomerCheckoutQuoteIdentity) => void;
+  readonly onPlacementPhaseChange?: (phase: CustomerCheckoutPlacementPhase) => void;
+  readonly onOrderConfirmed?: (orderId: string) => void;
   readonly onOrderPlaced?: (order: PlacedCustomerCodOrder) => void;
+  readonly onSecurityFailure?: () => void;
   readonly createIdempotencyKey?: () => string;
   readonly now?: () => number;
 }
 
-interface ActiveCheckoutQuoteScreenProps {
+interface ActiveCheckoutQuoteScreenProps extends Omit<
+  CustomerCheckoutQuoteScreenProps,
+  'addressId'
+> {
   readonly addressId: string;
-  readonly quoteClient: CustomerCheckoutQuotePort;
-  readonly orderClient: CustomerOrderPlacementPort | undefined;
-  readonly onOrderPlaced: ((order: PlacedCustomerCodOrder) => void) | undefined;
   readonly createIdempotencyKey: () => string;
   readonly now: () => number;
 }
@@ -43,7 +57,7 @@ interface CheckoutQuoteState {
 }
 
 interface OrderPlacementState {
-  readonly isSubmitting: boolean;
+  readonly phase: CustomerCheckoutPlacementPhase;
   readonly failure: CustomerOrderError | null;
 }
 
@@ -53,11 +67,21 @@ const INITIAL_LOADING_STATE: CheckoutQuoteState = Object.freeze({
   failure: null,
 });
 
+const INITIAL_PLACEMENT_STATE: OrderPlacementState = Object.freeze({
+  phase: 'IDLE',
+  failure: null,
+});
+
 function toCheckoutError(error: unknown): CustomerCheckoutQuoteError {
-  if (error instanceof CustomerCheckoutQuoteError) {
-    return error;
-  }
-  return new CustomerCheckoutQuoteError('UNKNOWN', null, false);
+  return error instanceof CustomerCheckoutQuoteError
+    ? error
+    : new CustomerCheckoutQuoteError('UNKNOWN', null, false);
+}
+
+function toOrderError(error: unknown): CustomerOrderError {
+  return error instanceof CustomerOrderError
+    ? error
+    : new CustomerOrderError('UNKNOWN', null, false);
 }
 
 function canKeepStaleQuote(kind: CustomerCheckoutQuoteFailureKind): boolean {
@@ -94,27 +118,29 @@ function failureMessage(kind: CustomerCheckoutQuoteFailureKind): string {
   }
 }
 
-function placementFailureMessage(error: CustomerOrderError): string {
+function placementFailureMessage(error: CustomerOrderError, uncertain: boolean): string {
+  if (uncertain) {
+    return 'The order request may have reached Vastra. Check the same order attempt before taking any other action.';
+  }
   switch (error.kind) {
     case 'AUTHENTICATION':
-      return 'Your session is no longer available. Sign in again before placing the order.';
+      return 'Your session expired. Sign in again before placing another order.';
+    case 'FORBIDDEN':
+      return 'This order is unavailable for the current account.';
     case 'STALE_QUOTE':
       return 'Prices, availability, or this quote changed. Refresh checkout before trying again.';
-    case 'TRANSPORT':
-      return 'You appear to be offline. Reconnect and retry; the same order attempt will be reused.';
-    case 'TEMPORARILY_UNAVAILABLE':
-      return 'Order placement is temporarily unavailable. Retry this order attempt.';
     case 'VALIDATION':
-      return 'The order request is invalid. Refresh checkout and review the selected address.';
-    case 'FORBIDDEN':
-      return 'This account is not allowed to place this order.';
+      return 'The order request is no longer valid. Refresh checkout and review the address.';
     case 'CONFLICT':
       return 'The cart changed while the order was being placed. Refresh checkout.';
     case 'NOT_FOUND':
       return 'The cart, quote, or address is no longer available. Refresh checkout.';
+    case 'TEMPORARILY_UNAVAILABLE':
+      return 'Order placement is temporarily unavailable. Retry this same order attempt.';
+    case 'TRANSPORT':
     case 'MALFORMED_RESPONSE':
     case 'UNKNOWN':
-      return 'The backend did not confirm this order. Retry safely before starting a new attempt.';
+      return 'Vastra could not safely confirm this order attempt.';
   }
 }
 
@@ -128,18 +154,25 @@ function quoteExpiryLabel(expiresAt: string): string {
 }
 
 function variantLabel(item: CustomerCheckoutQuoteItem): string {
-  const values = [item.colourName, item.sizeLabel, item.sku].filter(
-    (value): value is string => value !== null,
-  );
-  return values.join(' · ');
+  return [item.colourName, item.sizeLabel, item.sku]
+    .filter((value): value is string => value !== null)
+    .join(' · ');
 }
 
-function QuoteNotice({ label, message }: { readonly label: string; readonly message: string }) {
+function QuoteNotice({
+  label,
+  message,
+  assertive = false,
+}: {
+  readonly label: string;
+  readonly message: string;
+  readonly assertive?: boolean;
+}) {
   return (
     <View
       accessible
       accessibilityLabel={`${label}. ${message}`}
-      accessibilityLiveRegion="polite"
+      accessibilityLiveRegion={assertive ? 'assertive' : 'polite'}
       style={styles.notice}
     >
       <Text style={styles.noticeLabel}>{label}</Text>
@@ -174,6 +207,8 @@ function QuoteContent({
   quote,
   expired,
   onRefresh,
+  onBeginConfirmation,
+  onCancelConfirmation,
   onPlaceOrder,
   placement,
   canPlaceOrder,
@@ -181,17 +216,28 @@ function QuoteContent({
   readonly quote: CustomerCheckoutQuote;
   readonly expired: boolean;
   readonly onRefresh: () => void;
+  readonly onBeginConfirmation: () => void;
+  readonly onCancelConfirmation: () => void;
   readonly onPlaceOrder: () => void;
   readonly placement: OrderPlacementState;
   readonly canPlaceOrder: boolean;
 }) {
   const hasPriceChanges = quote.items.some((item) => item.priceChanged);
   const hasStockShortfall = quote.items.some((item) => item.availableQuantity < item.quantity);
-  const retrySameAttempt = placement.failure?.retryable === true;
-  const refreshRequired = expired || placement.failure?.kind === 'STALE_QUOTE';
+  const uncertain = placement.phase === 'UNCERTAIN';
+  const refreshingRequired =
+    expired ||
+    placement.failure?.kind === 'STALE_QUOTE' ||
+    placement.failure?.kind === 'VALIDATION' ||
+    placement.failure?.kind === 'CONFLICT' ||
+    placement.failure?.kind === 'NOT_FOUND';
+  const total = formatPaiseAsInr(quote.totals.totalPaise);
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
+      <View accessible accessibilityLiveRegion="polite" style={styles.liveRegion}>
+        <Text>{`Checkout placement state ${placement.phase}`}</Text>
+      </View>
       <Text style={styles.eyebrow}>CHECKOUT QUOTE</Text>
       <Text accessibilityRole="header" style={styles.title}>
         Review your COD total
@@ -204,14 +250,12 @@ function QuoteContent({
           message="Refresh before continuing so every amount is current."
         />
       ) : null}
-
       {hasPriceChanges ? (
         <QuoteNotice
           label="PRICE UPDATED"
           message="One or more prices changed. The amounts below are the current shop prices."
         />
       ) : null}
-
       {hasStockShortfall ? (
         <QuoteNotice
           label="STOCK CHANGED"
@@ -294,35 +338,73 @@ function QuoteContent({
 
       {placement.failure === null ? null : (
         <QuoteNotice
+          assertive
           label={
-            placement.failure.kind === 'STALE_QUOTE'
-              ? 'QUOTE MUST BE REFRESHED'
-              : 'ORDER NOT PLACED'
+            uncertain
+              ? 'ORDER STATUS UNKNOWN'
+              : placement.failure.kind === 'STALE_QUOTE'
+                ? 'QUOTE MUST BE REFRESHED'
+                : 'ORDER NOT PLACED'
           }
-          message={placementFailureMessage(placement.failure)}
+          message={placementFailureMessage(placement.failure, uncertain)}
         />
       )}
 
-      {placement.isSubmitting ? (
+      {placement.phase === 'CONFIRMING' ? (
+        <View accessible accessibilityLiveRegion="polite" style={styles.confirmationCard}>
+          <Text style={styles.confirmationLabel}>CONFIRM CASH ON DELIVERY</Text>
+          <Text style={styles.confirmationTitle}>Pay {total} when your order arrives</Text>
+          <Text style={styles.confirmationCopy}>
+            Vastra will place the order using the latest server quote. Repeated taps cannot create a
+            second order.
+          </Text>
+          <Pressable
+            accessibilityLabel={`Confirm COD order for ${total}`}
+            accessibilityRole="button"
+            onPress={onPlaceOrder}
+            style={styles.primaryAction}
+          >
+            <Text style={styles.primaryActionText}>Confirm COD order · {total}</Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Return to checkout review"
+            accessibilityRole="button"
+            onPress={onCancelConfirmation}
+            style={styles.secondaryAction}
+          >
+            <Text style={styles.secondaryActionText}>Review checkout</Text>
+          </Pressable>
+        </View>
+      ) : placement.phase === 'SUBMITTING' ? (
         <Pressable
           accessibilityLabel="Order placement in progress. Checkout refresh unavailable"
           accessibilityRole="button"
-          accessibilityState={{ disabled: true }}
+          accessibilityState={{ disabled: true, busy: true }}
           disabled
           style={[styles.primaryAction, styles.disabledAction]}
         >
           <Text style={styles.primaryActionText}>Placing order…</Text>
         </Pressable>
-      ) : retrySameAttempt ? (
+      ) : placement.phase === 'RECONCILING' ? (
         <Pressable
-          accessibilityLabel="Retry same COD order attempt"
+          accessibilityLabel="Order reconciliation in progress"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: true, busy: true }}
+          disabled
+          style={[styles.primaryAction, styles.disabledAction]}
+        >
+          <Text style={styles.primaryActionText}>Checking order status…</Text>
+        </Pressable>
+      ) : placement.phase === 'UNCERTAIN' ? (
+        <Pressable
+          accessibilityLabel="Reconcile uncertain COD order attempt"
           accessibilityRole="button"
           onPress={onPlaceOrder}
           style={styles.primaryAction}
         >
-          <Text style={styles.primaryActionText}>Retry same order attempt</Text>
+          <Text style={styles.primaryActionText}>Check order status safely</Text>
         </Pressable>
-      ) : refreshRequired ? (
+      ) : refreshingRequired ? (
         <Pressable
           accessibilityLabel="Refresh checkout quote"
           accessibilityRole="button"
@@ -331,17 +413,33 @@ function QuoteContent({
         >
           <Text style={styles.primaryActionText}>Refresh quote</Text>
         </Pressable>
-      ) : canPlaceOrder ? (
+      ) : placement.phase === 'FAILED' ? (
         <Pressable
-          accessibilityLabel={`Place COD order for ${formatPaiseAsInr(quote.totals.totalPaise)}`}
+          accessibilityLabel="Retry same COD order attempt"
           accessibilityRole="button"
-          accessibilityState={{ disabled: false }}
           onPress={onPlaceOrder}
           style={styles.primaryAction}
         >
-          <Text style={styles.primaryActionText}>
-            Place COD order · {formatPaiseAsInr(quote.totals.totalPaise)}
-          </Text>
+          <Text style={styles.primaryActionText}>Retry same order attempt</Text>
+        </Pressable>
+      ) : placement.phase === 'SUCCEEDED' ? (
+        <Pressable
+          accessibilityLabel="Order confirmed"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: true }}
+          disabled
+          style={[styles.primaryAction, styles.disabledAction]}
+        >
+          <Text style={styles.primaryActionText}>Order confirmed</Text>
+        </Pressable>
+      ) : canPlaceOrder && !hasStockShortfall ? (
+        <Pressable
+          accessibilityLabel={`Review COD order for ${total}`}
+          accessibilityRole="button"
+          onPress={onBeginConfirmation}
+          style={styles.primaryAction}
+        >
+          <Text style={styles.primaryActionText}>Continue to COD confirmation · {total}</Text>
         </Pressable>
       ) : (
         <Pressable
@@ -351,7 +449,7 @@ function QuoteContent({
           disabled
           style={[styles.primaryAction, styles.disabledAction]}
         >
-          <Text style={styles.primaryActionText}>COD placement coming next</Text>
+          <Text style={styles.primaryActionText}>COD placement unavailable</Text>
         </Pressable>
       )}
     </ScrollView>
@@ -362,108 +460,155 @@ function ActiveCustomerCheckoutQuoteScreen({
   addressId,
   quoteClient,
   orderClient,
+  idempotencyKey,
+  onQuoteAccepted,
+  onPlacementPhaseChange,
+  onOrderConfirmed,
   onOrderPlaced,
+  onSecurityFailure,
   createIdempotencyKey,
   now,
 }: ActiveCheckoutQuoteScreenProps) {
   const [state, setState] = useState<CheckoutQuoteState>(INITIAL_LOADING_STATE);
+  const [placement, setPlacement] = useState<OrderPlacementState>(INITIAL_PLACEMENT_STATE);
   const [clock, setClock] = useState(now);
   const operation = useRef(0);
-  const mounted = useRef(true);
   const placementOperation = useRef(0);
+  const mounted = useRef(true);
   const quoteInFlight = useRef(false);
   const placementInFlight = useRef(false);
-  const placementKey = useRef<string | null>(null);
-  const [placement, setPlacement] = useState<OrderPlacementState>({
-    isSubmitting: false,
-    failure: null,
-  });
+  const placementKey = useRef<string | null>(idempotencyKey ?? null);
+
+  useEffect(() => {
+    onPlacementPhaseChange?.(placement.phase);
+  }, [onPlacementPhaseChange, placement.phase]);
 
   const runRequest = useCallback(
     (operationId: number) => {
       void quoteClient.createQuote({ addressId }).then(
         (quote) => {
           quoteInFlight.current = false;
-          if (operation.current === operationId) {
-            setClock(now());
-            setState({ quote, isLoading: false, failure: null });
+          if (!mounted.current || operation.current !== operationId) return;
+          if (quote.address.id !== addressId) {
+            setState({
+              quote: null,
+              isLoading: false,
+              failure: new CustomerCheckoutQuoteError('MALFORMED_RESPONSE', null, false),
+            });
+            onSecurityFailure?.();
+            return;
           }
+          setClock(now());
+          setState({ quote, isLoading: false, failure: null });
+          onQuoteAccepted?.({
+            addressId: quote.address.id,
+            cartId: quote.cartId,
+            quoteId: quote.id,
+          });
         },
         (error: unknown) => {
           quoteInFlight.current = false;
-          if (operation.current === operationId) {
-            const failure = toCheckoutError(error);
-            setState((current) => ({
-              quote: canKeepStaleQuote(failure.kind) ? current.quote : null,
-              isLoading: false,
-              failure,
-            }));
-          }
+          if (!mounted.current || operation.current !== operationId) return;
+          const failure = toCheckoutError(error);
+          setState((current) => ({
+            quote: canKeepStaleQuote(failure.kind) ? current.quote : null,
+            isLoading: false,
+            failure,
+          }));
+          if (failure.kind === 'AUTHENTICATION') onSecurityFailure?.();
         },
       );
     },
-    [addressId, now, quoteClient],
+    [addressId, now, onQuoteAccepted, onSecurityFailure, quoteClient],
   );
 
   const requestQuote = useCallback(() => {
-    if (placementInFlight.current || quoteInFlight.current) {
-      return;
-    }
+    if (placementInFlight.current || quoteInFlight.current) return;
     quoteInFlight.current = true;
-    placementKey.current = null;
-    setPlacement({ isSubmitting: false, failure: null });
+    setPlacement(INITIAL_PLACEMENT_STATE);
     const operationId = ++operation.current;
     setState((current) => ({ ...current, isLoading: true, failure: null }));
     runRequest(operationId);
   }, [runRequest]);
 
-  const placeOrder = useCallback(() => {
-    if (orderClient === undefined || state.quote === null || placementInFlight.current) {
+  const beginConfirmation = useCallback(() => {
+    if (
+      orderClient === undefined ||
+      state.quote === null ||
+      placementInFlight.current ||
+      Date.parse(state.quote.expiresAt) <= now()
+    ) {
+      setClock(now());
       return;
     }
-    if (placementKey.current === null && Date.parse(state.quote.expiresAt) <= now()) {
+    setPlacement({ phase: 'CONFIRMING', failure: null });
+  }, [now, orderClient, state.quote]);
+
+  const placeOrder = useCallback(() => {
+    if (orderClient === undefined || state.quote === null || placementInFlight.current) return;
+    const reconciling = placement.phase === 'UNCERTAIN';
+    if (!reconciling && Date.parse(state.quote.expiresAt) <= now()) {
       setClock(now());
       return;
     }
 
     placementInFlight.current = true;
     const placementOperationId = ++placementOperation.current;
-    const idempotencyKey = placementKey.current ?? createIdempotencyKey();
-    placementKey.current = idempotencyKey;
-    setPlacement({ isSubmitting: true, failure: null });
+    const activeKey = placementKey.current ?? idempotencyKey ?? createIdempotencyKey();
+    placementKey.current = activeKey;
+    setPlacement({ phase: reconciling ? 'RECONCILING' : 'SUBMITTING', failure: null });
+
+    const identity: CustomerCheckoutQuoteIdentity = {
+      addressId: state.quote.address.id,
+      cartId: state.quote.cartId,
+      quoteId: state.quote.id,
+    };
+
     void orderClient
       .placeCodOrder({
-        cartId: state.quote.cartId,
-        quoteId: state.quote.id,
-        addressId: state.quote.address.id,
-        idempotencyKey,
+        cartId: identity.cartId,
+        quoteId: identity.quoteId,
+        addressId: identity.addressId,
+        idempotencyKey: activeKey,
       })
       .then(
         (order) => {
-          if (!mounted.current || placementOperation.current !== placementOperationId) {
+          if (!mounted.current || placementOperation.current !== placementOperationId) return;
+          placementInFlight.current = false;
+          if (!matchesCustomerCheckoutTransaction(order, identity)) {
+            setPlacement({
+              phase: 'FAILED',
+              failure: new CustomerOrderError('MALFORMED_RESPONSE', null, false),
+            });
+            onSecurityFailure?.();
             return;
           }
-          placementInFlight.current = false;
-          placementKey.current = null;
-          setPlacement({ isSubmitting: false, failure: null });
+          setPlacement({ phase: 'SUCCEEDED', failure: null });
+          onOrderConfirmed?.(order.id);
           onOrderPlaced?.(order);
         },
         (error: unknown) => {
-          if (!mounted.current || placementOperation.current !== placementOperationId) {
-            return;
-          }
+          if (!mounted.current || placementOperation.current !== placementOperationId) return;
           placementInFlight.current = false;
-          const failure =
-            error instanceof CustomerOrderError
-              ? error
-              : new CustomerOrderError('UNKNOWN', null, false);
-          if (failure.kind === 'STALE_QUOTE') {
-            placementKey.current = null;
-          }
-          setPlacement({ isSubmitting: false, failure });
+          const failure = toOrderError(error);
+          setPlacement({
+            phase: isUncertainCustomerOrderFailure(failure) ? 'UNCERTAIN' : 'FAILED',
+            failure,
+          });
+          if (isCustomerOrderSecurityFailure(failure)) onSecurityFailure?.();
         },
       );
-  }, [createIdempotencyKey, now, onOrderPlaced, orderClient, state.quote]);
+  }, [
+    createIdempotencyKey,
+    idempotencyKey,
+    now,
+    onOrderConfirmed,
+    onOrderPlaced,
+    onSecurityFailure,
+    orderClient,
+    placement.phase,
+    state.quote,
+  ]);
 
   useEffect(() => {
     mounted.current = true;
@@ -473,19 +618,16 @@ function ActiveCustomerCheckoutQuoteScreen({
     return () => {
       mounted.current = false;
       quoteInFlight.current = false;
+      placementInFlight.current = false;
       operation.current += 1;
       placementOperation.current += 1;
     };
   }, [runRequest]);
 
   useEffect(() => {
-    if (state.quote === null) {
-      return;
-    }
+    if (state.quote === null) return;
     const expiresIn = Date.parse(state.quote.expiresAt) - now();
-    if (expiresIn <= 0) {
-      return;
-    }
+    if (expiresIn <= 0) return;
     const timer = setTimeout(
       () => {
         setClock(now());
@@ -523,6 +665,10 @@ function ActiveCustomerCheckoutQuoteScreen({
         <QuoteContent
           canPlaceOrder={orderClient !== undefined}
           expired={expired}
+          onBeginConfirmation={beginConfirmation}
+          onCancelConfirmation={() => {
+            setPlacement(INITIAL_PLACEMENT_STATE);
+          }}
           onPlaceOrder={placeOrder}
           onRefresh={requestQuote}
           placement={placement}
@@ -537,7 +683,12 @@ export function CustomerCheckoutQuoteScreen({
   addressId,
   quoteClient,
   orderClient,
+  idempotencyKey,
+  onQuoteAccepted,
+  onPlacementPhaseChange,
+  onOrderConfirmed,
   onOrderPlaced,
+  onSecurityFailure,
   createIdempotencyKey = createCustomerOrderIdempotencyKey,
   now = Date.now,
 }: CustomerCheckoutQuoteScreenProps) {
@@ -563,9 +714,14 @@ export function CustomerCheckoutQuoteScreen({
       addressId={addressId}
       createIdempotencyKey={createIdempotencyKey}
       now={now}
-      onOrderPlaced={onOrderPlaced}
-      orderClient={orderClient}
       quoteClient={quoteClient}
+      {...(orderClient === undefined ? {} : { orderClient })}
+      {...(idempotencyKey === undefined ? {} : { idempotencyKey })}
+      {...(onQuoteAccepted === undefined ? {} : { onQuoteAccepted })}
+      {...(onPlacementPhaseChange === undefined ? {} : { onPlacementPhaseChange })}
+      {...(onOrderConfirmed === undefined ? {} : { onOrderConfirmed })}
+      {...(onOrderPlaced === undefined ? {} : { onOrderPlaced })}
+      {...(onSecurityFailure === undefined ? {} : { onSecurityFailure })}
     />
   );
 }
@@ -577,24 +733,10 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     backgroundColor: '#F7F8FA',
   },
-  eyebrow: {
-    color: '#6C3AA8',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.4,
-  },
-  title: {
-    marginTop: 8,
-    color: '#1F2937',
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  subtitle: {
-    marginTop: 8,
-    color: '#667085',
-    fontSize: 15,
-    lineHeight: 22,
-  },
+  liveRegion: { position: 'absolute', width: 1, height: 1, overflow: 'hidden' },
+  eyebrow: { color: '#6C3AA8', fontSize: 12, fontWeight: '700', letterSpacing: 1.4 },
+  title: { marginTop: 8, color: '#1F2937', fontSize: 28, fontWeight: '700' },
+  subtitle: { marginTop: 8, color: '#667085', fontSize: 15, lineHeight: 22 },
   notice: {
     marginTop: 20,
     padding: 16,
@@ -603,18 +745,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFF3D8',
   },
-  noticeLabel: {
-    color: '#7A4B00',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  noticeMessage: {
-    marginTop: 5,
-    color: '#5F430D',
-    fontSize: 14,
-    lineHeight: 20,
-  },
+  noticeLabel: { color: '#7A4B00', fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  noticeMessage: { marginTop: 5, color: '#5F430D', fontSize: 14, lineHeight: 20 },
   card: {
     marginTop: 20,
     padding: 18,
@@ -623,108 +755,44 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
   },
-  sectionLabel: {
-    color: '#667085',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
+  sectionLabel: { color: '#667085', fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  sectionTitle: { marginBottom: 12, color: '#1F2937', fontSize: 18, fontWeight: '700' },
+  shopName: { marginTop: 6, color: '#1F2937', fontSize: 17, fontWeight: '700' },
+  metaText: { marginTop: 4, color: '#667085', fontSize: 14, lineHeight: 20 },
+  deliveryEstimate: { marginTop: 10, color: '#18794E', fontSize: 14, fontWeight: '700' },
+  itemRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
+  itemCopy: { flex: 1, paddingRight: 12 },
+  itemName: { color: '#1F2937', fontSize: 15, fontWeight: '700' },
+  quantity: { marginTop: 4, color: '#475467', fontSize: 13 },
+  itemPrice: { color: '#1F2937', fontSize: 15, fontWeight: '700' },
+  moneyRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  totalRow: { marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#E4E7EC' },
+  moneyLabel: { color: '#667085', fontSize: 14 },
+  moneyValue: { color: '#1F2937', fontSize: 14, fontWeight: '600' },
+  totalText: { color: '#1F2937', fontSize: 17, fontWeight: '800' },
+  expiry: { marginTop: 16, color: '#667085', fontSize: 13, textAlign: 'center' },
+  confirmationCard: {
+    marginTop: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#BDA4D8',
+    borderRadius: 16,
+    backgroundColor: '#F8F5FB',
   },
-  sectionTitle: {
-    marginBottom: 8,
-    color: '#1F2937',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  shopName: {
-    marginTop: 6,
-    color: '#1F2937',
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  metaText: {
-    marginTop: 4,
-    color: '#667085',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  deliveryEstimate: {
-    marginTop: 10,
-    color: '#1F2937',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E4E7EC',
-  },
-  itemCopy: {
-    flex: 1,
-    paddingRight: 12,
-  },
-  itemName: {
-    color: '#1F2937',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  quantity: {
-    marginTop: 7,
-    color: '#1F2937',
-    fontSize: 13,
-  },
-  itemPrice: {
-    color: '#1F2937',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  moneyRow: {
-    minHeight: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  moneyLabel: {
-    color: '#667085',
-    fontSize: 14,
-  },
-  moneyValue: {
-    color: '#1F2937',
-    fontSize: 14,
-  },
-  totalRow: {
-    marginTop: 8,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: '#E4E7EC',
-  },
-  totalText: {
-    color: '#1F2937',
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  expiry: {
-    marginTop: 16,
-    color: '#667085',
-    fontSize: 13,
-    textAlign: 'center',
-  },
+  confirmationLabel: { color: '#542887', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  confirmationTitle: { marginTop: 8, color: '#1F2937', fontSize: 19, fontWeight: '800' },
+  confirmationCopy: { marginTop: 8, color: '#475467', fontSize: 14, lineHeight: 21 },
   primaryAction: {
-    minHeight: 48,
+    minHeight: 52,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 20,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
     backgroundColor: '#6C3AA8',
   },
-  disabledAction: {
-    opacity: 0.55,
-  },
-  primaryActionText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  primaryActionText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  secondaryAction: { minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  secondaryActionText: { color: '#6C3AA8', fontSize: 15, fontWeight: '700' },
+  disabledAction: { opacity: 0.5 },
 });

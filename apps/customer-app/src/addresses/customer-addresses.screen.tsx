@@ -12,12 +12,15 @@ import type {
   CustomerAddressPort,
 } from './customer-address.types';
 
+const NOOP = (): void => undefined;
+
 interface CustomerAddressesScreenProps {
   readonly addressPort: CustomerAddressPort;
   readonly mode?: 'MANAGE' | 'CHECKOUT';
   readonly selectedAddressId?: string | null;
   readonly onSelectedAddressChange?: (addressId: string | null) => void;
   readonly onInvalidateQuote?: () => void;
+  readonly onSecurityFailure?: () => void;
   readonly createIdempotencyKey?: () => string;
 }
 
@@ -140,8 +143,9 @@ export function CustomerAddressesScreen({
   addressPort,
   mode = 'MANAGE',
   selectedAddressId = null,
-  onSelectedAddressChange = () => undefined,
-  onInvalidateQuote = () => undefined,
+  onSelectedAddressChange = NOOP,
+  onInvalidateQuote = NOOP,
+  onSecurityFailure = NOOP,
   createIdempotencyKey = createCustomerAddressIdempotencyKey,
 }: CustomerAddressesScreenProps) {
   const [screenMode, setScreenMode] = useState<ScreenMode>({ kind: 'LIST' });
@@ -153,8 +157,34 @@ export function CustomerAddressesScreen({
   const [pendingAddressId, setPendingAddressId] = useState<string | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<CustomerAddress | null>(null);
   const activeMutationKeys = useRef(new Map<string, string>());
+  const securityCallbacks = useRef({
+    onInvalidateQuote,
+    onSecurityFailure,
+    onSelectedAddressChange,
+  });
+  useEffect(() => {
+    securityCallbacks.current = {
+      onInvalidateQuote,
+      onSecurityFailure,
+      onSelectedAddressChange,
+    };
+  }, [onInvalidateQuote, onSecurityFailure, onSelectedAddressChange]);
   const dismissDeleteConfirmation = useCallback(() => {
     setDeleteCandidate(null);
+  }, []);
+  const purgeSensitiveState = useCallback((kind: 'SESSION_EXPIRED' | 'UNAUTHORIZED'): void => {
+    setScreenMode({ kind: 'LIST' });
+    setAddresses([]);
+    setLoading(false);
+    setStale(false);
+    setFailureKind(kind);
+    setStatusMessage(null);
+    setPendingAddressId(null);
+    setDeleteCandidate(null);
+    activeMutationKeys.current.clear();
+    securityCallbacks.current.onInvalidateQuote();
+    securityCallbacks.current.onSelectedAddressChange(null);
+    securityCallbacks.current.onSecurityFailure();
   }, []);
 
   useEffect(() => {
@@ -179,6 +209,10 @@ export function CustomerAddressesScreen({
       const result = await addressPort.list();
       setLoading(false);
       if (result.kind === 'FAILURE') {
+        if (result.failureKind === 'SESSION_EXPIRED' || result.failureKind === 'UNAUTHORIZED') {
+          purgeSensitiveState(result.failureKind);
+          return null;
+        }
         setFailureKind(result.failureKind);
         setStale(preserveVisible);
         return null;
@@ -187,7 +221,7 @@ export function CustomerAddressesScreen({
       setStale(false);
       return result.addresses;
     },
-    [addressPort],
+    [addressPort, purgeSensitiveState],
   );
 
   useEffect(() => {
@@ -196,6 +230,10 @@ export function CustomerAddressesScreen({
       if (!active) return;
       setLoading(false);
       if (result.kind === 'FAILURE') {
+        if (result.failureKind === 'SESSION_EXPIRED' || result.failureKind === 'UNAUTHORIZED') {
+          purgeSensitiveState(result.failureKind);
+          return;
+        }
         setFailureKind(result.failureKind);
         return;
       }
@@ -204,7 +242,7 @@ export function CustomerAddressesScreen({
     return () => {
       active = false;
     };
-  }, [addressPort]);
+  }, [addressPort, purgeSensitiveState]);
 
   const mutationKey = (scope: string): string => {
     const existing = activeMutationKeys.current.get(scope);
@@ -238,6 +276,10 @@ export function CustomerAddressesScreen({
     const result = await addressPort.setDefault(address.id, mutationKey(scope));
     setPendingAddressId(null);
     if (result.kind === 'FAILURE') {
+      if (result.failureKind === 'SESSION_EXPIRED' || result.failureKind === 'UNAUTHORIZED') {
+        purgeSensitiveState(result.failureKind);
+        return;
+      }
       if (result.failureKind === 'CONFLICT' || result.failureKind === 'NOT_FOUND') {
         activeMutationKeys.current.delete(scope);
         await load(true);
@@ -262,6 +304,10 @@ export function CustomerAddressesScreen({
     const result = await addressPort.remove(address.id, mutationKey(scope));
     setPendingAddressId(null);
     if (result.kind === 'FAILURE') {
+      if (result.failureKind === 'SESSION_EXPIRED' || result.failureKind === 'UNAUTHORIZED') {
+        purgeSensitiveState(result.failureKind);
+        return;
+      }
       if (result.failureKind === 'CONFLICT' || result.failureKind === 'NOT_FOUND') {
         activeMutationKeys.current.delete(scope);
         await load(true);
@@ -303,6 +349,7 @@ export function CustomerAddressesScreen({
         address={screenMode.kind === 'EDIT' ? screenMode.address : null}
         addressPort={addressPort}
         createIdempotencyKey={createIdempotencyKey}
+        onSecurityFailure={purgeSensitiveState}
         onCancel={() => {
           setScreenMode({ kind: 'LIST' });
         }}

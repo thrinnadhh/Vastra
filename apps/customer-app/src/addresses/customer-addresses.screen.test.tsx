@@ -206,6 +206,65 @@ describe('CustomerAddressesScreen', () => {
     expect(screen.getByText('STALE DATA')).toBeTruthy();
   });
 
+  it('purges visible address and checkout state after an authorization failure', async () => {
+    const port = createPort();
+    port.list
+      .mockResolvedValueOnce({ kind: 'SUCCESS', addresses: [CUSTOMER_ADDRESS_FIXTURE] })
+      .mockResolvedValueOnce({
+        kind: 'FAILURE',
+        failureKind: 'UNAUTHORIZED',
+        fieldErrors: {},
+        requiresRefresh: false,
+      });
+    const onInvalidateQuote = jest.fn();
+    const onSelectedAddressChange = jest.fn();
+    const onSecurityFailure = jest.fn();
+    const screen = render(
+      <CustomerAddressesScreen
+        addressPort={port}
+        mode="CHECKOUT"
+        onInvalidateQuote={onInvalidateQuote}
+        onSecurityFailure={onSecurityFailure}
+        onSelectedAddressChange={onSelectedAddressChange}
+        selectedAddressId={CUSTOMER_ADDRESS_FIXTURE.id}
+      />,
+    );
+
+    expect(await screen.findByText('Home')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Refresh addresses'));
+
+    expect(await screen.findByText('Address access unavailable')).toBeTruthy();
+    expect(screen.queryByText('Home')).toBeNull();
+    expect(onInvalidateQuote).toHaveBeenCalledTimes(1);
+    expect(onSelectedAddressChange).toHaveBeenCalledWith(null);
+    expect(onSecurityFailure).toHaveBeenCalledTimes(1);
+  });
+
+  it('purges address snapshots when a default-address mutation loses the session', async () => {
+    const port = createPort();
+    port.list.mockResolvedValue({
+      kind: 'SUCCESS',
+      addresses: [CUSTOMER_ADDRESS_FIXTURE, SECOND],
+    });
+    port.setDefault.mockResolvedValue({
+      kind: 'FAILURE',
+      failureKind: 'SESSION_EXPIRED',
+      fieldErrors: {},
+      requiresRefresh: false,
+    });
+    const onSecurityFailure = jest.fn();
+    const screen = render(
+      <CustomerAddressesScreen addressPort={port} onSecurityFailure={onSecurityFailure} />,
+    );
+
+    expect(await screen.findByText('Office')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Set Office as default'));
+
+    expect(await screen.findByText('Session expired')).toBeTruthy();
+    expect(screen.queryByText('Office')).toBeNull();
+    expect(onSecurityFailure).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     ['SESSION_EXPIRED', 'Session expired'],
     ['UNAUTHORIZED', 'Address access unavailable'],

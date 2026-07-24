@@ -50,6 +50,17 @@ export function selectCustomerTab(
   };
 }
 
+export function resetCustomerNavigationToTab(
+  state: CustomerNavigationState,
+  selectedTab: CustomerTabKey,
+): CustomerNavigationState {
+  return {
+    ...state,
+    selectedTab,
+    transactionStack: [],
+  };
+}
+
 export function setAccessRoute(
   state: CustomerNavigationState,
   route: AccessRoute,
@@ -110,6 +121,22 @@ export function openCustomerRoute(
         transactionStack: [...state.transactionStack, route],
       };
   }
+}
+
+export function replaceCustomerRoute(
+  state: CustomerNavigationState,
+  route: CustomerRoute,
+): CustomerNavigationState {
+  if (route.scope !== 'TRANSACTION') {
+    return openCustomerRoute(state, route);
+  }
+  return {
+    ...state,
+    transactionStack:
+      state.transactionStack.length === 0
+        ? [route]
+        : [...state.transactionStack.slice(0, -1), route],
+  };
 }
 
 function removeLast<Route>(routes: readonly Route[]): readonly Route[] {

@@ -6,8 +6,15 @@ import type {
   CustomerCheckoutQuote,
   CustomerCheckoutQuotePort,
 } from '../checkout/customer-checkout-quote.types';
-import { CustomerOrderConfirmationScreen } from './customer-order-confirmation.screen';
 import { CustomerOrderDetailScreen } from './customer-order-detail.screen';
+import { CustomerOrderConfirmationRoute } from './default-customer-order-confirmation';
+
+jest.mock('../api/use-customer-api-client', () => ({
+  useCustomerApiClient: jest.fn(),
+}));
+jest.mock('./api-customer-order.adapter', () => ({
+  ApiCustomerOrderAdapter: jest.fn(),
+}));
 import {
   CustomerOrderError,
   type CustomerOrderDetail,
@@ -30,9 +37,9 @@ const ORDER_ID = '10000000-0000-4000-8000-000000000001';
 const ADDRESS = {
   id: ADDRESS_ID,
   label: 'Home',
-  recipientName: 'Journey Customer',
+  recipientName: 'Synthetic Journey Customer',
   phoneNumber: '9000000001',
-  line1: '10 Journey Road',
+  line1: '10 Synthetic Journey Road',
   line2: null,
   landmark: null,
   area: 'Tirupati',
@@ -60,8 +67,8 @@ const QUOTE: CustomerCheckoutQuote = {
   address: ADDRESS,
   shop: {
     id: SHOP_ID,
-    name: 'Journey Shop',
-    slug: 'journey-shop',
+    name: 'Synthetic Journey Shop',
+    slug: 'synthetic-journey-shop',
     minimumOrderPaise: 0,
     averagePreparationMinutes: 20,
     distanceMeters: 500,
@@ -72,8 +79,8 @@ const QUOTE: CustomerCheckoutQuote = {
       cartItemId: '60000000-0000-4000-8000-000000000099',
       variantId: VARIANT_ID,
       productId: PRODUCT_ID,
-      productName: 'Journey Kurta',
-      sku: 'JOURNEY-M',
+      productName: 'Synthetic Journey Kurta',
+      sku: 'SYNTH-JOURNEY-M',
       colourName: 'Indigo',
       sizeLabel: 'M',
       quantity: 1,
@@ -95,10 +102,10 @@ const QUOTE: CustomerCheckoutQuote = {
 
 const PLACED_ORDER: PlacedCustomerCodOrder = {
   id: ORDER_ID,
-  orderNumber: 'VAS-JOURNEY-0001',
+  orderNumber: 'VAS-SYNTH-JOURNEY-0001',
   cartId: CART_ID,
   quoteId: QUOTE_ID,
-  shop: { id: SHOP_ID, name: 'Journey Shop', slug: 'journey-shop' },
+  shop: { id: SHOP_ID, name: QUOTE.shop.name, slug: QUOTE.shop.slug },
   address: ADDRESS,
   status: 'WAITING_FOR_MERCHANT',
   paymentStatus: 'COD_PENDING',
@@ -109,8 +116,8 @@ const PLACED_ORDER: PlacedCustomerCodOrder = {
       id: ORDER_ITEM_ID,
       productId: PRODUCT_ID,
       variantId: VARIANT_ID,
-      productName: 'Journey Kurta',
-      sku: 'JOURNEY-M',
+      productName: 'Synthetic Journey Kurta',
+      sku: 'SYNTH-JOURNEY-M',
       colourName: 'Indigo',
       sizeLabel: 'M',
       imageObjectKey: null,
@@ -122,7 +129,7 @@ const PLACED_ORDER: PlacedCustomerCodOrder = {
     },
   ],
   totals: TOTALS,
-  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',
+  estimatedDeliveryAt: QUOTE.estimatedDeliveryAt,
   customerNote: null,
   placedAt: '2026-07-16T10:01:00.000Z',
   replayed: true,
@@ -130,7 +137,7 @@ const PLACED_ORDER: PlacedCustomerCodOrder = {
 
 const READY_ORDER: CustomerOrderDetail = {
   id: ORDER_ID,
-  orderNumber: 'VAS-JOURNEY-0001',
+  orderNumber: PLACED_ORDER.orderNumber,
   cartId: CART_ID,
   quoteId: QUOTE_ID,
   shop: PLACED_ORDER.shop,
@@ -144,31 +151,11 @@ const READY_ORDER: CustomerOrderDetail = {
   estimatedDeliveryAt: null,
   customerNote: null,
   history: [
-    {
-      id: '1',
-      status: 'PAYMENT_PENDING',
-      createdAt: '2026-07-16T10:01:00.000Z',
-    },
-    {
-      id: '2',
-      status: 'WAITING_FOR_MERCHANT',
-      createdAt: '2026-07-16T10:01:01.000Z',
-    },
-    {
-      id: '3',
-      status: 'MERCHANT_ACCEPTED',
-      createdAt: '2026-07-16T10:05:00.000Z',
-    },
-    {
-      id: '4',
-      status: 'PACKING',
-      createdAt: '2026-07-16T10:10:00.000Z',
-    },
-    {
-      id: '5',
-      status: 'READY_FOR_PICKUP',
-      createdAt: '2026-07-16T10:20:00.000Z',
-    },
+    { id: '1', status: 'PAYMENT_PENDING', createdAt: '2026-07-16T10:01:00.000Z' },
+    { id: '2', status: 'WAITING_FOR_MERCHANT', createdAt: '2026-07-16T10:01:01.000Z' },
+    { id: '3', status: 'MERCHANT_ACCEPTED', createdAt: '2026-07-16T10:05:00.000Z' },
+    { id: '4', status: 'PACKING', createdAt: '2026-07-16T10:10:00.000Z' },
+    { id: '5', status: 'READY_FOR_PICKUP', createdAt: '2026-07-16T10:20:00.000Z' },
   ],
   placedAt: '2026-07-16T10:01:00.000Z',
   acceptedAt: '2026-07-16T10:05:00.000Z',
@@ -184,35 +171,47 @@ const READY_ORDER: CustomerOrderDetail = {
 function CustomerCodJourney({
   quoteClient,
   placementClient,
+  confirmationClient,
   detailClient,
 }: {
   readonly quoteClient: CustomerCheckoutQuotePort;
   readonly placementClient: CustomerOrderPlacementPort;
+  readonly confirmationClient: CustomerOrderDetailPort;
   readonly detailClient: CustomerOrderDetailPort;
 }) {
-  const [placedOrder, setPlacedOrder] = useState<PlacedCustomerCodOrder | null>(null);
+  const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   if (selectedOrderId !== null) {
     return <CustomerOrderDetailScreen orderClient={detailClient} orderId={selectedOrderId} />;
   }
-  if (placedOrder !== null) {
+  if (confirmedOrderId !== null) {
     return (
-      <CustomerOrderConfirmationScreen
+      <CustomerOrderConfirmationRoute
+        expectedAddressId={ADDRESS_ID}
+        expectedCartId={CART_ID}
+        expectedQuoteId={QUOTE_ID}
         onContinueShopping={() => {
-          setPlacedOrder(null);
+          setConfirmedOrderId(null);
+        }}
+        onSecurityFailure={() => {
+          setConfirmedOrderId(null);
         }}
         onViewOrder={setSelectedOrderId}
-        order={placedOrder}
+        onViewOrders={() => {
+          setConfirmedOrderId(null);
+        }}
+        orderClient={confirmationClient}
+        orderId={confirmedOrderId}
       />
     );
   }
   return (
     <CustomerCheckoutQuoteScreen
       addressId={ADDRESS_ID}
-      createIdempotencyKey={() => IDEMPOTENCY_KEY}
+      idempotencyKey={IDEMPOTENCY_KEY}
       now={() => NOW}
-      onOrderPlaced={setPlacedOrder}
+      onOrderConfirmed={setConfirmedOrderId}
       orderClient={placementClient}
       quoteClient={quoteClient}
     />
@@ -220,7 +219,7 @@ function CustomerCodJourney({
 }
 
 describe('customer COD order journey', () => {
-  it('retries an unknown result with the same key, confirms the backend order, and renders its complete history', async () => {
+  it('reconciles one attempt, confirms via GET, and opens authoritative order detail', async () => {
     const placeCodOrder = jest
       .fn<
         ReturnType<CustomerOrderPlacementPort['placeCodOrder']>,
@@ -228,50 +227,59 @@ describe('customer COD order journey', () => {
       >()
       .mockRejectedValueOnce(new CustomerOrderError('TRANSPORT', null, true))
       .mockResolvedValueOnce(PLACED_ORDER);
-    const getOrder = jest.fn(() => Promise.resolve(READY_ORDER));
-    const { findByLabelText, findByRole, findByText, getByLabelText, getByText } = render(
+    const confirmationGetOrder = jest.fn(() => Promise.resolve(READY_ORDER));
+    const detailGetOrder = jest.fn(() => Promise.resolve(READY_ORDER));
+    const view = render(
       <CustomerCodJourney
-        detailClient={{ getOrder }}
+        confirmationClient={{ getOrder: confirmationGetOrder }}
+        detailClient={{ getOrder: detailGetOrder }}
         placementClient={{ placeCodOrder }}
         quoteClient={{ createQuote: () => Promise.resolve(QUOTE) }}
       />,
     );
 
     fireEvent.press(
-      await findByRole('button', { name: 'Place COD order for ₹325.00' }, { timeout: 5_000 }),
+      await view.findByRole('button', { name: 'Review COD order for ₹325.00' }, { timeout: 5_000 }),
     );
-    expect(await findByText('ORDER NOT PLACED')).toBeTruthy();
-    fireEvent.press(await findByRole('button', { name: 'Retry same COD order attempt' }));
+    fireEvent.press(await view.findByRole('button', { name: 'Confirm COD order for ₹325.00' }));
+    expect(await view.findByText('ORDER STATUS UNKNOWN')).toBeTruthy();
+    fireEvent.press(
+      await view.findByRole('button', { name: 'Reconcile uncertain COD order attempt' }),
+    );
 
-    expect(await findByLabelText('Order number VAS-JOURNEY-0001')).toBeTruthy();
-    expect(getByText('Journey Shop')).toBeTruthy();
-    expect(getByText('Journey Kurta')).toBeTruthy();
-    expect(getByLabelText('COD total ₹325.00')).toBeTruthy();
+    expect(await view.findByLabelText('Order number VAS-SYNTH-JOURNEY-0001')).toBeTruthy();
+    expect(view.getByText('Synthetic Journey Shop')).toBeTruthy();
+    expect(view.getByText('Synthetic Journey Kurta')).toBeTruthy();
+    expect(view.getByLabelText('COD total ₹325.00')).toBeTruthy();
     expect(placeCodOrder).toHaveBeenCalledTimes(2);
     expect(placeCodOrder.mock.calls[0]?.[0].idempotencyKey).toBe(IDEMPOTENCY_KEY);
     expect(placeCodOrder.mock.calls[1]?.[0].idempotencyKey).toBe(IDEMPOTENCY_KEY);
+    expect(confirmationGetOrder).toHaveBeenCalledWith(ORDER_ID);
 
-    fireEvent.press(await findByRole('button', { name: 'View order VAS-JOURNEY-0001' }));
+    fireEvent.press(await view.findByRole('button', { name: 'View order VAS-SYNTH-JOURNEY-0001' }));
 
     expect(
-      await findByLabelText(
+      await view.findByLabelText(
         'Current order status Ready for pickup. Your parcel is packed and ready for a delivery partner.',
       ),
     ).toBeTruthy();
     expect(
-      getByLabelText('Order update Confirming payment at 2026-07-16T10:01:00.000Z'),
+      view.getByLabelText('Order update Confirming payment at 2026-07-16T10:01:00.000Z'),
     ).toBeTruthy();
     expect(
-      getByLabelText('Order update Waiting for shop at 2026-07-16T10:01:01.000Z'),
+      view.getByLabelText('Order update Waiting for shop at 2026-07-16T10:01:01.000Z'),
     ).toBeTruthy();
-    expect(getByLabelText('Order update Order accepted at 2026-07-16T10:05:00.000Z')).toBeTruthy();
-    expect(getByLabelText('Order update Being packed at 2026-07-16T10:10:00.000Z')).toBeTruthy();
     expect(
-      getByLabelText('Order update Ready for pickup at 2026-07-16T10:20:00.000Z'),
+      view.getByLabelText('Order update Order accepted at 2026-07-16T10:05:00.000Z'),
     ).toBeTruthy();
-    expect(getOrder).toHaveBeenCalledWith(ORDER_ID);
+    expect(
+      view.getByLabelText('Order update Being packed at 2026-07-16T10:10:00.000Z'),
+    ).toBeTruthy();
+    expect(
+      view.getByLabelText('Order update Ready for pickup at 2026-07-16T10:20:00.000Z'),
+    ).toBeTruthy();
     await waitFor(() => {
-      expect(getOrder).toHaveBeenCalledTimes(1);
+      expect(detailGetOrder).toHaveBeenCalledWith(ORDER_ID);
     });
   });
 });

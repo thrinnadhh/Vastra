@@ -1,11 +1,13 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { formatPaiseAsInr } from '../checkout/format-inr';
-import type { CustomerOrderItem, PlacedCustomerCodOrder } from './customer-order.types';
+import { getCustomerOrderStatusPresentation } from './customer-order-status';
+import type { CustomerOrderDetail, CustomerOrderItem } from './customer-order.types';
 
 export interface CustomerOrderConfirmationScreenProps {
-  readonly order: PlacedCustomerCodOrder;
+  readonly order: CustomerOrderDetail;
   readonly onViewOrder: (orderId: string) => void;
+  readonly onViewOrders: () => void;
   readonly onContinueShopping: () => void;
 }
 
@@ -38,8 +40,12 @@ function MoneyRow({ label, paise }: { readonly label: string; readonly paise: nu
 export function CustomerOrderConfirmationScreen({
   order,
   onViewOrder,
+  onViewOrders,
   onContinueShopping,
 }: CustomerOrderConfirmationScreenProps) {
+  const status = getCustomerOrderStatusPresentation(order.status);
+  const placedAt = order.placedAt ?? order.createdAt;
+
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.eyebrow}>ORDER CONFIRMED</Text>
@@ -50,12 +56,16 @@ export function CustomerOrderConfirmationScreen({
         {order.orderNumber}
       </Text>
 
-      <View style={styles.card}>
+      <View
+        accessible
+        accessibilityLabel={`Current order status ${status.title}. ${status.description}`}
+        accessibilityLiveRegion="polite"
+        style={styles.card}
+      >
         <Text style={styles.sectionLabel}>CURRENT STATUS</Text>
-        <Text accessibilityLabel={`Current order status ${order.status}`} style={styles.status}>
-          {order.status.replaceAll('_', ' ')}
-        </Text>
-        <Text style={styles.secondary}>Placed {formatPlacedAt(order.placedAt)}</Text>
+        <Text style={styles.status}>{status.title}</Text>
+        <Text style={styles.secondary}>{status.description}</Text>
+        <Text style={styles.secondary}>Placed {formatPlacedAt(placedAt)}</Text>
         <Text style={styles.secondary}>Payment: Cash on Delivery</Text>
       </View>
 
@@ -93,7 +103,7 @@ export function CustomerOrderConfirmationScreen({
 
       <View style={styles.card}>
         <Text accessibilityRole="header" style={styles.sectionTitle}>
-          Paid on delivery
+          Pay on delivery
         </Text>
         <MoneyRow label="Subtotal" paise={order.totals.subtotalPaise} />
         <MoneyRow label="Product discount" paise={order.totals.productDiscountPaise} />
@@ -112,7 +122,15 @@ export function CustomerOrderConfirmationScreen({
         }}
         style={styles.primaryAction}
       >
-        <Text style={styles.primaryActionText}>View order</Text>
+        <Text style={styles.primaryActionText}>View order details</Text>
+      </Pressable>
+      <Pressable
+        accessibilityLabel="Open My Orders"
+        accessibilityRole="button"
+        onPress={onViewOrders}
+        style={styles.secondaryAction}
+      >
+        <Text style={styles.secondaryActionText}>My Orders</Text>
       </Pressable>
       <Pressable
         accessibilityLabel="Continue shopping"
@@ -156,13 +174,15 @@ const styles = StyleSheet.create({
   label: { color: '#667085', fontSize: 14 },
   value: { color: '#1F2937', fontSize: 14, fontWeight: '600' },
   primaryAction: {
+    minHeight: 52,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 24,
-    padding: 16,
+    paddingHorizontal: 16,
     borderRadius: 12,
     backgroundColor: '#6C3AA8',
   },
   primaryActionText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  secondaryAction: { alignItems: 'center', marginTop: 12, padding: 14 },
+  secondaryAction: { minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   secondaryActionText: { color: '#6C3AA8', fontSize: 15, fontWeight: '700' },
 });
