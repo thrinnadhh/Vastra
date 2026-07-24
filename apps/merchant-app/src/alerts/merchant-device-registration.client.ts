@@ -9,9 +9,7 @@ export interface MerchantDeviceRegistrationInput {
 }
 
 export type MerchantDeviceRegistrationFailureKind =
-  | 'SESSION_EXPIRED'
-  | 'OFFLINE_STALE'
-  | 'BACKEND_REGISTRATION_FAILED';
+  'SESSION_EXPIRED' | 'OFFLINE_STALE' | 'BACKEND_REGISTRATION_FAILED';
 
 export class MerchantDeviceRegistrationError extends Error {
   public constructor(
