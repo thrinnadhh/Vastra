@@ -1,0 +1,145 @@
+name: Materialize FE-S06 handover composition
+
+on:
+  push:
+    branches:
+      - agent/fe-s06-implementation-integration
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  compose:
+    name: Compose and format merchant handover
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Update workspace lockfile
+        run: pnpm install --lockfile-only --no-frozen-lockfile
+
+      - name: Compose handover into merchant order detail
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          function replaceOnce(source, before, after, label) {
+            if (source.includes(after)) return source;
+            const count = source.split(before).length - 1;
+            if (count !== 1) throw new Error(`${label}: expected one match, found ${count}`);
+            return source.replace(before, after);
+          }
+
+          const screenPath = 'apps/merchant-app/src/orders/merchant-order.screen.tsx';
+          let screen = fs.readFileSync(screenPath, 'utf8');
+          screen = replaceOnce(
+            screen,
+            "import { MerchantOrderDecisionActions } from './merchant-order-decision.screen';\nimport { MerchantOrderPackingActions } from './merchant-order-packing.screen';",
+            "import { MerchantOrderDecisionActions } from './merchant-order-decision.screen';\nimport { MerchantOrderHandoverActions } from './merchant-order-handover.screen';\nimport type { MerchantOrderHandoverPort } from './merchant-order-handover.types';\nimport { MerchantOrderPackingActions } from './merchant-order-packing.screen';",
+            'handover imports',
+          );
+          screen = replaceOnce(
+            screen,
+            "const GROUPS: readonly MerchantOrderGroup[] = [\n  'New',\n  'Accepted',\n  'Packing',\n  'Ready',\n  'Completed',\n  'Rejected',\n];",
+            "const GROUPS: readonly MerchantOrderGroup[] = [\n  'New',\n  'Accepted',\n  'Packing',\n  'Ready',\n  'Completed',\n  'Rejected',\n];\n\nconst HANDOVER_ORDER_STATUSES: ReadonlySet<MerchantOrderDetail['status']> = new Set([\n  'READY_FOR_PICKUP',\n  'CAPTAIN_SEARCHING',\n  'CAPTAIN_ASSIGNED',\n  'CAPTAIN_AT_STORE',\n  'PICKED_UP',\n]);",
+            'handover statuses',
+          );
+          screen = replaceOnce(
+            screen,
+            "  packingClient,\n  onBack,\n}: {\n  readonly orderId: string;\n  readonly orderClient: MerchantOrderReadPort;\n  readonly decisionClient?: MerchantOrderDecisionPort;\n  readonly packingClient?: MerchantOrderPackingPort;\n  readonly onBack: () => void;\n}) {",
+            "  packingClient,\n  handoverClient,\n  onSessionExpired,\n  onBack,\n}: {\n  readonly orderId: string;\n  readonly orderClient: MerchantOrderReadPort;\n  readonly decisionClient?: MerchantOrderDecisionPort;\n  readonly packingClient?: MerchantOrderPackingPort;\n  readonly handoverClient?: MerchantOrderHandoverPort;\n  readonly onSessionExpired: () => void;\n  readonly onBack: () => void;\n}) {",
+            'detail props',
+          );
+          screen = replaceOnce(
+            screen,
+            "        decisionClient === undefined && packingClient === undefined ? undefined : (",
+            "        decisionClient === undefined &&\n        packingClient === undefined &&\n        handoverClient === undefined ? undefined : (",
+            'footer condition',
+          );
+          screen = replaceOnce(
+            screen,
+            "            {packingClient === undefined ? null : (\n              <MerchantOrderPackingActions\n                onOrderChanged={refresh}\n                order={order}\n                packingClient={packingClient}\n              />\n            )}\n          </>",
+            "            {packingClient === undefined ? null : (\n              <MerchantOrderPackingActions\n                onOrderChanged={refresh}\n                order={order}\n                packingClient={packingClient}\n              />\n            )}\n            {handoverClient === undefined || !HANDOVER_ORDER_STATUSES.has(order.status) ? null : (\n              <MerchantOrderHandoverActions\n                handoverClient={handoverClient}\n                onAuthoritativePickupConfirmed={refresh}\n                onSessionExpired={onSessionExpired}\n                orderId={order.id}\n              />\n            )}\n          </>",
+            'handover footer',
+          );
+          screen = replaceOnce(
+            screen,
+            "  packingClient,\n  pollIntervalMs = 15_000,",
+            "  packingClient,\n  handoverClient,\n  onSessionExpired = () => undefined,\n  pollIntervalMs = 15_000,",
+            'queue args',
+          );
+          screen = replaceOnce(
+            screen,
+            "  readonly packingClient?: MerchantOrderPackingPort;\n  readonly pollIntervalMs?: number;",
+            "  readonly packingClient?: MerchantOrderPackingPort;\n  readonly handoverClient?: MerchantOrderHandoverPort;\n  readonly onSessionExpired?: () => void;\n  readonly pollIntervalMs?: number;",
+            'queue props',
+          );
+          screen = replaceOnce(
+            screen,
+            "        {...(packingClient === undefined ? {} : { packingClient })}\n        onBack={() => {",
+            "        {...(packingClient === undefined ? {} : { packingClient })}\n        {...(handoverClient === undefined ? {} : { handoverClient })}\n        onSessionExpired={onSessionExpired}\n        onBack={() => {",
+            'detail composition',
+          );
+          fs.writeFileSync(screenPath, screen);
+
+          const defaultPath = 'apps/merchant-app/src/orders/default-merchant-orders.tsx';
+          let defaults = fs.readFileSync(defaultPath, 'utf8');
+          defaults = replaceOnce(
+            defaults,
+            "        handoverClient={handoverClient}\n        onOpenAlertDiagnostics={() => {",
+            "        handoverClient={handoverClient}\n        onSessionExpired={() => {\n          void session.expireSession();\n        }}\n        onOpenAlertDiagnostics={() => {",
+            'session expiry composition',
+          );
+          fs.writeFileSync(defaultPath, defaults);
+          NODE
+
+      - name: Format Sprint 06 implementation
+        run: |
+          pnpm exec prettier --write \
+            apps/merchant-app/package.json \
+            apps/merchant-app/src/api/use-merchant-api-client.ts \
+            apps/merchant-app/src/auth/merchant-api-session.tsx \
+            apps/merchant-app/src/alerts/merchant-alert-diagnostics.screen.tsx \
+            apps/merchant-app/src/alerts/merchant-alert-notification.runtime.tsx \
+            apps/merchant-app/src/alerts/merchant-alert-notification.types.ts \
+            apps/merchant-app/src/alerts/merchant-device-registration.client.ts \
+            apps/merchant-app/src/alerts/merchant-device-registration.client.test.ts \
+            apps/merchant-app/src/orders/deduplicating-merchant-order-read.port.ts \
+            apps/merchant-app/src/orders/deduplicating-merchant-order-read.port.test.ts \
+            apps/merchant-app/src/orders/default-merchant-orders.tsx \
+            apps/merchant-app/src/orders/merchant-order-decision.screen.tsx \
+            apps/merchant-app/src/orders/merchant-order-decision.refresh.test.tsx \
+            apps/merchant-app/src/orders/merchant-order-handover.types.ts \
+            apps/merchant-app/src/orders/merchant-order-handover.client.ts \
+            apps/merchant-app/src/orders/merchant-order-handover.client.test.ts \
+            apps/merchant-app/src/orders/merchant-order-handover.screen.tsx \
+            apps/merchant-app/src/orders/merchant-order-handover.screen.test.tsx \
+            apps/merchant-app/src/orders/merchant-order.screen.tsx \
+            apps/merchant-app/src/readiness/merchant-readiness-gate.tsx \
+            apps/merchant-app/src/readiness/merchant-readiness-gate.test.tsx \
+            pnpm-lock.yaml
+
+      - name: Commit composition
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/merchant-app pnpm-lock.yaml
+          git commit -m "feat(merchant): compose generated pickup handover"
+          git push origin HEAD:${GITHUB_REF_NAME}
