@@ -1,9 +1,10 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
 export interface MerchantApiSession {
   readonly apiBaseUrl: string;
   getAccessToken(): Promise<string | null>;
+  expireSession(): Promise<void>;
 }
 
 const MerchantApiSessionContext = createContext<MerchantApiSession | null>(null);
@@ -24,6 +25,10 @@ export function MerchantApiSessionProvider({
         const response = await client.auth.getSession();
         if (response.error !== null) throw response.error;
         return response.data.session?.access_token ?? null;
+      },
+      async expireSession(): Promise<void> {
+        const response = await client.auth.signOut({ scope: 'local' });
+        if (response.error !== null) throw response.error;
       },
     }),
     [apiBaseUrl, client],
