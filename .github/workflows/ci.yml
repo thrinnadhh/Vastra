@@ -72,6 +72,17 @@ jobs:
       - name: Run frontend E2E and visual harness
         run: pnpm test:frontend:harness
 
+      - name: Upload frontend E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-e2e-evidence-${{ github.run_attempt }}
+          path: |
+            test-results/playwright
+            playwright-report
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v3
         with:
