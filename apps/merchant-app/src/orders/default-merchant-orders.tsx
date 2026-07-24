@@ -36,7 +36,7 @@ function MerchantOrdersWithAlertRuntime(): React.JSX.Element {
   const alertClient = useMemo(() => new HttpMerchantOrderAlertClient(session), [session]);
 
   const expireSession = (): void => {
-    void session.expireSession();
+    void session.expireSession?.();
   };
 
   if (showDiagnostics) {
