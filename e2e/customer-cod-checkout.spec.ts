@@ -51,7 +51,9 @@ test('completes product to tracking with authoritative COD state', async ({ page
     'data-order-id',
     '40000000-0000-4000-8000-000000000001',
   );
-  await expect(page.getByText('VST-260724-1042')).toBeVisible();
+  await expect(
+    page.locator('[data-screen="order-confirmation"]').getByText('VST-260724-1042'),
+  ).toBeVisible();
 
   await page.getByRole('button', { name: 'View delivery tracking' }).click();
   await expect(page.getByRole('heading', { name: 'Track order' })).toBeVisible();
@@ -139,7 +141,7 @@ test('invalidates quote identity when address or cart changes', async ({ page })
   await page.getByRole('button', { name: 'Return to cart' }).click();
   await expect(root).toHaveAttribute('data-quote-id', '');
   await page.getByRole('button', { name: 'Increase quantity' }).click();
-  await expect(page.getByText('₹2,598')).toBeVisible();
+  await expect(page.locator('#cart-subtotal')).toHaveText('₹2,598');
 });
 
 test('recovers the exact prior screen after an offline failure', async ({ page }) => {
@@ -186,7 +188,7 @@ test('exposes keyboard, landmark, live-region and control semantics', async ({ p
 
   await expect(page.getByRole('main')).toHaveCount(1);
   await expect(page.getByRole('status')).toHaveAttribute('aria-live', 'polite');
-  await expect(page.getByRole('alert')).toHaveAttribute('aria-live', 'assertive');
+  await expect(page.locator('#scenario-alert')).toHaveAttribute('aria-live', 'assertive');
   await expect(
     page.getByRole('complementary', { name: 'Failure injection controls' }),
   ).toBeVisible();
