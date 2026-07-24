@@ -1,0 +1,60 @@
+name: Format FE-S05-06
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    if: github.head_ref == 'agent/fe-s05-06-cod-e2e'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format FE-S05-06 files
+        run: |
+          pnpm exec prettier --write \
+            .github/workflows/ci.yml \
+            .github/workflows/format-fe-s05-06.yml \
+            docs/evidence/fe-s05-06-cod-customer-e2e.md \
+            e2e/customer-cod-checkout.spec.ts \
+            package.json \
+            packages/frontend-test-harness/src/customer-cod-checkout-document.ts \
+            packages/frontend-test-harness/src/customer-cod-checkout-scenario.ts \
+            packages/frontend-test-harness/src/index.ts \
+            packages/frontend-test-harness/src/server.ts \
+            packages/frontend-test-harness/tests/customer-cod-checkout.test.ts \
+            playwright.config.ts
+
+      - name: Create formatting patch
+        run: git diff --binary > /tmp/fe-s05-06-prettier.patch
+
+      - name: Upload formatting patch
+        uses: actions/upload-artifact@v4
+        with:
+          name: fe-s05-06-prettier-patch
+          path: /tmp/fe-s05-06-prettier.patch
+          if-no-files-found: error
+          retention-days: 1
