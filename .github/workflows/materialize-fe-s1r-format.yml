@@ -1,6 +1,7 @@
 name: Materialize FE-S1R formatting
 
 on:
+  pull_request:
   push:
     branches:
       - agent/fe-s1r-design-system-closure
