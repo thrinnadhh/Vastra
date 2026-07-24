@@ -20,9 +20,7 @@ import {
 
 function channelToLinear(channel: number): number {
   const normalized = channel / 255;
-  return normalized <= 0.04045
-    ? normalized / 12.92
-    : ((normalized + 0.055) / 1.055) ** 2.4;
+  return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
 }
 
 function relativeLuminance(hex: string): number {
@@ -32,9 +30,7 @@ function relativeLuminance(hex: string): number {
   const blue = Number.parseInt(value.slice(4, 6), 16);
 
   return (
-    0.2126 * channelToLinear(red) +
-    0.7152 * channelToLinear(green) +
-    0.0722 * channelToLinear(blue)
+    0.2126 * channelToLinear(red) + 0.7152 * channelToLinear(green) + 0.0722 * channelToLinear(blue)
   );
 }
 
