@@ -187,7 +187,9 @@ test('exposes keyboard, landmark, live-region and control semantics', async ({ p
   await expect(page.getByRole('main')).toHaveCount(1);
   await expect(page.getByRole('status')).toHaveAttribute('aria-live', 'polite');
   await expect(page.getByRole('alert')).toHaveAttribute('aria-live', 'assertive');
-  await expect(page.getByRole('complementary', { name: 'Failure injection controls' })).toBeVisible();
+  await expect(
+    page.getByRole('complementary', { name: 'Failure injection controls' }),
+  ).toBeVisible();
   await expect(page.getByRole('radio', { name: /Office/ })).toBeDisabled();
 
   await page.keyboard.press('Tab');
@@ -202,7 +204,9 @@ test('exposes keyboard, landmark, live-region and control semantics', async ({ p
   expect(target?.height ?? 0).toBeGreaterThanOrEqual(48);
 });
 
-test('captures mobile and desktop evidence for all transaction states', async ({ page }, testInfo) => {
+test('captures mobile and desktop evidence for all transaction states', async ({
+  page,
+}, testInfo) => {
   await page.goto(CUSTOMER_COD_CHECKOUT_SCENARIO_ROUTE);
   await attachEvidence(page, testInfo, '01-product');
 

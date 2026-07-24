@@ -1,5 +1,4 @@
-export const CUSTOMER_COD_CHECKOUT_SCENARIO_ROUTE =
-  '/scenarios/customer-cod-checkout' as const;
+export const CUSTOMER_COD_CHECKOUT_SCENARIO_ROUTE = '/scenarios/customer-cod-checkout' as const;
 
 export function renderCustomerCodCheckoutScenario(): string {
   return `<!doctype html>
