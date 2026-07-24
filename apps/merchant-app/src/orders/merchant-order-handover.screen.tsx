@@ -81,6 +81,7 @@ export function MerchantOrderHandoverActions({
 }): React.JSX.Element {
   const [delivery, setDelivery] = useState<MerchantDeliveryProjection | null>(null);
   const [pickupCode, setPickupCode] = useState<MerchantPickupCode | null>(null);
+  const [pickupCodeExpired, setPickupCodeExpired] = useState(false);
   const [isLoading, setLoading] = useState(true);
   const [isRevealing, setRevealing] = useState(false);
   const [failure, setFailure] = useState<MerchantHandoverError | null>(null);
@@ -100,6 +101,7 @@ export function MerchantOrderHandoverActions({
       setFailure(null);
       if (!next.captainAtStore || next.pickedUpAt !== null || next.taskStatus === 'PICKED_UP') {
         setPickupCode(null);
+        setPickupCodeExpired(false);
       }
       if (
         !pickupReported.current &&
@@ -135,10 +137,12 @@ export function MerchantOrderHandoverActions({
       const next = await handoverClient.getPickupCode(orderId);
       if (!mounted.current) return;
       setPickupCode(next);
+      setPickupCodeExpired(Date.parse(next.expiresAt) <= Date.now());
     } catch (error: unknown) {
       if (!mounted.current) return;
       const nextFailure = asHandoverError(error);
       setPickupCode(null);
+      setPickupCodeExpired(false);
       setFailure(nextFailure);
       if (nextFailure.kind === 'AUTHENTICATION') onSessionExpired();
       if (nextFailure.kind === 'INVALID_STATE') void load();
@@ -163,7 +167,6 @@ export function MerchantOrderHandoverActions({
     return () => {
       cancelled = true;
       mounted.current = false;
-      setPickupCode(null);
       if (timer !== null) clearTimeout(timer);
     };
   }, [load, pollIntervalMs]);
@@ -203,7 +206,7 @@ export function MerchantOrderHandoverActions({
   const copy = stateCopy(delivery);
   const pickedUp = delivery.pickedUpAt !== null || delivery.taskStatus === 'PICKED_UP';
   const canReveal = delivery.captainAtStore && !pickedUp;
-  const codeExpired = pickupCode !== null && Date.parse(pickupCode.expiresAt) <= Date.now();
+  const codeExpired = pickupCode !== null && pickupCodeExpired;
 
   return (
     <View style={styles.card} testID={MERCHANT_SPRINT_06_TEST_IDS.handoverState}>
@@ -259,7 +262,10 @@ export function MerchantOrderHandoverActions({
           <Pressable
             accessibilityLabel="Hide merchant pickup code"
             accessibilityRole="button"
-            onPress={() => setPickupCode(null)}
+            onPress={() => {
+              setPickupCode(null);
+              setPickupCodeExpired(false);
+            }}
             style={styles.hideCode}
           >
             <Text style={styles.hideCodeText}>Hide code</Text>
@@ -277,6 +283,7 @@ export function MerchantOrderHandoverActions({
             disabled={isRevealing}
             onPress={() => {
               setPickupCode(null);
+              setPickupCodeExpired(false);
               void revealPickupCode();
             }}
             style={styles.secondary}

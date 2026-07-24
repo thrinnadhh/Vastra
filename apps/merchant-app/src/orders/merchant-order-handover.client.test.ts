@@ -5,8 +5,8 @@ import { ApiMerchantOrderHandoverAdapter } from './merchant-order-handover.clien
 const ORDER_ID = '10000000-0000-4000-8000-000000000001';
 const TASK_ID = '20000000-0000-4000-8000-000000000001';
 
-function client(request: jest.Mock): ApiClient {
-  return { request } as unknown as ApiClient;
+function client(request: jest.Mock): Pick<ApiClient, 'request'> {
+  return { request };
 }
 
 describe('ApiMerchantOrderHandoverAdapter', () => {

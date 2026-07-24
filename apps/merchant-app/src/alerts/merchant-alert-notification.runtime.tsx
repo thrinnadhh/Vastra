@@ -18,6 +18,7 @@ import type { MerchantApiSession } from '../auth/merchant-api-session';
 import {
   HttpMerchantDeviceRegistrationClient,
   MerchantDeviceRegistrationError,
+  type MerchantDeviceRegistrationFailureKind,
 } from './merchant-device-registration.client';
 import { parseMerchantAlertNotificationPayload } from './merchant-alert-notification.payload';
 import type {
@@ -121,13 +122,13 @@ function tokenString(value: unknown): string {
   return value;
 }
 
-function registrationFailureState(error: unknown): MerchantAlertSetupState {
+function registrationFailureState(error: unknown): MerchantDeviceRegistrationFailureKind {
   return error instanceof MerchantDeviceRegistrationError
     ? error.kind
     : 'BACKEND_REGISTRATION_FAILED';
 }
 
-function registrationFailureMessage(state: MerchantAlertSetupState): string {
+function registrationFailureMessage(state: MerchantDeviceRegistrationFailureKind): string {
   switch (state) {
     case 'SESSION_EXPIRED':
       return 'Your merchant session expired before this device could be registered.';
@@ -135,8 +136,6 @@ function registrationFailureMessage(state: MerchantAlertSetupState): string {
       return 'Device registration could not be verified. Reconnect and retry.';
     case 'BACKEND_REGISTRATION_FAILED':
       return 'The backend rejected this merchant device registration.';
-    default:
-      return 'Merchant device registration failed.';
   }
 }
 
@@ -402,7 +401,10 @@ export function MerchantAlertRuntimeProvider({
     try {
       const response = Notifications.getLastNotificationResponse();
       if (response !== null) {
-        setActiveAlert(activePayloadOrNull(readNotificationPayload(response.notification)));
+        const cachedAlert = activePayloadOrNull(readNotificationPayload(response.notification));
+        void Promise.resolve().then(() => {
+          if (mounted.current) setActiveAlert(cachedAlert);
+        });
       }
     } catch {
       // A missing cached response must not block the authenticated merchant runtime.

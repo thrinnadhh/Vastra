@@ -132,7 +132,7 @@ function mapApiFailure(error: unknown): MerchantHandoverError {
 }
 
 export class ApiMerchantOrderHandoverAdapter implements MerchantOrderHandoverPort {
-  public constructor(private readonly apiClient: ApiClient) {}
+  public constructor(private readonly apiClient: Pick<ApiClient, 'request'>) {}
 
   public async getDelivery(orderId: string): Promise<MerchantDeliveryProjection> {
     try {

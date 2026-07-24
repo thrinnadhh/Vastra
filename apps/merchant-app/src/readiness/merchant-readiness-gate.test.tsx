@@ -13,7 +13,11 @@ jest.mock('../alerts/merchant-alert-notification.runtime', () => ({
   useMerchantAlertRuntime: () => mockUseMerchantAlertRuntime(),
 }));
 
-function runtime(setupState: MerchantAlertSetupState): MerchantAlertRuntimeValue {
+type TestRuntime = MerchantAlertRuntimeValue & {
+  readonly refreshSetup: jest.MockedFunction<MerchantAlertRuntimeValue['refreshSetup']>;
+};
+
+function runtime(setupState: MerchantAlertSetupState): TestRuntime {
   return {
     activeAlert: null,
     setupState,
@@ -58,7 +62,7 @@ describe('MerchantReadinessGate', () => {
 
     fireEvent.press(view.getByLabelText('Retry merchant readiness checks'));
 
-    expect(value.refreshSetup).toHaveBeenCalledTimes(1);
+    expect(value.refreshSetup.mock.calls).toHaveLength(1);
     expect(view.queryByLabelText('Open Android settings for merchant alerts')).toBeNull();
   });
 
@@ -69,7 +73,7 @@ describe('MerchantReadinessGate', () => {
 
     fireEvent.press(view.getByLabelText('Retry merchant readiness checks'));
 
-    expect(value.refreshSetup).not.toHaveBeenCalled();
+    expect(value.refreshSetup.mock.calls).toHaveLength(0);
     expect(view.getByText('Checking…')).toBeTruthy();
   });
 

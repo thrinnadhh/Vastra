@@ -84,8 +84,10 @@ export function MerchantUrgentAlertModal({
 
   useEffect(() => {
     if (alert !== null && remaining === 0) {
-      setAuthoritativeOrder(null);
-      void runtime.clearActiveAlert();
+      void Promise.resolve().then(() => {
+        setAuthoritativeOrder(null);
+        void runtime.clearActiveAlert();
+      });
     }
   }, [alert, remaining, runtime]);
 

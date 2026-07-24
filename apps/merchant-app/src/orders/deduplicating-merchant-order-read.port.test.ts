@@ -58,6 +58,6 @@ describe('DeduplicatingMerchantOrderReadPort', () => {
     const port = new DeduplicatingMerchantOrderReadPort(delegate);
 
     await expect(port.getOrder('order-1')).resolves.toBe(detail);
-    expect(delegate.getOrder).toHaveBeenCalledWith('order-1');
+    expect(delegate.getOrder.mock.calls).toEqual([['order-1']]);
   });
 });
