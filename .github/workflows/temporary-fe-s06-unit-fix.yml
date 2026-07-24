@@ -1,0 +1,72 @@
+name: Fix FE-S06 zero-interval polling
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - agent/fe-s06-implementation-integration
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/fe-s06-implementation-integration
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Treat non-positive poll intervals as disabled
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'apps/merchant-app/src/alerts/merchant-urgent-alert.modal.tsx';
+          let source = fs.readFileSync(path, 'utf8');
+          const before = `    void verify();
+    const timer = setInterval(() => void verify(), authoritativePollIntervalMs);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };`;
+          const after = `    void verify();
+    if (authoritativePollIntervalMs <= 0) {
+      return () => {
+        cancelled = true;
+      };
+    }
+    const timer = setInterval(() => void verify(), authoritativePollIntervalMs);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };`;
+          if (!source.includes(after)) {
+            const count = source.split(before).length - 1;
+            if (count !== 1) throw new Error(\`Expected one polling effect, found \${count}\`);
+            source = source.replace(before, after);
+            fs.writeFileSync(path, source);
+          }
+          NODE
+          pnpm exec prettier --write apps/merchant-app/src/alerts/merchant-urgent-alert.modal.tsx
+      - name: Run merchant unit tests
+        run: pnpm --filter @vastra/merchant-app test
+      - name: Commit and rebase fix
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/merchant-app/src/alerts/merchant-urgent-alert.modal.tsx
+          git commit -m "fix(merchant): disable non-positive alert polling intervals"
+          git pull --rebase origin agent/fe-s06-implementation-integration
+          git push origin HEAD:agent/fe-s06-implementation-integration
