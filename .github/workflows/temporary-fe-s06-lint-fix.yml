@@ -1,0 +1,198 @@
+name: Apply FE-S06 lint fixes
+
+on:
+  push:
+    branches:
+      - agent/fe-s06-implementation-integration
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/fe-s06-implementation-integration
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Apply exact lint fixes
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          function edit(path, edits) {
+            let source = fs.readFileSync(path, 'utf8');
+            for (const [before, after, label] of edits) {
+              if (source.includes(after)) continue;
+              const count = source.split(before).length - 1;
+              if (count !== 1) throw new Error(`${path} ${label}: expected one match, found ${count}`);
+              source = source.replace(before, after);
+            }
+            fs.writeFileSync(path, source);
+          }
+
+          edit('apps/merchant-app/src/alerts/merchant-alert-notification.runtime.tsx', [
+            [
+              "import {\n  HttpMerchantDeviceRegistrationClient,\n  MerchantDeviceRegistrationError,\n} from './merchant-device-registration.client';",
+              "import {\n  HttpMerchantDeviceRegistrationClient,\n  MerchantDeviceRegistrationError,\n  type MerchantDeviceRegistrationFailureKind,\n} from './merchant-device-registration.client';",
+              'registration failure import',
+            ],
+            [
+              "function registrationFailureState(error: unknown): MerchantAlertSetupState {\n  return error instanceof MerchantDeviceRegistrationError\n    ? error.kind\n    : 'BACKEND_REGISTRATION_FAILED';\n}\n\nfunction registrationFailureMessage(state: MerchantAlertSetupState): string {\n  switch (state) {\n    case 'SESSION_EXPIRED':\n      return 'Your merchant session expired before this device could be registered.';\n    case 'OFFLINE_STALE':\n      return 'Device registration could not be verified. Reconnect and retry.';\n    case 'BACKEND_REGISTRATION_FAILED':\n      return 'The backend rejected this merchant device registration.';\n    default:\n      return 'Merchant device registration failed.';\n  }\n}",
+              "function registrationFailureState(error: unknown): MerchantDeviceRegistrationFailureKind {\n  return error instanceof MerchantDeviceRegistrationError\n    ? error.kind\n    : 'BACKEND_REGISTRATION_FAILED';\n}\n\nfunction registrationFailureMessage(state: MerchantDeviceRegistrationFailureKind): string {\n  switch (state) {\n    case 'SESSION_EXPIRED':\n      return 'Your merchant session expired before this device could be registered.';\n    case 'OFFLINE_STALE':\n      return 'Device registration could not be verified. Reconnect and retry.';\n    case 'BACKEND_REGISTRATION_FAILED':\n      return 'The backend rejected this merchant device registration.';\n  }\n}",
+              'exhaustive registration failure',
+            ],
+            [
+              "      if (response !== null) {\n        setActiveAlert(activePayloadOrNull(readNotificationPayload(response.notification)));\n      }",
+              "      if (response !== null) {\n        const cachedAlert = activePayloadOrNull(readNotificationPayload(response.notification));\n        void Promise.resolve().then(() => {\n          if (mounted.current) setActiveAlert(cachedAlert);\n        });\n      }",
+              'deferred cached response',
+            ],
+          ]);
+
+          edit('apps/merchant-app/src/alerts/merchant-urgent-alert.modal.tsx', [
+            [
+              "    if (alert !== null && remaining === 0) {\n      setAuthoritativeOrder(null);\n      void runtime.clearActiveAlert();\n    }",
+              "    if (alert !== null && remaining === 0) {\n      void Promise.resolve().then(() => {\n        setAuthoritativeOrder(null);\n        void runtime.clearActiveAlert();\n      });\n    }",
+              'deferred expiry cleanup',
+            ],
+          ]);
+
+          edit('apps/merchant-app/src/orders/merchant-order-handover.client.ts', [
+            [
+              '  public constructor(private readonly apiClient: ApiClient) {}',
+              "  public constructor(private readonly apiClient: Pick<ApiClient, 'request'>) {}",
+              'narrow client dependency',
+            ],
+          ]);
+
+          edit('apps/merchant-app/src/orders/merchant-order-handover.client.test.ts', [
+            [
+              "function client(request: jest.Mock): ApiClient {\n  return { request } as unknown as ApiClient;\n}",
+              "function client(request: jest.Mock): Pick<ApiClient, 'request'> {\n  return { request };\n}",
+              'remove unnecessary assertion',
+            ],
+          ]);
+
+          edit('apps/merchant-app/src/orders/merchant-order-handover.screen.tsx', [
+            [
+              "  const [pickupCode, setPickupCode] = useState<MerchantPickupCode | null>(null);\n  const [isLoading, setLoading] = useState(true);",
+              "  const [pickupCode, setPickupCode] = useState<MerchantPickupCode | null>(null);\n  const [pickupCodeExpired, setPickupCodeExpired] = useState(false);\n  const [isLoading, setLoading] = useState(true);",
+              'expiry state',
+            ],
+            [
+              "        setPickupCode(null);\n      }",
+              "        setPickupCode(null);\n        setPickupCodeExpired(false);\n      }",
+              'clear code after delivery change',
+            ],
+            [
+              "      setPickupCode(next);",
+              "      setPickupCode(next);\n      setPickupCodeExpired(Date.parse(next.expiresAt) <= Date.now());",
+              'calculate expiry after read',
+            ],
+            [
+              "      setPickupCode(null);\n      setFailure(nextFailure);",
+              "      setPickupCode(null);\n      setPickupCodeExpired(false);\n      setFailure(nextFailure);",
+              'clear expiry after failure',
+            ],
+            [
+              "      mounted.current = false;\n      setPickupCode(null);\n      if (timer !== null) clearTimeout(timer);",
+              "      mounted.current = false;\n      if (timer !== null) clearTimeout(timer);",
+              'avoid cleanup state update',
+            ],
+            [
+              "  const codeExpired = pickupCode !== null && Date.parse(pickupCode.expiresAt) <= Date.now();",
+              '  const codeExpired = pickupCode !== null && pickupCodeExpired;',
+              'pure render expiry',
+            ],
+            [
+              "            onPress={() => setPickupCode(null)}",
+              "            onPress={() => {\n              setPickupCode(null);\n              setPickupCodeExpired(false);\n            }}",
+              'explicit hide callback',
+            ],
+            [
+              "              setPickupCode(null);\n              void revealPickupCode();",
+              "              setPickupCode(null);\n              setPickupCodeExpired(false);\n              void revealPickupCode();",
+              'reset expiry before refresh',
+            ],
+          ]);
+
+          edit('apps/merchant-app/src/orders/deduplicating-merchant-order-read.port.test.ts', [
+            [
+              "    expect(delegate.getOrder).toHaveBeenCalledWith('order-1');",
+              "    expect(delegate.getOrder.mock.calls).toEqual([['order-1']]);",
+              'bound mock assertion',
+            ],
+          ]);
+
+          edit('apps/merchant-app/src/orders/merchant-order-handover.screen.test.tsx', [
+            [
+              '    expect(client.getPickupCode).not.toHaveBeenCalled();',
+              '    expect(client.getPickupCode.mock.calls).toHaveLength(0);',
+              'first bound pickup assertion',
+            ],
+            [
+              '    expect(client.getPickupCode).not.toHaveBeenCalled();',
+              '    expect(client.getPickupCode.mock.calls).toHaveLength(0);',
+              'second bound pickup assertion',
+            ],
+            [
+              '    expect(client.getPickupCode).toHaveBeenCalledWith(ORDER_ID);',
+              '    expect(client.getPickupCode.mock.calls).toEqual([[ORDER_ID]]);',
+              'pickup argument assertion',
+            ],
+            [
+              '    expect(client.getPickupCode).toHaveBeenCalledTimes(1);',
+              '    expect(client.getPickupCode.mock.calls).toHaveLength(1);',
+              'duplicate pickup assertion',
+            ],
+          ]);
+
+          edit('apps/merchant-app/src/readiness/merchant-readiness-gate.test.tsx', [
+            [
+              'function runtime(setupState: MerchantAlertSetupState): MerchantAlertRuntimeValue {',
+              "type TestRuntime = MerchantAlertRuntimeValue & {\n  readonly refreshSetup: jest.MockedFunction<MerchantAlertRuntimeValue['refreshSetup']>;\n};\n\nfunction runtime(setupState: MerchantAlertSetupState): TestRuntime {",
+              'typed runtime mock',
+            ],
+            [
+              '    expect(value.refreshSetup).toHaveBeenCalledTimes(1);',
+              '    expect(value.refreshSetup.mock.calls).toHaveLength(1);',
+              'retry call assertion',
+            ],
+            [
+              '    expect(value.refreshSetup).not.toHaveBeenCalled();',
+              '    expect(value.refreshSetup.mock.calls).toHaveLength(0);',
+              'checking call assertion',
+            ],
+          ]);
+          NODE
+      - name: Format and lint merchant changes
+        run: |
+          pnpm exec prettier --write \
+            apps/merchant-app/src/alerts/merchant-alert-notification.runtime.tsx \
+            apps/merchant-app/src/alerts/merchant-device-registration.client.ts \
+            apps/merchant-app/src/alerts/merchant-device-registration.client.test.ts \
+            apps/merchant-app/src/alerts/merchant-urgent-alert.modal.tsx \
+            apps/merchant-app/src/orders/deduplicating-merchant-order-read.port.test.ts \
+            apps/merchant-app/src/orders/merchant-order-handover.client.ts \
+            apps/merchant-app/src/orders/merchant-order-handover.client.test.ts \
+            apps/merchant-app/src/orders/merchant-order-handover.screen.tsx \
+            apps/merchant-app/src/orders/merchant-order-handover.screen.test.tsx \
+            apps/merchant-app/src/readiness/merchant-readiness-gate.test.tsx
+          pnpm --filter @vastra/merchant-app lint
+      - name: Commit fixes
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/merchant-app
+          git commit -m "fix(merchant): satisfy strict Sprint 06 lint rules"
+          git push origin HEAD:agent/fe-s06-implementation-integration
