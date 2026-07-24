@@ -1,6 +1,9 @@
 name: Materialize FE-S06 handover composition
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - agent/fe-s06-implementation-integration
@@ -16,8 +19,10 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Check out repository
+      - name: Check out implementation branch
         uses: actions/checkout@v7
+        with:
+          ref: agent/fe-s06-implementation-integration
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -95,16 +100,6 @@ jobs:
             'detail composition',
           );
           fs.writeFileSync(screenPath, screen);
-
-          const defaultPath = 'apps/merchant-app/src/orders/default-merchant-orders.tsx';
-          let defaults = fs.readFileSync(defaultPath, 'utf8');
-          defaults = replaceOnce(
-            defaults,
-            "        handoverClient={handoverClient}\n        onOpenAlertDiagnostics={() => {",
-            "        handoverClient={handoverClient}\n        onSessionExpired={() => {\n          void session.expireSession();\n        }}\n        onOpenAlertDiagnostics={() => {",
-            'session expiry composition',
-          );
-          fs.writeFileSync(defaultPath, defaults);
           NODE
 
       - name: Format Sprint 06 implementation
@@ -118,6 +113,8 @@ jobs:
             apps/merchant-app/src/alerts/merchant-alert-notification.types.ts \
             apps/merchant-app/src/alerts/merchant-device-registration.client.ts \
             apps/merchant-app/src/alerts/merchant-device-registration.client.test.ts \
+            apps/merchant-app/src/alerts/merchant-urgent-alert.modal.tsx \
+            apps/merchant-app/src/alerts/merchant-urgent-alert.decision.test.tsx \
             apps/merchant-app/src/orders/deduplicating-merchant-order-read.port.ts \
             apps/merchant-app/src/orders/deduplicating-merchant-order-read.port.test.ts \
             apps/merchant-app/src/orders/default-merchant-orders.tsx \
@@ -142,4 +139,4 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add apps/merchant-app pnpm-lock.yaml
           git commit -m "feat(merchant): compose generated pickup handover"
-          git push origin HEAD:${GITHUB_REF_NAME}
+          git push origin HEAD:agent/fe-s06-implementation-integration
