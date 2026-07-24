@@ -41,69 +41,54 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require('node:fs');
-
           function replaceOnce(source, before, after, label) {
             if (source.includes(after)) return source;
             const count = source.split(before).length - 1;
             if (count !== 1) throw new Error(`${label}: expected one match, found ${count}`);
             return source.replace(before, after);
           }
-
           const path = 'apps/merchant-app/src/orders/merchant-order.screen.tsx';
           let source = fs.readFileSync(path, 'utf8');
-          source = replaceOnce(
-            source,
+          source = replaceOnce(source,
             "import { MerchantOrderDecisionActions } from './merchant-order-decision.screen';\nimport { MerchantOrderPackingActions } from './merchant-order-packing.screen';",
             "import { MerchantOrderDecisionActions } from './merchant-order-decision.screen';\nimport { MerchantOrderHandoverActions } from './merchant-order-handover.screen';\nimport type { MerchantOrderHandoverPort } from './merchant-order-handover.types';\nimport { MerchantOrderPackingActions } from './merchant-order-packing.screen';",
-            'handover imports',
-          );
-          source = replaceOnce(
-            source,
+            'handover imports');
+          source = replaceOnce(source,
             "const GROUPS: readonly MerchantOrderGroup[] = [\n  'New',\n  'Accepted',\n  'Packing',\n  'Ready',\n  'Completed',\n  'Rejected',\n];",
             "const GROUPS: readonly MerchantOrderGroup[] = [\n  'New',\n  'Accepted',\n  'Packing',\n  'Ready',\n  'Completed',\n  'Rejected',\n];\n\nconst HANDOVER_ORDER_STATUSES: ReadonlySet<MerchantOrderDetail['status']> = new Set([\n  'READY_FOR_PICKUP',\n  'CAPTAIN_SEARCHING',\n  'CAPTAIN_ASSIGNED',\n  'CAPTAIN_AT_STORE',\n  'PICKED_UP',\n]);",
-            'handover statuses',
-          );
-          source = replaceOnce(
-            source,
+            'handover statuses');
+          source = replaceOnce(source,
             "  packingClient,\n  onBack,\n}: {\n  readonly orderId: string;\n  readonly orderClient: MerchantOrderReadPort;\n  readonly decisionClient?: MerchantOrderDecisionPort;\n  readonly packingClient?: MerchantOrderPackingPort;\n  readonly onBack: () => void;\n}) {",
             "  packingClient,\n  handoverClient,\n  onSessionExpired,\n  onBack,\n}: {\n  readonly orderId: string;\n  readonly orderClient: MerchantOrderReadPort;\n  readonly decisionClient?: MerchantOrderDecisionPort;\n  readonly packingClient?: MerchantOrderPackingPort;\n  readonly handoverClient?: MerchantOrderHandoverPort;\n  readonly onSessionExpired: () => void;\n  readonly onBack: () => void;\n}) {",
-            'detail props',
-          );
-          source = replaceOnce(
-            source,
+            'detail props');
+          source = replaceOnce(source,
             "        decisionClient === undefined && packingClient === undefined ? undefined : (",
             "        decisionClient === undefined &&\n        packingClient === undefined &&\n        handoverClient === undefined ? undefined : (",
-            'footer condition',
-          );
-          source = replaceOnce(
-            source,
+            'footer condition');
+          source = replaceOnce(source,
             "            {packingClient === undefined ? null : (\n              <MerchantOrderPackingActions\n                onOrderChanged={refresh}\n                order={order}\n                packingClient={packingClient}\n              />\n            )}\n          </>",
             "            {packingClient === undefined ? null : (\n              <MerchantOrderPackingActions\n                onOrderChanged={refresh}\n                order={order}\n                packingClient={packingClient}\n              />\n            )}\n            {handoverClient === undefined || !HANDOVER_ORDER_STATUSES.has(order.status) ? null : (\n              <MerchantOrderHandoverActions\n                handoverClient={handoverClient}\n                onAuthoritativePickupConfirmed={refresh}\n                onSessionExpired={onSessionExpired}\n                orderId={order.id}\n              />\n            )}\n          </>",
-            'handover footer',
-          );
-          source = replaceOnce(
-            source,
+            'handover footer');
+          source = replaceOnce(source,
             "  packingClient,\n  pollIntervalMs = 15_000,",
             "  packingClient,\n  handoverClient,\n  onSessionExpired = () => undefined,\n  pollIntervalMs = 15_000,",
-            'queue args',
-          );
-          source = replaceOnce(
-            source,
+            'queue args');
+          source = replaceOnce(source,
             "  readonly packingClient?: MerchantOrderPackingPort;\n  readonly pollIntervalMs?: number;",
             "  readonly packingClient?: MerchantOrderPackingPort;\n  readonly handoverClient?: MerchantOrderHandoverPort;\n  readonly onSessionExpired?: () => void;\n  readonly pollIntervalMs?: number;",
-            'queue props',
-          );
-          source = replaceOnce(
-            source,
+            'queue props');
+          source = replaceOnce(source,
             "        {...(packingClient === undefined ? {} : { packingClient })}\n        onBack={() => {",
             "        {...(packingClient === undefined ? {} : { packingClient })}\n        {...(handoverClient === undefined ? {} : { handoverClient })}\n        onSessionExpired={onSessionExpired}\n        onBack={() => {",
-            'detail composition',
-          );
+            'detail composition');
           fs.writeFileSync(path, source);
           NODE
 
-      - name: Format manifests
-        run: pnpm exec prettier --write apps/merchant-app/package.json pnpm-lock.yaml
+      - name: Format merchant manifest
+        run: pnpm exec prettier --write apps/merchant-app/package.json
+
+      - name: Verify generated lockfile is readable
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Format readiness and session
         run: |
