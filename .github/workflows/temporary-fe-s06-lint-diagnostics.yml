@@ -1,6 +1,9 @@
 name: Capture FE-S06 lint diagnostics
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - agent/fe-s06-implementation-integration
