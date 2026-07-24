@@ -116,6 +116,11 @@ export function MerchantUrgentAlertModal({
       if (!cancelled) await verifyAuthoritativeState();
     };
     void verify();
+    if (authoritativePollIntervalMs <= 0) {
+      return () => {
+        cancelled = true;
+      };
+    }
     const timer = setInterval(() => void verify(), authoritativePollIntervalMs);
     return () => {
       cancelled = true;
