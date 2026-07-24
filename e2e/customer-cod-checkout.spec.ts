@@ -192,8 +192,6 @@ test('exposes keyboard, landmark, live-region and control semantics', async ({ p
   await expect(
     page.getByRole('complementary', { name: 'Failure injection controls' }),
   ).toBeVisible();
-  await expect(page.getByRole('radio', { name: /Office/ })).toBeDisabled();
-
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to checkout scenario' })).toBeFocused();
   await page.getByRole('link', { name: 'Skip to checkout scenario' }).press('Enter');
@@ -204,6 +202,11 @@ test('exposes keyboard, landmark, live-region and control semantics', async ({ p
     .getByRole('button', { name: 'Add available size to cart' })
     .boundingBox();
   expect(target?.height ?? 0).toBeGreaterThanOrEqual(48);
+
+  await page.getByRole('button', { name: 'Add available size to cart' }).click();
+  await page.getByRole('button', { name: 'Open cart' }).click();
+  await page.getByRole('button', { name: 'Continue to delivery address' }).click();
+  await expect(page.getByRole('radio', { name: /Office/ })).toBeDisabled();
 });
 
 test('captures mobile and desktop evidence for all transaction states', async ({
