@@ -7,14 +7,17 @@ import {
 } from '../alerts/merchant-alert-notification.runtime';
 import { HttpMerchantOrderAlertClient } from '../alerts/merchant-order-alert.client';
 import { MerchantUrgentAlertModal } from '../alerts/merchant-urgent-alert.modal';
+import { useMerchantApiClient } from '../api/use-merchant-api-client';
 import { useMerchantApiSession } from '../auth/merchant-api-session';
 import { MerchantReadinessGate } from '../readiness/merchant-readiness-gate';
 import { DeduplicatingMerchantOrderReadPort } from './deduplicating-merchant-order-read.port';
 import { HttpMerchantOrderClient } from './merchant-order.client';
+import { ApiMerchantOrderHandoverAdapter } from './merchant-order-handover.client';
 import { MerchantOrderQueueScreen } from './merchant-order.screen';
 
 function MerchantOrdersWithAlertRuntime(): React.JSX.Element {
   const session = useMerchantApiSession();
+  const apiClient = useMerchantApiClient();
   const runtime = useMerchantAlertRuntime();
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [requestedOrderId, setRequestedOrderId] = useState<string | null>(null);
@@ -25,6 +28,10 @@ function MerchantOrdersWithAlertRuntime(): React.JSX.Element {
   const orderReadPort = useMemo(
     () => new DeduplicatingMerchantOrderReadPort(orderClient),
     [orderClient],
+  );
+  const handoverClient = useMemo(
+    () => new ApiMerchantOrderHandoverAdapter(apiClient),
+    [apiClient],
   );
   const alertClient = useMemo(() => new HttpMerchantOrderAlertClient(session), [session]);
 
@@ -52,6 +59,7 @@ function MerchantOrdersWithAlertRuntime(): React.JSX.Element {
     <>
       <MerchantOrderQueueScreen
         decisionClient={orderClient}
+        handoverClient={handoverClient}
         onOpenAlertDiagnostics={() => {
           setShowDiagnostics(true);
         }}
