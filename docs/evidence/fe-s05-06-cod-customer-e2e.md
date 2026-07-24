@@ -68,6 +68,10 @@ Only opaque deterministic identifiers cross the simulated route boundaries: `car
 
 The fixture contains no network request, privileged key, service-role credential, production customer data, or external provider call. Session and authorization failures clear every transaction identifier before displaying a safe recovery route.
 
+## Review closure
+
+CodeRabbit's maintainability finding was applied: the scenario now owns its focusable main landmark and current-screen state, screen traversal is scoped to `.screen[data-screen]`, and the whitespace-sensitive document wrapper was removed.
+
 ## Commands
 
 ```bash
