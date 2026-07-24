@@ -53,6 +53,24 @@ export default defineConfig({
       },
     },
     {
+      name: 'cod-mobile',
+      testMatch: /customer-cod-checkout\.spec\.ts/,
+      use: {
+        ...devices['Pixel 7'],
+        baseURL: fixtureOrigin,
+        viewport: { width: 390, height: 844 },
+      },
+    },
+    {
+      name: 'cod-desktop',
+      testMatch: /customer-cod-checkout\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: fixtureOrigin,
+        viewport: { width: 1280, height: 900 },
+      },
+    },
+    {
       name: 'visual',
       testMatch: /visual-regression\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], baseURL: fixtureOrigin },
