@@ -11,7 +11,17 @@ export interface MerchantAlertNotificationPayload {
 }
 
 export type MerchantAlertSetupState =
-  'CHECKING' | 'READY' | 'PERMISSION_DENIED' | 'UNSUPPORTED' | 'ERROR';
+  | 'CHECKING'
+  | 'READY'
+  | 'PERMISSION_DENIED'
+  | 'PERMISSION_BLOCKED'
+  | 'UNSUPPORTED_PLATFORM'
+  | 'PHYSICAL_DEVICE_REQUIRED'
+  | 'CHANNEL_MISCONFIGURED'
+  | 'TOKEN_UNAVAILABLE'
+  | 'BACKEND_REGISTRATION_FAILED'
+  | 'SESSION_EXPIRED'
+  | 'OFFLINE_STALE';
 
 export interface MerchantAlertDiagnostics {
   readonly physicalDevice: boolean;
