@@ -9,7 +9,9 @@ export interface MerchantDeviceRegistrationInput {
 }
 
 export type MerchantDeviceRegistrationFailureKind =
-  'SESSION_EXPIRED' | 'OFFLINE_STALE' | 'BACKEND_REGISTRATION_FAILED';
+  | 'SESSION_EXPIRED'
+  | 'OFFLINE_STALE'
+  | 'BACKEND_REGISTRATION_FAILED';
 
 export class MerchantDeviceRegistrationError extends Error {
   public constructor(
@@ -21,8 +23,13 @@ export class MerchantDeviceRegistrationError extends Error {
   }
 }
 
+type FetchFunction = (input: string, init: RequestInit) => Promise<Response>;
+
 export class HttpMerchantDeviceRegistrationClient {
-  public constructor(private readonly session: MerchantApiSession) {}
+  public constructor(
+    private readonly session: MerchantApiSession,
+    private readonly fetchFunction: FetchFunction = fetch,
+  ) {}
 
   public async register(input: MerchantDeviceRegistrationInput): Promise<void> {
     let accessToken: string | null;
@@ -35,7 +42,7 @@ export class HttpMerchantDeviceRegistrationClient {
 
     let response: Response;
     try {
-      response = await fetch(`${this.session.apiBaseUrl}/me/devices`, {
+      response = await this.fetchFunction(`${this.session.apiBaseUrl}/me/devices`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',
