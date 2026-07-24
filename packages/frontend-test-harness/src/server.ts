@@ -7,7 +7,7 @@ import {
 import {
   CUSTOMER_COD_CHECKOUT_SCENARIO_ROUTE,
   renderCustomerCodCheckoutScenario,
-} from './customer-cod-checkout-scenario';
+} from './customer-cod-checkout-document';
 import { FRONTEND_FIXTURES, getFrontendFixture } from './fixtures';
 import { renderFixtureIndex, renderFixturePage } from './html';
 
