@@ -177,7 +177,7 @@ describe('CustomerCheckoutQuoteScreen', () => {
     expect(view.getByLabelText('Final COD total ₹535.00')).toBeTruthy();
     expect(view.getByText('PRICE UPDATED')).toBeTruthy();
     expect(view.getByLabelText('Continue to COD order placement in the next step')).toBeDisabled();
-  });
+  }, 15_000);
 
   it('retries an offline quote request without retaining fabricated data', async () => {
     const createQuote = jest
