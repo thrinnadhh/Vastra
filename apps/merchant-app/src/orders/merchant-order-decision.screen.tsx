@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
+  MERCHANT_SPRINT_06_ACCESSIBILITY_LABELS,
+  MERCHANT_SPRINT_06_TEST_IDS,
+  type MerchantDecisionPresentationContext,
+} from '../sprint-06/merchant-fulfilment.integration-contract';
+import {
   MERCHANT_REJECTION_REASONS,
   MerchantOrderError,
   type MerchantOrderDecisionPort,
@@ -47,11 +52,15 @@ export function MerchantOrderDecisionActions({
   order,
   decisionClient,
   onDecisionComplete,
+  onAuthoritativeRefreshRequested = onDecisionComplete,
+  context = 'ORDER_DETAIL',
 }: {
   readonly order: MerchantOrderDetail;
   readonly decisionClient: MerchantOrderDecisionPort;
   readonly onDecisionComplete: () => void;
-}) {
+  readonly onAuthoritativeRefreshRequested?: () => void;
+  readonly context?: MerchantDecisionPresentationContext;
+}): React.JSX.Element {
   const [mode, setMode] = useState<'CHOICE' | 'ACCEPT' | 'REJECT'>('CHOICE');
   const [preparationMinutes, setPreparationMinutes] = useState('30');
   const [reasonCode, setReasonCode] = useState<MerchantRejectionReason | null>(null);
@@ -98,15 +107,19 @@ export function MerchantOrderDecisionActions({
           if (!mounted.current) return;
           submitting.current = false;
           setSubmitting(false);
-          setFailure(
+          const nextFailure =
             error instanceof MerchantOrderError
               ? error
-              : new MerchantOrderError('UNKNOWN', null, false),
-          );
+              : new MerchantOrderError('UNKNOWN', null, false);
+          setFailure(nextFailure);
+          if (nextFailure.kind === 'INVALID_STATE') {
+            setRetryAttempt(null);
+            onAuthoritativeRefreshRequested();
+          }
         },
       );
     },
-    [decisionClient, onDecisionComplete, order.id],
+    [decisionClient, onAuthoritativeRefreshRequested, onDecisionComplete, order.id],
   );
 
   if (order.status !== 'WAITING_FOR_MERCHANT') {
@@ -155,7 +168,11 @@ export function MerchantOrderDecisionActions({
   };
 
   return (
-    <View style={styles.card}>
+    <View
+      accessibilityLabel={`Merchant order decision actions in ${context.toLowerCase().replaceAll('_', ' ')}`}
+      style={styles.card}
+      testID={MERCHANT_SPRINT_06_TEST_IDS.decisionActions}
+    >
       <Text accessibilityRole="header" style={styles.title}>
         Respond to this order
       </Text>
@@ -190,7 +207,7 @@ export function MerchantOrderDecisionActions({
       {mode === 'CHOICE' ? (
         <View style={styles.row}>
           <Pressable
-            accessibilityLabel="Accept complete merchant order"
+            accessibilityLabel={MERCHANT_SPRINT_06_ACCESSIBILITY_LABELS.acceptOrder}
             accessibilityRole="button"
             disabled={isSubmitting}
             onPress={() => {
@@ -202,7 +219,7 @@ export function MerchantOrderDecisionActions({
             <Text style={styles.actionText}>Accept order</Text>
           </Pressable>
           <Pressable
-            accessibilityLabel="Reject complete merchant order"
+            accessibilityLabel={MERCHANT_SPRINT_06_ACCESSIBILITY_LABELS.rejectOrder}
             accessibilityRole="button"
             disabled={isSubmitting}
             onPress={() => {
@@ -246,6 +263,7 @@ export function MerchantOrderDecisionActions({
             onPress={() => {
               setMode('CHOICE');
             }}
+            style={styles.cancelAction}
           >
             <Text style={styles.cancel}>Cancel</Text>
           </Pressable>
@@ -301,6 +319,7 @@ export function MerchantOrderDecisionActions({
             onPress={() => {
               setMode('CHOICE');
             }}
+            style={styles.cancelAction}
           >
             <Text style={styles.cancel}>Cancel</Text>
           </Pressable>
@@ -316,16 +335,20 @@ const styles = StyleSheet.create({
   copy: { marginTop: 5, color: '#665A52', lineHeight: 20 },
   row: { flexDirection: 'row', gap: 10, marginTop: 16 },
   acceptAction: {
+    minHeight: 48,
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
     padding: 14,
     borderRadius: 13,
     backgroundColor: '#287A55',
   },
   rejectAction: {
+    minHeight: 48,
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
     padding: 14,
     borderRadius: 13,
@@ -344,9 +367,11 @@ const styles = StyleSheet.create({
     color: '#241B16',
   },
   noteInput: { minHeight: 88, paddingTop: 12, textAlignVertical: 'top' },
-  reasonList: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  reasonList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   reason: {
-    paddingHorizontal: 9,
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 11,
     paddingVertical: 8,
     borderWidth: 1,
     borderColor: '#D8CAC0',
@@ -354,11 +379,12 @@ const styles = StyleSheet.create({
   },
   reasonSelected: { borderColor: '#8E3B46', backgroundColor: '#F4E3D9' },
   reasonText: { color: '#4F433B', fontSize: 11, fontWeight: '700' },
+  cancelAction: { minHeight: 48, justifyContent: 'center' },
   cancel: { padding: 13, color: '#8E3B46', fontWeight: '800', textAlign: 'center' },
   validation: { marginTop: 12, color: '#9A3F3F', fontWeight: '700' },
   error: { marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: '#FCE5E3' },
   errorText: { color: '#7A2929', lineHeight: 20 },
-  retry: { alignSelf: 'flex-start', marginTop: 9 },
+  retry: { minHeight: 48, alignSelf: 'flex-start', justifyContent: 'center', marginTop: 4 },
   retryText: { color: '#7A2929', fontWeight: '800' },
   disabled: { opacity: 0.55 },
   notice: { marginTop: 18, padding: 14, borderRadius: 14, backgroundColor: '#E7F3EC' },
