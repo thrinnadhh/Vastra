@@ -204,7 +204,7 @@ jobs:
           pnpm --filter @vastra/customer-app build
       - name: Validate full unit graph under CI
         env:
-          CI: 'true'
+          CI: "true"
         run: pnpm exec turbo run test --force --output-logs=errors-only
       - name: Validate formatting
         run: pnpm format:check
