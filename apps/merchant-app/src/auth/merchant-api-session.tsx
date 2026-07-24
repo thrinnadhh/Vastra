@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 export interface MerchantApiSession {
   readonly apiBaseUrl: string;
   getAccessToken(): Promise<string | null>;
-  expireSession(): Promise<void>;
+  expireSession?(): Promise<void>;
 }
 
 const MerchantApiSessionContext = createContext<MerchantApiSession | null>(null);
