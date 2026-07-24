@@ -4,6 +4,10 @@ import {
   CUSTOMER_ACCESS_NAVIGATION_SCENARIO_ROUTE,
   renderCustomerAccessNavigationScenario,
 } from './customer-access-navigation-scenario';
+import {
+  CUSTOMER_COD_CHECKOUT_SCENARIO_ROUTE,
+  renderCustomerCodCheckoutScenario,
+} from './customer-cod-checkout-scenario';
 import { FRONTEND_FIXTURES, getFrontendFixture } from './fixtures';
 import { renderFixtureIndex, renderFixturePage } from './html';
 
@@ -62,6 +66,14 @@ export async function startFixtureServer(
         'content-type': 'text/html; charset=utf-8',
       });
       response.end(renderCustomerAccessNavigationScenario());
+      return;
+    }
+    if (requestUrl.pathname === CUSTOMER_COD_CHECKOUT_SCENARIO_ROUTE) {
+      response.writeHead(200, {
+        'cache-control': 'no-store',
+        'content-type': 'text/html; charset=utf-8',
+      });
+      response.end(renderCustomerCodCheckoutScenario());
       return;
     }
     const match = /^\/fixtures\/([a-z0-9-]+)$/.exec(requestUrl.pathname);

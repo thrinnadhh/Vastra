@@ -1,0 +1,82 @@
+# FE-S05-06 customer COD E2E evidence
+
+Status: VALIDATED — repository CI passes the deterministic mobile and desktop browser evidence suite and all repository gates.
+
+## Scope
+
+This ticket closes the automated customer-side pilot journey:
+
+`Product → Cart → Address → Quote → COD confirmation → Order confirmation → Tracking`
+
+The browser harness is synthetic and deterministic. It exercises the frozen frontend contracts without contacting authentication, location, Supabase, payment, delivery, or notification providers.
+
+## Executable coverage
+
+`e2e/customer-cod-checkout.spec.ts` runs against both `cod-mobile` and `cod-desktop` Playwright projects. The suite proves:
+
+1. An available product variant enters the one-shop cart.
+2. Cart quantity and totals remain internally consistent while quote identity is invalidated after cart edits.
+3. Only a serviceable saved address can continue.
+4. The quote presents server-authoritative items, delivery fee, COD fee, total, eligibility, and payment method.
+5. COD placement is guarded synchronously against duplicate submission.
+6. The same idempotency key survives an unknown transport result and reconciliation retry.
+7. A stale quote cannot create an order and must be refreshed.
+8. Offline recovery restores the exact prior screen without manufacturing success.
+9. Session expiry and authorization denial purge cart, address, quote, order, and idempotency identifiers.
+10. Confirmation opens the authoritative tracking timeline and delivery-OTP boundary.
+
+Each behavioral case executes at 390 × 844 and 1280 × 900 viewports.
+
+## Screenshot manifest
+
+The visual-evidence test attaches these states for each viewport:
+
+| Sequence | State | Primary proof |
+| --- | --- | --- |
+| 01 | Product | available variant, price and add-to-cart action |
+| 02 | Cart | one-shop item, quantity and subtotal |
+| 03 | Address | serviceable and unserviceable saved-address states |
+| 04 | Quote | authoritative fee and total breakdown |
+| 05 | COD confirmation | explicit final confirmation boundary |
+| 06 | Unknown result | non-failure reconciliation state |
+| 07 | Order confirmation | authoritative order read and navigation |
+| 08 | Tracking | centralized status timeline and OTP boundary |
+| 09 | Offline | recoverable network state |
+| 10 | Authorization purge | safe copy after sensitive-state removal |
+
+The two projects therefore produce 20 deterministic PNG attachments. CI uploads `test-results/playwright` and `playwright-report` as `frontend-e2e-evidence-<run-attempt>` for 14 days.
+
+## Accessibility assertions
+
+The suite verifies:
+
+- one `main` landmark and a named complementary failure-injection region;
+- a keyboard-operable skip link and focusable main target;
+- focused headings after route transitions;
+- semantic headings, buttons, radio controls, list and timeline labels;
+- disabled state for the unserviceable address;
+- polite status and assertive alert live regions;
+- minimum 48-pixel primary action height;
+- reduced-motion rendering through Playwright project configuration and fixture CSS;
+- textual status labels so meaning does not depend on colour alone.
+
+This evidence is an automated browser audit, not a claim of physical-device, screen-reader, or complete WCAG certification. Those release-level checks remain owned by FE-S16.
+
+## Privacy and authority boundaries
+
+Only opaque deterministic identifiers cross the simulated route boundaries: `cartId`, `addressId`, `quoteId`, `orderId`, and `idempotencyKey`. Product, price, address, eligibility, fee, total, and order snapshots are rendered as server-shaped fixture responses and are not carried as navigation authority.
+
+The fixture contains no network request, privileged key, service-role credential, production customer data, or external provider call. Session and authorization failures clear every transaction identifier before displaying a safe recovery route.
+
+## Review closure
+
+CodeRabbit's maintainability finding was applied: the scenario now owns its focusable main landmark and current-screen state, screen traversal is scoped to `.screen[data-screen]`, and the whitespace-sensitive document wrapper was removed.
+
+## Commands
+
+```bash
+pnpm test:frontend:cod
+pnpm test:frontend:harness
+```
+
+The second command is the repository CI gate and includes fixture unit tests, all browser E2E projects, and visual regression coverage.
