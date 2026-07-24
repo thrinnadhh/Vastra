@@ -86,15 +86,14 @@ describe('HttpMerchantDeviceRegistrationClient', () => {
     );
 
     await expect(client.register(INPUT)).resolves.toBeUndefined();
-    expect(transport.mock.calls).toEqual([
-      [
-        'https://api.example.test/me/devices',
-        expect.objectContaining({
-          method: 'POST',
-          headers: expect.objectContaining({ Authorization: 'Bearer access-token' }),
-          body: expect.stringContaining('private-fcm-token'),
-        }),
-      ],
-    ]);
+    expect(transport.mock.calls).toHaveLength(1);
+    const call = transport.mock.calls[0];
+    if (call === undefined) throw new TypeError('Expected one registration request');
+    const [url, init] = call;
+    expect(url).toBe('https://api.example.test/me/devices');
+    expect(init.method).toBe('POST');
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer access-token');
+    if (typeof init.body !== 'string') throw new TypeError('Expected JSON request body');
+    expect(init.body).toContain('private-fcm-token');
   });
 });
