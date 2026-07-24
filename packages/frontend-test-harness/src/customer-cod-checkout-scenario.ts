@@ -229,11 +229,11 @@ export function renderCustomerCodCheckoutScenario(): string {
 </head>
 <body>
   <a class="skip-link" href="#scenario-main">Skip to checkout scenario</a>
-  <main class="stage" id="scenario-main">
+  <main class="stage" id="scenario-main" tabindex="-1">
     <article
       class="phone"
       data-scenario-id="customer-cod-checkout"
-      data-screen="product"
+      data-current-screen="product"
       data-placement-phase="IDLE"
       data-placement-attempts="0"
       data-idempotency-key=""
@@ -456,7 +456,7 @@ export function renderCustomerCodCheckoutScenario(): string {
       const ORDER_ID = '40000000-0000-4000-8000-000000000001';
       const IDEMPOTENCY_KEY = '50000000-0000-4000-8000-000000000001';
       const root = document.querySelector('[data-scenario-id="customer-cod-checkout"]');
-      const screens = Array.from(document.querySelectorAll('[data-screen]'));
+      const screens = Array.from(document.querySelectorAll('.screen[data-screen]'));
       const status = document.getElementById('scenario-status');
       const alert = document.getElementById('scenario-alert');
       const openCart = document.getElementById('open-cart');
@@ -494,7 +494,7 @@ export function renderCustomerCodCheckoutScenario(): string {
       const total = () => subtotal() + 39;
 
       const updateDebug = () => {
-        root.dataset.screen = currentScreen;
+        root.dataset.currentScreen = currentScreen;
         root.dataset.placementPhase = placementPhase;
         root.dataset.placementAttempts = String(placementAttempts);
         root.dataset.idempotencyKey = idempotencyKey;
