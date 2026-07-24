@@ -9,9 +9,7 @@ import type {
 const ORDER_ID = '10000000-0000-4000-8000-000000000001';
 const TASK_ID = '20000000-0000-4000-8000-000000000001';
 
-function delivery(
-  input: Partial<MerchantDeliveryProjection> = {},
-): MerchantDeliveryProjection {
+function delivery(input: Partial<MerchantDeliveryProjection> = {}): MerchantDeliveryProjection {
   return {
     orderId: ORDER_ID,
     deliveryTaskId: TASK_ID,

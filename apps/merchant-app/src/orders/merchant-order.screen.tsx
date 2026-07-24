@@ -3,6 +3,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 
 import { formatPaiseAsInr } from './format-inr';
 import { MerchantOrderDecisionActions } from './merchant-order-decision.screen';
+import { MerchantOrderHandoverActions } from './merchant-order-handover.screen';
+import type { MerchantOrderHandoverPort } from './merchant-order-handover.types';
 import { MerchantOrderPackingActions } from './merchant-order-packing.screen';
 import {
   groupMerchantOrderStatus,
@@ -23,6 +25,14 @@ const GROUPS: readonly MerchantOrderGroup[] = [
   'Completed',
   'Rejected',
 ];
+
+const HANDOVER_ORDER_STATUSES: ReadonlySet<MerchantOrderDetail['status']> = new Set([
+  'READY_FOR_PICKUP',
+  'CAPTAIN_SEARCHING',
+  'CAPTAIN_ASSIGNED',
+  'CAPTAIN_AT_STORE',
+  'PICKED_UP',
+]);
 
 interface QueueState {
   readonly orders: readonly MerchantOrderSummary[];
@@ -203,12 +213,16 @@ function MerchantOrderDetailScreen({
   orderClient,
   decisionClient,
   packingClient,
+  handoverClient,
+  onSessionExpired,
   onBack,
 }: {
   readonly orderId: string;
   readonly orderClient: MerchantOrderReadPort;
   readonly decisionClient?: MerchantOrderDecisionPort;
   readonly packingClient?: MerchantOrderPackingPort;
+  readonly handoverClient?: MerchantOrderHandoverPort;
+  readonly onSessionExpired: () => void;
   readonly onBack: () => void;
 }) {
   const [order, setOrder] = useState<MerchantOrderDetail | null>(null);
@@ -281,7 +295,9 @@ function MerchantOrderDetailScreen({
     <MerchantOrderDetailView
       failure={failure}
       footer={
-        decisionClient === undefined && packingClient === undefined ? undefined : (
+        decisionClient === undefined &&
+        packingClient === undefined &&
+        handoverClient === undefined ? undefined : (
           <>
             {decisionClient === undefined ? null : (
               <MerchantOrderDecisionActions
@@ -295,6 +311,14 @@ function MerchantOrderDetailScreen({
                 onOrderChanged={refresh}
                 order={order}
                 packingClient={packingClient}
+              />
+            )}
+            {handoverClient === undefined || !HANDOVER_ORDER_STATUSES.has(order.status) ? null : (
+              <MerchantOrderHandoverActions
+                handoverClient={handoverClient}
+                onAuthoritativePickupConfirmed={refresh}
+                onSessionExpired={onSessionExpired}
+                orderId={order.id}
               />
             )}
           </>
@@ -312,6 +336,8 @@ export function MerchantOrderQueueScreen({
   orderClient,
   decisionClient,
   packingClient,
+  handoverClient,
+  onSessionExpired = () => undefined,
   pollIntervalMs = 15_000,
   requestedOrderId = null,
   onRequestedOrderHandled,
@@ -320,6 +346,8 @@ export function MerchantOrderQueueScreen({
   readonly orderClient: MerchantOrderReadPort;
   readonly decisionClient?: MerchantOrderDecisionPort;
   readonly packingClient?: MerchantOrderPackingPort;
+  readonly handoverClient?: MerchantOrderHandoverPort;
+  readonly onSessionExpired?: () => void;
   readonly pollIntervalMs?: number;
   readonly requestedOrderId?: string | null;
   readonly onRequestedOrderHandled?: () => void;
@@ -417,6 +445,8 @@ export function MerchantOrderQueueScreen({
       <MerchantOrderDetailScreen
         {...(decisionClient === undefined ? {} : { decisionClient })}
         {...(packingClient === undefined ? {} : { packingClient })}
+        {...(handoverClient === undefined ? {} : { handoverClient })}
+        onSessionExpired={onSessionExpired}
         onBack={() => {
           setSelectedOrderId(null);
           if (requestedOrderId !== null) onRequestedOrderHandled?.();

@@ -47,7 +47,9 @@ function envelopeData(value: unknown): Readonly<Record<string, unknown>> {
   return value['data'];
 }
 
-function taskStatus(record: Readonly<Record<string, unknown>>): MerchantDeliveryProjection['taskStatus'] {
+function taskStatus(
+  record: Readonly<Record<string, unknown>>,
+): MerchantDeliveryProjection['taskStatus'] {
   const value = stringValue(record, 'taskStatus');
   const status = MERCHANT_DELIVERY_TASK_STATUSES.find((candidate) => candidate === value);
   if (status === undefined) {
@@ -153,7 +155,9 @@ export class ApiMerchantOrderHandoverAdapter implements MerchantOrderHandoverPor
       const response = await this.apiClient.request('getMerchantPickupCode', {
         path: { orderId },
       });
-      const pickupCode = parseMerchantPickupCodeEnvelope(response.data satisfies PickupCodeResponse);
+      const pickupCode = parseMerchantPickupCodeEnvelope(
+        response.data satisfies PickupCodeResponse,
+      );
       if (pickupCode.orderId !== orderId) {
         throw new MerchantHandoverError('MALFORMED_RESPONSE', null, false);
       }

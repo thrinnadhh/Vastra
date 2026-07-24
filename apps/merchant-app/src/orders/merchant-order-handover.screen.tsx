@@ -287,7 +287,11 @@ export function MerchantOrderHandoverActions({
       ) : null}
 
       {pickedUp ? (
-        <View accessible accessibilityLabel="Merchant pickup authoritatively confirmed" style={styles.complete}>
+        <View
+          accessible
+          accessibilityLabel="Merchant pickup authoritatively confirmed"
+          style={styles.complete}
+        >
           <Text style={styles.completeTitle}>Handover complete</Text>
           <Text style={styles.completeCopy}>
             The code is no longer available because pickup has been confirmed by the server.
@@ -302,7 +306,9 @@ export function MerchantOrderHandoverActions({
         onPress={() => void load()}
         style={[styles.refresh, isLoading ? styles.disabled : null]}
       >
-        <Text style={styles.secondaryText}>{isLoading ? 'Refreshing…' : 'Refresh captain state'}</Text>
+        <Text style={styles.secondaryText}>
+          {isLoading ? 'Refreshing…' : 'Refresh captain state'}
+        </Text>
       </Pressable>
     </View>
   );

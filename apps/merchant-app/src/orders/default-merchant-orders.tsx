@@ -29,10 +29,7 @@ function MerchantOrdersWithAlertRuntime(): React.JSX.Element {
     () => new DeduplicatingMerchantOrderReadPort(orderClient),
     [orderClient],
   );
-  const handoverClient = useMemo(
-    () => new ApiMerchantOrderHandoverAdapter(apiClient),
-    [apiClient],
-  );
+  const handoverClient = useMemo(() => new ApiMerchantOrderHandoverAdapter(apiClient), [apiClient]);
   const alertClient = useMemo(() => new HttpMerchantOrderAlertClient(session), [session]);
 
   const expireSession = (): void => {
