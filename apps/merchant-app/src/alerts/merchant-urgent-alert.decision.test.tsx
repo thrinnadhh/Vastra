@@ -37,7 +37,7 @@ function runtime(): MerchantAlertRuntimeValue {
       orderId: ORDER_ID,
       orderNumber: 'VAS-ALERT-1',
       shopId: '30000000-0000-4000-8000-000000000001',
-      expiresAt: '2026-07-24T12:10:00.000Z',
+      expiresAt: '2099-07-24T12:10:00.000Z',
       soundShouldPlay: true,
       notificationId: 'notification-1',
     },
@@ -61,15 +61,6 @@ function runtime(): MerchantAlertRuntimeValue {
 }
 
 describe('MerchantUrgentAlertModal direct decisions', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2026-07-24T12:00:00.000Z'));
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
   it('renders the shared decision actions after authoritative order read', async () => {
     mockUseMerchantAlertRuntime.mockReturnValue(runtime());
     const orderClient = {
