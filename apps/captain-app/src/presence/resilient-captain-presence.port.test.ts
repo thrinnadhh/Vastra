@@ -17,7 +17,7 @@ const SAMPLE: CaptainLocationSample = {
 function delegate(): jest.Mocked<CaptainPresencePort> {
   return {
     getAvailability: jest.fn(() => Promise.resolve('AVAILABLE')),
-    setAvailability: jest.fn(() =>
+    setAvailability: jest.fn((..._args: Parameters<CaptainPresencePort['setAvailability']>) =>
       Promise.resolve({
         availabilityStatus: 'AVAILABLE',
         dispatchEligible: true,
@@ -26,7 +26,7 @@ function delegate(): jest.Mocked<CaptainPresencePort> {
         locationRecordedAt: SAMPLE.recordedAt,
       }),
     ),
-    updateLocation: jest.fn(() =>
+    updateLocation: jest.fn((..._args: Parameters<CaptainPresencePort['updateLocation']>) =>
       Promise.resolve({
         sampleId: SAMPLE.sampleId,
         acceptedAt: SAMPLE.recordedAt,
