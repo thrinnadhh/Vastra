@@ -86,11 +86,7 @@ function validEvidencePath(repositoryRoot, evidencePath) {
   if (!isNonEmptyString(evidencePath) || isAbsolute(evidencePath)) return false;
   const resolvedPath = resolve(repositoryRoot, evidencePath);
   const relativePath = relative(repositoryRoot, resolvedPath);
-  return (
-    relativePath.length > 0 &&
-    relativePath !== '..' &&
-    !relativePath.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`)
-  );
+  return relativePath.length > 0 && relativePath !== '..' && !relativePath.startsWith('../') && !relativePath.startsWith('..\\');
 }
 
 function validateCommon(report, errors) {
@@ -214,16 +210,9 @@ function validateDeviceFcm(report, context) {
   const steps = validateExactSteps(report, DEVICE_FCM_STEPS, errors, context);
   validateFinalPass(report, steps, errors);
 
-  if (!Array.isArray(report.devices) || report.devices.length < 3) {
-    errors.push('devices must contain at least three physical Android devices.');
+  if (!Array.isArray(report.devices)) {
+    errors.push('devices must be an array.');
   } else {
-    const physicalDevices = report.devices.filter((device) => isRecord(device) && device.physical === true);
-    const classes = new Set(physicalDevices.map((device) => device.class));
-    const oems = new Set(physicalDevices.map((device) => device.oem));
-    for (const requiredClass of ['low-memory', 'current-android', 'minimum-supported-android']) {
-      if (!classes.has(requiredClass)) errors.push(`Physical device class is missing: ${requiredClass}.`);
-    }
-    if (oems.size < 2) errors.push('Physical evidence must cover at least two Android OEMs.');
     for (const [index, device] of report.devices.entries()) {
       if (!isRecord(device)) {
         errors.push(`devices[${index}] must be an object.`);
@@ -236,11 +225,27 @@ function validateDeviceFcm(report, context) {
         errors.push(`devices[${index}] requires androidVersion and buildId.`);
       }
     }
+
+    if (report.status === 'PASS') {
+      if (report.devices.length < 3) {
+        errors.push('PASS requires at least three physical Android devices.');
+      }
+      const physicalDevices = report.devices.filter((device) => isRecord(device) && device.physical === true);
+      const classes = new Set(physicalDevices.map((device) => device.class));
+      const oems = new Set(physicalDevices.map((device) => device.oem));
+      for (const requiredClass of ['low-memory', 'current-android', 'minimum-supported-android']) {
+        if (!classes.has(requiredClass)) errors.push(`Physical device class is missing: ${requiredClass}.`);
+      }
+      if (oems.size < 2) errors.push('Physical evidence must cover at least two Android OEMs.');
+    }
   }
 
-  if (!Array.isArray(report.providerTimelines) || report.providerTimelines.length === 0) {
-    errors.push('providerTimelines must contain at least one real FCM delivery timeline.');
+  if (!Array.isArray(report.providerTimelines)) {
+    errors.push('providerTimelines must be an array.');
   } else {
+    if (report.status === 'PASS' && report.providerTimelines.length === 0) {
+      errors.push('PASS requires at least one real FCM delivery timeline.');
+    }
     for (const [index, timeline] of report.providerTimelines.entries()) {
       const prefix = `providerTimelines[${index}]`;
       if (!isRecord(timeline)) {
@@ -285,8 +290,10 @@ function validateLoadQuery(report, context) {
   } else {
     const minimums = { shops: 100, products: 1000, variants: 3000, orders: 1000, captains: 100 };
     for (const [key, minimum] of Object.entries(minimums)) {
-      if (!isNonNegativeInteger(report.dataset[key]) || report.dataset[key] < minimum) {
-        errors.push(`dataset.${key} must be at least ${minimum}.`);
+      if (!isNonNegativeInteger(report.dataset[key])) {
+        errors.push(`dataset.${key} must be a non-negative integer.`);
+      } else if (report.status === 'PASS' && report.dataset[key] < minimum) {
+        errors.push(`PASS requires dataset.${key} to be at least ${minimum}.`);
       }
     }
   }
@@ -294,19 +301,35 @@ function validateLoadQuery(report, context) {
   if (!isRecord(report.metrics)) {
     errors.push('metrics must be an object.');
   } else {
-    if (typeof report.metrics.criticalReadSuccessRate !== 'number' || report.metrics.criticalReadSuccessRate < 0.999) {
-      errors.push('criticalReadSuccessRate must be at least 0.999.');
+    const numericFields = [
+      'criticalReadSuccessRate',
+      'criticalCommandSuccessRate',
+      'p95CriticalReadMs',
+      'p95CriticalCommandMs',
+      'invariantViolations',
+    ];
+    for (const field of numericFields) {
+      if (typeof report.metrics[field] !== 'number' || !Number.isFinite(report.metrics[field])) {
+        errors.push(`metrics.${field} must be a finite number.`);
+      }
     }
-    if (typeof report.metrics.criticalCommandSuccessRate !== 'number' || report.metrics.criticalCommandSuccessRate < 0.995) {
-      errors.push('criticalCommandSuccessRate must be at least 0.995.');
+    if (report.status === 'PASS') {
+      if (report.metrics.criticalReadSuccessRate < 0.999) {
+        errors.push('PASS requires criticalReadSuccessRate to be at least 0.999.');
+      }
+      if (report.metrics.criticalCommandSuccessRate < 0.995) {
+        errors.push('PASS requires criticalCommandSuccessRate to be at least 0.995.');
+      }
+      if (report.metrics.p95CriticalReadMs > 750) {
+        errors.push('PASS requires p95CriticalReadMs to be at most 750.');
+      }
+      if (report.metrics.p95CriticalCommandMs > 1500) {
+        errors.push('PASS requires p95CriticalCommandMs to be at most 1500.');
+      }
+      if (report.metrics.invariantViolations !== 0) {
+        errors.push('PASS requires invariantViolations to equal 0.');
+      }
     }
-    if (typeof report.metrics.p95CriticalReadMs !== 'number' || report.metrics.p95CriticalReadMs > 750) {
-      errors.push('p95CriticalReadMs must be at most 750.');
-    }
-    if (typeof report.metrics.p95CriticalCommandMs !== 'number' || report.metrics.p95CriticalCommandMs > 1500) {
-      errors.push('p95CriticalCommandMs must be at most 1500.');
-    }
-    if (report.metrics.invariantViolations !== 0) errors.push('invariantViolations must equal 0.');
   }
   return errors;
 }
