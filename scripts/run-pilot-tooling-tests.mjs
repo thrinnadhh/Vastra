@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { isClientSourcePath, scanClientSource } from './client-secret-scan-lib.mjs';
 import { validatePilotManifest } from './pilot-evidence-lib.mjs';
+import {
+  ADMIN_RECOVERY_STEPS,
+  DEVICE_FCM_STEPS,
+  LOAD_QUERY_SCENARIOS,
+  STAGING_COD_STEPS,
+  validatePilotExecutionReport,
+} from './pilot-execution-report-lib.mjs';
 
 const REQUIRED_IDS = [
   'S11-02-ACCEPTANCE',
@@ -40,6 +49,38 @@ function buildManifest() {
     })),
     openDefects: [],
   };
+}
+
+function buildSteps(ids, status = 'NOT_RUN') {
+  return ids.map((id, index) => ({
+    id,
+    status,
+    observedAt:
+      status === 'PASS' ? new Date(Date.UTC(2026, 6, 25, 10, 0, index)).toISOString() : null,
+    requestIds: status === 'PASS' ? [`request-${index}`] : [],
+    evidence: [],
+    notes: status === 'PASS' ? 'Observed and verified.' : 'Not executed.',
+  }));
+}
+
+function baseExecutionReport(type, steps, overrides = {}) {
+  return {
+    schemaVersion: 1,
+    type,
+    releaseCommit: 'a'.repeat(40),
+    environment: 'staging',
+    status: 'NOT_RUN',
+    startedAt: '2026-07-25T10:00:00.000Z',
+    completedAt: null,
+    operator: 'Pilot Operator',
+    notes: 'Not executed.',
+    steps,
+    ...overrides,
+  };
+}
+
+function readTemplate(path) {
+  return JSON.parse(readFileSync(resolve(process.cwd(), path), 'utf8'));
 }
 
 function runEvidenceTests() {
@@ -84,6 +125,87 @@ function runEvidenceTests() {
   );
 }
 
+function runExecutionReportTests() {
+  const stagingTemplate = readTemplate(
+    'docs/pilot/evidence/templates/staging-cod-report.template.json',
+  );
+  const deviceTemplate = readTemplate(
+    'docs/pilot/evidence/templates/device-fcm-report.template.json',
+  );
+  const adminTemplate = readTemplate(
+    'docs/pilot/evidence/templates/admin-recovery-report.template.json',
+  );
+  assert.deepEqual(validatePilotExecutionReport(stagingTemplate), []);
+  assert.deepEqual(validatePilotExecutionReport(deviceTemplate), []);
+  assert.deepEqual(validatePilotExecutionReport(adminTemplate), []);
+
+  const falseStagingPass = baseExecutionReport(
+    'staging-cod',
+    buildSteps(STAGING_COD_STEPS, 'PASS').map((step) => ({
+      ...step,
+      requestIds: [],
+    })),
+    {
+      status: 'PASS',
+      completedAt: '2026-07-25T10:30:00.000Z',
+      orderId: '00000000-0000-4000-8000-000000000001',
+    },
+  );
+  assert.ok(
+    validatePilotExecutionReport(falseStagingPass).some((error) =>
+      error.includes('cannot be PASS without request IDs or evidence'),
+    ),
+  );
+
+  const falseDevicePass = baseExecutionReport('device-fcm', buildSteps(DEVICE_FCM_STEPS, 'PASS'), {
+    status: 'PASS',
+    completedAt: '2026-07-25T11:00:00.000Z',
+    devices: [],
+    providerTimelines: [],
+  });
+  assert.ok(
+    validatePilotExecutionReport(falseDevicePass).some((error) =>
+      error.includes('at least three physical Android devices'),
+    ),
+  );
+
+  const falseLoadPass = baseExecutionReport(
+    'load-query',
+    buildSteps(LOAD_QUERY_SCENARIOS, 'PASS'),
+    {
+      status: 'PASS',
+      completedAt: '2026-07-25T11:00:00.000Z',
+      dataset: { shops: 1, products: 1, variants: 1, orders: 1, captains: 1 },
+      metrics: {
+        criticalReadSuccessRate: 1,
+        criticalCommandSuccessRate: 1,
+        p95CriticalReadMs: 1,
+        p95CriticalCommandMs: 1,
+        invariantViolations: 0,
+      },
+    },
+  );
+  assert.ok(
+    validatePilotExecutionReport(falseLoadPass).some((error) =>
+      error.includes('dataset.shops to be at least 100'),
+    ),
+  );
+
+  const falseAdminPass = baseExecutionReport(
+    'admin-recovery',
+    buildSteps(ADMIN_RECOVERY_STEPS, 'PASS'),
+    {
+      status: 'PASS',
+      completedAt: '2026-07-25T11:00:00.000Z',
+      aal: 'AAL1',
+      auditEntriesVerified: false,
+    },
+  );
+  const adminErrors = validatePilotExecutionReport(falseAdminPass);
+  assert.ok(adminErrors.some((error) => error.includes('requires AAL2')));
+  assert.ok(adminErrors.some((error) => error.includes('auditEntriesVerified=true')));
+}
+
 function runSecretScannerTests() {
   assert.equal(isClientSourcePath('apps/customer-app/src/config.ts'), true);
   assert.equal(isClientSourcePath('apps/backend/src/config.ts'), false);
@@ -114,6 +236,7 @@ function runSecretScannerTests() {
 
 try {
   runEvidenceTests();
+  runExecutionReportTests();
   runSecretScannerTests();
   console.log('OK: Sprint 11 pilot tooling tests passed.');
 } catch (error) {

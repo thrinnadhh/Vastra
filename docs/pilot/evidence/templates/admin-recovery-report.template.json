@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "type": "admin-recovery",
+  "releaseCommit": "0000000000000000000000000000000000000000",
+  "environment": "staging",
+  "status": "NOT_RUN",
+  "startedAt": "1970-01-01T00:00:00.000Z",
+  "completedAt": null,
+  "operator": "replace-me",
+  "notes": "Admin recovery and pilot sign-off have not been executed.",
+  "aal": "NOT_VERIFIED",
+  "auditEntriesVerified": false,
+  "steps": [
+    {
+      "id": "investigate-order-timeline",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "release-pre-pickup-assignment",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "resolve-post-pickup-custody",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "reset-delivery-verification-lockout",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "pause-and-restore-merchant-orders",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "suspend-and-restore-captain",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "correct-captain-availability",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "open-assign-escalate-resolve-case",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "reconcile-cod-collection",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "verify-immutable-audit-history",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "verify-unauthorized-admin-denial",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    }
+  ]
+}
