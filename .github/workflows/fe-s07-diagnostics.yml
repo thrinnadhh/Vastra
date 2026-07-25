@@ -1,9 +1,6 @@
 name: FE-S07 focused diagnostics
 
 on:
-  push:
-    branches:
-      - agent/fe-s07-production-closure
   pull_request:
     branches:
       - main
@@ -47,33 +44,38 @@ jobs:
             apps/captain-app/src/presence/resilient-captain-presence.port.ts
             docs/implementation/fe-s07-production-closure.md
           )
-          pnpm exec prettier --write "${files[@]}"
+          set +e
+          pnpm exec prettier --write "${files[@]}" > diagnostics/prettier.log 2>&1
+          echo $? > diagnostics/prettier.exit
           for file in "${files[@]}"; do
-            mkdir -p "diagnostics/formatted/$(dirname "$file")"
-            cp "$file" "diagnostics/formatted/$file"
+            if [ -f "$file" ]; then
+              mkdir -p "diagnostics/formatted/$(dirname "$file")"
+              cp "$file" "diagnostics/formatted/$file"
+            fi
           done
           git diff -- "${files[@]}" > diagnostics/prettier.patch
+          exit 0
 
       - name: Capture captain typecheck
-        continue-on-error: true
         run: |
           set +e
           pnpm --filter @vastra/captain-app typecheck > diagnostics/typecheck.log 2>&1
           echo $? > diagnostics/typecheck.exit
+          exit 0
 
       - name: Capture captain tests
-        continue-on-error: true
         run: |
           set +e
           pnpm --filter @vastra/captain-app test > diagnostics/tests.log 2>&1
           echo $? > diagnostics/tests.exit
+          exit 0
 
       - name: Capture captain build
-        continue-on-error: true
         run: |
           set +e
           pnpm --filter @vastra/captain-app build > diagnostics/build.log 2>&1
           echo $? > diagnostics/build.exit
+          exit 0
 
       - name: Upload diagnostics
         if: always()
