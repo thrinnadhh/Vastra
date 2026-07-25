@@ -1,10 +1,15 @@
 import { useAudioPlayer } from 'expo-audio';
-
-import ringtoneSource from '../../assets/sounds/vastra_new_order.wav';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { MerchantOrderReadPort } from '../orders/merchant-order.types';
+import ringtoneSource from '../../assets/sounds/vastra_new_order.wav';
+import { MerchantOrderDecisionActions } from '../orders/merchant-order-decision.screen';
+import type {
+  MerchantOrderDecisionPort,
+  MerchantOrderDetail,
+  MerchantOrderReadPort,
+} from '../orders/merchant-order.types';
+import { MERCHANT_SPRINT_06_TEST_IDS } from '../sprint-06/merchant-fulfilment.integration-contract';
 import {
   merchantAlertSecondsRemaining,
   shouldStopMerchantAlertForOrderStatus,
@@ -21,21 +26,26 @@ function formatCountdown(seconds: number): string {
 export function MerchantUrgentAlertModal({
   alertClient,
   orderClient,
+  decisionClient,
   onOpenOrder,
   authoritativePollIntervalMs = 5_000,
 }: {
   readonly alertClient: MerchantOrderAlertClient;
   readonly orderClient: Pick<MerchantOrderReadPort, 'getOrder'>;
+  readonly decisionClient?: MerchantOrderDecisionPort;
   readonly onOpenOrder: (orderId: string) => void;
   readonly authoritativePollIntervalMs?: number;
-}) {
+}): React.JSX.Element | null {
   const runtime = useMerchantAlertRuntime();
   const alert = runtime.activeAlert;
   const [now, setNow] = useState<number | null>(null);
   const remaining =
     alert === null || now === null ? null : merchantAlertSecondsRemaining(alert.expiresAt, now);
   const [acknowledging, setAcknowledging] = useState(false);
-  const [failure, setFailure] = useState(false);
+  const acknowledgingRef = useRef(false);
+  const [acknowledgementFailure, setAcknowledgementFailure] = useState(false);
+  const [authoritativeOrder, setAuthoritativeOrder] = useState<MerchantOrderDetail | null>(null);
+  const [authoritativeUnavailable, setAuthoritativeUnavailable] = useState(false);
   const player = useAudioPlayer(ringtoneSource, { downloadFirst: true });
 
   useEffect(() => {
@@ -74,34 +84,49 @@ export function MerchantUrgentAlertModal({
 
   useEffect(() => {
     if (alert !== null && remaining === 0) {
-      void runtime.clearActiveAlert();
+      void Promise.resolve().then(() => {
+        setAuthoritativeOrder(null);
+        void runtime.clearActiveAlert();
+      });
     }
   }, [alert, remaining, runtime]);
+
+  const verifyAuthoritativeState = useCallback(async (): Promise<void> => {
+    if (alert === null) return;
+    try {
+      const order = await orderClient.getOrder(alert.orderId);
+      setAuthoritativeUnavailable(false);
+      setAuthoritativeOrder(order);
+      if (shouldStopMerchantAlertForOrderStatus(order.status)) {
+        player.pause();
+        void player.seekTo(0);
+        setAuthoritativeOrder(null);
+        await runtime.clearActiveAlert();
+      }
+    } catch {
+      setAuthoritativeUnavailable(true);
+      // A transient read failure must not hide a still-active urgent alert.
+    }
+  }, [alert, orderClient, player, runtime]);
 
   useEffect(() => {
     if (alert === null) return;
     let cancelled = false;
-
-    const verifyAuthoritativeState = async (): Promise<void> => {
-      try {
-        const order = await orderClient.getOrder(alert.orderId);
-        if (!cancelled && shouldStopMerchantAlertForOrderStatus(order.status)) {
-          player.pause();
-          void player.seekTo(0);
-          await runtime.clearActiveAlert();
-        }
-      } catch {
-        // A transient read failure must not hide a still-active urgent alert.
-      }
+    const verify = async (): Promise<void> => {
+      if (!cancelled) await verifyAuthoritativeState();
     };
-
-    void verifyAuthoritativeState();
-    const timer = setInterval(() => void verifyAuthoritativeState(), authoritativePollIntervalMs);
+    void verify();
+    if (authoritativePollIntervalMs <= 0) {
+      return () => {
+        cancelled = true;
+      };
+    }
+    const timer = setInterval(() => void verify(), authoritativePollIntervalMs);
     return () => {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [alert, authoritativePollIntervalMs, orderClient, player, runtime]);
+  }, [alert, authoritativePollIntervalMs, verifyAuthoritativeState]);
 
   const accessibilityLabel = useMemo(
     () =>
@@ -115,19 +140,26 @@ export function MerchantUrgentAlertModal({
 
   if (alert === null) return null;
 
+  const stopAndOpen = async (): Promise<void> => {
+    player.pause();
+    void player.seekTo(0);
+    setAuthoritativeOrder(null);
+    await runtime.clearActiveAlert();
+    onOpenOrder(alert.orderId);
+  };
+
   const acknowledgeAndOpen = async (): Promise<void> => {
-    if (acknowledging) return;
+    if (acknowledgingRef.current) return;
+    acknowledgingRef.current = true;
     setAcknowledging(true);
-    setFailure(false);
+    setAcknowledgementFailure(false);
     try {
       await alertClient.acknowledge(alert.alertId);
-      player.pause();
-      void player.seekTo(0);
-      await runtime.clearActiveAlert();
-      onOpenOrder(alert.orderId);
+      await stopAndOpen();
     } catch {
-      setFailure(true);
+      setAcknowledgementFailure(true);
     } finally {
+      acknowledgingRef.current = false;
       setAcknowledging(false);
     }
   };
@@ -136,7 +168,12 @@ export function MerchantUrgentAlertModal({
 
   return (
     <Modal animationType="fade" onRequestClose={() => undefined} transparent visible>
-      <View accessibilityLabel={accessibilityLabel} accessible style={styles.backdrop}>
+      <View
+        accessibilityLabel={accessibilityLabel}
+        accessible
+        style={styles.backdrop}
+        testID={MERCHANT_SPRINT_06_TEST_IDS.urgentAlert}
+      >
         <View style={styles.panel}>
           <Text style={styles.eyebrow}>URGENT NEW ORDER</Text>
           <Text accessibilityRole="header" style={styles.title}>
@@ -151,7 +188,12 @@ export function MerchantUrgentAlertModal({
               {remaining === null ? '—:—' : formatCountdown(remaining)}
             </Text>
           </View>
-          {failure ? (
+          {authoritativeUnavailable ? (
+            <Text accessibilityLiveRegion="assertive" style={styles.failure}>
+              Authoritative order state is temporarily unavailable. The valid alert remains active.
+            </Text>
+          ) : null}
+          {acknowledgementFailure ? (
             <Text accessibilityLiveRegion="assertive" style={styles.failure}>
               We could not acknowledge this alert. Check your connection and retry.
             </Text>
@@ -167,6 +209,16 @@ export function MerchantUrgentAlertModal({
               {acknowledging ? 'Acknowledging…' : 'Acknowledge & review order'}
             </Text>
           </Pressable>
+
+          {decisionClient !== undefined && authoritativeOrder?.status === 'WAITING_FOR_MERCHANT' ? (
+            <MerchantOrderDecisionActions
+              context="URGENT_ALERT"
+              decisionClient={decisionClient}
+              onAuthoritativeRefreshRequested={() => void verifyAuthoritativeState()}
+              onDecisionComplete={() => void stopAndOpen()}
+              order={authoritativeOrder}
+            />
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -184,6 +236,7 @@ const styles = StyleSheet.create({
   panel: {
     width: '100%',
     maxWidth: 440,
+    maxHeight: '92%',
     padding: 24,
     borderRadius: 24,
     backgroundColor: '#FFFFFF',
@@ -201,11 +254,13 @@ const styles = StyleSheet.create({
   countdownValue: { marginTop: 4, color: '#7B3440', fontSize: 34, fontWeight: '900' },
   failure: { marginTop: 16, color: '#9E1C2F', fontSize: 14, lineHeight: 20 },
   primary: {
+    minHeight: 48,
     marginTop: 20,
     paddingHorizontal: 18,
     paddingVertical: 15,
     borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#8E3B46',
   },
   primaryText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },

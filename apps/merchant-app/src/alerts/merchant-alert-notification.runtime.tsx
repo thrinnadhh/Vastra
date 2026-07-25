@@ -15,7 +15,11 @@ import {
 import { Platform } from 'react-native';
 
 import type { MerchantApiSession } from '../auth/merchant-api-session';
-import { HttpMerchantDeviceRegistrationClient } from './merchant-device-registration.client';
+import {
+  HttpMerchantDeviceRegistrationClient,
+  MerchantDeviceRegistrationError,
+  type MerchantDeviceRegistrationFailureKind,
+} from './merchant-device-registration.client';
 import { parseMerchantAlertNotificationPayload } from './merchant-alert-notification.payload';
 import type {
   MerchantAlertDiagnostics,
@@ -118,6 +122,23 @@ function tokenString(value: unknown): string {
   return value;
 }
 
+function registrationFailureState(error: unknown): MerchantDeviceRegistrationFailureKind {
+  return error instanceof MerchantDeviceRegistrationError
+    ? error.kind
+    : 'BACKEND_REGISTRATION_FAILED';
+}
+
+function registrationFailureMessage(state: MerchantDeviceRegistrationFailureKind): string {
+  switch (state) {
+    case 'SESSION_EXPIRED':
+      return 'Your merchant session expired before this device could be registered.';
+    case 'OFFLINE_STALE':
+      return 'Device registration could not be verified. Reconnect and retry.';
+    case 'BACKEND_REGISTRATION_FAILED':
+      return 'The backend rejected this merchant device registration.';
+  }
+}
+
 export function MerchantAlertRuntimeProvider({
   session,
   children,
@@ -130,6 +151,7 @@ export function MerchantAlertRuntimeProvider({
   const [diagnostics, setDiagnostics] = useState<MerchantAlertDiagnostics>(emptyDiagnostics);
   const operation = useRef(0);
   const mounted = useRef(true);
+  const setupPromise = useRef<Promise<void> | null>(null);
   const registrationClient = useMemo(
     () => new HttpMerchantDeviceRegistrationClient(session),
     [session],
@@ -149,100 +171,152 @@ export function MerchantAlertRuntimeProvider({
     [registrationClient],
   );
 
-  const refreshSetup = useCallback(async (): Promise<void> => {
+  const performSetup = useCallback(async (): Promise<void> => {
     const operationId = ++operation.current;
+    const current = (): boolean => mounted.current && operation.current === operationId;
+    const checkedAt = (): string => new Date().toISOString();
+
     if (Platform.OS !== 'android') {
-      setSetupState('UNSUPPORTED');
+      if (!current()) return;
+      setSetupState('UNSUPPORTED_PLATFORM');
       setDiagnostics({
         ...emptyDiagnostics,
-        lastCheckedAt: new Date().toISOString(),
+        lastCheckedAt: checkedAt(),
         failureReason: 'Urgent merchant push delivery is supported on Android for the MVP.',
       });
       return;
     }
 
     setSetupState('CHECKING');
+
+    let channel: Notifications.NotificationChannel | null;
     try {
-      const channel = await ensureUrgentChannel();
-      let permission = await Notifications.getPermissionsAsync();
+      channel = await ensureUrgentChannel();
+    } catch {
+      if (!current()) return;
+      setSetupState('CHANNEL_MISCONFIGURED');
+      setDiagnostics({
+        ...emptyDiagnostics,
+        physicalDevice: Device.isDevice,
+        lastCheckedAt: checkedAt(),
+        failureReason: 'The urgent Android order channel could not be configured.',
+      });
+      return;
+    }
+
+    let permission: Notifications.NotificationPermissionsStatus;
+    try {
+      permission = await Notifications.getPermissionsAsync();
       if (!permission.granted && permission.canAskAgain) {
         permission = await Notifications.requestPermissionsAsync();
       }
-
-      if (!permission.granted) {
-        if (operation.current === operationId) {
-          setSetupState('PERMISSION_DENIED');
-          setDiagnostics({
-            physicalDevice: Device.isDevice,
-            permissionGranted: false,
-            permissionCanAskAgain: permission.canAskAgain,
-            channelReady: isUrgentChannelReady(channel),
-            customSoundReady: hasCustomSound(channel),
-            vibrationReady: channel?.enableVibrate === true,
-            pushTokenReady: false,
-            backendRegistrationReady: false,
-            lastCheckedAt: new Date().toISOString(),
-            failureReason: 'Android notification permission is disabled.',
-          });
-        }
-        return;
-      }
-
-      if (!Device.isDevice) {
-        if (operation.current === operationId) {
-          setSetupState('ERROR');
-          setDiagnostics({
-            physicalDevice: false,
-            permissionGranted: true,
-            permissionCanAskAgain: permission.canAskAgain,
-            channelReady: isUrgentChannelReady(channel),
-            customSoundReady: hasCustomSound(channel),
-            vibrationReady: channel?.enableVibrate === true,
-            pushTokenReady: false,
-            backendRegistrationReady: false,
-            lastCheckedAt: new Date().toISOString(),
-            failureReason: 'A physical Android development build is required for an FCM token.',
-          });
-        }
-        return;
-      }
-
-      const token = await Notifications.getDevicePushTokenAsync();
-      await registerNativeToken(token.data);
-
-      if (operation.current === operationId) {
-        const channelReady = isUrgentChannelReady(channel);
-        const customSoundReady = hasCustomSound(channel);
-        const vibrationReady = channel?.enableVibrate === true;
-        const presentationReady = channelReady && customSoundReady && vibrationReady;
-        setSetupState(presentationReady ? 'READY' : 'ERROR');
-        setDiagnostics({
-          physicalDevice: true,
-          permissionGranted: true,
-          permissionCanAskAgain: permission.canAskAgain,
-          channelReady,
-          customSoundReady,
-          vibrationReady,
-          pushTokenReady: true,
-          backendRegistrationReady: true,
-          lastCheckedAt: new Date().toISOString(),
-          failureReason: presentationReady
-            ? null
-            : 'The urgent order channel sound, vibration, or importance is disabled in Android settings.',
-        });
-      }
-    } catch (error: unknown) {
-      if (operation.current === operationId) {
-        setSetupState('ERROR');
-        setDiagnostics((current) => ({
-          ...current,
-          physicalDevice: Device.isDevice,
-          lastCheckedAt: new Date().toISOString(),
-          failureReason: error instanceof Error ? error.message : 'Unknown alert setup failure',
-        }));
-      }
+    } catch {
+      if (!current()) return;
+      setSetupState('OFFLINE_STALE');
+      setDiagnostics({
+        ...emptyDiagnostics,
+        physicalDevice: Device.isDevice,
+        channelReady: isUrgentChannelReady(channel),
+        customSoundReady: hasCustomSound(channel),
+        vibrationReady: channel?.enableVibrate === true,
+        lastCheckedAt: checkedAt(),
+        failureReason: 'Android notification permission could not be verified.',
+      });
+      return;
     }
+
+    const channelReady = isUrgentChannelReady(channel);
+    const customSoundReady = hasCustomSound(channel);
+    const vibrationReady = channel?.enableVibrate === true;
+    const baseDiagnostics = {
+      physicalDevice: Device.isDevice,
+      permissionGranted: permission.granted,
+      permissionCanAskAgain: permission.canAskAgain,
+      channelReady,
+      customSoundReady,
+      vibrationReady,
+      pushTokenReady: false,
+      backendRegistrationReady: false,
+      lastCheckedAt: checkedAt(),
+    } satisfies Omit<MerchantAlertDiagnostics, 'failureReason'>;
+
+    if (!permission.granted) {
+      if (!current()) return;
+      const state: MerchantAlertSetupState = permission.canAskAgain
+        ? 'PERMISSION_DENIED'
+        : 'PERMISSION_BLOCKED';
+      setSetupState(state);
+      setDiagnostics({
+        ...baseDiagnostics,
+        failureReason: permission.canAskAgain
+          ? 'Android notification permission was not granted.'
+          : 'Android notification permission is blocked in device settings.',
+      });
+      return;
+    }
+
+    if (!Device.isDevice) {
+      if (!current()) return;
+      setSetupState('PHYSICAL_DEVICE_REQUIRED');
+      setDiagnostics({
+        ...baseDiagnostics,
+        failureReason: 'A physical Android development build is required for a native FCM token.',
+      });
+      return;
+    }
+
+    let token: Notifications.DevicePushToken;
+    try {
+      token = await Notifications.getDevicePushTokenAsync();
+      tokenString(token.data);
+    } catch {
+      if (!current()) return;
+      setSetupState('TOKEN_UNAVAILABLE');
+      setDiagnostics({
+        ...baseDiagnostics,
+        physicalDevice: true,
+        failureReason: 'A native FCM token could not be obtained for this device.',
+      });
+      return;
+    }
+
+    try {
+      await registerNativeToken(token.data);
+    } catch (error: unknown) {
+      if (!current()) return;
+      const state = registrationFailureState(error);
+      setSetupState(state);
+      setDiagnostics({
+        ...baseDiagnostics,
+        physicalDevice: true,
+        pushTokenReady: true,
+        failureReason: registrationFailureMessage(state),
+      });
+      return;
+    }
+
+    if (!current()) return;
+    const presentationReady = channelReady && customSoundReady && vibrationReady;
+    setSetupState(presentationReady ? 'READY' : 'CHANNEL_MISCONFIGURED');
+    setDiagnostics({
+      ...baseDiagnostics,
+      physicalDevice: true,
+      pushTokenReady: true,
+      backendRegistrationReady: true,
+      failureReason: presentationReady
+        ? null
+        : 'The urgent order channel sound, vibration, or importance is disabled in Android settings.',
+    });
   }, [registerNativeToken]);
+
+  const refreshSetup = useCallback((): Promise<void> => {
+    if (setupPromise.current !== null) return setupPromise.current;
+    const promise = performSetup().finally(() => {
+      if (setupPromise.current === promise) setupPromise.current = null;
+    });
+    setupPromise.current = promise;
+    return promise;
+  }, [performSetup]);
 
   const testNotification = useCallback(async (): Promise<void> => {
     if (Platform.OS !== 'android') {
@@ -265,11 +339,11 @@ export function MerchantAlertRuntimeProvider({
   }, []);
 
   const clearActiveAlert = useCallback(async (): Promise<void> => {
-    const current = activeAlert;
+    const currentAlert = activeAlert;
     setActiveAlert(null);
-    if (current?.notificationId !== null && current?.notificationId !== undefined) {
+    if (currentAlert?.notificationId !== null && currentAlert?.notificationId !== undefined) {
       try {
-        await Notifications.dismissNotificationAsync(current.notificationId);
+        await Notifications.dismissNotificationAsync(currentAlert.notificationId);
       } catch {
         // The system tray entry may already have been dismissed by the merchant.
       }
@@ -290,25 +364,35 @@ export function MerchantAlertRuntimeProvider({
       void registerNativeToken(token.data).then(
         () => {
           if (!mounted.current) return;
-          setDiagnostics((current) => ({
-            ...current,
-            physicalDevice: Device.isDevice,
-            pushTokenReady: true,
-            backendRegistrationReady: true,
-            lastCheckedAt: new Date().toISOString(),
-            failureReason: null,
-          }));
+          setDiagnostics((currentDiagnostics) => {
+            const ready =
+              currentDiagnostics.permissionGranted &&
+              currentDiagnostics.channelReady &&
+              currentDiagnostics.customSoundReady &&
+              currentDiagnostics.vibrationReady;
+            setSetupState(ready ? 'READY' : 'CHANNEL_MISCONFIGURED');
+            return {
+              ...currentDiagnostics,
+              physicalDevice: Device.isDevice,
+              pushTokenReady: true,
+              backendRegistrationReady: true,
+              lastCheckedAt: new Date().toISOString(),
+              failureReason: ready
+                ? null
+                : 'The device token was updated, but the urgent Android channel needs attention.',
+            };
+          });
         },
         (error: unknown) => {
           if (!mounted.current) return;
-          setSetupState('ERROR');
-          setDiagnostics((current) => ({
-            ...current,
+          const state = registrationFailureState(error);
+          setSetupState(state);
+          setDiagnostics((currentDiagnostics) => ({
+            ...currentDiagnostics,
             pushTokenReady: true,
             backendRegistrationReady: false,
             lastCheckedAt: new Date().toISOString(),
-            failureReason:
-              error instanceof Error ? error.message : 'Push token registration failed',
+            failureReason: registrationFailureMessage(state),
           }));
         },
       );
@@ -317,7 +401,10 @@ export function MerchantAlertRuntimeProvider({
     try {
       const response = Notifications.getLastNotificationResponse();
       if (response !== null) {
-        setActiveAlert(activePayloadOrNull(readNotificationPayload(response.notification)));
+        const cachedAlert = activePayloadOrNull(readNotificationPayload(response.notification));
+        void Promise.resolve().then(() => {
+          if (mounted.current) setActiveAlert(cachedAlert);
+        });
       }
     } catch {
       // A missing cached response must not block the authenticated merchant runtime.
@@ -326,6 +413,7 @@ export function MerchantAlertRuntimeProvider({
     return () => {
       mounted.current = false;
       operation.current += 1;
+      setupPromise.current = null;
       received.remove();
       responded.remove();
       rolled.remove();

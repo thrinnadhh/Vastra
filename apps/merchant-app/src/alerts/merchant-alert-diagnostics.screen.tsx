@@ -1,9 +1,12 @@
 import { useAudioPlayer } from 'expo-audio';
-
-import ringtoneSource from '../../assets/sounds/vastra_new_order.wav';
 import { useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import ringtoneSource from '../../assets/sounds/vastra_new_order.wav';
+import {
+  MERCHANT_SPRINT_06_ACCESSIBILITY_LABELS,
+  MERCHANT_SPRINT_06_TEST_IDS,
+} from '../sprint-06/merchant-fulfilment.integration-contract';
 import { useMerchantAlertRuntime } from './merchant-alert-notification.runtime';
 
 function StatusRow({
@@ -31,12 +34,19 @@ function StatusRow({
   );
 }
 
-export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: () => void }) {
+export function MerchantAlertDiagnosticsScreen({
+  onBack,
+}: {
+  readonly onBack: () => void;
+}): React.JSX.Element {
   const runtime = useMerchantAlertRuntime();
   const [testing, setTesting] = useState(false);
   const [testFailure, setTestFailure] = useState<string | null>(null);
   const player = useAudioPlayer(ringtoneSource, { downloadFirst: true });
   const diagnostics = runtime.diagnostics;
+  const checking = runtime.setupState === 'CHECKING';
+  const settingsRecovery =
+    runtime.setupState === 'PERMISSION_BLOCKED' || runtime.setupState === 'CHANNEL_MISCONFIGURED';
 
   const testRingtone = async (): Promise<void> => {
     if (testing) return;
@@ -54,11 +64,15 @@ export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: ()
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+      contentContainerStyle={styles.content}
+      testID={MERCHANT_SPRINT_06_TEST_IDS.diagnosticsScreen}
+    >
       <Pressable
         accessibilityLabel="Back to merchant orders"
         accessibilityRole="button"
         onPress={onBack}
+        style={styles.backTarget}
       >
         <Text style={styles.back}>‹ Orders</Text>
       </Pressable>
@@ -70,6 +84,14 @@ export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: ()
         Check the exact Android path used for urgent Vastra orders. Battery optimisation and
         manufacturer background restrictions must still be reviewed in device settings.
       </Text>
+      <View
+        accessible
+        accessibilityLabel={`Current readiness state ${runtime.setupState}`}
+        style={styles.state}
+      >
+        <Text style={styles.stateLabel}>CURRENT STATE</Text>
+        <Text style={styles.stateValue}>{runtime.setupState.replaceAll('_', ' ')}</Text>
+      </View>
 
       <View style={styles.card}>
         <StatusRow
@@ -80,7 +102,11 @@ export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: ()
         <StatusRow
           label="Notification permission"
           ready={diagnostics.permissionGranted}
-          detail="Android 13+ requires explicit permission."
+          detail={
+            diagnostics.permissionCanAskAgain
+              ? 'Android can still show the permission prompt.'
+              : 'A denied permission must be restored in Android settings.'
+          }
         />
         <StatusRow
           label="Urgent order channel"
@@ -110,26 +136,28 @@ export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: ()
       </View>
 
       {diagnostics.failureReason === null ? null : (
-        <View style={styles.warning}>
+        <View accessibilityLiveRegion="assertive" style={styles.warning}>
           <Text style={styles.warningTitle}>Setup needs attention</Text>
           <Text style={styles.warningCopy}>{diagnostics.failureReason}</Text>
         </View>
       )}
 
       <Pressable
-        accessibilityLabel="Refresh merchant alert setup"
+        accessibilityLabel={MERCHANT_SPRINT_06_ACCESSIBILITY_LABELS.retryReadiness}
         accessibilityRole="button"
+        disabled={checking}
         onPress={() => void runtime.refreshSetup()}
-        style={styles.primary}
+        style={[styles.primary, checking ? styles.disabled : null]}
       >
-        <Text style={styles.primaryText}>Refresh setup</Text>
+        <Text style={styles.primaryText}>{checking ? 'Checking…' : 'Refresh readiness'}</Text>
       </Pressable>
       <Pressable
-        accessibilityLabel="Test merchant order ringtone"
+        accessibilityLabel={MERCHANT_SPRINT_06_ACCESSIBILITY_LABELS.testRingtone}
         accessibilityRole="button"
-        disabled={testing}
+        disabled={testing || checking}
         onPress={() => void testRingtone()}
-        style={[styles.secondary, testing ? styles.disabled : null]}
+        style={[styles.secondary, testing || checking ? styles.disabled : null]}
+        testID={MERCHANT_SPRINT_06_TEST_IDS.ringtoneTest}
       >
         <Text style={styles.secondaryText}>
           {testing ? 'Testing…' : 'Test ringtone & notification'}
@@ -140,14 +168,16 @@ export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: ()
           {testFailure}
         </Text>
       )}
-      <Pressable
-        accessibilityLabel="Open Android notification settings"
-        accessibilityRole="button"
-        onPress={() => void Linking.openSettings()}
-        style={styles.linkButton}
-      >
-        <Text style={styles.linkText}>Open device settings</Text>
-      </Pressable>
+      {settingsRecovery ? (
+        <Pressable
+          accessibilityLabel="Open Android notification settings"
+          accessibilityRole="button"
+          onPress={() => void Linking.openSettings()}
+          style={styles.linkButton}
+        >
+          <Text style={styles.linkText}>Open device settings</Text>
+        </Pressable>
+      ) : null}
 
       <View style={styles.guidance}>
         <Text style={styles.guidanceTitle}>Background delivery checklist</Text>
@@ -158,11 +188,12 @@ export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: ()
           • Keep the urgent order channel enabled at high importance.
         </Text>
         <Text style={styles.guidanceCopy}>
-          • Exclude the app from aggressive battery optimisation where the device manufacturer
-          requires it.
+          • Exclude the app from aggressive battery optimisation only where the device manufacturer
+          provides that setting.
         </Text>
         <Text style={styles.guidanceCopy}>
-          • Confirm alerts in foreground, background, killed-app, and locked-screen states.
+          • Confirm alerts in foreground, background, killed-app, and locked-screen states on an
+          approved physical device.
         </Text>
       </View>
     </ScrollView>
@@ -171,11 +202,15 @@ export function MerchantAlertDiagnosticsScreen({ onBack }: { readonly onBack: ()
 
 const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 48, backgroundColor: '#FFF8F2' },
-  back: { marginBottom: 16, color: '#8E3B46', fontSize: 16, fontWeight: '800' },
-  eyebrow: { color: '#8E3B46', fontSize: 12, fontWeight: '900', letterSpacing: 1.4 },
+  backTarget: { minHeight: 48, justifyContent: 'center', alignSelf: 'flex-start' },
+  back: { color: '#8E3B46', fontSize: 16, fontWeight: '800' },
+  eyebrow: { marginTop: 4, color: '#8E3B46', fontSize: 12, fontWeight: '900', letterSpacing: 1.4 },
   title: { marginTop: 7, color: '#241B16', fontSize: 29, fontWeight: '900' },
   description: { marginTop: 10, color: '#665A52', fontSize: 15, lineHeight: 22 },
-  card: { marginTop: 22, padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF' },
+  state: { marginTop: 18, padding: 14, borderRadius: 16, backgroundColor: '#EEF5FF' },
+  stateLabel: { color: '#2857A6', fontSize: 11, fontWeight: '900', letterSpacing: 1.1 },
+  stateValue: { marginTop: 4, color: '#192F55', fontSize: 15, fontWeight: '900' },
+  card: { marginTop: 18, padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -193,25 +228,29 @@ const styles = StyleSheet.create({
   warningTitle: { color: '#6A4812', fontWeight: '900' },
   warningCopy: { marginTop: 4, color: '#6A4812', lineHeight: 20 },
   primary: {
+    minHeight: 48,
     marginTop: 20,
-    padding: 15,
+    padding: 14,
     borderRadius: 15,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#8E3B46',
   },
   primaryText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
   secondary: {
+    minHeight: 48,
     marginTop: 12,
-    padding: 15,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#8E3B46',
     borderRadius: 15,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   secondaryText: { color: '#8E3B46', fontSize: 15, fontWeight: '900' },
   testFailure: { marginTop: 12, color: '#9E1C2F', textAlign: 'center' },
-  linkButton: { marginTop: 14, alignItems: 'center' },
-  linkText: { color: '#8E3B46', fontSize: 14, fontWeight: '800', textDecorationLine: 'underline' },
+  linkButton: { minHeight: 48, marginTop: 8, alignItems: 'center', justifyContent: 'center' },
+  linkText: { color: '#2857A6', fontSize: 14, fontWeight: '800', textDecorationLine: 'underline' },
   guidance: { marginTop: 24, padding: 18, borderRadius: 18, backgroundColor: '#F4E3D9' },
   guidanceTitle: { color: '#7B3440', fontSize: 16, fontWeight: '900' },
   guidanceCopy: { marginTop: 7, color: '#665A52', fontSize: 13, lineHeight: 19 },
