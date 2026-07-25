@@ -55,7 +55,8 @@ function buildSteps(ids, status = 'NOT_RUN') {
   return ids.map((id, index) => ({
     id,
     status,
-    observedAt: status === 'PASS' ? new Date(Date.UTC(2026, 6, 25, 10, 0, index)).toISOString() : null,
+    observedAt:
+      status === 'PASS' ? new Date(Date.UTC(2026, 6, 25, 10, 0, index)).toISOString() : null,
     requestIds: status === 'PASS' ? [`request-${index}`] : [],
     evidence: [],
     notes: status === 'PASS' ? 'Observed and verified.' : 'Not executed.',
@@ -156,16 +157,12 @@ function runExecutionReportTests() {
     ),
   );
 
-  const falseDevicePass = baseExecutionReport(
-    'device-fcm',
-    buildSteps(DEVICE_FCM_STEPS, 'PASS'),
-    {
-      status: 'PASS',
-      completedAt: '2026-07-25T11:00:00.000Z',
-      devices: [],
-      providerTimelines: [],
-    },
-  );
+  const falseDevicePass = baseExecutionReport('device-fcm', buildSteps(DEVICE_FCM_STEPS, 'PASS'), {
+    status: 'PASS',
+    completedAt: '2026-07-25T11:00:00.000Z',
+    devices: [],
+    providerTimelines: [],
+  });
   assert.ok(
     validatePilotExecutionReport(falseDevicePass).some((error) =>
       error.includes('at least three physical Android devices'),

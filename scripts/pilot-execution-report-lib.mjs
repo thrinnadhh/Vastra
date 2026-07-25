@@ -86,7 +86,12 @@ function validEvidencePath(repositoryRoot, evidencePath) {
   if (!isNonEmptyString(evidencePath) || isAbsolute(evidencePath)) return false;
   const resolvedPath = resolve(repositoryRoot, evidencePath);
   const relativePath = relative(repositoryRoot, resolvedPath);
-  return relativePath.length > 0 && relativePath !== '..' && !relativePath.startsWith('../') && !relativePath.startsWith('..\\');
+  return (
+    relativePath.length > 0 &&
+    relativePath !== '..' &&
+    !relativePath.startsWith('../') &&
+    !relativePath.startsWith('..\\')
+  );
 }
 
 function validateCommon(report, errors) {
@@ -230,11 +235,14 @@ function validateDeviceFcm(report, context) {
       if (report.devices.length < 3) {
         errors.push('PASS requires at least three physical Android devices.');
       }
-      const physicalDevices = report.devices.filter((device) => isRecord(device) && device.physical === true);
+      const physicalDevices = report.devices.filter(
+        (device) => isRecord(device) && device.physical === true,
+      );
       const classes = new Set(physicalDevices.map((device) => device.class));
       const oems = new Set(physicalDevices.map((device) => device.oem));
       for (const requiredClass of ['low-memory', 'current-android', 'minimum-supported-android']) {
-        if (!classes.has(requiredClass)) errors.push(`Physical device class is missing: ${requiredClass}.`);
+        if (!classes.has(requiredClass))
+          errors.push(`Physical device class is missing: ${requiredClass}.`);
       }
       if (oems.size < 2) errors.push('Physical evidence must cover at least two Android OEMs.');
     }
@@ -261,7 +269,8 @@ function validateDeviceFcm(report, context) {
       ];
       const times = [];
       for (const field of fields) {
-        if (!isIsoDateTime(timeline[field])) errors.push(`${prefix}.${field} must be an ISO date-time.`);
+        if (!isIsoDateTime(timeline[field]))
+          errors.push(`${prefix}.${field} must be an ISO date-time.`);
         else times.push(Date.parse(timeline[field]));
       }
       for (let timeIndex = 1; timeIndex < times.length; timeIndex += 1) {
@@ -340,7 +349,8 @@ function validateAdminRecovery(report, context) {
   if (report.type !== 'admin-recovery') errors.push('type must equal admin-recovery.');
   const steps = validateExactSteps(report, ADMIN_RECOVERY_STEPS, errors, context);
   validateFinalPass(report, steps, errors);
-  if (report.status === 'PASS' && report.aal !== 'AAL2') errors.push('Admin recovery PASS requires AAL2.');
+  if (report.status === 'PASS' && report.aal !== 'AAL2')
+    errors.push('Admin recovery PASS requires AAL2.');
   if (report.status === 'PASS' && report.auditEntriesVerified !== true) {
     errors.push('Admin recovery PASS requires auditEntriesVerified=true.');
   }

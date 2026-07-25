@@ -211,7 +211,10 @@ try {
     console.error(`BLOCKED: staging dataset is not realistic enough. Report: ${outputPath}`);
     process.exitCode = 1;
   } else {
-    const queryPlans = QUERIES.map((query) => ({ id: query.id, ...explain(connectionString, query.sql) }));
+    const queryPlans = QUERIES.map((query) => ({
+      id: query.id,
+      ...explain(connectionString, query.sql),
+    }));
     const report = {
       schemaVersion: 1,
       type: 'query-plan-evidence',

@@ -10,7 +10,8 @@ function isRecord(value) {
 }
 
 function requiredString(value, name) {
-  if (typeof value !== 'string' || value.trim().length === 0) throw new Error(`${name} is required.`);
+  if (typeof value !== 'string' || value.trim().length === 0)
+    throw new Error(`${name} is required.`);
   return value.trim();
 }
 
@@ -85,7 +86,10 @@ function validatePlan(plan) {
   for (const id of LOAD_QUERY_SCENARIOS) {
     if (!seen.has(id)) throw new Error(`Required load scenario is missing: ${id}`);
   }
-  if (seen.size !== LOAD_QUERY_SCENARIOS.length || plan.scenarios.length !== LOAD_QUERY_SCENARIOS.length) {
+  if (
+    seen.size !== LOAD_QUERY_SCENARIOS.length ||
+    plan.scenarios.length !== LOAD_QUERY_SCENARIOS.length
+  ) {
     throw new Error('Load plan must contain exactly the frozen pilot scenarios.');
   }
 }
@@ -98,7 +102,10 @@ async function runOneRequest(baseUrl, scenario, fixedIdempotencyKey) {
   }
   const method = requiredString(scenario.method, `${scenario.id}.method`).toUpperCase();
   const path = substitute(requiredString(scenario.path, `${scenario.id}.path`), requestUuid);
-  const body = scenario.body === null || scenario.body === undefined ? undefined : substitute(scenario.body, requestUuid);
+  const body =
+    scenario.body === null || scenario.body === undefined
+      ? undefined
+      : substitute(scenario.body, requestUuid);
   const headers = {
     Accept: 'application/json',
     Authorization: `Bearer ${token}`,
@@ -137,8 +144,11 @@ async function runOneRequest(baseUrl, scenario, fixedIdempotencyKey) {
     success: scenario.expectedStatuses.includes(response.status),
     latencyMs: performance.now() - started,
     status: response.status,
-    requestId: response.headers.get('x-request-id') ?? requestIdFromBody(responseBody) ?? requestUuid,
-    error: scenario.expectedStatuses.includes(response.status) ? null : `Unexpected HTTP ${response.status}`,
+    requestId:
+      response.headers.get('x-request-id') ?? requestIdFromBody(responseBody) ?? requestUuid,
+    error: scenario.expectedStatuses.includes(response.status)
+      ? null
+      : `Unexpected HTTP ${response.status}`,
   };
 }
 
@@ -172,7 +182,10 @@ async function runScenario(baseUrl, scenario) {
     kind: scenario.kind,
     status: passed ? 'PASS' : 'FAIL',
     observedAt: new Date().toISOString(),
-    requestIds: results.map((result) => result.requestId).filter(Boolean).slice(0, 20),
+    requestIds: results
+      .map((result) => result.requestId)
+      .filter(Boolean)
+      .slice(0, 20),
     evidence: [],
     notes: `${successes}/${results.length} requests succeeded; p95=${p95Ms.toFixed(2)} ms.`,
     requests: results.length,
@@ -252,19 +265,23 @@ try {
   if (plan.environment !== 'staging') throw new Error('Load plan environment must equal staging.');
   const baseUrl = safeBaseUrl(requiredString(process.env.PILOT_API_BASE_URL, 'PILOT_API_BASE_URL'));
   const queryPlan = JSON.parse(readFileSync(resolve(process.cwd(), queryPlanPath), 'utf8'));
-  if (queryPlan.status !== 'PASS') throw new Error('Query-plan evidence must pass before load execution.');
+  if (queryPlan.status !== 'PASS')
+    throw new Error('Query-plan evidence must pass before load execution.');
 
   const startedAt = new Date().toISOString();
   const detailedSteps = [];
   for (const scenario of plan.scenarios) detailedSteps.push(await runScenario(baseUrl, scenario));
 
   const invariantReport = runPostLoadInvariantAudit(invariantPath);
-  if (invariantReport.environment !== 'staging') throw new Error('Invariant report must target staging.');
+  if (invariantReport.environment !== 'staging')
+    throw new Error('Invariant report must target staging.');
   const readMetrics = aggregate(detailedSteps, 'read');
   const commandMetrics = aggregate(detailedSteps, 'command');
   const invariantViolations = Number(invariantReport.violationCount);
   const passed = detailedSteps.every((step) => step.status === 'PASS') && invariantViolations === 0;
-  const evidence = [queryPlanPath, invariantPath].filter((path) => existsSync(resolve(process.cwd(), path)));
+  const evidence = [queryPlanPath, invariantPath].filter((path) =>
+    existsSync(resolve(process.cwd(), path)),
+  );
   const report = {
     schemaVersion: 1,
     type: 'load-query',

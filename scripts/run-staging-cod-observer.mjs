@@ -98,7 +98,8 @@ function createReport(releaseCommit, orderId, operator) {
     completedAt: null,
     operator,
     orderId,
-    notes: 'Authoritative projections are being observed while operators execute the real staging journey.',
+    notes:
+      'Authoritative projections are being observed while operators execute the real staging journey.',
     steps: STAGING_COD_STEPS.map((id) => ({
       id,
       status: 'NOT_RUN',
@@ -164,9 +165,19 @@ function applyMerchantProjection(report, projection, packingProjection) {
   const statuses = [...historyStatuses(order), currentStatus].filter((status) => status !== null);
   const alert = nestedRecord(order, 'alert');
 
-  pass(report, 'customer-order-created', request, 'Merchant projection contains the authoritative order.');
+  pass(
+    report,
+    'customer-order-created',
+    request,
+    'Merchant projection contains the authoritative order.',
+  );
   if (alert !== null && ['DELIVERED', 'ACKNOWLEDGED'].includes(stringValue(alert, 'status'))) {
-    pass(report, 'merchant-alert-received', request, 'Merchant alert reached a delivered or acknowledged state.');
+    pass(
+      report,
+      'merchant-alert-received',
+      request,
+      'Merchant alert reached a delivered or acknowledged state.',
+    );
   }
   if (hasReached(statuses, 'MERCHANT_ACCEPTED')) {
     pass(report, 'merchant-order-accepted', request, 'Order history reached MERCHANT_ACCEPTED.');
@@ -207,7 +218,12 @@ function applyMerchantProjection(report, projection, packingProjection) {
     pass(report, 'captain-departed-store', request, 'Order history reached OUT_FOR_DELIVERY.');
   }
   if (hasReached(statuses, 'CAPTAIN_AT_CUSTOMER')) {
-    pass(report, 'captain-arrived-at-customer', request, 'Order history reached CAPTAIN_AT_CUSTOMER.');
+    pass(
+      report,
+      'captain-arrived-at-customer',
+      request,
+      'Order history reached CAPTAIN_AT_CUSTOMER.',
+    );
   }
   if (hasReached(statuses, 'DELIVERED')) {
     pass(
@@ -227,7 +243,12 @@ function applyCaptainProjection(report, offersProjection, activeProjection, orde
       Array.isArray(offers) &&
       offers.some((offer) => isRecord(offer) && stringValue(offer, 'orderId') === orderId)
     ) {
-      pass(report, 'captain-offer-received', request, 'Captain offer list contains the target order.');
+      pass(
+        report,
+        'captain-offer-received',
+        request,
+        'Captain offer list contains the target order.',
+      );
     }
   }
 
@@ -242,7 +263,12 @@ function applyCaptainProjection(report, offersProjection, activeProjection, orde
     pass(report, 'captain-offer-accepted', request, 'Active delivery has an accepted assignment.');
   }
   if (['AT_PICKUP', 'PICKED_UP', 'IN_TRANSIT', 'AT_DROP'].includes(taskStatus)) {
-    pass(report, 'captain-arrived-at-store', request, 'Captain task reached the merchant location.');
+    pass(
+      report,
+      'captain-arrived-at-store',
+      request,
+      'Captain task reached the merchant location.',
+    );
   }
   if (['PICKED_UP', 'IN_TRANSIT', 'AT_DROP'].includes(taskStatus)) {
     pass(report, 'pickup-code-verified', request, 'Captain task confirms verified pickup custody.');
@@ -308,23 +334,29 @@ try {
 
   writeReport(report, outputPath);
   while (Date.now() < deadline) {
-    const [customerOrder, customerTracking, merchantOrder, merchantPacking, captainOffers, captainActive] =
-      await Promise.all([
-        readProjection(baseUrl, `/customer/orders/${encodeURIComponent(orderId)}`, customerToken),
-        readProjection(
-          baseUrl,
-          `/customer/orders/${encodeURIComponent(orderId)}/tracking`,
-          customerToken,
-        ),
-        readProjection(baseUrl, `/merchant/orders/${encodeURIComponent(orderId)}`, merchantToken),
-        readProjection(
-          baseUrl,
-          `/merchant/orders/${encodeURIComponent(orderId)}/packing`,
-          merchantToken,
-        ),
-        readProjection(baseUrl, '/captain/delivery-offers', captainToken),
-        readProjection(baseUrl, '/captain/deliveries/active', captainToken),
-      ]);
+    const [
+      customerOrder,
+      customerTracking,
+      merchantOrder,
+      merchantPacking,
+      captainOffers,
+      captainActive,
+    ] = await Promise.all([
+      readProjection(baseUrl, `/customer/orders/${encodeURIComponent(orderId)}`, customerToken),
+      readProjection(
+        baseUrl,
+        `/customer/orders/${encodeURIComponent(orderId)}/tracking`,
+        customerToken,
+      ),
+      readProjection(baseUrl, `/merchant/orders/${encodeURIComponent(orderId)}`, merchantToken),
+      readProjection(
+        baseUrl,
+        `/merchant/orders/${encodeURIComponent(orderId)}/packing`,
+        merchantToken,
+      ),
+      readProjection(baseUrl, '/captain/delivery-offers', captainToken),
+      readProjection(baseUrl, '/captain/deliveries/active', captainToken),
+    ]);
 
     applyMerchantProjection(report, merchantOrder, merchantPacking);
     applyCaptainProjection(report, captainOffers, captainActive, orderId);
@@ -333,7 +365,8 @@ try {
     if (report.steps.every((step) => step.status === 'PASS')) {
       report.status = 'PASS';
       report.completedAt = now();
-      report.notes = 'All authoritative customer, merchant, and captain staging checkpoints were observed.';
+      report.notes =
+        'All authoritative customer, merchant, and captain staging checkpoints were observed.';
       writeReport(report, outputPath);
       console.log(`OK: complete staging COD journey observed. Report: ${outputPath}`);
       process.exit(0);
