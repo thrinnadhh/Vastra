@@ -3,6 +3,7 @@
   "environment": "staging",
   "releaseCommit": "0000000000000000000000000000000000000000",
   "operator": "replace-me",
+  "notes": "Copy this template, replace the release/operator identifiers, and set collectedAmountPaise to the exact authoritative total for PILOT_COMPLETION_TASK_ID.",
   "scenarios": [
     {
       "id": "nearby-shop-discovery",
@@ -129,7 +130,7 @@
       "method": "POST",
       "path": "/captain/deliveries/${ENV:PILOT_COMPLETION_TASK_ID}/complete",
       "body": {
-        "collectedAmountPaise": "${ENV:PILOT_COLLECTED_AMOUNT_PAISE}",
+        "collectedAmountPaise": 149900,
         "deliveryOtp": "${ENV:PILOT_DELIVERY_OTP}",
         "location": null
       },
