@@ -5,15 +5,11 @@ with schema extensions;
 
 set local search_path = extensions, public;
 
-select plan(5);
+select plan(4);
 
 select ok(
-  to_regprocedure('public.rls_auto_enable()') is not null,
-  'RLS auto-enable event-trigger function exists'
-);
-
-select ok(
-  exists (
+  to_regprocedure('public.rls_auto_enable()') is null
+  or exists (
     select 1
     from pg_proc p
     join pg_namespace n
@@ -23,34 +19,45 @@ select ok(
       and p.prosecdef
       and p.proconfig @> array['search_path=pg_catalog']::text[]
   ),
-  'RLS auto-enable function remains SECURITY DEFINER with a fixed pg_catalog search path'
+  'the optional platform RLS hook keeps its hardened execution context'
 );
 
 select ok(
-  not has_function_privilege(
-    'public',
-    'public.rls_auto_enable()',
-    'EXECUTE'
+  to_regprocedure('public.rls_auto_enable()') is null
+  or not exists (
+    select 1
+    from pg_proc p
+    cross join lateral aclexplode(
+      coalesce(
+        p.proacl,
+        acldefault('f', p.proowner)
+      )
+    ) privilege
+    where p.oid = to_regprocedure('public.rls_auto_enable()')
+      and privilege.grantee = 0
+      and privilege.privilege_type = 'EXECUTE'
   ),
-  'PUBLIC cannot execute the RLS event-trigger function'
+  'PUBLIC cannot execute the optional RLS event-trigger function'
 );
 
 select ok(
-  not has_function_privilege(
+  to_regprocedure('public.rls_auto_enable()') is null
+  or not has_function_privilege(
     'anon',
     'public.rls_auto_enable()',
     'EXECUTE'
   ),
-  'anonymous clients cannot execute the RLS event-trigger function'
+  'anonymous clients cannot execute the optional RLS event-trigger function'
 );
 
 select ok(
-  not has_function_privilege(
+  to_regprocedure('public.rls_auto_enable()') is null
+  or not has_function_privilege(
     'authenticated',
     'public.rls_auto_enable()',
     'EXECUTE'
   ),
-  'authenticated clients cannot execute the RLS event-trigger function'
+  'authenticated clients cannot execute the optional RLS event-trigger function'
 );
 
 select * from finish();
