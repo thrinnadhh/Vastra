@@ -114,9 +114,7 @@ export function CaptainDeliveryScreen({
 
   useEffect(() => {
     mounted.current = true;
-    const initialLoad = setTimeout(() => {
-      void load();
-    }, 0);
+    void load();
     const refresh = setInterval(() => {
       void load();
     }, 10_000);
@@ -126,7 +124,6 @@ export function CaptainDeliveryScreen({
 
     return () => {
       mounted.current = false;
-      clearTimeout(initialLoad);
       clearInterval(refresh);
       clearInterval(clock);
     };
