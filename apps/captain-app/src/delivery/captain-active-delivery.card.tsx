@@ -79,9 +79,7 @@ export function CaptainActiveDeliveryCard({
       <Text style={styles.meta}>
         Order {active.orderNumber} · {active.taskStatus.replaceAll('_', ' ')}
       </Text>
-      <Text style={styles.address}>
-        {addressLine(active, delivering ? 'drop' : 'pickup')}
-      </Text>
+      <Text style={styles.address}>{addressLine(active, delivering ? 'drop' : 'pickup')}</Text>
 
       <View style={styles.actionsRow}>
         <Pressable
@@ -220,46 +218,65 @@ export function CaptainActiveDeliveryCard({
           </Text>
           <Text style={styles.meta}>
             {isPrePickup(active)
-              ? 'Before pickup, an approved reason releases the assignment and returns the order to captain search.'
+              ? 'Before pickup, an approved reason releases the assignment back to operations.'
               : 'After pickup, this reports a problem. It does not cancel the order or ' +
                 'reassign package custody.'}
           </Text>
-          <View accessibilityRole="radiogroup" style={styles.reasonList}>
-            {(isPrePickup(active) ? DELIVERY_RELEASE_REASONS : DELIVERY_PROBLEM_REASONS).map(
-              (reason) => {
-                const kind = isPrePickup(active) ? 'RELEASE' : 'PROBLEM';
-                const selected = issueSelection?.kind === kind && issueSelection.reason === reason;
-                const label = kind === 'RELEASE operations'
-                  ? RELEASE_LABELS[reason as keyof typeof RELEASE_LABELS]
-                  : PROBLEM_LABELS[reason as keyof typeof PROBLEM_LABELS];
-                return (
+
+          <View style={styles.reasonList}>
+            {isPrePickup(active)
+              ? DELIVERY_RELEASE_REASONS.map((reason) => (
                   <Pressable
                     accessibilityRole="radio"
-                    accessibilityState={{ selected }}
+                    accessibilityState={{
+                      checked:
+                        issueSelection?.kind === 'RELEASE' && issueSelection.reason === reason,
+                    }}
                     key={reason}
                     onPress={() => {
-                      onIssueSelectionChange(
-                        kind === 'RELEASE'
-                          ? { kind, reason: reason as keyof typeof RELEASE_LABELS }
-                          : { kind, reason: reason as keyof typeof PROBLEM_LABELS },
-                      );
+                      onIssueSelectionChange({ kind: 'RELEASE', reason });
                     }}
-                    style={[styles.reasonButton, selected ? styles.selectedReason : null]}
+                    style={[
+                      styles.reasonButton,
+                      issueSelection?.kind === 'RELEASE' && issueSelection.reason === reason
+                        ? styles.selectedReason
+                        : null,
+                    ]}
                   >
-                    <Text style={styles.reasonText}>{label}</Text>
+                    <Text style={styles.reasonText}>{RELEASE_LABELS[reason]}</Text>
                   </Pressable>
-                );
-              },
-            )}
+                ))
+              : DELIVERY_PROBLEM_REASONS.map((reason) => (
+                  <Pressable
+                    accessibilityRole="radio"
+                    accessibilityState={{
+                      checked:
+                        issueSelection?.kind === 'PROBLEM' && issueSelection.reason === reason,
+                    }}
+                    key={reason}
+                    onPress={() => {
+                      onIssueSelectionChange({ kind: 'PROBLEM', reason });
+                    }}
+                    style={[
+                      styles.reasonButton,
+                      issueSelection?.kind === 'PROBLEM' && issueSelection.reason === reason
+                        ? styles.selectedReason
+                        : null,
+                    ]}
+                  >
+                    <Text style={styles.reasonText}>{PROBLEM_LABELS[reason]}</Text>
+                  </Pressable>
+                ))}
           </View>
+
           <TextInput
             accessibilityLabel="Operational issue note"
             multiline
             onChangeText={onIssueNoteChange}
             placeholder={
-              issueSelection === 'OTHER'
-              ? 'Required note for Other reason'
-              : 'Optional note for operations'
+              issueSelection?.reason === 'OTHER'
+                ? 'Required note for Other reason'
+                : 'Optional note for operations'
             }
             style={[styles.input, styles.noteInput]}
             value={issueNote}
