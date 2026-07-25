@@ -1,9 +1,6 @@
 import { CaptainPresenceApiError } from './captain-presence.client';
 import { ResilientCaptainPresencePort } from './resilient-captain-presence.port';
-import type {
-  CaptainLocationSample,
-  CaptainPresencePort,
-} from './captain-presence.types';
+import type { CaptainLocationSample, CaptainPresencePort } from './captain-presence.types';
 
 const SAMPLE: CaptainLocationSample = {
   sampleId: '50000000-0000-4000-8000-000000000001',
