@@ -237,10 +237,7 @@ export function CaptainDeliveryScreen({
     );
   };
 
-  const reject = async (
-    offer: CaptainDelivery,
-    reason: DeliveryRejectionReason,
-  ): Promise<void> => {
+  const reject = async (offer: CaptainDelivery, reason: DeliveryRejectionReason): Promise<void> => {
     setBusy(true);
     setNotice(null);
     try {
