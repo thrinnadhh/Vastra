@@ -272,14 +272,13 @@ export class ResilientCaptainDeliveryPort implements CaptainDeliveryPort {
     const current = this.reads.get(key) as Promise<T> | undefined;
     if (current !== undefined) return current;
 
-    let request: Promise<T>;
-    request = operation()
+    const request = operation()
       .catch(async (error: unknown) => {
         await this.expireSession(error);
         throw error;
       })
       .finally(() => {
-        if (this.reads.get(key) === request) this.reads.delete(key);
+        this.reads.delete(key);
       });
     this.reads.set(key, request);
     return request;
