@@ -369,25 +369,27 @@ try {
         'All authoritative customer, merchant, and captain staging checkpoints were observed.';
       writeReport(report, outputPath);
       console.log(`OK: complete staging COD journey observed. Report: ${outputPath}`);
-      process.exit(0);
+      break;
     }
 
     writeReport(report, outputPath);
     await sleep(pollIntervalMs);
   }
 
-  report.status = 'BLOCKED';
-  report.completedAt = now();
-  report.notes = 'Observer timeout expired before every authoritative checkpoint was observed.';
-  for (const step of report.steps) {
-    if (step.status !== 'PASS') {
-      step.status = 'BLOCKED';
-      step.notes = 'Not observed before the configured timeout.';
+  if (report.status !== 'PASS') {
+    report.status = 'BLOCKED';
+    report.completedAt = now();
+    report.notes = 'Observer timeout expired before every authoritative checkpoint was observed.';
+    for (const step of report.steps) {
+      if (step.status !== 'PASS') {
+        step.status = 'BLOCKED';
+        step.notes = 'Not observed before the configured timeout.';
+      }
     }
+    writeReport(report, outputPath);
+    console.error(`BLOCKED: staging COD observer timed out. Report: ${outputPath}`);
+    process.exitCode = 1;
   }
-  writeReport(report, outputPath);
-  console.error(`BLOCKED: staging COD observer timed out. Report: ${outputPath}`);
-  process.exitCode = 1;
 } catch (error) {
   const message = error instanceof Error ? error.message : 'Unknown staging observer failure';
   console.error(`ERROR: ${message}`);
