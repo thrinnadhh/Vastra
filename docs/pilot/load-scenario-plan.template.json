@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "environment": "staging",
+  "releaseCommit": "0000000000000000000000000000000000000000",
+  "operator": "replace-me",
+  "scenarios": [
+    {
+      "id": "nearby-shop-discovery",
+      "kind": "read",
+      "tokenEnv": "PILOT_CUSTOMER_TOKEN",
+      "method": "GET",
+      "path": "/shops/nearby?latitude=${ENV:PILOT_LATITUDE}&longitude=${ENV:PILOT_LONGITUDE}&limit=50",
+      "body": null,
+      "idempotency": "none",
+      "requests": 1000,
+      "concurrency": 25,
+      "expectedStatuses": [200]
+    },
+    {
+      "id": "product-search",
+      "kind": "read",
+      "tokenEnv": "PILOT_CUSTOMER_TOKEN",
+      "method": "GET",
+      "path": "/customer/products/search?q=shirt&latitude=${ENV:PILOT_LATITUDE}&longitude=${ENV:PILOT_LONGITUDE}&limit=50",
+      "body": null,
+      "idempotency": "none",
+      "requests": 1000,
+      "concurrency": 25,
+      "expectedStatuses": [200]
+    },
+    {
+      "id": "customer-order-read",
+      "kind": "read",
+      "tokenEnv": "PILOT_CUSTOMER_TOKEN",
+      "method": "GET",
+      "path": "/customer/orders/${ENV:PILOT_ORDER_ID}",
+      "body": null,
+      "idempotency": "none",
+      "requests": 1000,
+      "concurrency": 25,
+      "expectedStatuses": [200]
+    },
+    {
+      "id": "merchant-order-queue",
+      "kind": "read",
+      "tokenEnv": "PILOT_MERCHANT_TOKEN",
+      "method": "GET",
+      "path": "/merchant/orders?limit=20",
+      "body": null,
+      "idempotency": "none",
+      "requests": 1000,
+      "concurrency": 25,
+      "expectedStatuses": [200]
+    },
+    {
+      "id": "captain-offer-read",
+      "kind": "read",
+      "tokenEnv": "PILOT_CAPTAIN_TOKEN",
+      "method": "GET",
+      "path": "/captain/delivery-offers",
+      "body": null,
+      "idempotency": "none",
+      "requests": 1000,
+      "concurrency": 25,
+      "expectedStatuses": [200]
+    },
+    {
+      "id": "checkout-quote",
+      "kind": "command",
+      "tokenEnv": "PILOT_CUSTOMER_TOKEN",
+      "method": "POST",
+      "path": "/checkout/quote",
+      "body": {
+        "cartId": "${ENV:PILOT_QUOTE_CART_ID}",
+        "addressId": "${ENV:PILOT_ADDRESS_ID}"
+      },
+      "idempotency": "unique",
+      "requests": 200,
+      "concurrency": 10,
+      "expectedStatuses": [200, 201]
+    },
+    {
+      "id": "cod-order-idempotency",
+      "kind": "command",
+      "tokenEnv": "PILOT_CUSTOMER_TOKEN",
+      "method": "POST",
+      "path": "/orders",
+      "body": {
+        "cartId": "${ENV:PILOT_ORDER_CART_ID}",
+        "quoteId": "${ENV:PILOT_QUOTE_ID}",
+        "addressId": "${ENV:PILOT_ADDRESS_ID}",
+        "paymentMethod": "COD"
+      },
+      "idempotency": "fixed",
+      "requests": 100,
+      "concurrency": 20,
+      "expectedStatuses": [200, 201]
+    },
+    {
+      "id": "merchant-decision-race",
+      "kind": "command",
+      "tokenEnv": "PILOT_MERCHANT_TOKEN",
+      "method": "POST",
+      "path": "/merchant/orders/${ENV:PILOT_MERCHANT_RACE_ORDER_ID}/accept",
+      "body": {
+        "preparationMinutes": 15
+      },
+      "idempotency": "fixed",
+      "requests": 50,
+      "concurrency": 20,
+      "expectedStatuses": [200, 409]
+    },
+    {
+      "id": "captain-assignment-race",
+      "kind": "command",
+      "tokenEnv": "PILOT_CAPTAIN_TOKEN",
+      "method": "POST",
+      "path": "/captain/delivery-offers/${ENV:PILOT_ASSIGNMENT_ID}/accept",
+      "body": null,
+      "idempotency": "fixed",
+      "requests": 50,
+      "concurrency": 20,
+      "expectedStatuses": [200, 409]
+    },
+    {
+      "id": "pickup-delivery-retry",
+      "kind": "command",
+      "tokenEnv": "PILOT_CAPTAIN_TOKEN",
+      "method": "POST",
+      "path": "/captain/deliveries/${ENV:PILOT_COMPLETION_TASK_ID}/complete",
+      "body": {
+        "collectedAmountPaise": "${ENV:PILOT_COLLECTED_AMOUNT_PAISE}",
+        "deliveryOtp": "${ENV:PILOT_DELIVERY_OTP}",
+        "location": null
+      },
+      "idempotency": "fixed",
+      "requests": 25,
+      "concurrency": 10,
+      "expectedStatuses": [200]
+    },
+    {
+      "id": "outbox-worker-contention",
+      "kind": "command",
+      "tokenEnv": "PILOT_MERCHANT_TOKEN",
+      "method": "POST",
+      "path": "/merchant/orders/${ENV:PILOT_OUTBOX_ORDER_ID}/accept",
+      "body": {
+        "preparationMinutes": 15
+      },
+      "idempotency": "fixed",
+      "requests": 100,
+      "concurrency": 25,
+      "expectedStatuses": [200, 409]
+    }
+  ]
+}
