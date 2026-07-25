@@ -15,16 +15,12 @@ describe('CaptainOperationsScreen', () => {
   it('provides explicit accessible delivery and availability sections', () => {
     const view = render(<CaptainOperationsScreen />);
 
-    expect(view.getByLabelText('Deliveries tab').props.accessibilityState).toEqual({
-      selected: true,
-    });
+    expect(view.getByRole('tab', { name: 'Deliveries tab', selected: true })).toBeTruthy();
     expect(view.getByText('Captain delivery work')).toBeTruthy();
 
     fireEvent.press(view.getByLabelText('Availability tab'));
 
-    expect(view.getByLabelText('Availability tab').props.accessibilityState).toEqual({
-      selected: true,
-    });
+    expect(view.getByRole('tab', { name: 'Availability tab', selected: true })).toBeTruthy();
     expect(view.getByText('Captain availability work')).toBeTruthy();
   });
 });
