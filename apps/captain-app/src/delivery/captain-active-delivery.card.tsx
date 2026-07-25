@@ -29,22 +29,16 @@ interface CaptainActiveDeliveryCardProps {
   readonly onCashConfirmationChange: () => void;
   readonly onIssueOpen: () => void;
   readonly onIssueClose: () => void;
-  readonly onIssueSelectionChange: (selection: IssueSelection) => void;
+  readonly onIssueSelectionChange: (value: IssueSelection) => void;
   readonly onIssueNoteChange: (value: string) => void;
-  readonly onSubmitIssue: () => void;
+  readonly onCall: () => void;
+  readonly onNavigate: () => void;
   readonly onArrivePickup: () => void;
   readonly onVerifyPickup: () => void;
   readonly onDepartPickup: () => void;
   readonly onArriveDrop: () => void;
   readonly onComplete: () => void;
-  readonly onCall: () => void;
-  readonly onNavigate: () => void;
-}
-
-function deliveryTarget(active: CaptainDelivery): 'pickup' | 'drop' {
-  return active.taskStatus === 'IN_TRANSIT' || active.taskStatus === 'AT_DROP'
-    ? 'drop'
-    : 'pickup';
+  readonly onSubmitIssue: () => void;
 }
 
 export function CaptainActiveDeliveryCard({
@@ -63,44 +57,42 @@ export function CaptainActiveDeliveryCard({
   onIssueClose,
   onIssueSelectionChange,
   onIssueNoteChange,
-  onSubmitIssue,
+  onCall,
+  onNavigate,
   onArrivePickup,
   onVerifyPickup,
   onDepartPickup,
   onArriveDrop,
   onComplete,
-  onCall,
-  onNavigate,
+  onSubmitIssue,
 }: CaptainActiveDeliveryCardProps): React.JSX.Element {
-  const target = deliveryTarget(active);
-  const selectedOther = issueSelection?.reason === 'OTHER';
+  const delivering = active.taskStatus === 'IN_TRANSIT' || active.taskStatus === 'AT_DROP';
+  const contact = delivering ? active.drop.phoneNumber : active.pickup.phoneNumber;
 
   return (
-    <View style={styles.card} testID="active-captain-delivery">
+    <View style={styles.card}>
       <Text style={styles.cardTitle}>
-        {active[target].recipientName ?? (target === 'pickup' ? 'Pickup shop' : 'Customer')}
+        {delivering
+          ? (active.drop.recipientName ?? 'Customer')
+          : (active.pickup.recipientName ?? 'Pickup shop')}
       </Text>
       <Text style={styles.meta}>
         Order {active.orderNumber} · {active.taskStatus.replaceAll('_', ' ')}
       </Text>
-      <Text style={styles.address}>{addressLine(active, target)}</Text>
+      <Text style={styles.address}>
+        {addressLine(active, delivering ? 'drop' : 'pickup')}
+      </Text>
+
       <View style={styles.actionsRow}>
         <Pressable
           accessibilityRole="button"
-          disabled={active[target].phoneNumber === null}
+          disabled={contact === null}
           onPress={onCall}
-          style={[
-            styles.secondaryButton,
-            active[target].phoneNumber === null ? styles.disabled : null,
-          ]}
+          style={[styles.secondaryButton, contact === null ? styles.disabled : null]}
         >
           <Text style={styles.secondaryText}>Call</Text>
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          onPress={onNavigate}
-          style={styles.secondaryButton}
-        >
+        <Pressable accessibilityRole="button" onPress={onNavigate} style={styles.secondaryButton}>
           <Text style={styles.secondaryText}>Navigate</Text>
         </Pressable>
       </View>
@@ -120,7 +112,6 @@ export function CaptainActiveDeliveryCard({
         <>
           <TextInput
             accessibilityLabel="Merchant pickup code"
-            autoComplete="one-time-code"
             keyboardType="number-pad"
             maxLength={6}
             onChangeText={onPickupCodeChange}
@@ -167,16 +158,19 @@ export function CaptainActiveDeliveryCard({
 
       {active.taskStatus === 'AT_DROP' ? (
         <View style={styles.codPanel}>
-          <Text accessibilityLabel={`Collect exactly ${money(active.totalPaise)}`} style={styles.codDue}>
+          <Text style={styles.panelTitle}>Cash collection</Text>
+          <Text
+            accessibilityLabel={`Collect exactly ${money(active.totalPaise)}`}
+            style={styles.codDue}
+          >
             Collect exactly {money(active.totalPaise)}
           </Text>
           <Text style={styles.meta}>
-            This amount comes from the order. It cannot be changed by the captain.
+            This amount comes from the server and cannot be edited by the captain.
           </Text>
           <Pressable
             accessibilityRole="checkbox"
             accessibilityState={{ checked: cashConfirmed }}
-            disabled={busy}
             onPress={onCashConfirmationChange}
             style={[styles.confirmRow, cashConfirmed ? styles.confirmedRow : null]}
           >
@@ -185,7 +179,6 @@ export function CaptainActiveDeliveryCard({
           </Pressable>
           <TextInput
             accessibilityLabel="Customer delivery OTP"
-            autoComplete="one-time-code"
             keyboardType="number-pad"
             maxLength={6}
             onChangeText={onDeliveryOtpChange}
@@ -213,42 +206,43 @@ export function CaptainActiveDeliveryCard({
           accessibilityRole="button"
           disabled={busy}
           onPress={onIssueOpen}
-          style={styles.linkButton}
+          style={styles.dangerButton}
         >
-          <Text style={styles.linkText}>Report or release delivery</Text>
+          <Text style={styles.dangerText}>Report or release delivery</Text>
         </Pressable>
       ) : (
-        <View style={styles.issuePanel}>
-          <Text accessibilityRole="alert" style={styles.safetyNotice}>
-            Stop in a safe place before using these controls. Do not type while riding.
+        <View accessibilityLabel="Delivery issue escalation" style={styles.issuePanel}>
+          <Text accessibilityRole="header" style={styles.panelTitle}>
+            Delivery issue
           </Text>
-          <Text style={styles.panelTitle}>
-            {isPrePickup(active) ? 'Release before pickup' : 'Escalate package custody'}
+          <Text accessibilityLiveRegion="assertive" style={styles.safetyNotice}>
+            Stop in a safe place before using these controls. Do not type while riding.
           </Text>
           <Text style={styles.meta}>
             {isPrePickup(active)
-              ? 'Releasing returns the order to captain search after the server confirms it.'
-              : 'After pickup, this reports a problem. It does not cancel the order or reassign the package.'}
+              ? 'Before pickup, an approved reason releases the assignment and returns the order to captain search.'
+              : 'After pickup, this reports a problem. It does not cancel the order or ' +
+                'reassign package custody.'}
           </Text>
-          <View style={styles.reasonList}>
+          <View accessibilityRole="radiogroup" style={styles.reasonList}>
             {(isPrePickup(active) ? DELIVERY_RELEASE_REASONS : DELIVERY_PROBLEM_REASONS).map(
               (reason) => {
-                const selection: IssueSelection = isPrePickup(active)
-                  ? { kind: 'RELEASE', reason }
-                  : { kind: 'PROBLEM', reason };
-                const selected =
-                  issueSelection?.kind === selection.kind && issueSelection.reason === reason;
-                const label = isPrePickup(active)
+                const kind = isPrePickup(active) ? 'RELEASE' : 'PROBLEM';
+                const selected = issueSelection?.kind === kind && issueSelection.reason === reason;
+                const label = kind === 'RELEASE operations'
                   ? RELEASE_LABELS[reason as keyof typeof RELEASE_LABELS]
                   : PROBLEM_LABELS[reason as keyof typeof PROBLEM_LABELS];
-
                 return (
                   <Pressable
                     accessibilityRole="radio"
                     accessibilityState={{ selected }}
                     key={reason}
                     onPress={() => {
-                      onIssueSelectionChange(selection);
+                      onIssueSelectionChange(
+                        kind === 'RELEASE'
+                          ? { kind, reason: reason as keyof typeof RELEASE_LABELS }
+                          : { kind, reason: reason as keyof typeof PROBLEM_LABELS },
+                      );
                     }}
                     style={[styles.reasonButton, selected ? styles.selectedReason : null]}
                   >
@@ -262,7 +256,11 @@ export function CaptainActiveDeliveryCard({
             accessibilityLabel="Operational issue note"
             multiline
             onChangeText={onIssueNoteChange}
-            placeholder={selectedOther ? 'A note is required for Other' : 'Optional note for operations'}
+            placeholder={
+              issueSelection === 'OTHER'
+              ? 'Required note for Other reason'
+              : 'Optional note for operations'
+            }
             style={[styles.input, styles.noteInput]}
             value={issueNote}
           />
@@ -273,7 +271,7 @@ export function CaptainActiveDeliveryCard({
               onPress={onIssueClose}
               style={styles.secondaryButton}
             >
-              <Text style={styles.secondaryText}>Close</Text>
+              <Text style={styles.secondaryText}>Back</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"

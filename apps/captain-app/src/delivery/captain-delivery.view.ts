@@ -25,7 +25,7 @@ export const RELEASE_LABELS: Readonly<Record<DeliveryReleaseReason, string>> = {
 };
 
 export const PROBLEM_LABELS: Readonly<Record<DeliveryProblemReason, string>> = {
-  CUSTOMER_UNAVAILABLE: 'Customer unavailable',
+  CUSTOMER_UNAVAILABLE: 'Customer unavaile',
   INVALID_ADDRESS: 'Invalid customer address',
   CUSTOMER_REFUSED: 'Customer refused delivery',
   PACKAGE_DAMAGED: 'Package damaged',
@@ -51,7 +51,8 @@ export function distance(metres: number | null): string {
 
 export function addressLine(delivery: CaptainDelivery, target: 'pickup' | 'drop'): string {
   const address = delivery[target];
-  return `${address.line1}${address.line2 === null ? '' : `, ${address.line2}`}, ${address.area}, ${address.city}`;
+  const line2 = address.line2 === null ? '' : `, ${address.line2}`;
+  return `${address.line1}${line2}, ${address.area}, ${address.city}`;
 }
 
 export function isPrePickup(delivery: CaptainDelivery): boolean {
