@@ -293,54 +293,47 @@ describe('CaptainDeliveryScreen production closure', () => {
           expect.any(String),
         );
       });
-      expect(
-        await view.findByText('Delivery completed and COD collection recorded.'),
-      ).toBeTruthy();
+      expect(await view.findByText('Delivery completed and COD collection recorded.')).toBeTruthy();
     } finally {
       view.unmount();
     }
   });
 
-  it(
-    'offers safe pre-pickup release reasons only after the captain opens issue controls',
-    async () => {
-      const client = deliveryClient(delivery('ASSIGNED'));
-      const view = renderScreen(client);
+  it('offers safe pre-pickup release reasons only after the captain opens issue controls', async () => {
+    const client = deliveryClient(delivery('ASSIGNED'));
+    const view = renderScreen(client);
 
-      try {
-        expect(await view.findByText('Report or release delivery')).toBeTruthy();
-        expect(
-          view.queryByText(
-            'Stop in a safe place before using these controls. Do not type while riding.',
-          ),
-        ).toBeNull();
+    try {
+      expect(await view.findByText('Report or release delivery')).toBeTruthy();
+      expect(
+        view.queryByText(
+          'Stop in a safe place before using these controls. Do not type while riding.',
+        ),
+      ).toBeNull();
 
-        fireEvent.press(view.getByText('Report or release delivery'));
-        expect(
-          view.getByText(
-            'Stop in a safe place before using these controls. Do not type while riding.',
-          ),
-        ).toBeTruthy();
-        fireEvent.press(view.getByText('Personal emergency'));
-        fireEvent.press(view.getByText('Release to operations'));
+      fireEvent.press(view.getByText('Report or release delivery'));
+      expect(
+        view.getByText(
+          'Stop in a safe place before using these controls. Do not type while riding.',
+        ),
+      ).toBeTruthy();
+      fireEvent.press(view.getByText('Personal emergency'));
+      fireEvent.press(view.getByText('Release to operations'));
 
-        await waitFor(() => {
-          expect(client.release).toHaveBeenCalledWith(
-            delivery('ASSIGNED').taskId,
-            'PERSONAL_EMERGENCY',
-            null,
-            expect.any(Object),
-            expect.any(String),
-          );
-        });
-        expect(
-          await view.findByText('Delivery released to operations before pickup.'),
-        ).toBeTruthy();
-      } finally {
-        view.unmount();
-      }
-    },
-  );
+      await waitFor(() => {
+        expect(client.release).toHaveBeenCalledWith(
+          delivery('ASSIGNED').taskId,
+          'PERSONAL_EMERGENCY',
+          null,
+          expect.any(Object),
+          expect.any(String),
+        );
+      });
+      expect(await view.findByText('Delivery released to operations before pickup.')).toBeTruthy();
+    } finally {
+      view.unmount();
+    }
+  });
 
   it('escalates post-pickup custody without presenting cancellation or reassignment', async () => {
     const client = deliveryClient(delivery('IN_TRANSIT'));
@@ -370,9 +363,7 @@ describe('CaptainDeliveryScreen production closure', () => {
         );
       });
       expect(
-        await view.findByText(
-          'Problem escalated to operations. Package custody remains recorded.',
-        ),
+        await view.findByText('Problem escalated to operations. Package custody remains recorded.'),
       ).toBeTruthy();
     } finally {
       view.unmount();
@@ -407,9 +398,7 @@ describe('CaptainDeliveryScreen production closure', () => {
         expect(source.complete).toHaveBeenCalledTimes(2);
       });
       expect(source.complete.mock.calls[0]?.[4]).toBe(source.complete.mock.calls[1]?.[4]);
-      expect(
-        await view.findByText('Delivery completed and COD collection recorded.'),
-      ).toBeTruthy();
+      expect(await view.findByText('Delivery completed and COD collection recorded.')).toBeTruthy();
     } finally {
       view.unmount();
     }
@@ -442,9 +431,7 @@ describe('CaptainDeliveryScreen production closure', () => {
       fireEvent.changeText(view.getByLabelText('Customer delivery OTP'), '654321');
       fireEvent.press(view.getByText('Complete delivery with OTP'));
 
-      expect(
-        await view.findByText('Delivery completed and COD collection recorded.'),
-      ).toBeTruthy();
+      expect(await view.findByText('Delivery completed and COD collection recorded.')).toBeTruthy();
       expect(client.acceptOffer).toHaveBeenCalledTimes(1);
       expect(client.arrivePickup).toHaveBeenCalledTimes(1);
       expect(client.verifyPickup).toHaveBeenCalledTimes(1);
