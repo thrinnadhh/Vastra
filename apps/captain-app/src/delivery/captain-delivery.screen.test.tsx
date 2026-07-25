@@ -111,33 +111,35 @@ function deliveryClient(
   return {
     listOffers: jest.fn(() => Promise.resolve(offers)),
     getActive: jest.fn(() => Promise.resolve(current)),
-    getTask: jest.fn(() => Promise.resolve(current ?? delivery('ASSIGNED'))),
-    acceptOffer: jest.fn(() => {
+    getTask: jest.fn((..._args: Parameters<CaptainDeliveryPort['getTask']>) =>
+      Promise.resolve(current ?? delivery('ASSIGNED')),
+    ),
+    acceptOffer: jest.fn((..._args: Parameters<CaptainDeliveryPort['acceptOffer']>) => {
       current = delivery('ASSIGNED');
       offers = [];
       return Promise.resolve(current);
     }),
-    rejectOffer: jest.fn(() => {
+    rejectOffer: jest.fn((..._args: Parameters<CaptainDeliveryPort['rejectOffer']>) => {
       offers = [];
       return Promise.resolve();
     }),
-    arrivePickup: jest.fn(() => {
+    arrivePickup: jest.fn((..._args: Parameters<CaptainDeliveryPort['arrivePickup']>) => {
       current = delivery('AT_PICKUP');
       return Promise.resolve(current);
     }),
-    verifyPickup: jest.fn(() => {
+    verifyPickup: jest.fn((..._args: Parameters<CaptainDeliveryPort['verifyPickup']>) => {
       current = delivery('PICKED_UP');
       return Promise.resolve(current);
     }),
-    departPickup: jest.fn(() => {
+    departPickup: jest.fn((..._args: Parameters<CaptainDeliveryPort['departPickup']>) => {
       current = delivery('IN_TRANSIT');
       return Promise.resolve(current);
     }),
-    arriveDrop: jest.fn(() => {
+    arriveDrop: jest.fn((..._args: Parameters<CaptainDeliveryPort['arriveDrop']>) => {
       current = delivery('AT_DROP');
       return Promise.resolve(current);
     }),
-    complete: jest.fn(() => {
+    complete: jest.fn((..._args: Parameters<CaptainDeliveryPort['complete']>) => {
       current = null;
       return Promise.resolve(completion());
     }),
@@ -191,7 +193,9 @@ function locationProvider(): jest.Mocked<CaptainLocationProvider> {
       Promise.resolve({ granted: true, canAskAgain: true }),
     ),
     getCurrentLocation: jest.fn(() => Promise.resolve(LOCATION)),
-    watchLocations: jest.fn(() => Promise.resolve(() => undefined)),
+    watchLocations: jest.fn((..._args: Parameters<CaptainLocationProvider['watchLocations']>) =>
+      Promise.resolve(() => undefined),
+    ),
   };
 }
 
