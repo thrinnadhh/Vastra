@@ -10,26 +10,117 @@
   "orderId": "00000000-0000-4000-8000-000000000000",
   "notes": "Replace all placeholders or generate this report with pnpm pilot:staging:observe.",
   "steps": [
-    "customer-order-created",
-    "merchant-alert-received",
-    "merchant-order-accepted",
-    "merchant-packing-started",
-    "merchant-items-verified",
-    "merchant-ready-for-pickup",
-    "captain-offer-received",
-    "captain-offer-accepted",
-    "captain-arrived-at-store",
-    "pickup-code-verified",
-    "captain-departed-store",
-    "captain-arrived-at-customer",
-    "cod-and-delivery-otp-completed",
-    "customer-delivered-observed"
-  ].map((id) => ({
-    "id": id,
-    "status": "NOT_RUN",
-    "observedAt": null,
-    "requestIds": [],
-    "evidence": [],
-    "notes": "Not executed."
-  }))
+    {
+      "id": "customer-order-created",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "merchant-alert-received",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "merchant-order-accepted",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "merchant-packing-started",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "merchant-items-verified",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "merchant-ready-for-pickup",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "captain-offer-received",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "captain-offer-accepted",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "captain-arrived-at-store",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "pickup-code-verified",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "captain-departed-store",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "captain-arrived-at-customer",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "cod-and-delivery-otp-completed",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "customer-delivered-observed",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    }
+  ]
 }
