@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AuthenticatedCaptainDeliveryScreen } from './delivery/captain-delivery.screen';
+import { HardenedAuthenticatedCaptainDeliveryScreen } from './delivery/hardened-captain-delivery.screen';
 import { AuthenticatedCaptainPresenceScreen } from './presence/captain-presence.screen';
 
-export function CaptainOperationsScreen() {
+export function CaptainOperationsScreen(): React.JSX.Element {
   const [tab, setTab] = useState<'DELIVERIES' | 'AVAILABILITY'>('DELIVERIES');
   return (
     <View style={styles.root}>
@@ -32,7 +32,7 @@ export function CaptainOperationsScreen() {
       </View>
       <View style={styles.content}>
         {tab === 'DELIVERIES' ? (
-          <AuthenticatedCaptainDeliveryScreen />
+          <HardenedAuthenticatedCaptainDeliveryScreen />
         ) : (
           <AuthenticatedCaptainPresenceScreen />
         )}
