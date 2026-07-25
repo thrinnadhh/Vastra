@@ -66,10 +66,7 @@ export class ResilientCaptainDeliveryPort implements CaptainDeliveryPort {
     return this.singleFlight(`task:${taskId}`, () => this.delegate.getTask(taskId));
   }
 
-  public async acceptOffer(
-    assignmentId: string,
-    idempotencyKey: string,
-  ): Promise<CaptainDelivery> {
+  public async acceptOffer(assignmentId: string, idempotencyKey: string): Promise<CaptainDelivery> {
     return this.deliveryMutation(
       `accept:${assignmentId}`,
       idempotencyKey,
@@ -117,12 +114,8 @@ export class ResilientCaptainDeliveryPort implements CaptainDeliveryPort {
     location: DeliveryLocation,
     idempotencyKey: string,
   ): Promise<CaptainDelivery> {
-    return this.lifecycleMutation(
-      taskId,
-      'arrive-pickup',
-      'AT_PICKUP',
-      idempotencyKey,
-      (key) => this.delegate.arrivePickup(taskId, location, key),
+    return this.lifecycleMutation(taskId, 'arrive-pickup', 'AT_PICKUP', idempotencyKey, (key) =>
+      this.delegate.arrivePickup(taskId, location, key),
     );
   }
 
@@ -131,12 +124,8 @@ export class ResilientCaptainDeliveryPort implements CaptainDeliveryPort {
     pickupCode: string,
     idempotencyKey: string,
   ): Promise<CaptainDelivery> {
-    return this.lifecycleMutation(
-      taskId,
-      'verify-pickup',
-      'PICKED_UP',
-      idempotencyKey,
-      (key) => this.delegate.verifyPickup(taskId, pickupCode, key),
+    return this.lifecycleMutation(taskId, 'verify-pickup', 'PICKED_UP', idempotencyKey, (key) =>
+      this.delegate.verifyPickup(taskId, pickupCode, key),
     );
   }
 
@@ -145,12 +134,8 @@ export class ResilientCaptainDeliveryPort implements CaptainDeliveryPort {
     location: DeliveryLocation | null,
     idempotencyKey: string,
   ): Promise<CaptainDelivery> {
-    return this.lifecycleMutation(
-      taskId,
-      'depart-pickup',
-      'IN_TRANSIT',
-      idempotencyKey,
-      (key) => this.delegate.departPickup(taskId, location, key),
+    return this.lifecycleMutation(taskId, 'depart-pickup', 'IN_TRANSIT', idempotencyKey, (key) =>
+      this.delegate.departPickup(taskId, location, key),
     );
   }
 
@@ -159,12 +144,8 @@ export class ResilientCaptainDeliveryPort implements CaptainDeliveryPort {
     location: DeliveryLocation | null,
     idempotencyKey: string,
   ): Promise<CaptainDelivery> {
-    return this.lifecycleMutation(
-      taskId,
-      'arrive-drop',
-      'AT_DROP',
-      idempotencyKey,
-      (key) => this.delegate.arriveDrop(taskId, location, key),
+    return this.lifecycleMutation(taskId, 'arrive-drop', 'AT_DROP', idempotencyKey, (key) =>
+      this.delegate.arriveDrop(taskId, location, key),
     );
   }
 
@@ -211,15 +192,10 @@ export class ResilientCaptainDeliveryPort implements CaptainDeliveryPort {
     idempotencyKey: string,
     operation: (key: string) => Promise<CaptainDelivery>,
   ): Promise<CaptainDelivery> {
-    return this.deliveryMutation(
-      `${action}:${taskId}`,
-      idempotencyKey,
-      operation,
-      async () => {
-        const delivery = await this.getTask(taskId);
-        return hasReached(delivery, expectedStatus) ? delivery : null;
-      },
-    );
+    return this.deliveryMutation(`${action}:${taskId}`, idempotencyKey, operation, async () => {
+      const delivery = await this.getTask(taskId);
+      return hasReached(delivery, expectedStatus) ? delivery : null;
+    });
   }
 
   private async deliveryMutation(
