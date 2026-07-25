@@ -95,8 +95,10 @@ export class ResilientCaptainDeliveryPort implements CaptainDeliveryPort {
       if (await this.expireSession(error)) throw error;
 
       try {
-        const offers = await this.listOffers();
-        if (!offers.some((offer) => offer.assignmentId === assignmentId)) {
+        const [offers, active] = await Promise.all([this.listOffers(), this.getActive()]);
+        const stillOffered = offers.some((offer) => offer.assignmentId === assignmentId);
+        const becameActive = active?.assignmentId === assignmentId;
+        if (!stillOffered && !becameActive) {
           this.attemptKeys.delete(attempt);
           return;
         }
