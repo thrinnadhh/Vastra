@@ -99,7 +99,7 @@ describe('ResilientCaptainDeliveryPort', () => {
     const first = client.getActive();
     const second = client.getActive();
 
-    expect(base.getActive).toHaveBeenCalledTimes(1);
+    expect(base.getActive.mock.calls).toHaveLength(1);
     resolveActive?.(ASSIGNED);
     await expect(Promise.all([first, second])).resolves.toEqual([ASSIGNED, ASSIGNED]);
   });
@@ -127,8 +127,10 @@ describe('ResilientCaptainDeliveryPort', () => {
     await expect(client.acceptOffer(OFFER.assignmentId, 'first-key')).rejects.toThrow('Retry.');
     await expect(client.acceptOffer(OFFER.assignmentId, 'second-key')).resolves.toEqual(ASSIGNED);
 
-    expect(base.acceptOffer).toHaveBeenNthCalledWith(1, OFFER.assignmentId, 'first-key');
-    expect(base.acceptOffer).toHaveBeenNthCalledWith(2, OFFER.assignmentId, 'first-key');
+    expect(base.acceptOffer.mock.calls).toEqual([
+      [OFFER.assignmentId, 'first-key'],
+      [OFFER.assignmentId, 'first-key'],
+    ]);
   });
 
   it('reconciles an accept race from the authoritative active delivery', async () => {
@@ -163,8 +165,10 @@ describe('ResilientCaptainDeliveryPort', () => {
       PICKED_UP,
     );
 
-    expect(base.verifyPickup).toHaveBeenNthCalledWith(1, OFFER.taskId, '111111', 'wrong-key');
-    expect(base.verifyPickup).toHaveBeenNthCalledWith(2, OFFER.taskId, '222222', 'correct-key');
+    expect(base.verifyPickup.mock.calls).toEqual([
+      [OFFER.taskId, '111111', 'wrong-key'],
+      [OFFER.taskId, '222222', 'correct-key'],
+    ]);
   });
 
   it('expires the local session after an authenticated mutation failure', async () => {
