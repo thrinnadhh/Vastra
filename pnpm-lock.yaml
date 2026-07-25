@@ -297,6 +297,9 @@ importers:
       '@supabase/supabase-js':
         specifier: 2.109.0
         version: 2.109.0
+      '@vastra/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@vastra/app-shells':
         specifier: workspace:*
         version: link:../../packages/app-shells
