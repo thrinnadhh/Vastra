@@ -90,7 +90,7 @@ describe('ResilientCaptainDeliveryPort', () => {
     const base = delegate();
     let resolveActive: ((delivery: CaptainDelivery | null) => void) | undefined;
     base.getActive.mockReturnValue(
-      new Promise((resolve) => {
+      new Promise<CaptainDelivery | null>((resolve) => {
         resolveActive = resolve;
       }),
     );
@@ -102,6 +102,18 @@ describe('ResilientCaptainDeliveryPort', () => {
     expect(base.getActive).toHaveBeenCalledTimes(1);
     resolveActive?.(ASSIGNED);
     await expect(Promise.all([first, second])).resolves.toEqual([ASSIGNED, ASSIGNED]);
+  });
+
+  it('expires the local session after an authenticated polling failure', async () => {
+    const base = delegate();
+    base.getActive.mockRejectedValue(
+      new CaptainDeliveryApiError('AUTHENTICATION_INVALID', 'Sign in again.', false),
+    );
+    const expireSession = jest.fn().mockResolvedValue(undefined);
+    const client = new ResilientCaptainDeliveryPort(base, expireSession);
+
+    await expect(client.getActive()).rejects.toThrow('Sign in again.');
+    expect(expireSession).toHaveBeenCalledTimes(1);
   });
 
   it('retains the first idempotency key across a retryable accept failure', async () => {
@@ -155,7 +167,7 @@ describe('ResilientCaptainDeliveryPort', () => {
     expect(base.verifyPickup).toHaveBeenNthCalledWith(2, OFFER.taskId, '222222', 'correct-key');
   });
 
-  it('expires the local session after an authentication failure', async () => {
+  it('expires the local session after an authenticated mutation failure', async () => {
     const base = delegate();
     base.complete.mockRejectedValue(
       new CaptainDeliveryApiError('SESSION_EXPIRED', 'Sign in again.', false),
