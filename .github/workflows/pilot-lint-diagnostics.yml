@@ -1,0 +1,60 @@
+name: Pilot tooling lint diagnostics
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/pilot-lint-diagnostics.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Capture focused ESLint report
+        id: eslint
+        continue-on-error: true
+        run: |
+          pnpm exec eslint \
+            scripts/pilot-execution-report-lib.mjs \
+            scripts/validate-pilot-execution-report.mjs \
+            scripts/run-staging-cod-observer.mjs \
+            scripts/run-pilot-query-plans.mjs \
+            scripts/run-pilot-invariant-audit.mjs \
+            scripts/run-pilot-http-load.mjs \
+            scripts/run-pilot-tooling-tests.mjs \
+            --format json > pilot-tooling-eslint.json
+
+      - name: Upload lint report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pilot-tooling-eslint
+          path: pilot-tooling-eslint.json
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Require lint success
+        if: steps.eslint.outcome != 'success'
+        run: exit 1
