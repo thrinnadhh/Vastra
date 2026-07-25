@@ -5,6 +5,7 @@ import type { AuthSessionPort } from './session-restoration.types';
 export interface CaptainApiSession {
   readonly apiBaseUrl: string;
   getAccessToken(): Promise<string | null>;
+  expireSession(): Promise<void>;
 }
 
 const CaptainApiSessionContext = createContext<CaptainApiSession | null>(null);
@@ -24,6 +25,9 @@ export function CaptainApiSessionProvider({
       async getAccessToken(): Promise<string | null> {
         const session = await authSession.getSession();
         return session?.accessToken ?? null;
+      },
+      async expireSession(): Promise<void> {
+        await authSession.signOutLocal();
       },
     }),
     [apiBaseUrl, authSession],
