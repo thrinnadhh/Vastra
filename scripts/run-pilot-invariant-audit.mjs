@@ -97,7 +97,7 @@ const CHECKS = [
           select 1
           from public.delivery_events event
           where event.delivery_task_id = task.id
-            and event.event_type = 'DELIVERY_COMPLETED'
+            and event.event_type = 'TASK_COMPLETED'
         )
     `,
   },
@@ -111,21 +111,18 @@ const CHECKS = [
           select 1
           from public.cod_collections collection
           where collection.order_id = orders.id
+            and collection.status in ('COLLECTED', 'DEPOSIT_PENDING', 'DEPOSITED', 'RECONCILED')
         )
     `,
   },
   {
-    id: 'outbox-terminal-events-not-duplicated',
+    id: 'delivery-completion-outbox-not-duplicated',
     sql: `
       select count(*)
       from (
         select aggregate_type, aggregate_id, event_type
         from public.outbox_events
-        where event_type in (
-          'order.delivered.v1',
-          'delivery.completed.v1',
-          'refund.executed.v1'
-        )
+        where event_type = 'delivery.task.completed'
         group by aggregate_type, aggregate_id, event_type
         having count(*) > 1
       ) violations
