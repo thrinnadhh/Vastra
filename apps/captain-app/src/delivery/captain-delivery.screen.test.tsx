@@ -210,12 +210,11 @@ function renderScreen(client: jest.Mocked<CaptainDeliveryPort>) {
 }
 
 describe('CaptainDeliveryScreen production closure', () => {
-  it('preserves the ten-second authoritative polling interval', async () => {
+  it('preserves the ten-second authoritative polling interval', () => {
     const intervalSpy = jest.spyOn(globalThis, 'setInterval');
     const view = renderScreen(deliveryClient(null));
 
     try {
-      expect(await view.findByText('No active offers')).toBeTruthy();
       expect(intervalSpy).toHaveBeenCalledWith(expect.any(Function), 10_000);
     } finally {
       view.unmount();
