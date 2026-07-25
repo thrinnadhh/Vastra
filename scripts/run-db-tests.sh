@@ -28,7 +28,9 @@ cleanup() {
 trap cleanup EXIT
 
 if ! supabase status --output json >/dev/null 2>&1; then
-  supabase start
+  # Database tests require only PostgreSQL. Avoid starting unrelated
+  # services such as Mailpit/Inbucket, which can cause CI port collisions.
+  supabase db start
   started_stack=1
 fi
 
