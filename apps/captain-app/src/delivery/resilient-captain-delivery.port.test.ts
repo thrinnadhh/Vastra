@@ -157,7 +157,9 @@ describe('ResilientCaptainDeliveryPort', () => {
     base.getActive.mockResolvedValue(null);
     const client = new ResilientCaptainDeliveryPort(base, jest.fn());
 
-    await expect(client.rejectOffer(OFFER.assignmentId, 'OTHER', 'reject-key')).resolves.toBeUndefined();
+    await expect(
+      client.rejectOffer(OFFER.assignmentId, 'OTHER', 'reject-key'),
+    ).resolves.toBeUndefined();
   });
 
   it('does not report rejection success when the assignment became active', async () => {
