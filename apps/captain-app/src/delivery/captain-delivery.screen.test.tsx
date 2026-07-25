@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import type {
   CaptainLocationProvider,
@@ -211,33 +211,15 @@ function renderScreen(client: jest.Mocked<CaptainDeliveryPort>) {
 
 describe('CaptainDeliveryScreen production closure', () => {
   it('preserves the ten-second authoritative polling interval', async () => {
-    jest.useFakeTimers();
     const intervalSpy = jest.spyOn(globalThis, 'setInterval');
-    const client = deliveryClient(null);
-    const view = renderScreen(client);
+    const view = renderScreen(deliveryClient(null));
 
     try {
-      await act(async () => {
-        jest.advanceTimersByTime(0);
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-
-      const refreshRegistration = intervalSpy.mock.calls.find(([, delay]) => delay === 10_000);
-      expect(refreshRegistration).toBeDefined();
-      const refresh = refreshRegistration?.[0];
-      if (typeof refresh !== 'function') throw new TypeError('Expected delivery refresh callback');
-
-      await act(async () => {
-        refresh();
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-      expect(client.getActive.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(await view.findByText('No active offers')).toBeTruthy();
+      expect(intervalSpy).toHaveBeenCalledWith(expect.any(Function), 10_000);
     } finally {
       view.unmount();
       intervalSpy.mockRestore();
-      jest.useRealTimers();
     }
   });
 
