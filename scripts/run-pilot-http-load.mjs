@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -73,6 +74,12 @@ function validatePlan(plan) {
     }
     if (!Array.isArray(scenario.expectedStatuses) || scenario.expectedStatuses.length === 0) {
       throw new Error(`scenarios[${index}].expectedStatuses is required.`);
+    }
+    if (
+      scenario.idempotency !== undefined &&
+      !['unique', 'fixed', 'none'].includes(scenario.idempotency)
+    ) {
+      throw new Error(`scenarios[${index}].idempotency is invalid.`);
     }
   }
   for (const id of LOAD_QUERY_SCENARIOS) {
@@ -196,6 +203,24 @@ function aggregate(steps, kind) {
   };
 }
 
+function runPostLoadInvariantAudit(invariantPath) {
+  const audit = spawnSync(process.execPath, ['scripts/run-pilot-invariant-audit.mjs'], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PILOT_INVARIANT_REPORT_PATH: invariantPath,
+    },
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  if (audit.error !== undefined) throw audit.error;
+  const absolutePath = resolve(process.cwd(), invariantPath);
+  if (!existsSync(absolutePath)) {
+    throw new Error(audit.stderr.trim() || 'Post-load invariant audit did not create a report.');
+  }
+  return JSON.parse(readFileSync(absolutePath, 'utf8'));
+}
+
 function writeReport(outputPath, report) {
   const absolutePath = resolve(process.cwd(), outputPath);
   mkdirSync(dirname(absolutePath), { recursive: true });
@@ -227,13 +252,14 @@ try {
   if (plan.environment !== 'staging') throw new Error('Load plan environment must equal staging.');
   const baseUrl = safeBaseUrl(requiredString(process.env.PILOT_API_BASE_URL, 'PILOT_API_BASE_URL'));
   const queryPlan = JSON.parse(readFileSync(resolve(process.cwd(), queryPlanPath), 'utf8'));
-  const invariantReport = JSON.parse(readFileSync(resolve(process.cwd(), invariantPath), 'utf8'));
   if (queryPlan.status !== 'PASS') throw new Error('Query-plan evidence must pass before load execution.');
-  if (invariantReport.environment !== 'staging') throw new Error('Invariant report must target staging.');
 
   const startedAt = new Date().toISOString();
   const detailedSteps = [];
   for (const scenario of plan.scenarios) detailedSteps.push(await runScenario(baseUrl, scenario));
+
+  const invariantReport = runPostLoadInvariantAudit(invariantPath);
+  if (invariantReport.environment !== 'staging') throw new Error('Invariant report must target staging.');
   const readMetrics = aggregate(detailedSteps, 'read');
   const commandMetrics = aggregate(detailedSteps, 'command');
   const invariantViolations = Number(invariantReport.violationCount);
@@ -250,7 +276,7 @@ try {
     operator: requiredString(plan.operator, 'plan.operator'),
     notes: passed
       ? 'All staging load thresholds and post-load invariants passed.'
-      : 'One or more staging load thresholds or invariants failed.',
+      : 'One or more staging load thresholds or post-load invariants failed.',
     dataset: queryPlan.dataset,
     metrics: {
       criticalReadSuccessRate: readMetrics.successRate,
