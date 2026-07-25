@@ -148,6 +148,32 @@ describe('ResilientCaptainDeliveryPort', () => {
     await expect(client.acceptOffer(OFFER.assignmentId, 'accept-key')).resolves.toEqual(ASSIGNED);
   });
 
+  it('reconciles a reject only when the assignment is neither offered nor active', async () => {
+    const base = delegate();
+    base.rejectOffer.mockRejectedValue(
+      new CaptainDeliveryApiError('NETWORK_UNAVAILABLE', 'Result unknown.', true),
+    );
+    base.listOffers.mockResolvedValue([]);
+    base.getActive.mockResolvedValue(null);
+    const client = new ResilientCaptainDeliveryPort(base, jest.fn());
+
+    await expect(client.rejectOffer(OFFER.assignmentId, 'OTHER', 'reject-key')).resolves.toBeUndefined();
+  });
+
+  it('does not report rejection success when the assignment became active', async () => {
+    const base = delegate();
+    base.rejectOffer.mockRejectedValue(
+      new CaptainDeliveryApiError('NETWORK_UNAVAILABLE', 'Result unknown.', true),
+    );
+    base.listOffers.mockResolvedValue([]);
+    base.getActive.mockResolvedValue(ASSIGNED);
+    const client = new ResilientCaptainDeliveryPort(base, jest.fn());
+
+    await expect(client.rejectOffer(OFFER.assignmentId, 'OTHER', 'reject-key')).rejects.toThrow(
+      'Result unknown.',
+    );
+  });
+
   it('clears a rejected secret attempt so corrected input uses a new key', async () => {
     const base = delegate();
     base.verifyPickup
