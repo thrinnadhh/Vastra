@@ -219,22 +219,20 @@ export function CaptainDeliveryScreen({
         if (mounted.current) setBusy(false);
       }
     },
-    [client, load],
+    [load],
   );
 
   const openUrl = useCallback(async (url: string): Promise<void> => {
     try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (!canOpen) throw new Error('This action is not available on this device.');
       await Linking.openURL(url);
-    } catch (error: unknown) {
-      if (mounted.current) setNotice(messageFor(error));
+    } catch {
+      if (mounted.current) setNotice('Could not open that app. Try again when safely stopped.');
     }
   }, []);
 
   const accept = (offer: CaptainDelivery): void => {
     void run(
-      async () => client.acceptOffer(offer.assignmentId, createIdempotencyKey()),
+      () => client.acceptOffer(offer.assignmentId, createIdempotencyKey()),
       'Delivery assigned. Review the pickup details before travelling.',
     );
   };
@@ -267,10 +265,21 @@ export function CaptainDeliveryScreen({
       return;
     }
 
-    void run(async () => {
-      const location = await currentLocation(false);
-      if (issueSelection.kind === 'RELEASE') {
-        await client.release(
+    void run(
+      async () => {
+        const location = await currentLocation(false);
+        if (issueSelection.kind === 'RELEASE') {
+          await client.release(
+            active.taskId,
+            issueSelection.reason,
+            issueNote.trim() || null,
+            location,
+            createIdempotencyKey(),
+          );
+          return null;
+        }
+
+        await client.reportProblem(
           active.taskId,
           issueSelection.reason,
           issueNote.trim() || null,
@@ -278,20 +287,11 @@ export function CaptainDeliveryScreen({
           createIdempotencyKey(),
         );
         return null;
-      }
-
-      await client.reportProblem(
-        active.taskId,
-        issueSelection.reason,
-        issueNote.trim() || null,
-        location,
-        createIdempotencyKey(),
-      );
-      return null;
-    },
-    issueSelection.kind === 'RELEASE'
-      ? 'Delivery released to operations before pickup.'
-      : 'Problem escalated to operations. Package custody remains recorded.');
+      },
+      issueSelection.kind === 'RELEASE'
+        ? 'Delivery released to operations before pickup.'
+        : 'Problem escalated to operations. Package custody remains recorded.',
+    );
   };
 
   if (loading && !hasLoaded) {
@@ -403,4 +403,73 @@ export function CaptainDeliveryScreen({
               active.taskStatus === 'IN_TRANSIT' || active.taskStatus === 'AT_DROP'
                 ? active.drop.phoneNumber
                 : active.pickup.phoneNumber;
-            if (phone !== null) void openUrl(
+            if (phone !== null) void openUrl(`tel:${phone}`);
+          }}
+          onCashConfirmationChange={() => {
+            setCashConfirmed((value) => !value);
+          }}
+          onComplete={() => {
+            void run(async () => {
+              await client.complete(
+                active.taskId,
+                active.totalPaise,
+                deliveryOtp,
+                await currentLocation(false),
+                createIdempotencyKey(),
+              );
+              setDeliveryOtp('');
+              setCashConfirmed(false);
+              return null;
+            }, 'Delivery completed and COD collection recorded.');
+          }}
+          onDeliveryOtpChange={setDeliveryOtp}
+          onDepartPickup={() => {
+            void run(
+              async () =>
+                client.departPickup(
+                  active.taskId,
+                  await currentLocation(false),
+                  createIdempotencyKey(),
+                ),
+              'Customer delivery started.',
+            );
+          }}
+          onIssueClose={() => {
+            setIssueOpen(false);
+            setIssueSelection(null);
+            setIssueNote('');
+          }}
+          onIssueNoteChange={setIssueNote}
+          onIssueOpen={() => {
+            setIssueOpen(true);
+          }}
+          onIssueSelectionChange={setIssueSelection}
+          onNavigate={() => {
+            const target =
+              active.taskStatus === 'IN_TRANSIT' || active.taskStatus === 'AT_DROP'
+                ? active.drop.location
+                : active.pickup.location;
+            void openUrl(
+              'https://www.google.com/maps/dir/?api=1&destination=' +
+                `${String(target.latitude)},${String(target.longitude)}`,
+            );
+          }}
+          onPickupCodeChange={setPickupCode}
+          onSubmitIssue={submitIssue}
+          onVerifyPickup={() => {
+            void run(async () => {
+              const result = await client.verifyPickup(
+                active.taskId,
+                pickupCode,
+                createIdempotencyKey(),
+              );
+              setPickupCode('');
+              return result;
+            }, 'Package handover verified by the server.');
+          }}
+          pickupCode={pickupCode}
+        />
+      )}
+    </ScrollView>
+  );
+}
