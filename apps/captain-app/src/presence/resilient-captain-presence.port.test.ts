@@ -17,7 +17,7 @@ const SAMPLE: CaptainLocationSample = {
 function delegate(): jest.Mocked<CaptainPresencePort> {
   return {
     getAvailability: jest.fn(() => Promise.resolve('AVAILABLE')),
-    setAvailability: jest.fn((..._args: Parameters<CaptainPresencePort['setAvailability']>) =>
+    setAvailability: jest.fn(() =>
       Promise.resolve({
         availabilityStatus: 'AVAILABLE',
         dispatchEligible: true,
@@ -25,14 +25,14 @@ function delegate(): jest.Mocked<CaptainPresencePort> {
         locationFresh: true,
         locationRecordedAt: SAMPLE.recordedAt,
       }),
-    ),
-    updateLocation: jest.fn((..._args: Parameters<CaptainPresencePort['updateLocation']>) =>
+    ) as jest.MockedFunction<CaptainPresencePort['setAvailability']>,
+    updateLocation: jest.fn(() =>
       Promise.resolve({
         sampleId: SAMPLE.sampleId,
         acceptedAt: SAMPLE.recordedAt,
         replayed: false,
       }),
-    ),
+    ) as jest.MockedFunction<CaptainPresencePort['updateLocation']>,
   };
 }
 
@@ -51,7 +51,7 @@ describe('ResilientCaptainPresencePort', () => {
     const first = port.getAvailability();
     const second = port.getAvailability();
     expect(first).toBe(second);
-    expect(source.getAvailability).toHaveBeenCalledTimes(1);
+    expect(source.getAvailability.mock.calls).toHaveLength(1);
 
     resolveAvailability?.('AVAILABLE');
     await expect(first).resolves.toBe('AVAILABLE');
