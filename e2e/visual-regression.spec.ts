@@ -26,6 +26,12 @@ for (const entryPoint of FRONTEND_VISUAL_ENTRY_POINTS) {
       await document.fonts.ready;
     });
 
+    const dimensions = await page.evaluate(() => ({
+      contentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+    }));
+    expect(dimensions.contentWidth).toBe(dimensions.viewportWidth);
+
     const screenshot = await page.screenshot({ animations: 'disabled', fullPage: true });
     const actualHash = createHash('sha256').update(screenshot).digest('hex');
     const expectedHash = getExpectedHashes()[entryPoint.id];
