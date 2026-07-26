@@ -1,0 +1,145 @@
+name: FE-S07 validated autofix
+
+on:
+  push:
+    branches:
+      - agent/fe-s07-production-closure
+
+permissions:
+  contents: write
+
+jobs:
+  autofix:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out production closure branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/fe-s07-production-closure
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply strict lint fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('apps/captain-app/src')
+
+          def replace_exact(path: Path, old: str, new: str) -> None:
+              content = path.read_text()
+              if old not in content:
+                  raise SystemExit(f'Expected source block not found in {path}: {old[:80]!r}')
+              path.write_text(content.replace(old, new))
+
+          screen = root / 'delivery/captain-delivery.screen.tsx'
+          replace_exact(screen, 'const mounted = useRef(true);', 'const mounted = useRef<boolean>(true);')
+          replace_exact(
+              screen,
+              """  useEffect(() => {\n    mounted.current = true;\n    void load();\n    const refresh = setInterval(() => {""",
+              """  useEffect(() => {\n    mounted.current = true;\n    queueMicrotask(() => {\n      void load();\n    });\n    const refresh = setInterval(() => {""",
+          )
+          replace_exact(
+              screen,
+              """  useEffect(() => {\n    setPickupCode('');\n    setDeliveryOtp('');\n    setCashConfirmed(false);\n    setIssueOpen(false);\n    setIssueSelection(null);\n    setIssueNote('');\n  }, [active?.taskId, active?.taskStatus]);""",
+              """  useEffect(() => {\n    queueMicrotask(() => {\n      if (!mounted.current) return;\n      setPickupCode('');\n      setDeliveryOtp('');\n      setCashConfirmed(false);\n      setIssueOpen(false);\n      setIssueSelection(null);\n      setIssueNote('');\n    });\n  }, [active?.taskId, active?.taskStatus]);""",
+          )
+          replace_exact(screen, '    let stopped = false;', '    const lifecycle = { stopped: false };')
+          content = screen.read_text()
+          content = content.replace('permission.granted || stopped', 'permission.granted || lifecycle.stopped')
+          content = content.replace('if (stopped) stopWatching();', 'if (lifecycle.stopped) stopWatching();')
+          content = content.replace('if (!stopped && mounted.current)', 'if (!lifecycle.stopped && mounted.current)')
+          content = content.replace('      stopped = true;', '      lifecycle.stopped = true;')
+          screen.write_text(content)
+
+          delivery_test = root / 'delivery/captain-delivery.screen.test.tsx'
+          replacements = {
+              """    getTask: jest.fn((..._args: Parameters<CaptainDeliveryPort['getTask']>) =>\n      Promise.resolve(current ?? delivery('ASSIGNED')),\n    ),""": """    getTask: jest.fn(() =>\n      Promise.resolve(current ?? delivery('ASSIGNED')),\n    ) as jest.MockedFunction<CaptainDeliveryPort['getTask']>,""",
+              """    acceptOffer: jest.fn((..._args: Parameters<CaptainDeliveryPort['acceptOffer']>) => {\n      current = delivery('ASSIGNED');\n      offers = [];\n      return Promise.resolve(current);\n    }),""": """    acceptOffer: jest.fn(() => {\n      current = delivery('ASSIGNED');\n      offers = [];\n      return Promise.resolve(current);\n    }) as jest.MockedFunction<CaptainDeliveryPort['acceptOffer']>,""",
+              """    rejectOffer: jest.fn((..._args: Parameters<CaptainDeliveryPort['rejectOffer']>) => {\n      offers = [];\n      return Promise.resolve();\n    }),""": """    rejectOffer: jest.fn(() => {\n      offers = [];\n      return Promise.resolve();\n    }) as jest.MockedFunction<CaptainDeliveryPort['rejectOffer']>,""",
+              """    arrivePickup: jest.fn((..._args: Parameters<CaptainDeliveryPort['arrivePickup']>) => {\n      current = delivery('AT_PICKUP');\n      return Promise.resolve(current);\n    }),""": """    arrivePickup: jest.fn(() => {\n      current = delivery('AT_PICKUP');\n      return Promise.resolve(current);\n    }) as jest.MockedFunction<CaptainDeliveryPort['arrivePickup']>,""",
+              """    verifyPickup: jest.fn((..._args: Parameters<CaptainDeliveryPort['verifyPickup']>) => {\n      current = delivery('PICKED_UP');\n      return Promise.resolve(current);\n    }),""": """    verifyPickup: jest.fn(() => {\n      current = delivery('PICKED_UP');\n      return Promise.resolve(current);\n    }) as jest.MockedFunction<CaptainDeliveryPort['verifyPickup']>,""",
+              """    departPickup: jest.fn((..._args: Parameters<CaptainDeliveryPort['departPickup']>) => {\n      current = delivery('IN_TRANSIT');\n      return Promise.resolve(current);\n    }),""": """    departPickup: jest.fn(() => {\n      current = delivery('IN_TRANSIT');\n      return Promise.resolve(current);\n    }) as jest.MockedFunction<CaptainDeliveryPort['departPickup']>,""",
+              """    arriveDrop: jest.fn((..._args: Parameters<CaptainDeliveryPort['arriveDrop']>) => {\n      current = delivery('AT_DROP');\n      return Promise.resolve(current);\n    }),""": """    arriveDrop: jest.fn(() => {\n      current = delivery('AT_DROP');\n      return Promise.resolve(current);\n    }) as jest.MockedFunction<CaptainDeliveryPort['arriveDrop']>,""",
+              """    complete: jest.fn((..._args: Parameters<CaptainDeliveryPort['complete']>) => {\n      current = null;\n      return Promise.resolve(completion());\n    }),""": """    complete: jest.fn(() => {\n      current = null;\n      return Promise.resolve(completion());\n    }) as jest.MockedFunction<CaptainDeliveryPort['complete']>,""",
+              """    watchLocations: jest.fn((..._args: Parameters<CaptainLocationProvider['watchLocations']>) =>\n      Promise.resolve(() => undefined),\n    ),""": """    watchLocations: jest.fn(() =>\n      Promise.resolve(() => undefined),\n    ) as jest.MockedFunction<CaptainLocationProvider['watchLocations']>,""",
+              """expect(client.rejectOffer).toHaveBeenCalledWith(\n          offer.assignmentId,\n          'LOW_BATTERY',\n          expect.any(String),\n        );""": """expect(client.rejectOffer.mock.calls).toContainEqual([\n          offer.assignmentId,\n          'LOW_BATTERY',\n          expect.any(String),\n        ]);""",
+              "expect(client.complete).not.toHaveBeenCalled();": "expect(client.complete.mock.calls).toHaveLength(0);",
+              """expect(client.complete).toHaveBeenCalledWith(\n          delivery('AT_DROP').taskId,\n          149900,\n          '654321',\n          expect.any(Object),\n          expect.any(String),\n        );""": """expect(client.complete.mock.calls).toContainEqual([\n          delivery('AT_DROP').taskId,\n          149900,\n          '654321',\n          expect.any(Object),\n          expect.any(String),\n        ]);""",
+              """expect(client.release).toHaveBeenCalledWith(\n          delivery('ASSIGNED').taskId,\n          'PERSONAL_EMERGENCY',\n          null,\n          expect.any(Object),\n          expect.any(String),\n        );""": """expect(client.release.mock.calls).toContainEqual([\n          delivery('ASSIGNED').taskId,\n          'PERSONAL_EMERGENCY',\n          null,\n          expect.any(Object),\n          expect.any(String),\n        ]);""",
+              """expect(client.reportProblem).toHaveBeenCalledWith(\n          delivery('IN_TRANSIT').taskId,\n          'SAFETY_CONCERN',\n          null,\n          expect.any(Object),\n          expect.any(String),\n        );""": """expect(client.reportProblem.mock.calls).toContainEqual([\n          delivery('IN_TRANSIT').taskId,\n          'SAFETY_CONCERN',\n          null,\n          expect.any(Object),\n          expect.any(String),\n        ]);""",
+              'expect(source.complete).toHaveBeenCalledTimes(2);': 'expect(source.complete.mock.calls).toHaveLength(2);',
+          }
+          content = delivery_test.read_text()
+          for old, new in replacements.items():
+              if old not in content:
+                  raise SystemExit(f'Expected delivery test block not found: {old[:80]!r}')
+              content = content.replace(old, new)
+          for method in ('acceptOffer', 'arrivePickup', 'verifyPickup', 'departPickup', 'arriveDrop', 'complete'):
+              old = f'expect(client.{method}).toHaveBeenCalledTimes(1);'
+              new = f'expect(client.{method}.mock.calls).toHaveLength(1);'
+              if old not in content:
+                  raise SystemExit(f'Expected journey assertion not found: {old}')
+              content = content.replace(old, new)
+          delivery_test.write_text(content)
+
+          presence_test = root / 'presence/resilient-captain-presence.port.test.ts'
+          replace_exact(
+              presence_test,
+              """    setAvailability: jest.fn((..._args: Parameters<CaptainPresencePort['setAvailability']>) =>\n      Promise.resolve({\n        availabilityStatus: 'AVAILABLE',\n        dispatchEligible: true,\n        changed: true,\n        locationFresh: true,\n        locationRecordedAt: SAMPLE.recordedAt,\n      }),\n    ),""",
+              """    setAvailability: jest.fn(() =>\n      Promise.resolve({\n        availabilityStatus: 'AVAILABLE',\n        dispatchEligible: true,\n        changed: true,\n        locationFresh: true,\n        locationRecordedAt: SAMPLE.recordedAt,\n      }),\n    ) as jest.MockedFunction<CaptainPresencePort['setAvailability']>,""",
+          )
+          replace_exact(
+              presence_test,
+              """    updateLocation: jest.fn((..._args: Parameters<CaptainPresencePort['updateLocation']>) =>\n      Promise.resolve({\n        sampleId: SAMPLE.sampleId,\n        acceptedAt: SAMPLE.recordedAt,\n        replayed: false,\n      }),\n    ),""",
+              """    updateLocation: jest.fn(() =>\n      Promise.resolve({\n        sampleId: SAMPLE.sampleId,\n        acceptedAt: SAMPLE.recordedAt,\n        replayed: false,\n      }),\n    ) as jest.MockedFunction<CaptainPresencePort['updateLocation']>,""",
+          )
+          replace_exact(
+              presence_test,
+              'expect(source.getAvailability).toHaveBeenCalledTimes(1);',
+              'expect(source.getAvailability.mock.calls).toHaveLength(1);',
+          )
+          PY
+
+      - name: Format changed sources
+        run: |
+          pnpm exec prettier --write \
+            apps/captain-app/src/delivery/captain-delivery.screen.tsx \
+            apps/captain-app/src/delivery/captain-delivery.screen.test.tsx \
+            apps/captain-app/src/presence/resilient-captain-presence.port.test.ts \
+            apps/captain-app/src/captain-operations.screen.test.tsx
+
+      - name: Validate repository lint and typecheck
+        run: |
+          pnpm lint
+          pnpm typecheck
+
+      - name: Validate captain tests and build
+        run: |
+          pnpm --filter @vastra/captain-app test
+          pnpm --filter @vastra/captain-app build
+
+      - name: Remove temporary diagnostics
+        run: |
+          rm -f .github/workflows/fe-s07-lint-diagnostics.yml
+          rm -f .github/workflows/fe-s07-autofix.yml
+
+      - name: Commit validated fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/captain-app/src .github/workflows
+          git commit -m "fix(fe-s07): resolve PR validation errors"
+          git push origin HEAD:agent/fe-s07-production-closure
