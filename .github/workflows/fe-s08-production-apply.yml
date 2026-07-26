@@ -54,8 +54,7 @@ jobs:
           encoded = ''.join(path.read_text(encoding='utf-8').strip() for path in chunks)
           compressed = base64.b64decode(encoded, validate=True)
           patch = gzip.decompress(compressed)
-          output = Path('/tmp/fe-s08-production.patch')
-          output.write_bytes(patch)
+          Path('/tmp/fe-s08-production.patch').write_bytes(patch)
           print(f'Decoded {len(patch)} patch bytes from {len(chunks)} chunks')
           PY
           test -s /tmp/fe-s08-production.patch
@@ -66,10 +65,7 @@ jobs:
           set -euo pipefail
           git apply --check /tmp/fe-s08-production.patch
           git apply /tmp/fe-s08-production.patch
-
-          rm -rf .github/fe-s08-production
-          rm -rf .github/fe-s08-final
-          rm -rf .github/fe-s08-patch
+          rm -rf .github/fe-s08-production .github/fe-s08-final .github/fe-s08-patch
           rm -f .github/workflows/fe-s08-materialize.yml
           rm -f .github/workflows/fe-s08-production-apply.yml
 
@@ -79,24 +75,32 @@ jobs:
       - name: Format production tree
         run: pnpm format
 
-      - name: Validate static quality
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm format:check
-          pnpm security:client-secrets
-          pnpm lint
-          pnpm typecheck
+      - name: Check formatting
+        run: pnpm format:check
 
-      - name: Validate backend and contracts
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm --filter @vastra/backend test
-          pnpm --filter @vastra/backend test:integration
-          pnpm openapi:check
-          pnpm db:test
-          pnpm build
+      - name: Scan client secrets
+        run: pnpm security:client-secrets
+
+      - name: Lint repository
+        run: pnpm lint
+
+      - name: Typecheck repository
+        run: pnpm typecheck
+
+      - name: Run backend unit tests
+        run: pnpm --filter @vastra/backend test
+
+      - name: Run backend integration tests
+        run: pnpm --filter @vastra/backend test:integration
+
+      - name: Validate OpenAPI
+        run: pnpm openapi:check
+
+      - name: Run database tests
+        run: pnpm db:test
+
+      - name: Build workspace
+        run: pnpm build
 
       - name: Commit validated production implementation
         shell: bash
