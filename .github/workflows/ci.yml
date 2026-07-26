@@ -118,7 +118,11 @@ jobs:
         run: pnpm exec playwright install chromium
 
       - name: Run frontend E2E and visual harness
-        run: pnpm test:frontend:harness
+        run: |
+          if ! pnpm test:frontend:harness > /tmp/frontend-harness.log 2>&1; then
+            tail -n 300 /tmp/frontend-harness.log
+            exit 1
+          fi
 
       - name: Upload frontend E2E evidence
         if: always()
@@ -126,6 +130,7 @@ jobs:
         with:
           name: frontend-e2e-evidence-${{ github.run_attempt }}
           path: |
+            /tmp/frontend-harness.log
             test-results/playwright
             playwright-report
           if-no-files-found: warn
@@ -191,7 +196,20 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: |
+          if ! pnpm build > /tmp/workspace-build.log 2>&1; then
+            tail -n 300 /tmp/workspace-build.log
+            exit 1
+          fi
+
+      - name: Upload workspace build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-build-diagnostics-${{ github.run_attempt }}
+          path: /tmp/workspace-build.log
+          if-no-files-found: error
+          retention-days: 1
 
   verify:
     name: Verify repository

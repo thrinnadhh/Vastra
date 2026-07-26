@@ -6923,7 +6923,7 @@ paths:
       security: [{bearerAuth: []}]
       parameters: [{name: merchantId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
       requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Merchant command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+      responses: {'200': {description: Merchant command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
   /admin/merchants/{merchantId}/suspend:
     post:
       operationId: suspendAdminMerchant
@@ -6932,7 +6932,7 @@ paths:
       security: [{bearerAuth: []}]
       parameters: [{name: merchantId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
       requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Merchant command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+      responses: {'200': {description: Merchant command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
   /admin/merchants/{merchantId}/restore:
     post:
       operationId: restoreAdminMerchant
@@ -6941,7 +6941,7 @@ paths:
       security: [{bearerAuth: []}]
       parameters: [{name: merchantId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
       requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Merchant command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+      responses: {'200': {description: Merchant command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
   /admin/captains:
     get:
       operationId: listAdminCaptains
@@ -6972,7 +6972,7 @@ paths:
       security: [{bearerAuth: []}]
       parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
       requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Captain command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+      responses: {'200': {description: Captain command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
   /admin/captains/{captainId}/restore:
     post:
       operationId: restoreAdminCaptain
@@ -6981,7 +6981,7 @@ paths:
       security: [{bearerAuth: []}]
       parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
       requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Captain command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+      responses: {'200': {description: Captain command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
   /admin/captains/{captainId}/correct-availability:
     post:
       operationId: correctAdminCaptainAvailability
@@ -6990,7 +6990,7 @@ paths:
       security: [{bearerAuth: []}]
       parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
       requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Captain command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+      responses: {'200': {description: Captain command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
   /admin/captains/{captainId}/release-active-assignment:
     post:
       operationId: releaseAdminCaptainAssignment
@@ -6999,7 +6999,7 @@ paths:
       security: [{bearerAuth: []}]
       parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
       requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Captain command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+      responses: {'200': {description: Captain command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
   /admin/audit:
     get:
       operationId: listAdminAudit

@@ -27,7 +27,8 @@ export default defineConfig({
     },
     {
       command:
-        'pnpm --filter @vastra/admin-dashboard exec next build && pnpm --filter @vastra/admin-dashboard exec next start -H 127.0.0.1 -p 4179',
+        'test -f packages/api-client/dist/index.js || pnpm --filter @vastra/api-client build; pnpm --filter @vastra/admin-dashboard exec next build && pnpm --filter @vastra/admin-dashboard exec next start -H 127.0.0.1 -p 4179',
+      env: { NEXT_PUBLIC_ADMIN_E2E_FIXTURE: '1' },
       url: adminOrigin,
       reuseExistingServer: false,
       timeout: 120_000,
