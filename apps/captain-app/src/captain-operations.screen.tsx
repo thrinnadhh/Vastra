@@ -2,14 +2,20 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { HardenedAuthenticatedCaptainDeliveryScreen } from './delivery/hardened-captain-delivery.screen';
-import { AuthenticatedCaptainPresenceScreen } from './presence/captain-presence.screen';
+import { HardenedAuthenticatedCaptainPresenceScreen } from './presence/hardened-captain-presence.screen';
 
 export function CaptainOperationsScreen(): React.JSX.Element {
   const [tab, setTab] = useState<'DELIVERIES' | 'AVAILABILITY'>('DELIVERIES');
+
   return (
     <View style={styles.root}>
-      <View accessibilityRole="tablist" style={styles.tabs}>
+      <View
+        accessibilityLabel="Captain operations sections"
+        accessibilityRole="tablist"
+        style={styles.tabs}
+      >
         <Pressable
+          accessibilityLabel="Deliveries tab"
           accessibilityRole="tab"
           accessibilityState={{ selected: tab === 'DELIVERIES' }}
           onPress={() => {
@@ -20,6 +26,7 @@ export function CaptainOperationsScreen(): React.JSX.Element {
           <Text style={styles.tabText}>Deliveries</Text>
         </Pressable>
         <Pressable
+          accessibilityLabel="Availability tab"
           accessibilityRole="tab"
           accessibilityState={{ selected: tab === 'AVAILABILITY' }}
           onPress={() => {
@@ -34,7 +41,7 @@ export function CaptainOperationsScreen(): React.JSX.Element {
         {tab === 'DELIVERIES' ? (
           <HardenedAuthenticatedCaptainDeliveryScreen />
         ) : (
-          <AuthenticatedCaptainPresenceScreen />
+          <HardenedAuthenticatedCaptainPresenceScreen />
         )}
       </View>
     </View>
@@ -54,11 +61,15 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
+    minHeight: 48,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: '#F6E7DB',
+    borderWidth: 1,
+    borderColor: '#E4E4E8',
+    backgroundColor: '#F4F4F6',
   },
-  activeTab: { backgroundColor: '#E9A47E' },
-  tabText: { color: '#4A2919', fontWeight: '800' },
+  activeTab: { borderColor: '#147D65', backgroundColor: '#ECFDF8' },
+  tabText: { color: '#2F1B12', fontWeight: '800' },
 });
