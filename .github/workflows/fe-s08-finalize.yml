@@ -48,6 +48,47 @@ jobs:
           rm -f .github/workflows/fe-s08-apply.yml
           rm -f .github/workflows/fe-s08-finalize.yml
 
+      - name: Repair recovered static findings
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/backend/src/admin/admin-capabilities.service.test.ts')
+          text = path.read_text(encoding='utf-8').replace(
+              '  public listGrantedPermissions(_client: SupabaseClient) {\n    return Promise.resolve',
+              '  public listGrantedPermissions(client: SupabaseClient) {\n    void client;\n    return Promise.resolve',
+          )
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('apps/backend/src/admin/admin-list.validation.ts')
+          text = path.read_text(encoding='utf-8').replace(
+              "  if (typeof value !== 'string' || !allowed.includes(value as T[number])) {\n    throw new AdminListQueryInvalidError();\n  }\n  return value as T[number];",
+              "  if (typeof value !== 'string') throw new AdminListQueryInvalidError();\n  const matched = allowed.find((candidate) => candidate === value);\n  if (matched === undefined) throw new AdminListQueryInvalidError();\n  return matched;",
+          )
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('apps/backend/src/admin/admin-module-contracts.test.ts')
+          text = path.read_text(encoding='utf-8').replace(
+              "    expect(\n      readMetadata(REQUIRED_PERMISSIONS_METADATA, AdminCapabilitiesController.prototype.get),\n    ).toBeUndefined();",
+              "    const descriptor = Object.getOwnPropertyDescriptor(\n      AdminCapabilitiesController.prototype,\n      'get',\n    );\n    expect(readMetadata(REQUIRED_PERMISSIONS_METADATA, descriptor?.value)).toBeUndefined();",
+          )
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('apps/backend/src/admin/admin-order-list.gateway.ts')
+          text = path.read_text(encoding='utf-8').replace(
+              '  optionalPhoneLast4,\n  optionalString,\n  optionalUuid,',
+              '  optionalPhoneLast4,\n  optionalUuid,',
+          )
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('apps/backend/src/admin/admin-read-model.parser.ts')
+          text = path.read_text(encoding='utf-8').replace(
+              "  const value = requireString(record, key);\n  if (!allowed.includes(value as T[number])) throw new AdminReadModelInvalidError();\n  return value as T[number];",
+              "  const value = requireString(record, key);\n  const matched = allowed.find((candidate) => candidate === value);\n  if (matched === undefined) throw new AdminReadModelInvalidError();\n  return matched;",
+          )
+          path.write_text(text, encoding='utf-8')
+          PY
+
       - name: Install pnpm
         uses: pnpm/action-setup@v6
 
@@ -67,23 +108,7 @@ jobs:
         run: pnpm format:check
 
       - name: Run lint
-        id: lint
-        shell: bash
-        run: |
-          set +e
-          pnpm lint > /tmp/fe-s08-lint.log 2>&1
-          status=$?
-          cat /tmp/fe-s08-lint.log
-          exit "$status"
-
-      - name: Upload lint diagnostics
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: fe-s08-lint-diagnostics
-          path: /tmp/fe-s08-lint.log
-          if-no-files-found: warn
-          retention-days: 1
+        run: pnpm lint
 
       - name: Run TypeScript checks
         run: pnpm typecheck
