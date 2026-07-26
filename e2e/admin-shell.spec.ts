@@ -5,23 +5,19 @@ import { FRONTEND_E2E_ENTRY_POINTS } from '@vastra/frontend-test-harness';
 const entryPoint = FRONTEND_E2E_ENTRY_POINTS.find(
   (candidate) => candidate.id === 'admin-shell-keyboard-and-responsive',
 );
-if (entryPoint === undefined) {
-  throw new Error('Admin E2E entry point is missing');
-}
+if (entryPoint === undefined) throw new Error('Admin E2E entry point is missing');
 
-test('admin application exposes keyboard and landmark foundations', async ({ page }) => {
+test('admin application exposes permission-aware landmarks and keyboard access', async ({
+  page,
+}) => {
   await page.goto('/');
-
-  await expect(
-    page.getByRole('heading', { name: 'Vastra Admin — foundation ready' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Operations overview' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Admin navigation' })).toBeVisible();
-  await expect(page.getByRole('main')).toHaveCount(1);
   await expect(page.getByRole('link', { name: 'Overview' })).toHaveAttribute(
     'aria-current',
     'page',
   );
-
+  await expect(page.getByText('AAL2')).toBeVisible();
   await page.keyboard.press('Tab');
   const skipLink = page.getByRole('link', { name: 'Skip to main content' });
   await expect(skipLink).toBeFocused();
@@ -29,14 +25,40 @@ test('admin application exposes keyboard and landmark foundations', async ({ pag
   await expect(page.getByRole('main')).toBeFocused();
 });
 
-test('admin application reflows without losing semantic regions', async ({ page }) => {
+test('FE08 completes dashboard to search to recovery to audit', async ({ page }) => {
+  await page.goto('/');
+  await page
+    .getByRole('search')
+    .getByPlaceholder('Order number, UUID, phone suffix or name')
+    .fill('VAS');
+  await page.getByRole('button', { name: 'Search' }).click();
+  await page
+    .getByRole('list', { name: 'Search results' })
+    .getByRole('link', { name: /^VAS-260726-001\b/u })
+    .click();
+  await expect(page.getByRole('heading', { name: 'VAS-260726-001' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Order status timeline' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Restart captain search' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Restart captain search' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel(/Operational note/u).fill('FE08 audited browser recovery');
+  await dialog.getByRole('button', { name: 'Restart dispatch' }).click();
+  await expect(page.getByText('Authoritative operation completed.')).toBeVisible();
+  await expect(page.getByText(/FE08 audited browser recovery/u)).toBeVisible();
+
+  await page.getByRole('link', { name: 'Open audit explorer' }).click();
+  await expect(page.getByRole('heading', { name: 'Admin audit' })).toBeVisible();
+  await expect(page.getByText('FE08 audited browser recovery')).toBeVisible();
+});
+
+test('admin application reflows without losing operational navigation', async ({ page }) => {
   await page.goto('/');
   await page.setViewportSize(
     entryPoint.viewport.width > 760 ? { width: 390, height: 844 } : entryPoint.viewport,
   );
-
   await expect(page.getByRole('banner')).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Admin navigation' })).toBeVisible();
   await expect(page.getByRole('main')).toBeVisible();
-  await expect(page.getByText('System shell available')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Operations overview' })).toBeVisible();
 });

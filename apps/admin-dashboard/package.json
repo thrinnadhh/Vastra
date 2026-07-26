@@ -11,6 +11,8 @@
     "build": "next build"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.109.0",
+    "@vastra/api-client": "workspace:*",
     "@vastra/app-shells": "workspace:*",
     "next": "16.2.10",
     "react": "19.2.7",
