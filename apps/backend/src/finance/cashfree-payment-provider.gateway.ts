@@ -24,6 +24,8 @@ export class PaymentProviderOperationNotImplementedError extends Error {}
 export class PaymentWebhookSignatureInvalidError extends Error {}
 export class PaymentWebhookPayloadInvalidError extends Error {}
 
+const PAYMENT_WEBHOOK_REPLAY_WINDOW_MS = 5 * 60 * 1_000;
+
 function requireEnvironment(name: string): string {
   const value = process.env[name];
   if (value === undefined || value.trim().length === 0) {
@@ -100,7 +102,14 @@ function cashfreeRoot(): string {
 
 function verifyCashfreeSignature(input: VerifyProviderWebhookInput): void {
   if (input.version !== CASHFREE_API_VERSION) throw new PaymentWebhookPayloadInvalidError();
-  if (!/^\d{10,16}$/u.test(input.timestamp)) throw new PaymentWebhookPayloadInvalidError();
+  if (!/^\d{13}$/u.test(input.timestamp)) throw new PaymentWebhookPayloadInvalidError();
+  const timestamp = Number(input.timestamp);
+  if (
+    !Number.isSafeInteger(timestamp) ||
+    Math.abs(Date.now() - timestamp) > PAYMENT_WEBHOOK_REPLAY_WINDOW_MS
+  ) {
+    throw new PaymentWebhookPayloadInvalidError();
+  }
   if (input.idempotencyKey.length < 16 || input.idempotencyKey.length > 256) {
     throw new PaymentWebhookPayloadInvalidError();
   }
