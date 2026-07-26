@@ -32,6 +32,10 @@ import { MerchantOrderReadyController } from './merchant-order-ready.controller'
 import { SupabaseMerchantOrderReadyGateway } from './merchant-order-ready.gateway';
 import { MerchantOrderReadyService } from './merchant-order-ready.service';
 import { MERCHANT_ORDER_READY_GATEWAY } from './merchant-order-ready.tokens';
+import { MerchantDashboardController } from './merchant-dashboard.controller';
+import { SupabaseMerchantDashboardGateway } from './merchant-dashboard.gateway';
+import { MerchantDashboardService } from './merchant-dashboard.service';
+import { MERCHANT_DASHBOARD_GATEWAY } from './merchant-dashboard.tokens';
 
 @Module({
   controllers: [
@@ -43,6 +47,7 @@ import { MERCHANT_ORDER_READY_GATEWAY } from './merchant-order-ready.tokens';
     MerchantOrderPackingController,
     MerchantOrderReadyController,
     MerchantOrderReadController,
+    MerchantDashboardController,
   ],
   providers: [
     CustomerOrderService,
@@ -53,6 +58,7 @@ import { MERCHANT_ORDER_READY_GATEWAY } from './merchant-order-ready.tokens';
     MerchantOrderDecisionService,
     MerchantOrderPackingService,
     MerchantOrderReadyService,
+    MerchantDashboardService,
     {
       provide: CUSTOMER_ORDER_GATEWAY,
       useClass: SupabaseCustomerOrderGateway,
@@ -76,6 +82,10 @@ import { MERCHANT_ORDER_READY_GATEWAY } from './merchant-order-ready.tokens';
       provide: MERCHANT_ORDER_READ_GATEWAY,
       useClass: SupabaseMerchantOrderReadGateway,
     },
+    {
+      provide: MERCHANT_DASHBOARD_GATEWAY,
+      useClass: SupabaseMerchantDashboardGateway,
+    },
   ],
   exports: [
     CUSTOMER_ORDER_GATEWAY,
@@ -84,6 +94,7 @@ import { MERCHANT_ORDER_READY_GATEWAY } from './merchant-order-ready.tokens';
     MERCHANT_ORDER_ALERT_GATEWAY,
     MERCHANT_ORDER_PACKING_GATEWAY,
     MERCHANT_ORDER_READ_GATEWAY,
+    MERCHANT_DASHBOARD_GATEWAY,
   ],
 })
 export class OrdersModule {}

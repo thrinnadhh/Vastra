@@ -78,14 +78,14 @@ describe('AdminDashboardService', () => {
     });
   });
 
-  it('rejects unknown order statuses and issue filters', () => {
+  it('rejects unknown order statuses and issue filters', async () => {
     const service = new AdminDashboardService(new GatewayStub());
 
-    expect(() => service.listOrders(CONTEXT, 'UNKNOWN', undefined, undefined, undefined)).toThrow(
-      AdminOrderListQueryInvalidError,
-    );
-    expect(() =>
+    await expect(
+      service.listOrders(CONTEXT, 'UNKNOWN', undefined, undefined, undefined),
+    ).rejects.toBeInstanceOf(AdminOrderListQueryInvalidError);
+    await expect(
       service.listOrders(CONTEXT, undefined, 'UNKNOWN', undefined, undefined),
-    ).toThrow(AdminOrderListQueryInvalidError);
+    ).rejects.toBeInstanceOf(AdminOrderListQueryInvalidError);
   });
 });

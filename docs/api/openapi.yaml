@@ -3027,6 +3027,116 @@ components:
           properties:
             problemDeliveries30d: {type: integer, minimum: 0}
             pendingEarningsPaise: {type: integer, minimum: 0}
+    AdminOperationalOrder:
+      type: object
+      additionalProperties: false
+      required: [id, orderNumber, status, paymentStatus, fulfilmentType, totalPaise, itemCount, customer, shop, deliveryTaskId, deliveryStatus, interventionReason, estimatedDeliveryAt, placedAt, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        orderNumber: {type: string}
+        status:
+          type: string
+          enum: [PAYMENT_PENDING, WAITING_FOR_MERCHANT, MERCHANT_ACCEPTED, PACKING, READY_FOR_PICKUP, CAPTAIN_SEARCHING, CAPTAIN_ASSIGNED, CAPTAIN_AT_STORE, PICKED_UP, OUT_FOR_DELIVERY, CAPTAIN_AT_CUSTOMER, DELIVERED, COMPLETED, PROBLEM_REPORTED, CANCELLED]
+        paymentStatus: {type: string}
+        fulfilmentType: {type: string}
+        totalPaise: {type: integer, minimum: 0}
+        itemCount: {type: integer, minimum: 0}
+        customer:
+          type: object
+          additionalProperties: false
+          required: [id, name, phoneNumber]
+          properties:
+            id: {type: string, format: uuid}
+            name: {type: ['string', 'null']}
+            phoneNumber: {type: ['string', 'null']}
+        shop:
+          type: object
+          additionalProperties: false
+          required: [id, name, merchantId]
+          properties:
+            id: {type: string, format: uuid}
+            name: {type: string}
+            merchantId: {type: string, format: uuid}
+        deliveryTaskId: {type: ['string', 'null'], format: uuid}
+        deliveryStatus: {type: ['string', 'null']}
+        interventionReason:
+          type: ['string', 'null']
+          enum: [DELAYED, UNASSIGNED, MERCHANT_TIMEOUT, CAPTAIN_ISSUE, PAYMENT_ISSUE, null]
+        estimatedDeliveryAt: {type: ['string', 'null'], format: date-time}
+        placedAt: {type: ['string', 'null'], format: date-time}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    AdminOrderListResponse:
+      type: object
+      additionalProperties: false
+      required: [orders, nextCursor]
+      properties:
+        orders:
+          type: array
+          items: {$ref: '#/components/schemas/AdminOperationalOrder'}
+        nextCursor: {type: ['string', 'null']}
+    MerchantDashboard:
+      type: object
+      additionalProperties: false
+      required: [shop, orders, alerts, inventory, sales, generatedAt]
+      properties:
+        shop:
+          type: object
+          additionalProperties: false
+          required: [id, name, operationalStatus, acceptsOnlineOrders]
+          properties:
+            id: {type: string, format: uuid}
+            name: {type: string}
+            operationalStatus: {type: string}
+            acceptsOnlineOrders: {type: boolean}
+        orders:
+          type: object
+          additionalProperties: false
+          required: [waitingForMerchant, packing, readyForPickup, activeDelivery, problemReported]
+          properties:
+            waitingForMerchant: {type: integer, minimum: 0}
+            packing: {type: integer, minimum: 0}
+            readyForPickup: {type: integer, minimum: 0}
+            activeDelivery: {type: integer, minimum: 0}
+            problemReported: {type: integer, minimum: 0}
+        alerts:
+          type: object
+          additionalProperties: false
+          required: [unacknowledged]
+          properties:
+            unacknowledged: {type: integer, minimum: 0}
+        inventory:
+          type: object
+          additionalProperties: false
+          required: [lowStockVariants]
+          properties:
+            lowStockVariants: {type: integer, minimum: 0}
+        sales:
+          type: object
+          additionalProperties: false
+          required: [completedToday, grossTodayPaise]
+          properties:
+            completedToday: {type: integer, minimum: 0}
+            grossTodayPaise: {type: integer, minimum: 0}
+        generatedAt: {type: string, format: date-time}
+    MerchantDashboardResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          additionalProperties: false
+          required: [dashboard]
+          properties:
+            dashboard: {$ref: '#/components/schemas/MerchantDashboard'}
+        meta:
+          type: object
+          additionalProperties: false
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     DeliveryAddressSnapshot:
       type: object
       additionalProperties: false
@@ -5920,22 +6030,20 @@ paths:
               schema: {$ref: '#/components/schemas/ApiError'}
   /merchant/dashboard:
     get:
+      operationId: getMerchantDashboard
       summary: Get merchant dashboard
-      tags:
-      - Merchant
+      description: Returns the authenticated merchant's one-shop operational snapshot, live work queues, low-stock count, and UTC-day sales totals.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Merchant operational dashboard
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/MerchantDashboardResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /merchant/orders:
     get:
       operationId: listMerchantOrders
@@ -6944,22 +7052,42 @@ paths:
           description: Forbidden
   /admin/orders:
     get:
+      operationId: listAdminOperationalOrders
       summary: List operational orders
-      tags:
-      - Admin
+      description: Keyset-paginated operations queue with optional lifecycle and intervention filters.
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [PAYMENT_PENDING, WAITING_FOR_MERCHANT, MERCHANT_ACCEPTED, PACKING, READY_FOR_PICKUP, CAPTAIN_SEARCHING, CAPTAIN_ASSIGNED, CAPTAIN_AT_STORE, PICKED_UP, OUT_FOR_DELIVERY, CAPTAIN_AT_CUSTOMER, DELIVERED, COMPLETED, PROBLEM_REPORTED, CANCELLED]
+      - name: issue
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [DELAYED, UNASSIGNED, MERCHANT_TIMEOUT, CAPTAIN_ISSUE, PAYMENT_ISSUE]
+      - name: cursor
+        in: query
+        required: false
+        schema: {type: string}
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 50, default: 20}
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Operational order page
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/AdminOrderListResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/orders/{orderId}/assign-captain:
     post:
       summary: Assign captain

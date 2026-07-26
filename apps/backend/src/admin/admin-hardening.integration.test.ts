@@ -140,6 +140,10 @@ class IntegrationDashboardGateway implements AdminDashboardGateway {
   public search() {
     return Promise.resolve([]);
   }
+
+  public listOrders() {
+    return Promise.resolve({ orders: [], nextCursor: null });
+  }
 }
 
 class IntegrationOrderOperationsGateway implements AdminOrderOperationsGateway {
