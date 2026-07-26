@@ -1,0 +1,75 @@
+name: FE-S08 apply validated backend implementation
+
+on:
+  push:
+    branches:
+      - agent/fe-s08-backend-implementation
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out implementation branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/fe-s08-backend-implementation
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Decode and inspect prepared implementation
+        run: |
+          cat .github/fe-s08-patch/chunk-* \
+            | tr -d '\n\r' \
+            | base64 --decode \
+            | gzip --decompress \
+            > /tmp/fe-s08.patch
+          test -s /tmp/fe-s08.patch
+          git apply --check --whitespace=error-all /tmp/fe-s08.patch
+          sed -n '1,120p' /tmp/fe-s08.patch
+
+      - name: Apply implementation and remove temporary transport files
+        run: |
+          git apply --whitespace=error-all /tmp/fe-s08.patch
+          rm -rf .github/fe-s08-patch
+          rm -f .github/workflows/fe-s08-materialize.yml
+          rm -f .github/workflows/fe-s08-apply.yml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply repository formatting
+        run: pnpm format
+
+      - name: Validate static quality
+        run: |
+          pnpm format:check
+          pnpm lint
+          pnpm typecheck
+
+      - name: Validate backend and contracts
+        run: |
+          pnpm --filter @vastra/backend test
+          pnpm --filter @vastra/backend test:integration
+          pnpm openapi:check
+          pnpm --filter @vastra/backend build
+
+      - name: Commit validated implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "feat(fe-s08): implement admin observation and recovery backend"
+          git push origin HEAD:agent/fe-s08-backend-implementation
