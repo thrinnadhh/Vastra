@@ -114,6 +114,39 @@ describe('ApiCustomerOrderAdapter', () => {
     expect(JSON.stringify(order)).not.toContain('INTERNAL_');
   });
 
+  it('cancels an eligible order through the generated idempotent command', async () => {
+    const idempotencyKey = '70000000-0000-4000-8000-000000000001';
+    const { client, request } = clientReturning({
+      success: true,
+      data: {
+        cancellation: {
+          orderId: ORDER_ID,
+          orderNumber: 'VAS-1',
+          status: 'CANCELLED',
+          paymentStatus: 'COD_PENDING',
+          refundId: null,
+          refundStatus: null,
+          reservationsReleased: 1,
+          cancelledAt: '2026-07-26T10:00:00.000Z',
+          replayed: false,
+        },
+      },
+      meta: { requestId: null },
+    });
+
+    await expect(
+      new ApiCustomerOrderAdapter(client).cancelOrder(ORDER_ID, idempotencyKey),
+    ).resolves.toMatchObject({
+      orderId: ORDER_ID,
+      status: 'CANCELLED',
+      reservationsReleased: 1,
+    });
+    expect(request).toHaveBeenCalledWith('cancelCustomerOrder', {
+      path: { orderId: ORDER_ID },
+      headers: { 'Idempotency-Key': idempotencyKey },
+    });
+  });
+
   it('maps an unknown order status without exposing the backend enum', async () => {
     const { client } = clientReturning({
       success: true,
