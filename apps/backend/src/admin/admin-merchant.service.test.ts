@@ -12,8 +12,13 @@ const KEY = '30000000-0000-4000-8000-000000000001';
 
 class GatewayStub implements AdminMerchantGateway {
   public input: AdminMerchantMutationInput | null = null;
+  public approvalInput: AdminMerchantMutationInput | null = null;
   public get() {
     return Promise.resolve({ merchant: { id: MERCHANT_ID } });
+  }
+  public approve(input: AdminMerchantMutationInput) {
+    this.approvalInput = input;
+    return Promise.resolve({ merchant: { id: MERCHANT_ID, onboardingStatus: 'ACTIVE' } });
   }
   public setStatus(input: AdminMerchantMutationInput) {
     this.input = input;
@@ -48,5 +53,28 @@ describe('AdminMerchantService', () => {
     expect(() =>
       service.setStatus(CONTEXT, MERCHANT_ID, KEY, { reasonCode: 'NOPE' }, 'PAUSED', null),
     ).toThrow(AdminMerchantRequestInvalidError);
+  });
+
+  it('builds an actor-bound, idempotent merchant approval command', async () => {
+    const gateway = new GatewayStub();
+    const service = new AdminMerchantService(gateway);
+
+    await service.approve(
+      CONTEXT,
+      MERCHANT_ID,
+      KEY,
+      { reasonCode: 'DATA_CORRECTION', note: 'KYC and shop checks completed' },
+      'request-approval-1',
+    );
+
+    expect(gateway.approvalInput).toEqual({
+      actorId: CONTEXT.actor.id,
+      merchantId: MERCHANT_ID,
+      idempotencyKey: KEY,
+      targetStatus: 'ACTIVE',
+      reasonCode: 'DATA_CORRECTION',
+      note: 'KYC and shop checks completed',
+      requestId: 'request-approval-1',
+    });
   });
 });
