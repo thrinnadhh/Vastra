@@ -28,6 +28,9 @@ Under the frozen go/no-go rules, unexecuted critical gates require `NO_GO`.
 - Added merchant and captain account-approval commands with MFA, permission, audit, and
   database transaction enforcement.
 - Added admin live-order and merchant dashboard read models.
+- Replaced the admin foundation page with a secure, AAL2-gated operations dashboard
+  backed by the generated API client, including summary metrics, filters, live-order
+  pagination, and complete loading/error/empty/access-denied states.
 - Rejected stale or future payment webhook timestamps and bounded Cashfree network calls.
 - Added automatic, bounded execution of initiated cancellation refunds while preserving
   the initiating actor and provider idempotency identity.
@@ -65,15 +68,21 @@ bypass; consolidate them before scale testing where practical.
 ## Current frontend boundary
 
 The customer COD journey, customer navigation/discovery/order foundations, merchant
-fulfilment path, captain COD delivery path, and shared frontend infrastructure have
-automated coverage. The admin application is still a foundation shell and is not an
-operational admin console.
+fulfilment path, captain COD delivery path, shared frontend infrastructure, and the
+admin read-only operations dashboard have automated coverage. The admin application
+now provides secure sign-in, AAL2 enforcement, aggregate operational metrics, filters,
+and a paginated live-order queue.
 
 The complete frozen screen inventory is not implemented end to end. Material remaining
-surfaces include admin operations UI, full customer online-payment/return/support
+surfaces include admin order investigation/recovery actions, account approvals,
+support/finance/audit/configuration tools, full customer online-payment/return/support
 experiences, merchant catalogue/inventory/finance/support self-service, and captain
-onboarding/earnings/history/support. These are product-completeness blockers even though
-the supporting backend is substantially broader than the current clients.
+onboarding/earnings/history/support. These are product-completeness blockers even
+though the supporting backend is substantially broader than the current clients.
+
+The repository does not contain release-environment credentials, so the real Supabase
+password-plus-TOTP flow remains a production evidence gate even though its fail-closed
+client orchestration and entry surface have automated coverage.
 
 There is also an unresolved scope conflict: `docs/product/mvp-scope.md` includes Group
 Style, while `apps/customer-app/AGENTS.md` explicitly forbids implementing it. Group
