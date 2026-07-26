@@ -32,10 +32,9 @@ test('FE08 completes dashboard to search to recovery to audit', async ({ page })
     .getByPlaceholder('Order number, UUID, phone suffix or name')
     .fill('VAS');
   await page.getByRole('button', { name: 'Search' }).click();
-  await page
-    .getByRole('list', { name: 'Search results' })
-    .getByRole('link', { name: /^VAS-260726-001\b/u })
-    .click();
+  const searchResults = page.getByRole('list', { name: 'Search results' });
+  await expect(searchResults).toBeVisible();
+  await searchResults.getByRole('link', { name: /^VAS-260726-001\b/u }).click();
   await expect(page.getByRole('heading', { name: 'VAS-260726-001' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Order status timeline' })).toBeVisible();
 
