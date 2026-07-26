@@ -156,3 +156,19 @@ replace_once(
     '''    setSearchResults(result.data);\n    if (result.data.length === 1) router.prefetch(resultHref(result.data[0]));''',
     '''    setSearchResults(result.data);\n    const [onlyResult] = result.data;\n    if (result.data.length === 1 && onlyResult !== undefined) {\n      router.prefetch(resultHref(onlyResult));\n    }''',
 )
+
+audit = ROOT / 'apps/admin-dashboard/src/app/audit/page.tsx'
+replace_once(
+    audit,
+    "import { useState, type FormEvent } from 'react';",
+    "import { Suspense, useState, type FormEvent } from 'react';",
+)
+replace_once(
+    audit,
+    'export default function AuditPage() {',
+    'function AuditPageContent() {',
+)
+audit_text = audit.read_text(encoding='utf-8')
+wrapper = '''\nexport default function AuditPage() {\n  return (\n    <Suspense fallback={<LoadingPanel label="Loading audit filters…" />}>\n      <AuditPageContent />\n    </Suspense>\n  );\n}\n'''
+if wrapper.strip() not in audit_text:
+    audit.write_text(audit_text.rstrip() + '\n' + wrapper, encoding='utf-8')
