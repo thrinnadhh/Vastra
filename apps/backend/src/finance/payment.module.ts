@@ -21,6 +21,7 @@ import {
 import { RefundExecutionController } from './refund-execution.controller';
 import { SupabaseRefundExecutionGateway } from './refund-execution.gateway';
 import { RefundExecutionService } from './refund-execution.service';
+import { RefundExecutionWorker } from './refund-execution.worker';
 
 @Module({
   controllers: [
@@ -35,6 +36,7 @@ import { RefundExecutionService } from './refund-execution.service';
     PaymentProcessingService,
     PaymentProcessingWorker,
     RefundExecutionService,
+    RefundExecutionWorker,
     {
       provide: CUSTOMER_PAYMENT_GATEWAY,
       useClass: SupabaseCustomerPaymentGateway,

@@ -491,5 +491,60 @@ select is(
   'captured-payment cancellation emits one durable refund event'
 );
 
+select throws_ok(
+  $$
+    select public.apply_return_refund_result(
+      'c1000000-0000-4000-8000-000000000001',
+      (
+        select id
+        from public.refunds
+        where order_id = 'c6000000-0000-4000-8000-000000000002'
+      ),
+      'CF-UNAUTHORIZED-REFUND',
+      'SUCCESS',
+      transaction_timestamp(),
+      null
+    )
+  $$,
+  'P0001',
+  'FINANCE_ACCESS_DENIED',
+  'an unrelated active account cannot apply another actor refund result'
+);
+select lives_ok(
+  $$
+    select public.apply_return_refund_result(
+      'c1000000-0000-4000-8000-000000000002',
+      (
+        select id
+        from public.refunds
+        where order_id = 'c6000000-0000-4000-8000-000000000002'
+      ),
+      'CF-CANCEL-REFUND',
+      'SUCCESS',
+      transaction_timestamp(),
+      null
+    )
+  $$,
+  'automatic execution may apply a cancellation refund as its immutable initiating actor'
+);
+select is(
+  (
+    select status::text
+    from public.refunds
+    where order_id = 'c6000000-0000-4000-8000-000000000002'
+  ),
+  'COMPLETED',
+  'automatic cancellation refund execution reaches a terminal state'
+);
+select is(
+  (
+    select payment_status::text
+    from public.orders
+    where id = 'c6000000-0000-4000-8000-000000000002'
+  ),
+  'REFUNDED',
+  'successful automatic cancellation refund updates the order payment state'
+);
+
 select * from finish();
 rollback;

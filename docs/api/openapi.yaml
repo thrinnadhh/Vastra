@@ -3942,11 +3942,12 @@ components:
     RefundExecutionRecord:
       type: object
       additionalProperties: false
-      required: [refundId, refundNumber, returnId, orderId, paymentId, providerOrderId, providerPaymentId, providerRefundId, amountPaise, idempotencyKey, status, failureMessage, initiatedAt, completedAt, replayed]
+      required: [refundId, refundNumber, returnId, initiatedBy, orderId, paymentId, providerOrderId, providerPaymentId, providerRefundId, amountPaise, idempotencyKey, status, failureMessage, initiatedAt, completedAt, replayed]
       properties:
         refundId: {type: string, format: uuid}
         refundNumber: {type: string}
-        returnId: {type: string, format: uuid}
+        returnId: {type: ['string', 'null'], format: uuid}
+        initiatedBy: {type: string, format: uuid}
         orderId: {type: string, format: uuid}
         paymentId: {type: string, format: uuid}
         providerOrderId: {type: string}
