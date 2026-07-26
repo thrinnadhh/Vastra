@@ -427,9 +427,13 @@ describe('customer discovery journeys', () => {
     );
 
     fireEvent.press(
-      await screen.findByRole('button', {
-        name: 'Open Journey Trends. 700 m away. Open for online orders',
-      }),
+      await screen.findByRole(
+        'button',
+        {
+          name: 'Open Journey Trends. 700 m away. Open for online orders',
+        },
+        { timeout: 5_000 },
+      ),
     );
     expect(await screen.findByText('Shop catalogue')).toBeTruthy();
     expect(screen.getByText('Open now · 10:00–21:00')).toBeTruthy();

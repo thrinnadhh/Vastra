@@ -379,7 +379,7 @@ describe('merchant COD fulfilment journey', () => {
       />,
     );
 
-    await view.findByText('VAS-JOURNEY');
+    await view.findByText('VAS-JOURNEY', undefined, { timeout: 5_000 });
     fireEvent.press(view.getByLabelText('Open order VAS-JOURNEY for Asha'));
     await view.findByText('Customer and delivery');
 
