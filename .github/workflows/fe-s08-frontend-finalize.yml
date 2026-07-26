@@ -94,10 +94,11 @@ jobs:
           echo 'dc904f30cd10f30379c081833a729050189301d1518d6d62cc8ad9e887d029c0  /tmp/fe-s08-lint-repair-2.patch' | sha256sum --check
           git apply --check /tmp/fe-s08-lint-repair.patch
           git apply /tmp/fe-s08-lint-repair.patch
+          pnpm format > /tmp/fe-s08-reformat-1.log 2>&1
           git apply --check /tmp/fe-s08-lint-repair-2.patch
           git apply /tmp/fe-s08-lint-repair-2.patch
           rm -f .github/fe-s08-lint-repair.xz.b64 .github/fe-s08-lint-repair-2.xz.b64
-          pnpm format > /tmp/fe-s08-reformat.log 2>&1
+          pnpm format > /tmp/fe-s08-reformat-2.log 2>&1
 
       - name: Check formatting
         run: |
