@@ -27,6 +27,7 @@ export interface AdminCaptainAvailabilityInput extends AdminCaptainMutationInput
 
 export interface AdminCaptainGateway {
   get(captainId: string): Promise<AdminCaptainSnapshot | null>;
+  approve(input: AdminCaptainMutationInput): Promise<AdminCaptainSnapshot>;
   setStatus(input: AdminCaptainStatusInput): Promise<AdminCaptainSnapshot>;
   correctAvailability(input: AdminCaptainAvailabilityInput): Promise<AdminCaptainSnapshot>;
   releaseActiveAssignment(input: AdminCaptainMutationInput): Promise<AdminCaptainSnapshot>;
@@ -80,6 +81,17 @@ export class SupabaseAdminCaptainGateway implements AdminCaptainGateway {
       p_actor_id: input.actorId,
       p_captain_id: input.captainId,
       p_target_status: input.targetStatus,
+      p_reason_code: input.reasonCode,
+      p_note: input.note,
+      p_request_id: input.requestId,
+      p_idempotency_key: input.idempotencyKey,
+    });
+  }
+
+  public approve(input: AdminCaptainMutationInput): Promise<AdminCaptainSnapshot> {
+    return this.rpc('admin_approve_captain', {
+      p_actor_id: input.actorId,
+      p_captain_id: input.captainId,
       p_reason_code: input.reasonCode,
       p_note: input.note,
       p_request_id: input.requestId,

@@ -34,6 +34,25 @@ export class AdminMerchantController {
     return this.service.get(context, merchantId);
   }
 
+  @Post(':merchantId/approve')
+  @RequirePermissions('admin.merchants.manage')
+  @HttpCode(HttpStatus.OK)
+  public approve(
+    @CurrentAuthContext() context: AuthenticatedRequestContext,
+    @Param('merchantId') merchantId: unknown,
+    @Headers('idempotency-key') idempotencyKey: unknown,
+    @Headers('x-request-id') requestId: string | undefined,
+    @Body() body: unknown,
+  ) {
+    return this.service.approve(
+      context,
+      merchantId,
+      idempotencyKey,
+      body,
+      requestId ?? null,
+    );
+  }
+
   @Post(':merchantId/pause-orders')
   @RequirePermissions('admin.merchants.manage')
   @HttpCode(HttpStatus.OK)

@@ -2939,6 +2939,94 @@ components:
       properties:
         collectedAmountPaise: {type: integer, minimum: 0}
         reason: {type: string, minLength: 10, maxLength: 500}
+    AdminMutationReasonCode:
+      type: string
+      enum: [CUSTOMER_REQUEST, MERCHANT_REQUEST, CAPTAIN_REQUEST, DELIVERY_FAILURE, PAYMENT_RISK, FRAUD_RISK, POLICY_VIOLATION, SAFETY_INCIDENT, OPERATIONAL_RECOVERY, DATA_CORRECTION, OTHER]
+    AdminAccountApprovalRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode]
+      properties:
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminMerchantOperationsSnapshot:
+      type: object
+      additionalProperties: false
+      required: [merchant, shops, metrics]
+      properties:
+        merchant:
+          type: object
+          additionalProperties: false
+          required: [id, fullName, phoneNumber, profileStatus, legalName, onboardingStatus, kycStatus, approvedAt, approvedBy, updatedAt]
+          properties:
+            id: {type: string, format: uuid}
+            fullName: {type: ['string', 'null']}
+            phoneNumber: {type: ['string', 'null']}
+            profileStatus: {type: string}
+            legalName: {type: string}
+            onboardingStatus: {type: string}
+            kycStatus: {type: string}
+            approvedAt: {type: ['string', 'null'], format: date-time}
+            approvedBy: {type: ['string', 'null'], format: uuid}
+            updatedAt: {type: string, format: date-time}
+        shops:
+          type: array
+          maxItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, shopCode, name, verificationStatus, operationalStatus, acceptsOnlineOrders, updatedAt]
+            properties:
+              id: {type: string, format: uuid}
+              shopCode: {type: string}
+              name: {type: string}
+              verificationStatus: {type: string}
+              operationalStatus: {type: string}
+              acceptsOnlineOrders: {type: boolean}
+              updatedAt: {type: string, format: date-time}
+        metrics:
+          type: object
+          additionalProperties: false
+          required: [openOrders, cancelledOrders30d, problemOrders30d]
+          properties:
+            openOrders: {type: integer, minimum: 0}
+            cancelledOrders30d: {type: integer, minimum: 0}
+            problemOrders30d: {type: integer, minimum: 0}
+    AdminCaptainOperationsSnapshot:
+      type: object
+      required: [captain, activeDelivery, location, metrics]
+      properties:
+        captain:
+          type: object
+          required: [id, captainCode, fullName, phoneNumber, profileStatus, kycStatus, availabilityStatus, vehicleType, vehicleNumber, ratingAverage, ratingCount, completedDeliveries, cashBalancePaise, approvedAt, updatedAt]
+          properties:
+            id: {type: string, format: uuid}
+            captainCode: {type: string}
+            fullName: {type: ['string', 'null']}
+            phoneNumber: {type: ['string', 'null']}
+            profileStatus: {type: string}
+            kycStatus: {type: string}
+            availabilityStatus: {type: string}
+            vehicleType: {type: ['string', 'null']}
+            vehicleNumber: {type: ['string', 'null']}
+            ratingAverage: {type: ['number', 'null']}
+            ratingCount: {type: integer, minimum: 0}
+            completedDeliveries: {type: integer, minimum: 0}
+            cashBalancePaise: {type: integer, minimum: 0}
+            approvedAt: {type: ['string', 'null'], format: date-time}
+            updatedAt: {type: string, format: date-time}
+        activeDelivery:
+          type: ['object', 'null']
+          additionalProperties: true
+        location:
+          type: ['object', 'null']
+          additionalProperties: true
+        metrics:
+          type: object
+          required: [problemDeliveries30d, pendingEarningsPaise]
+          properties:
+            problemDeliveries30d: {type: integer, minimum: 0}
+            pendingEarningsPaise: {type: integer, minimum: 0}
     DeliveryAddressSnapshot:
       type: object
       additionalProperties: false
@@ -6900,54 +6988,66 @@ paths:
           description: Forbidden
   /admin/merchants/{merchantId}/approve:
     post:
+      operationId: approveAdminMerchant
       summary: Approve merchant
-      tags:
-      - Admin
+      description: Atomically verifies the merchant's single shop, documents, and primary bank account; activates the account; writes an immutable admin audit entry; and emits notification events.
+      tags: [Admin]
+      security: [{bearerAuth: []}]
       parameters:
       - name: merchantId
         in: path
         required: true
-        schema:
-          type: string
-          format: uuid
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminAccountApprovalRequest'}
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Merchant approved or an identical request safely replayed
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/AdminMerchantOperationsSnapshot'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/captains/{captainId}/approve:
     post:
+      operationId: approveAdminCaptain
       summary: Approve captain
-      tags:
-      - Admin
+      description: Atomically validates captain licence and vehicle details, activates the account in OFFLINE state, writes an immutable admin audit entry, and emits notification events.
+      tags: [Admin]
+      security: [{bearerAuth: []}]
       parameters:
       - name: captainId
         in: path
         required: true
-        schema:
-          type: string
-          format: uuid
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminAccountApprovalRequest'}
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Captain approved or an identical request safely replayed
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/AdminCaptainOperationsSnapshot'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/returns/{returnId}/approve:
     post:
       summary: Approve return
