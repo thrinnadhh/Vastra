@@ -108,7 +108,21 @@ jobs:
         run: pnpm format:check
 
       - name: Run lint
-        run: pnpm lint
+        run: |
+          set +e
+          pnpm lint > /tmp/fe-s08-lint.log 2>&1
+          status=$?
+          cat /tmp/fe-s08-lint.log
+          exit "$status"
+
+      - name: Upload lint diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: fe-s08-lint-diagnostics-2
+          path: /tmp/fe-s08-lint.log
+          if-no-files-found: warn
+          retention-days: 1
 
       - name: Run TypeScript checks
         run: pnpm typecheck
