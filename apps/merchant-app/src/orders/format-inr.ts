@@ -1,12 +1,7 @@
-export function formatPaiseAsInr(paise: number): string {
-  if (!Number.isSafeInteger(paise) || paise < 0) {
-    throw new TypeError('Money must be a non-negative integer number of paise');
-  }
-
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: paise % 100 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  }).format(paise / 100);
-}
+/**
+ * Re-exports the authoritative formatPaiseAsInr from @vastra/formatting.
+ *
+ * Existing consumers within merchant-app import from this path.
+ * New code should import directly from '@vastra/formatting'.
+ */
+export { formatPaiseAsInr } from '@vastra/formatting';

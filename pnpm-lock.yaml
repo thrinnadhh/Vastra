@@ -233,6 +233,9 @@ importers:
       '@vastra/app-shells':
         specifier: workspace:*
         version: link:../../packages/app-shells
+      '@vastra/formatting':
+        specifier: workspace:*
+        version: link:../../packages/formatting
       expo:
         specifier: 57.0.4
         version: 57.0.4(@babel/core@7.29.7)(@expo/metro-runtime@57.0.3)(react-dom@19.2.3)(react-native-web@0.21.2)(react-native@0.86.0)(react@19.2.3)(typescript@5.9.3)
@@ -309,6 +312,9 @@ importers:
       '@vastra/app-shells':
         specifier: workspace:*
         version: link:../../packages/app-shells
+      '@vastra/formatting':
+        specifier: workspace:*
+        version: link:../../packages/formatting
       expo:
         specifier: 57.0.4
         version: 57.0.4(@babel/core@7.29.7)(@expo/metro-runtime@57.0.3)(react-dom@19.2.3)(react-native-web@0.21.2)(react-native@0.86.0)(react@19.2.3)(typescript@5.9.3)
@@ -419,6 +425,8 @@ importers:
   packages/design-tokens: {}
 
   packages/domain-types: {}
+
+  packages/formatting: {}
 
   packages/frontend-test-harness:
     dependencies:
