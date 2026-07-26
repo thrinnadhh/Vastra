@@ -80,6 +80,20 @@ release, post-pickup custody escalation, overlapping presence reads, and session
 - issue input is not shown until the captain explicitly opens the stopped-safely flow;
 - direct Supabase table access remains prohibited.
 
+## Validated PR repair boundary
+
+The source state immediately preceding this documentation update passed the following guarded
+pre-push checks before it was committed:
+
+- repository lint with zero warnings or errors;
+- TypeScript checks for all 15 workspace packages;
+- all 43 captain application tests across 10 suites;
+- captain Expo web export;
+- formatting for every repaired captain source and test file.
+
+These guarded checks confirm the PR repair itself. They do not replace the normal required GitHub
+CI run or any external staging, device, notification-provider, or pilot evidence.
+
 ## Verification required before merge
 
 - repository formatting;
