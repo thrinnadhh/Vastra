@@ -84,7 +84,7 @@ export function CaptainDeliveryScreen({
   const [issueOpen, setIssueOpen] = useState(false);
   const [issueSelection, setIssueSelection] = useState<IssueSelection | null>(null);
   const [issueNote, setIssueNote] = useState('');
-  const mounted = useRef(true);
+  const mounted = useRef<boolean>(true);
   const hasLoadedRef = useRef(false);
 
   const load = useCallback(
@@ -114,7 +114,9 @@ export function CaptainDeliveryScreen({
 
   useEffect(() => {
     mounted.current = true;
-    void load();
+    queueMicrotask(() => {
+      void load();
+    });
     const refresh = setInterval(() => {
       void load();
     }, 10_000);
@@ -130,12 +132,15 @@ export function CaptainDeliveryScreen({
   }, [load]);
 
   useEffect(() => {
-    setPickupCode('');
-    setDeliveryOtp('');
-    setCashConfirmed(false);
-    setIssueOpen(false);
-    setIssueSelection(null);
-    setIssueNote('');
+    queueMicrotask(() => {
+      if (!mounted.current) return;
+      setPickupCode('');
+      setDeliveryOtp('');
+      setCashConfirmed(false);
+      setIssueOpen(false);
+      setIssueSelection(null);
+      setIssueNote('');
+    });
   }, [active?.taskId, active?.taskStatus]);
 
   useEffect(() => {
@@ -146,28 +151,28 @@ export function CaptainDeliveryScreen({
       return undefined;
     }
 
-    let stopped = false;
+    const lifecycle = { stopped: false };
     let stopWatching: (() => void) | undefined;
 
     void locationProvider
       .requestForegroundPermission()
       .then(async (permission) => {
-        if (!permission.granted || stopped) return;
+        if (!permission.granted || lifecycle.stopped) return;
         stopWatching = await locationProvider.watchLocations((sample) => {
           void presenceClient
             .updateLocation({ ...sample, activeDeliveryTaskId: active.taskId })
             .catch(() => undefined);
         });
-        if (stopped) stopWatching();
+        if (lifecycle.stopped) stopWatching();
       })
       .catch(() => {
-        if (!stopped && mounted.current) {
+        if (!lifecycle.stopped && mounted.current) {
           setNotice('Live location paused. Check location permission and network access.');
         }
       });
 
     return () => {
-      stopped = true;
+      lifecycle.stopped = true;
       stopWatching?.();
     };
   }, [active, locationProvider, presenceClient]);
