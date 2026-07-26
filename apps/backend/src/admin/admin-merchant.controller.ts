@@ -8,6 +8,7 @@ import {
   Inject,
   Param,
   Post,
+  Query,
 } from '@nestjs/common';
 
 import { AllowAccountTypes } from '../auth/account-types.decorator';
@@ -15,6 +16,7 @@ import type { AuthenticatedRequestContext } from '../auth/auth.types';
 import { CurrentAuthContext } from '../auth/current-auth-context.decorator';
 import { RequireOperationalReadiness } from '../auth/operational-readiness.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
+import type { ListAdminMerchantsResponse } from './admin-actor-list.types';
 import { AdminMerchantService } from './admin-merchant.service';
 
 @Controller('admin/merchants')
@@ -24,6 +26,28 @@ export class AdminMerchantController {
   public constructor(
     @Inject(AdminMerchantService) private readonly service: AdminMerchantService,
   ) {}
+
+  @Get()
+  @RequirePermissions('admin.merchants.read')
+  public list(
+    @CurrentAuthContext() context: AuthenticatedRequestContext,
+    @Query('q') query: unknown,
+    @Query('profileStatus') profileStatus: unknown,
+    @Query('onboardingStatus') onboardingStatus: unknown,
+    @Query('kycStatus') kycStatus: unknown,
+    @Query('cursor') cursor: unknown,
+    @Query('limit') limit: unknown,
+  ): Promise<ListAdminMerchantsResponse> {
+    return this.service.list(
+      context,
+      query,
+      profileStatus,
+      onboardingStatus,
+      kycStatus,
+      cursor,
+      limit,
+    );
+  }
 
   @Get(':merchantId')
   @RequirePermissions('admin.merchants.read')

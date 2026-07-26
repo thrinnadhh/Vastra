@@ -1,10 +1,29 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import type { AuthenticatedRequestContext } from '../auth/auth.types';
-import type {
-  AdminMerchantGateway,
-  AdminMerchantSnapshot,
-  AdminMerchantTargetStatus,
+import {
+  ADMIN_KYC_STATUSES,
+  ADMIN_MERCHANT_ONBOARDING_STATUSES,
+  ADMIN_PROFILE_STATUSES,
+  type ListAdminMerchantsResponse,
+} from './admin-actor-list.types';
+import {
+  createAdminReadProviderUnavailableException,
+  createInvalidAdminListQueryException,
+} from './admin-http-error';
+import {
+  AdminListQueryInvalidError,
+  encodeAdminListCursor,
+  parseAdminListCursor,
+  parseAdminListLimit,
+  parseAdminOptionalEnum,
+  parseAdminOptionalSearch,
+} from './admin-list.validation';
+import {
+  AdminMerchantGatewayUnavailableError,
+  type AdminMerchantGateway,
+  type AdminMerchantSnapshot,
+  type AdminMerchantTargetStatus,
 } from './admin-merchant.gateway';
 import { ADMIN_MERCHANT_GATEWAY } from './admin.tokens';
 import { ADMIN_MUTATION_REASON_CODES, type AdminMutationReasonCode } from './admin.types';
@@ -49,6 +68,43 @@ export class AdminMerchantService {
     @Inject(ADMIN_MERCHANT_GATEWAY)
     private readonly gateway: AdminMerchantGateway,
   ) {}
+
+  public async list(
+    _context: AuthenticatedRequestContext,
+    queryValue: unknown,
+    profileStatusValue: unknown,
+    onboardingStatusValue: unknown,
+    kycStatusValue: unknown,
+    cursorValue: unknown,
+    limitValue: unknown,
+  ): Promise<ListAdminMerchantsResponse> {
+    try {
+      const page = await this.gateway.list({
+        query: parseAdminOptionalSearch(queryValue),
+        profileStatus: parseAdminOptionalEnum(profileStatusValue, ADMIN_PROFILE_STATUSES),
+        onboardingStatus: parseAdminOptionalEnum(
+          onboardingStatusValue,
+          ADMIN_MERCHANT_ONBOARDING_STATUSES,
+        ),
+        kycStatus: parseAdminOptionalEnum(kycStatusValue, ADMIN_KYC_STATUSES),
+        cursor: parseAdminListCursor(cursorValue),
+        limit: parseAdminListLimit(limitValue),
+      });
+      return {
+        success: true,
+        data: { merchants: page.items, nextCursor: encodeAdminListCursor(page.nextCursor) },
+        meta: { requestId: null },
+      };
+    } catch (error: unknown) {
+      if (error instanceof AdminListQueryInvalidError) {
+        throw createInvalidAdminListQueryException();
+      }
+      if (error instanceof AdminMerchantGatewayUnavailableError) {
+        throw createAdminReadProviderUnavailableException();
+      }
+      throw error;
+    }
+  }
 
   public async get(
     _context: AuthenticatedRequestContext,
