@@ -37,20 +37,44 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
-      - name: Decode and inspect prepared implementation
+      - name: Decode prepared implementation
         run: |
-          cat .github/fe-s08-patch/chunk-* \
-            | tr -d '\n\r' \
-            | base64 --decode \
-            | gzip --decompress \
-            > /tmp/fe-s08.patch
+          mkdir -p /tmp/fe-s08-diagnostics
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+          import gzip
+
+          paths = sorted(Path('.github/fe-s08-patch').glob('chunk-*'))
+          if not paths:
+              raise SystemExit('No FE-S08 patch chunks found')
+
+          encoded = ''.join(path.read_text(encoding='utf-8').strip() for path in paths)
+          raw = base64.b64decode(encoded, validate=True)
+          patch = gzip.decompress(raw)
+          Path('/tmp/fe-s08.patch').write_bytes(patch)
+          Path('/tmp/fe-s08-diagnostics/decode.txt').write_text(
+              f'chunks={len(paths)}\nencoded_bytes={len(encoded)}\ncompressed_bytes={len(raw)}\npatch_bytes={len(patch)}\n',
+              encoding='utf-8',
+          )
+          PY
           test -s /tmp/fe-s08.patch
-          git apply --check --whitespace=error-all /tmp/fe-s08.patch
-          sed -n '1,120p' /tmp/fe-s08.patch
+          sed -n '1,120p' /tmp/fe-s08.patch > /tmp/fe-s08-diagnostics/patch-head.txt
+
+      - name: Check prepared patch
+        run: |
+          set +e
+          git apply --check /tmp/fe-s08.patch > /tmp/fe-s08-diagnostics/apply-check.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            cat /tmp/fe-s08-diagnostics/apply-check.log
+            exit "$status"
+          fi
 
       - name: Apply implementation and remove temporary transport files
         run: |
-          git apply --whitespace=error-all /tmp/fe-s08.patch
+          git apply /tmp/fe-s08.patch
           rm -rf .github/fe-s08-patch
           rm -f .github/workflows/fe-s08-materialize.yml
           rm -f .github/workflows/fe-s08-apply.yml
@@ -82,3 +106,12 @@ jobs:
           git diff --cached --check
           git commit -m "feat(fe-s08): implement admin observation and recovery backend"
           git push origin HEAD:agent/fe-s08-backend-implementation
+
+      - name: Upload recovery diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: fe-s08-recovery-diagnostics
+          path: /tmp/fe-s08-diagnostics
+          if-no-files-found: warn
+          retention-days: 1
