@@ -1,16 +1,15 @@
 name: FE-S08 materialize backend workspace
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - agent/fe-s08-backend-recovery
 
 permissions:
   contents: read
 
 jobs:
   materialize:
-    if: github.head_ref == 'agent/fe-s08-backend-closure'
     runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
@@ -22,7 +21,7 @@ jobs:
       - name: Upload workspace
         uses: actions/upload-artifact@v6
         with:
-          name: fe-s08-workspace
+          name: fe-s08-workspace-recovery
           path: /tmp/fe-s08-workspace.tar.gz
           if-no-files-found: error
           retention-days: 1
