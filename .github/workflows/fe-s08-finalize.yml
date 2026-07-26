@@ -144,7 +144,11 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: fe-s08-integration-diagnostics
-          path: /tmp/fe-s08-integration.log
+          path: |
+            /tmp/fe-s08-integration.log
+            apps/backend/src/admin
+            apps/backend/src/auth/admin-mfa.guard.ts
+            apps/backend/src/auth/auth.module.ts
           if-no-files-found: ignore
           retention-days: 1
 
