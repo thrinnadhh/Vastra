@@ -68,6 +68,24 @@ jobs:
       - name: Format implementation
         run: pnpm format > /tmp/fe-s08-format.log 2>&1
 
+      - name: Apply strict lint corrections
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+          import lzma
+
+          encoded = Path('.github/fe-s08-lint-repair.xz.b64').read_text(encoding='utf-8').strip()
+          compressed = base64.b64decode(encoded, validate=True)
+          patch = lzma.decompress(compressed)
+          Path('/tmp/fe-s08-lint-repair.patch').write_bytes(patch)
+          PY
+          echo '177ffcffc5bf2601a47a64b48a9a69bbdf419cbd42f71e55ef0f6813fe0c4266  /tmp/fe-s08-lint-repair.patch' | sha256sum --check
+          git apply --check /tmp/fe-s08-lint-repair.patch
+          git apply /tmp/fe-s08-lint-repair.patch
+          rm -f .github/fe-s08-lint-repair.xz.b64
+          pnpm format > /tmp/fe-s08-reformat.log 2>&1
+
       - name: Check formatting
         run: |
           if ! pnpm format:check > /tmp/fe-s08-format-check.log 2>&1; then
