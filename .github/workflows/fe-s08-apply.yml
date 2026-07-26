@@ -4,13 +4,22 @@ on:
   push:
     branches:
       - agent/fe-s08-backend-implementation
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
 
+concurrency:
+  group: fe-s08-apply-backend-implementation
+  cancel-in-progress: true
+
 jobs:
   apply-and-validate:
-    if: github.actor != 'github-actions[bot]'
+    if: >-
+      github.actor != 'github-actions[bot]' &&
+      (github.event_name != 'pull_request' || github.head_ref == 'agent/fe-s08-backend-implementation')
     runs-on: ubuntu-24.04
     steps:
       - name: Check out implementation branch
