@@ -67,6 +67,7 @@ jobs:
 
       - name: Apply deterministic source corrections
         run: |
+          pnpm format > /tmp/fe-s08-pre-repair-format.log 2>&1
           python3 .github/fe-s08-static-repair.py
           rm -f .github/fe-s08-static-repair.py
           rm -f .github/fe-s08-lint-repair.xz.b64 .github/fe-s08-lint-repair-2.xz.b64
