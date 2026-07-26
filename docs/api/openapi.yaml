@@ -4108,6 +4108,14 @@ components:
         service: {type: string, const: vastra-backend}
         status: {type: string, const: ready}
         scope: {type: string, const: infrastructure}
+    HealthReadinessResponse:
+      type: object
+      additionalProperties: false
+      required: [service, status, scope]
+      properties:
+        service: {type: string, const: vastra-backend}
+        status: {type: string, enum: [ready, unavailable]}
+        scope: {type: string, const: dependencies}
 security:
 - bearerAuth: []
 
@@ -4124,6 +4132,23 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/HealthResponse'}
+  /health/ready:
+    get:
+      operationId: getHealthReadiness
+      summary: Check database dependency readiness
+      tags: [Common]
+      security: []
+      responses:
+        '200':
+          description: Required dependencies are available
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HealthReadinessResponse'}
+        '503':
+          description: A required dependency is unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HealthReadinessResponse'}
   /me:
     get:
       operationId: getCurrentAccount
