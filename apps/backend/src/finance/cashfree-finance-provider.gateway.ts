@@ -136,7 +136,7 @@ export class CashfreeFinanceProviderGateway extends CashfreePaymentProviderGatew
   public override async createRefund(
     input: CreateProviderRefundInput,
   ): Promise<ProviderRefundSnapshot> {
-    const response = await fetch(
+    const response = await this.request(
       `${cashfreeRoot()}/pg/orders/${encodeURIComponent(input.providerOrderId)}/refunds`,
       {
         method: 'POST',
@@ -163,7 +163,7 @@ export class CashfreeFinanceProviderGateway extends CashfreePaymentProviderGatew
     providerOrderId: string,
     internalRefundId: string,
   ): Promise<ProviderRefundSnapshot> {
-    const response = await fetch(
+    const response = await this.request(
       `${cashfreeRoot()}/pg/orders/${encodeURIComponent(providerOrderId)}/refunds/${encodeURIComponent(internalRefundId)}`,
       {
         method: 'GET',

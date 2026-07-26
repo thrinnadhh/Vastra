@@ -19,6 +19,7 @@ export const serverEnvSchema = commonEnvSchema.extend({
   PAYMENT_API_VERSION: z.literal('2025-01-01').default('2025-01-01'),
   PAYMENT_CLIENT_ID: z.string().min(8),
   PAYMENT_SECRET_KEY: secretSchema,
+  PAYMENT_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(10).max(60_000).default(10_000),
 
   SMS_PROVIDER: z.enum(['msg91', 'twilio']),
   SMS_API_KEY: secretSchema,

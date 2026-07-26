@@ -14,7 +14,10 @@ describe('CashfreeFinanceProviderGateway', () => {
   it('creates and validates a Cashfree refund snapshot', async () => {
     process.env['PAYMENT_CLIENT_ID'] = 'client';
     process.env['PAYMENT_SECRET_KEY'] = 'secret';
-    const fetchMock = vi.fn().mockResolvedValue({
+    let receivedSignal: AbortSignal | null = null;
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => {
+      receivedSignal = init.signal instanceof AbortSignal ? init.signal : null;
+      return Promise.resolve({
         ok: true,
         json: () =>
           Promise.resolve({
@@ -27,6 +30,7 @@ describe('CashfreeFinanceProviderGateway', () => {
             processed_at: '2026-07-18T12:00:00.000Z',
           }),
       });
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     const gateway = new CashfreeFinanceProviderGateway();
@@ -44,10 +48,8 @@ describe('CashfreeFinanceProviderGateway', () => {
       status: 'SUCCESS',
       amountPaise: 12500,
     });
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
-    );
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(receivedSignal).toBeInstanceOf(AbortSignal);
   });
 
   it('aborts a Cashfree request that exceeds the configured timeout', async () => {
