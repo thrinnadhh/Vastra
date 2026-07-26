@@ -154,6 +154,13 @@ class IntegrationOperationalReadinessGateway implements OperationalReadinessGate
 
 @Controller('operational-readiness-probe')
 class OperationalReadinessProbeController {
+  @Get('customer')
+  @AllowAccountTypes('CUSTOMER')
+  @RequireOperationalReadiness()
+  public customerOnly(): { readonly allowed: true } {
+    return { allowed: true };
+  }
+
   @Get('merchant')
   @AllowAccountTypes('MERCHANT')
   @RequireOperationalReadiness()
@@ -285,7 +292,16 @@ describe('operational readiness integration', () => {
     expect(readErrorCode(response.body)).toBe('ACCOUNT_PENDING');
   });
 
-  it('denies a customer before readiness lookup', async () => {
+  it('allows an active customer to use customer operational routes', async () => {
+    const response = await request(httpServer)
+      .get('/operational-readiness-probe/customer')
+      .set('Authorization', 'Bearer customer-token');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toStrictEqual({ allowed: true });
+  });
+
+  it('denies a customer access to merchant operational routes', async () => {
     const response = await request(httpServer)
       .get('/operational-readiness-probe/merchant')
       .set('Authorization', 'Bearer customer-token');
