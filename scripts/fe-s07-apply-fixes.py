@@ -19,6 +19,10 @@ interface EffectLifecycle {
 function createEffectLifecycle(): EffectLifecycle {
   return { active: true };
 }
+
+function isEffectActive(lifecycle: EffectLifecycle): boolean {
+  return lifecycle.active;
+}
 """
 if "interface EffectLifecycle" not in content:
     if marker not in content:
@@ -41,6 +45,34 @@ content = content.replace(
 content = content.replace(
     "!locationLifecycle.active = true;",
     "locationLifecycle.active = false;",
+)
+content = content.replace(
+    "  useEffect(() => {\n    mounted.current.active = true;",
+    "  useEffect(() => {\n    const mountedLifecycle = mounted.current;\n    mountedLifecycle.active = true;",
+)
+content = content.replace(
+    "      mounted.current.active = false;",
+    "      mountedLifecycle.active = false;",
+)
+content = content.replace(
+    "if (!mounted.current.active)",
+    "if (!isEffectActive(mounted.current))",
+)
+content = content.replace(
+    "if (mounted.current.active)",
+    "if (isEffectActive(mounted.current))",
+)
+content = content.replace(
+    "if (!permission.granted || !locationLifecycle.active)",
+    "if (!permission.granted || !isEffectActive(locationLifecycle))",
+)
+content = content.replace(
+    "if (!locationLifecycle.active) stopWatching();",
+    "if (!isEffectActive(locationLifecycle)) stopWatching();",
+)
+content = content.replace(
+    "if (locationLifecycle.active && isEffectActive(mounted.current))",
+    "if (isEffectActive(locationLifecycle) && isEffectActive(mounted.current))",
 )
 screen.write_text(content)
 
