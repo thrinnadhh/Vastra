@@ -6,7 +6,7 @@ import { CurrentAuthContext } from '../auth/current-auth-context.decorator';
 import { CustomerProfileService } from './customer-profile.service';
 import type { GetCurrentAccountResponse } from './me.types';
 
-@Controller('me/profile')
+@Controller('me')
 @AllowAccountTypes('CUSTOMER')
 export class CustomerProfileController {
   public constructor(
