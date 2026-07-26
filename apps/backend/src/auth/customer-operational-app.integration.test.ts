@@ -51,13 +51,15 @@ class CustomerAuthenticationGateway implements AuthenticationGateway {
   }
 }
 
+function isHttpServer(value: unknown): value is Server {
+  return value instanceof Server;
+}
+
 function requireHttpServer(application: INestApplication): Server {
   const server: unknown = application.getHttpServer();
-
-  if (!(server instanceof Server)) {
+  if (!isHttpServer(server)) {
     throw new TypeError('Expected Nest to provide a Node HTTP server');
   }
-
   return server;
 }
 

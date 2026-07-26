@@ -51,9 +51,13 @@ class IntegrationGateway implements CustomerOrderCancellationGateway {
   }
 }
 
+function isHttpServer(value: unknown): value is Server {
+  return value instanceof Server;
+}
+
 function requireHttpServer(application: INestApplication): Server {
   const server: unknown = application.getHttpServer();
-  if (!(server instanceof Server)) throw new TypeError('Expected Node HTTP server');
+  if (!isHttpServer(server)) throw new TypeError('Expected Node HTTP server');
   return server;
 }
 

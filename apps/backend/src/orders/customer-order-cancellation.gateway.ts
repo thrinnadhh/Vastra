@@ -104,6 +104,7 @@ function mapGatewayError(error: { readonly code?: string }): Error {
       return new CustomerOrderAlreadyCancelledError();
     case 'P0036':
       return new CustomerOrderCancellationIdempotencyConflictError();
+    case undefined:
     default:
       return new CustomerOrderCancellationGatewayUnavailableError();
   }
