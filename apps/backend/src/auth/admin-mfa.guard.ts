@@ -1,6 +1,7 @@
 import { type CanActivate, type ExecutionContext, Inject, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
+import { ALLOW_ADMIN_AAL1_METADATA } from './admin-mfa.decorator';
 import { createAuthRequiredException, createMfaRequiredException } from './auth-http-error';
 import type { AuthenticatedHttpRequest } from './auth.types';
 import { PUBLIC_ROUTE_METADATA } from './public.decorator';
@@ -34,6 +35,14 @@ export class AdminMfaGuard implements CanActivate {
     }
 
     if (authContext.actor.accountType !== 'ADMIN') {
+      return true;
+    }
+
+    const allowAdminAal1 = this.reflector.getAllAndOverride<boolean>(ALLOW_ADMIN_AAL1_METADATA, [
+      executionContext.getHandler(),
+      executionContext.getClass(),
+    ]);
+    if (allowAdminAal1) {
       return true;
     }
 

@@ -1,8 +1,14 @@
 export interface AdminDashboardSummary {
   readonly openOrders: number;
   readonly interventionOrders: number;
+  readonly waitingMerchantOrders: number;
+  readonly stuckOrders: number;
+  readonly unassignedDeliveries: number;
   readonly searchingDeliveries: number;
   readonly activeDeliveries: number;
+  readonly alertAttention: number;
+  readonly paymentAttention: number;
+  readonly refundAttention: number;
   readonly openCases: number;
   readonly suspendedMerchants: number;
   readonly suspendedCaptains: number;

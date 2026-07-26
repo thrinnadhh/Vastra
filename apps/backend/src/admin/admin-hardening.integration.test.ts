@@ -14,14 +14,23 @@ import type { OperationalReadinessGateway } from '../auth/operational-readiness.
 import { OPERATIONAL_READINESS_GATEWAY } from '../auth/operational-readiness.tokens';
 import type { AuthenticationGateway, TokenVerificationResult } from '../auth/supabase.gateway';
 import { AUTHENTICATION_GATEWAY } from '../auth/supabase.tokens';
+import type { AdminCapabilitiesGateway } from './admin-capabilities.gateway';
 import type { AdminDashboardGateway } from './admin-dashboard.gateway';
+import type { AdminOrderListGateway } from './admin-order-list.gateway';
+import type { AdminOperationalOrderPage } from './admin-order-list.types';
 import type {
   AdminOperationInput,
   AdminOrderOperationsGateway,
   AdminResetVerificationInput,
 } from './admin-order-operations.gateway';
 import { AdminModule } from './admin.module';
-import { ADMIN_DASHBOARD_GATEWAY, ADMIN_ORDER_OPERATIONS_GATEWAY } from './admin.tokens';
+import type { AdminPermission } from './admin.permissions';
+import {
+  ADMIN_CAPABILITIES_GATEWAY,
+  ADMIN_DASHBOARD_GATEWAY,
+  ADMIN_ORDER_LIST_GATEWAY,
+  ADMIN_ORDER_OPERATIONS_GATEWAY,
+} from './admin.tokens';
 
 const ADMIN_ID = '10000000-0000-4000-8000-000000000001';
 const CUSTOMER_ID = '10000000-0000-4000-8000-000000000002';
@@ -39,6 +48,11 @@ const TOKENS: Readonly<Record<string, TokenContract>> = {
     userId: ADMIN_ID,
     assuranceLevel: 'aal2',
     grants: ['admin.dashboard.read'],
+  },
+  'admin-aal2-orders-read': {
+    userId: ADMIN_ID,
+    assuranceLevel: 'aal2',
+    grants: ['admin.orders.read'],
   },
   'admin-aal2-none': {
     userId: ADMIN_ID,
@@ -109,6 +123,14 @@ class IntegrationAuthorizationGateway implements AuthorizationGateway {
   }
 }
 
+class IntegrationCapabilitiesGateway implements AdminCapabilitiesGateway {
+  public listGrantedPermissions(client: SupabaseClient) {
+    return Promise.resolve(
+      (TOKENS[readClientToken(client)]?.grants ?? []) as readonly AdminPermission[],
+    );
+  }
+}
+
 class IntegrationReadinessGateway implements OperationalReadinessGateway {
   public calls = 0;
 
@@ -128,8 +150,14 @@ class IntegrationDashboardGateway implements AdminDashboardGateway {
     return Promise.resolve({
       openOrders: 7,
       interventionOrders: 2,
+      waitingMerchantOrders: 2,
+      stuckOrders: 1,
+      unassignedDeliveries: 1,
       searchingDeliveries: 1,
       activeDeliveries: 3,
+      alertAttention: 1,
+      paymentAttention: 1,
+      refundAttention: 0,
       openCases: 4,
       suspendedMerchants: 1,
       suspendedCaptains: 0,
@@ -139,6 +167,30 @@ class IntegrationDashboardGateway implements AdminDashboardGateway {
 
   public search() {
     return Promise.resolve([]);
+  }
+}
+
+class IntegrationOrderListGateway implements AdminOrderListGateway {
+  public list(): Promise<AdminOperationalOrderPage> {
+    return Promise.resolve({
+      items: [
+        {
+          id: ORDER_ID,
+          orderNumber: 'VAS-S08-1',
+          orderStatus: 'CAPTAIN_SEARCHING',
+          paymentStatus: 'COD_PENDING',
+          fulfilmentType: 'DELIVERY',
+          totalPaise: 149900,
+          operationalQueue: 'STUCK' as const,
+          shop: { id: '40000000-0000-4000-8000-000000000001', name: 'Pilot Shop' },
+          customer: { id: CUSTOMER_ID, displayName: 'Pilot Customer', phoneLast4: '0002' },
+          delivery: null,
+          attention: { alert: false, payment: false, refund: false, case: false },
+          updatedAt: '2026-07-26T00:00:00.000Z',
+        },
+      ],
+      nextCursor: null,
+    });
   }
 }
 
@@ -213,8 +265,12 @@ describe('Sprint 9 admin hardening integration', () => {
       .useValue(new IntegrationAuthorizationGateway())
       .overrideProvider(OPERATIONAL_READINESS_GATEWAY)
       .useValue(readinessGateway)
+      .overrideProvider(ADMIN_CAPABILITIES_GATEWAY)
+      .useValue(new IntegrationCapabilitiesGateway())
       .overrideProvider(ADMIN_DASHBOARD_GATEWAY)
       .useValue(new IntegrationDashboardGateway())
+      .overrideProvider(ADMIN_ORDER_LIST_GATEWAY)
+      .useValue(new IntegrationOrderListGateway())
       .overrideProvider(ADMIN_ORDER_OPERATIONS_GATEWAY)
       .useValue(orderOperationsGateway)
       .compile();
@@ -228,6 +284,23 @@ describe('Sprint 9 admin hardening integration', () => {
     if (app !== undefined) await app.close();
   });
 
+  it('exposes permissions and AAL1 state before operational MFA is satisfied', async () => {
+    const response = await request(server)
+      .get('/admin/capabilities')
+      .set('Authorization', 'Bearer admin-aal1-read');
+    expect(response.status).toBe(200);
+    expect(response.body).toStrictEqual({
+      success: true,
+      data: {
+        assuranceLevel: 'aal1',
+        permissions: ['admin.dashboard.read'],
+        mfaRequiredForSensitiveOperations: true,
+      },
+      meta: { requestId: null },
+    });
+    expect(readinessGateway.calls).toBe(0);
+  });
+
   it('allows an AAL2 administrator with the required read permission', async () => {
     const response = await request(server)
       .get('/admin/dashboard')
@@ -235,6 +308,29 @@ describe('Sprint 9 admin hardening integration', () => {
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({ openOrders: 7, interventionOrders: 2 });
     expect(readinessGateway.calls).toBe(0);
+  });
+
+  it('returns a permission-gated privacy-minimal live order page', async () => {
+    const response = await request(server)
+      .get('/admin/orders?queue=STUCK&limit=25')
+      .set('Authorization', 'Bearer admin-aal2-orders-read');
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      success: true,
+      data: {
+        orders: [
+          {
+            id: ORDER_ID,
+            operationalQueue: 'STUCK',
+            customer: { phoneLast4: '0002' },
+          },
+        ],
+        nextCursor: null,
+      },
+    });
+    expect(JSON.stringify(response.body)).not.toContain('phoneNumber');
+    expect(JSON.stringify(response.body)).not.toContain('pickupCode');
+    expect(JSON.stringify(response.body)).not.toContain('deliveryOtp');
   });
 
   it('requires AAL2 before evaluating admin permissions', async () => {

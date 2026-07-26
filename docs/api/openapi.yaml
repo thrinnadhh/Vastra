@@ -6783,118 +6783,235 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/capabilities:
+    get:
+      operationId: getAdminCapabilities
+      summary: Read the current admin permissions and MFA assurance
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Admin capabilities, content: {application/json: {schema: {type: object}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /admin/dashboard:
     get:
-      summary: Get admin dashboard
-      tags:
-      - Admin
+      operationId: getAdminOperationsDashboard
+      summary: Get the live COD operations dashboard
+      tags: [Admin]
+      security: [{bearerAuth: []}]
       responses:
-        '200':
-          description: Success
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+        '200': {description: Operational counters, content: {application/json: {schema: {type: object}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/search:
+    get:
+      operationId: searchAdminOperations
+      summary: Search operational resources by supported identifiers
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - {name: q, in: query, required: true, schema: {type: string, minLength: 2, maxLength: 120}}
+      - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 50, default: 20}}
+      responses:
+        '200': {description: Search results, content: {application/json: {schema: {type: array, items: {type: object}}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /admin/orders:
     get:
-      summary: List operational orders
-      tags:
-      - Admin
-      responses:
-        '200':
-          description: Success
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /admin/orders/{orderId}/assign-captain:
-    post:
-      summary: Assign captain
-      tags:
-      - Admin
+      operationId: listAdminOperationalOrders
+      summary: List keyset-paginated operational orders
+      tags: [Admin]
+      security: [{bearerAuth: []}]
       parameters:
-      - name: orderId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/IdempotencyKey'
+      - {name: queue, in: query, required: false, schema: {type: string}}
+      - {name: status, in: query, required: false, schema: {type: string}}
+      - {name: shopId, in: query, required: false, schema: {type: string, format: uuid}}
+      - {name: cursor, in: query, required: false, schema: {type: string}}
+      - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
       responses:
-        '200':
-          description: Success
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /admin/merchants/{merchantId}/approve:
-    post:
-      summary: Approve merchant
-      tags:
-      - Admin
+        '200': {description: Operational order page, content: {application/json: {schema: {type: object}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /admin/orders/{orderId}/investigation:
+    get:
+      operationId: getAdminOrderInvestigation
+      summary: Get full operational order investigation timeline
+      tags: [Admin]
+      security: [{bearerAuth: []}]
       parameters:
-      - name: merchantId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - {name: orderId, in: path, required: true, schema: {type: string, format: uuid}}
       responses:
-        '200':
-          description: Success
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /admin/captains/{captainId}/approve:
+        '200': {description: Investigation projection, content: {application/json: {schema: {type: object}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /admin/orders/{orderId}/cancel:
     post:
-      summary: Approve captain
-      tags:
-      - Admin
+      operationId: cancelAdminOrderOperation
+      summary: Execute an audited order cancellation recovery command
+      tags: [Admin]
+      security: [{bearerAuth: []}]
       parameters:
-      - name: captainId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      responses:
-        '200':
-          description: Success
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+      - {name: orderId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {$ref: '#/components/parameters/IdempotencyKey'}
+      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
+      responses: {'200': {description: Recovery result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /admin/orders/{orderId}/retry-dispatch:
+    post:
+      operationId: retryAdminOrderDispatch
+      summary: Retry dispatch for an eligible order
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - {name: orderId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {$ref: '#/components/parameters/IdempotencyKey'}
+      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
+      responses: {'200': {description: Recovery result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /admin/delivery-tasks/{taskId}/release-operation:
+    post:
+      operationId: releaseAdminDeliveryOperation
+      summary: Release an eligible delivery task through audited operations recovery
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - {name: taskId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {$ref: '#/components/parameters/IdempotencyKey'}
+      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
+      responses: {'200': {description: Recovery result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /admin/delivery-tasks/{taskId}/reset-verification:
+    post:
+      operationId: resetAdminDeliveryVerification
+      summary: Reset locked delivery verification through audited recovery
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - {name: taskId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {$ref: '#/components/parameters/IdempotencyKey'}
+      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
+      responses: {'200': {description: Recovery result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /admin/merchants:
+    get:
+      operationId: listAdminMerchants
+      summary: List operational merchant profiles
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - {name: q, in: query, required: false, schema: {type: string}}
+      - {name: profileStatus, in: query, required: false, schema: {type: string}}
+      - {name: onboardingStatus, in: query, required: false, schema: {type: string}}
+      - {name: kycStatus, in: query, required: false, schema: {type: string}}
+      - {name: cursor, in: query, required: false, schema: {type: string}}
+      - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100}}
+      responses: {'200': {description: Merchant page, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /admin/merchants/{merchantId}:
+    get:
+      operationId: getAdminMerchantOperations
+      summary: Get merchant operational detail
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters: [{name: merchantId, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'200': {description: Merchant operations detail, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /admin/merchants/{merchantId}/pause-orders:
+    post:
+      operationId: pauseAdminMerchantOrders
+      summary: Pause merchant online orders
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters: [{name: merchantId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
+      responses: {'200': {description: Merchant command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /admin/merchants/{merchantId}/suspend:
+    post:
+      operationId: suspendAdminMerchant
+      summary: Suspend merchant operations
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters: [{name: merchantId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
+      responses: {'200': {description: Merchant command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /admin/merchants/{merchantId}/restore:
+    post:
+      operationId: restoreAdminMerchant
+      summary: Restore merchant operations
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters: [{name: merchantId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
+      responses: {'200': {description: Merchant command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /admin/captains:
+    get:
+      operationId: listAdminCaptains
+      summary: List operational captain profiles
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - {name: q, in: query, required: false, schema: {type: string}}
+      - {name: profileStatus, in: query, required: false, schema: {type: string}}
+      - {name: kycStatus, in: query, required: false, schema: {type: string}}
+      - {name: availabilityStatus, in: query, required: false, schema: {type: string}}
+      - {name: cursor, in: query, required: false, schema: {type: string}}
+      - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100}}
+      responses: {'200': {description: Captain page, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /admin/captains/{captainId}:
+    get:
+      operationId: getAdminCaptainOperations
+      summary: Get captain operational detail
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'200': {description: Captain operations detail, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /admin/captains/{captainId}/suspend:
+    post:
+      operationId: suspendAdminCaptain
+      summary: Suspend a captain
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
+      responses: {'200': {description: Captain command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /admin/captains/{captainId}/restore:
+    post:
+      operationId: restoreAdminCaptain
+      summary: Restore a captain
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
+      responses: {'200': {description: Captain command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /admin/captains/{captainId}/correct-availability:
+    post:
+      operationId: correctAdminCaptainAvailability
+      summary: Correct captain availability
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
+      responses: {'200': {description: Captain command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /admin/captains/{captainId}/release-active-assignment:
+    post:
+      operationId: releaseAdminCaptainAssignment
+      summary: Release captain active assignment
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
+      responses: {'200': {description: Captain command result}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /admin/audit:
+    get:
+      operationId: listAdminAudit
+      summary: List immutable admin audit records
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - {name: resourceType, in: query, required: false, schema: {type: string}}
+      - {name: resourceId, in: query, required: false, schema: {type: string, format: uuid}}
+      - {name: actorId, in: query, required: false, schema: {type: string, format: uuid}}
+      - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100}}
+      responses: {'200': {description: Audit records, content: {application/json: {schema: {type: array, items: {type: object}}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
   /admin/returns/{returnId}/approve:
     post:
       summary: Approve return

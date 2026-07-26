@@ -22,6 +22,12 @@ class GatewayStub implements AdminCaptainGateway {
   public input:
     AdminCaptainMutationInput | AdminCaptainStatusInput | AdminCaptainAvailabilityInput | null =
     null;
+  public listQuery: unknown = null;
+
+  public list(query: unknown) {
+    this.listQuery = query;
+    return Promise.resolve({ items: [], nextCursor: null });
+  }
   public get() {
     return Promise.resolve({ captain: { id: CAPTAIN_ID } });
   }
@@ -40,6 +46,33 @@ class GatewayStub implements AdminCaptainGateway {
 }
 
 describe('AdminCaptainService', () => {
+  it('builds a filtered captain recovery list query', async () => {
+    const gateway = new GatewayStub();
+    const service = new AdminCaptainService(gateway);
+    const response = await service.list(
+      CONTEXT,
+      'CAP-100',
+      'ACTIVE',
+      'VERIFIED',
+      'AVAILABLE',
+      null,
+      '25',
+    );
+    expect(gateway.listQuery).toStrictEqual({
+      query: 'CAP-100',
+      profileStatus: 'ACTIVE',
+      kycStatus: 'VERIFIED',
+      availabilityStatus: 'AVAILABLE',
+      cursor: null,
+      limit: 25,
+    });
+    expect(response).toStrictEqual({
+      success: true,
+      data: { captains: [], nextCursor: null },
+      meta: { requestId: null },
+    });
+  });
+
   it('requires idempotency for captain mutations', () => {
     const service = new AdminCaptainService(new GatewayStub());
     expect(() =>
