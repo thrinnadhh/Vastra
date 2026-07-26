@@ -9,12 +9,13 @@ if (entryPoint === undefined) {
   throw new Error('Admin E2E entry point is missing');
 }
 
-test('admin application exposes keyboard and landmark foundations', async ({ page }) => {
+test('admin application exposes secure sign-in and keyboard landmarks', async ({ page }) => {
   await page.goto('/');
 
-  await expect(
-    page.getByRole('heading', { name: 'Vastra Admin — foundation ready' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Secure admin sign in' })).toBeVisible();
+  await expect(page.getByLabel('Admin email')).toBeVisible();
+  await expect(page.getByLabel('Password')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in securely' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Admin navigation' })).toBeVisible();
   await expect(page.getByRole('main')).toHaveCount(1);
   await expect(page.getByRole('link', { name: 'Overview' })).toHaveAttribute(
@@ -38,5 +39,5 @@ test('admin application reflows without losing semantic regions', async ({ page 
   await expect(page.getByRole('banner')).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Admin navigation' })).toBeVisible();
   await expect(page.getByRole('main')).toBeVisible();
-  await expect(page.getByText('System shell available')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Secure admin sign in' })).toBeVisible();
 });

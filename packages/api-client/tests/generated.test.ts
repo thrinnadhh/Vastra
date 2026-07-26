@@ -33,4 +33,16 @@ describe('generated OpenAPI boundary', () => {
       ),
     ).toBe(false);
   });
+
+  it('exposes the admin dashboard as an authenticated typed operation', () => {
+    expect(OPENAPI_OPERATIONS.getAdminDashboard).toMatchObject({
+      method: 'GET',
+      path: '/admin/dashboard',
+      requiresAuth: true,
+      responses: {
+        200: { $ref: '#/components/schemas/AdminDashboardSummary' },
+      },
+    });
+    expect(Object.keys(OPENAPI_SCHEMAS)).toContain('AdminDashboardSummary');
+  });
 });
