@@ -4,6 +4,7 @@ import { HttpException, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ALLOW_ADMIN_AAL1_METADATA } from './admin-mfa.decorator';
 import { AdminMfaGuard } from './admin-mfa.guard';
 import type {
   AuthenticatedHttpRequest,
@@ -122,6 +123,21 @@ describe('AdminMfaGuard', () => {
         createExecutionContext({
           headers: {},
           authContext: createContext('ADMIN', 'aal2'),
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('allows an authenticated administrator on an explicit aal1 bootstrap route', () => {
+    vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((metadataKey: unknown) =>
+      metadataKey === ALLOW_ADMIN_AAL1_METADATA ? true : false,
+    );
+
+    expect(
+      guard.canActivate(
+        createExecutionContext({
+          headers: {},
+          authContext: createContext('ADMIN', 'aal1'),
         }),
       ),
     ).toBe(true);
