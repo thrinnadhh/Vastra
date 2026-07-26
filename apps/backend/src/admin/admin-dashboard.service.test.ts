@@ -1,14 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AuthenticatedRequestContext } from '../auth/auth.types';
-import type { AdminDashboardGateway } from './admin-dashboard.gateway';
-import { AdminDashboardService, AdminSearchQueryInvalidError } from './admin-dashboard.service';
+import type {
+  AdminDashboardGateway,
+  AdminOrderListInput,
+} from './admin-dashboard.gateway';
+import {
+  AdminDashboardService,
+  AdminOrderListQueryInvalidError,
+  AdminSearchQueryInvalidError,
+} from './admin-dashboard.service';
 
 const CONTEXT = {} as AuthenticatedRequestContext;
 
 class GatewayStub implements AdminDashboardGateway {
   public query: string | null = null;
   public limit: number | null = null;
+  public orderInput: AdminOrderListInput | null = null;
 
   public getSummary() {
     return Promise.resolve({
@@ -28,6 +36,11 @@ class GatewayStub implements AdminDashboardGateway {
     this.limit = limit;
     return Promise.resolve([]);
   }
+
+  public listOrders(input: AdminOrderListInput) {
+    this.orderInput = input;
+    return Promise.resolve({ orders: [], nextCursor: null });
+  }
 }
 
 describe('AdminDashboardService', () => {
@@ -42,5 +55,37 @@ describe('AdminDashboardService', () => {
   it('rejects short search terms', () => {
     const service = new AdminDashboardService(new GatewayStub());
     expect(() => service.search(CONTEXT, 'x', undefined)).toThrow(AdminSearchQueryInvalidError);
+  });
+
+  it('parses a bounded operational order query', async () => {
+    const gateway = new GatewayStub();
+    const service = new AdminDashboardService(gateway);
+
+    await service.listOrders(
+      CONTEXT,
+      'CAPTAIN_SEARCHING',
+      'UNASSIGNED',
+      undefined,
+      '999',
+    );
+
+    expect(gateway.orderInput).toEqual({
+      status: 'CAPTAIN_SEARCHING',
+      issue: 'UNASSIGNED',
+      cursorCreatedAt: null,
+      cursorId: null,
+      limit: 50,
+    });
+  });
+
+  it('rejects unknown order statuses and issue filters', () => {
+    const service = new AdminDashboardService(new GatewayStub());
+
+    expect(() => service.listOrders(CONTEXT, 'UNKNOWN', undefined, undefined, undefined)).toThrow(
+      AdminOrderListQueryInvalidError,
+    );
+    expect(() =>
+      service.listOrders(CONTEXT, undefined, 'UNKNOWN', undefined, undefined),
+    ).toThrow(AdminOrderListQueryInvalidError);
   });
 });
