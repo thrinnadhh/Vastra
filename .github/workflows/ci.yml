@@ -118,10 +118,11 @@ jobs:
         run: pnpm exec playwright install chromium
 
       - name: Run frontend E2E and visual harness
+        env:
+          DEBUG: pw:webserver
         run: |
-          mkdir -p test-results/playwright
-          if ! pnpm test:frontend:harness > test-results/playwright/frontend-harness.log 2>&1; then
-            tail -n 300 test-results/playwright/frontend-harness.log
+          if ! pnpm test:frontend:harness > /tmp/frontend-harness.log 2>&1; then
+            tail -n 300 /tmp/frontend-harness.log
             exit 1
           fi
 
@@ -131,6 +132,7 @@ jobs:
         with:
           name: frontend-e2e-evidence-${{ github.run_attempt }}
           path: |
+            /tmp/frontend-harness.log
             test-results/playwright
             playwright-report
           if-no-files-found: warn
