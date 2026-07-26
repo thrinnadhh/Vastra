@@ -185,10 +185,8 @@ describe('OperationalReadinessService', () => {
     );
   });
 
-  it('rejects an account type without an operational profile', async () => {
-    await expect(service.assertOperationallyReady(createContext('CUSTOMER'))).rejects.toSatisfy(
-      (error: unknown) => readErrorCode(error) === 'ACCOUNT_TYPE_FORBIDDEN',
-    );
+  it('allows an active customer without merchant or captain readiness lookup', async () => {
+    await expect(service.assertOperationallyReady(createContext('CUSTOMER'))).resolves.toBeUndefined();
 
     expect(gateway.merchantCalls).toBe(0);
     expect(gateway.captainCalls).toBe(0);
