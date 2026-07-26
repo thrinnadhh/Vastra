@@ -5,10 +5,12 @@ import { formatPaiseAsInr } from '../checkout/format-inr';
 import { CustomerNetworkStateBoundary } from '../ui/customer-network-state';
 import { resolveCustomerNetworkState } from '../ui/resolve-customer-network-state';
 import { getCustomerOrderStatusPresentation } from './customer-order-status';
+import { createCustomerOrderIdempotencyKey } from './customer-order-placement.client';
 import { CustomerOrderTracking } from './customer-order-tracking';
 import type { CustomerOrderTrackingPort } from './customer-order-tracking.types';
 import {
   CustomerOrderError,
+  type CustomerOrderCancellationPort,
   type CustomerOrderDetail,
   type CustomerOrderDetailPort,
   type CustomerOrderHistoryEntry,
@@ -18,6 +20,12 @@ import {
 interface DetailState {
   readonly order: CustomerOrderDetail | null;
   readonly isLoading: boolean;
+  readonly failure: CustomerOrderError | null;
+}
+
+interface CancellationState {
+  readonly confirming: boolean;
+  readonly isSubmitting: boolean;
   readonly failure: CustomerOrderError | null;
 }
 
@@ -90,11 +98,21 @@ function OrderDetailContent({
   onRefresh,
   onBack,
   trackingClient,
+  cancellation,
+  canCancel,
+  onBeginCancellation,
+  onCancelCancellation,
+  onConfirmCancellation,
 }: {
   readonly order: CustomerOrderDetail;
   readonly onRefresh: () => void;
   readonly onBack?: () => void;
   readonly trackingClient?: CustomerOrderTrackingPort;
+  readonly cancellation: CancellationState;
+  readonly canCancel: boolean;
+  readonly onBeginCancellation: () => void;
+  readonly onCancelCancellation: () => void;
+  readonly onConfirmCancellation: () => void;
 }) {
   const status = getCustomerOrderStatusPresentation(order.status);
   return (
@@ -139,6 +157,66 @@ function OrderDetailContent({
           {order.paymentStatus === 'COD_PENDING' ? 'Cash on delivery pending' : 'Payment updated'}
         </Text>
       </View>
+
+      {!canCancel ? null : (
+        <View style={styles.card}>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>
+            Cancel order
+          </Text>
+          {!cancellation.confirming ? (
+            <Pressable
+              accessibilityLabel="Cancel this order"
+              accessibilityRole="button"
+              onPress={onBeginCancellation}
+              style={styles.cancelAction}
+            >
+              <Text style={styles.cancelActionText}>Cancel this order</Text>
+            </Pressable>
+          ) : (
+            <>
+              <Text style={styles.meta}>
+                Cancellation is final. Reserved stock will be released and any captured payment
+                will enter refund processing.
+              </Text>
+              {cancellation.failure === null ? null : (
+                <Text accessibilityRole="alert" style={styles.errorText}>
+                  Cancellation could not be completed. Please try again.
+                </Text>
+              )}
+              {cancellation.isSubmitting ? (
+                <Text accessibilityLiveRegion="polite" style={styles.meta}>
+                  Cancelling order…
+                </Text>
+              ) : (
+                <View style={styles.cancelActions}>
+                  <Pressable
+                    accessibilityLabel={
+                      cancellation.failure === null
+                        ? 'Confirm order cancellation'
+                        : 'Retry order cancellation'
+                    }
+                    accessibilityRole="button"
+                    onPress={onConfirmCancellation}
+                    style={styles.destructiveAction}
+                  >
+                    <Text style={styles.destructiveActionText}>
+                      {cancellation.failure === null ? 'Confirm cancellation' : 'Try again'}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityLabel="Keep this order"
+                    accessibilityRole="button"
+                    onPress={onCancelCancellation}
+                    style={styles.keepAction}
+                  >
+                    <Text style={styles.keepActionText}>Keep order</Text>
+                  </Pressable>
+                </View>
+              )}
+            </>
+          )}
+        </View>
+      )}
 
       <View style={styles.card}>
         <Text accessibilityRole="header" style={styles.sectionTitle}>
@@ -206,7 +284,7 @@ function ActiveCustomerOrderDetailScreen({
   trackingClient,
 }: {
   readonly orderId: string;
-  readonly orderClient: CustomerOrderDetailPort;
+  readonly orderClient: CustomerOrderDetailPort & Partial<CustomerOrderCancellationPort>;
   readonly onBack?: () => void;
   readonly trackingClient?: CustomerOrderTrackingPort;
 }) {
@@ -216,6 +294,12 @@ function ActiveCustomerOrderDetailScreen({
     isLoading: true,
     failure: null,
   });
+  const [cancellation, setCancellation] = useState<CancellationState>({
+    confirming: false,
+    isSubmitting: false,
+    failure: null,
+  });
+  const cancellationIdempotencyKey = useRef<string | null>(null);
 
   const runRequest = useCallback(
     (operationId: number) => {
@@ -245,6 +329,35 @@ function ActiveCustomerOrderDetailScreen({
     setState((current) => ({ ...current, isLoading: true, failure: null }));
     runRequest(operationId);
   }, [runRequest]);
+
+  const confirmCancellation = useCallback(() => {
+    if (orderClient.cancelOrder === undefined) return;
+    const operationId = ++operation.current;
+    const idempotencyKey =
+      cancellationIdempotencyKey.current ?? createCustomerOrderIdempotencyKey();
+    cancellationIdempotencyKey.current = idempotencyKey;
+    setCancellation({ confirming: true, isSubmitting: true, failure: null });
+
+    void (async () => {
+      try {
+        await orderClient.cancelOrder?.(orderId, idempotencyKey);
+        const order = await orderClient.getOrder(orderId);
+        if (operation.current === operationId) {
+          cancellationIdempotencyKey.current = null;
+          setState({ order, isLoading: false, failure: null });
+          setCancellation({ confirming: false, isSubmitting: false, failure: null });
+        }
+      } catch (error: unknown) {
+        if (operation.current === operationId) {
+          setCancellation({
+            confirming: true,
+            isSubmitting: false,
+            failure: toOrderError(error),
+          });
+        }
+      }
+    })();
+  }, [orderClient, orderId]);
 
   useEffect(() => {
     const operationId = ++operation.current;
@@ -278,6 +391,20 @@ function ActiveCustomerOrderDetailScreen({
           {...(onBack === undefined ? {} : { onBack })}
           onRefresh={refresh}
           order={state.order}
+          cancellation={cancellation}
+          canCancel={
+            orderClient.cancelOrder !== undefined &&
+            (state.order.status === 'PAYMENT_PENDING' ||
+              state.order.status === 'WAITING_FOR_MERCHANT')
+          }
+          onBeginCancellation={() => {
+            setCancellation({ confirming: true, isSubmitting: false, failure: null });
+          }}
+          onCancelCancellation={() => {
+            cancellationIdempotencyKey.current = null;
+            setCancellation({ confirming: false, isSubmitting: false, failure: null });
+          }}
+          onConfirmCancellation={confirmCancellation}
           {...(trackingClient === undefined ? {} : { trackingClient })}
         />
       )}
@@ -292,7 +419,7 @@ export function CustomerOrderDetailScreen({
   trackingClient,
 }: {
   readonly orderId: string;
-  readonly orderClient: CustomerOrderDetailPort;
+  readonly orderClient: CustomerOrderDetailPort & Partial<CustomerOrderCancellationPort>;
   readonly onBack?: () => void;
   readonly trackingClient?: CustomerOrderTrackingPort;
 }) {
@@ -347,4 +474,32 @@ const styles = StyleSheet.create({
   historyCopy: { flex: 1, marginLeft: 12 },
   historyStatus: { color: '#1F2937', fontSize: 15, fontWeight: '700' },
   historyNote: { marginTop: 5, color: '#475467', fontSize: 14, lineHeight: 20 },
+  cancelAction: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#B42318',
+    borderRadius: 10,
+  },
+  cancelActionText: { color: '#B42318', fontSize: 15, fontWeight: '700' },
+  cancelActions: { flexDirection: 'row', marginTop: 16 },
+  destructiveAction: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#B42318',
+  },
+  destructiveActionText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  keepAction: {
+    flex: 1,
+    alignItems: 'center',
+    marginLeft: 10,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#D0D5DD',
+    borderRadius: 10,
+  },
+  keepActionText: { color: '#344054', fontSize: 14, fontWeight: '700' },
+  errorText: { marginTop: 12, color: '#B42318', fontSize: 14, lineHeight: 20 },
 });

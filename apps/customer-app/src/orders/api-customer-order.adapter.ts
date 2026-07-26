@@ -6,6 +6,7 @@ import {
 } from './customer-order.codec';
 import {
   CustomerOrderError,
+  type CustomerOrderCancellationResult,
   type CustomerOrderDetail,
   type CustomerOrderFailureKind,
   type CustomerOrderReadPort,
@@ -20,6 +21,7 @@ import type {
 
 type ListOrdersResponse = OperationResponse<'listCustomerOrders'>;
 type GetOrderResponse = OperationResponse<'getCustomerOrder'>;
+type CancellationResponse = OperationResponse<'cancelCustomerOrder'>;
 type TrackingResponse = OperationResponse<'getCustomerOrderTracking'>;
 type DeliveryOtpResponse = OperationResponse<'getCustomerDeliveryOtp'>;
 
@@ -177,6 +179,64 @@ function parseDeliveryOtpEnvelope(value: DeliveryOtpResponse): CustomerDeliveryO
   };
 }
 
+function nonNegativeInteger(record: Readonly<Record<string, unknown>>, key: string): number {
+  const value = record[key];
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
+  }
+  return value;
+}
+
+function parseCancellationEnvelope(value: CancellationResponse): CustomerOrderCancellationResult {
+  const envelope: unknown = value;
+  if (
+    !isRecord(envelope) ||
+    field(envelope, 'success') !== true ||
+    !isRecord(field(envelope, 'data'))
+  ) {
+    throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
+  }
+  const data = field(envelope, 'data');
+  if (!isRecord(data) || !isRecord(field(data, 'cancellation'))) {
+    throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
+  }
+  const cancellation = field(data, 'cancellation');
+  if (
+    !isRecord(cancellation) ||
+    cancellation['status'] !== 'CANCELLED' ||
+    (cancellation['refundStatus'] !== null &&
+      cancellation['refundStatus'] !== 'INITIATED') ||
+    typeof cancellation['replayed'] !== 'boolean'
+  ) {
+    throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
+  }
+  const paymentStatus = stringValue(cancellation, 'paymentStatus');
+  const validPaymentStatuses = new Set([
+    'PENDING',
+    'AUTHORIZED',
+    'CAPTURED',
+    'FAILED',
+    'PARTIALLY_REFUNDED',
+    'REFUNDED',
+    'COD_PENDING',
+    'COD_COLLECTED',
+  ]);
+  if (!validPaymentStatuses.has(paymentStatus)) {
+    throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
+  }
+  return {
+    orderId: stringValue(cancellation, 'orderId'),
+    orderNumber: stringValue(cancellation, 'orderNumber'),
+    status: 'CANCELLED',
+    paymentStatus: paymentStatus as CustomerOrderCancellationResult['paymentStatus'],
+    refundId: nullableString(cancellation, 'refundId'),
+    refundStatus: cancellation['refundStatus'],
+    reservationsReleased: nonNegativeInteger(cancellation, 'reservationsReleased'),
+    cancelledAt: stringValue(cancellation, 'cancelledAt'),
+    replayed: cancellation['replayed'],
+  };
+}
+
 export class ApiCustomerOrderAdapter implements CustomerOrderReadPort, CustomerOrderTrackingPort {
   public constructor(private readonly apiClient: ApiClient) {}
 
@@ -199,6 +259,26 @@ export class ApiCustomerOrderAdapter implements CustomerOrderReadPort, CustomerO
     try {
       const response = await this.apiClient.request('getCustomerOrder', { path: { orderId } });
       return parseCustomerOrderDetailEnvelope(response.data satisfies GetOrderResponse);
+    } catch (error: unknown) {
+      if (error instanceof CustomerOrderError) throw error;
+      throw mapApiFailure(error);
+    }
+  }
+
+  public async cancelOrder(
+    orderId: string,
+    idempotencyKey: string,
+  ): Promise<CustomerOrderCancellationResult> {
+    try {
+      const response = await this.apiClient.request('cancelCustomerOrder', {
+        path: { orderId },
+        headers: { 'Idempotency-Key': idempotencyKey },
+      });
+      const cancellation = parseCancellationEnvelope(response.data);
+      if (cancellation.orderId !== orderId) {
+        throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);
+      }
+      return cancellation;
     } catch (error: unknown) {
       if (error instanceof CustomerOrderError) throw error;
       throw mapApiFailure(error);

@@ -2109,6 +2109,51 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    CustomerOrderCancellation:
+      type: object
+      additionalProperties: false
+      required:
+      - orderId
+      - orderNumber
+      - status
+      - paymentStatus
+      - refundId
+      - refundStatus
+      - reservationsReleased
+      - cancelledAt
+      - replayed
+      properties:
+        orderId: {type: string, format: uuid}
+        orderNumber: {type: string, minLength: 1}
+        status: {type: string, const: CANCELLED}
+        paymentStatus:
+          type: string
+          enum: [PENDING, AUTHORIZED, CAPTURED, FAILED, PARTIALLY_REFUNDED, REFUNDED, COD_PENDING, COD_COLLECTED]
+        refundId: {type: ['string', 'null'], format: uuid}
+        refundStatus:
+          type: ['string', 'null']
+          enum: [INITIATED, null]
+        reservationsReleased: {type: integer, minimum: 0}
+        cancelledAt: {type: string, format: date-time}
+        replayed: {type: boolean}
+    CancelCustomerOrderResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          additionalProperties: false
+          required: [cancellation]
+          properties:
+            cancellation: {$ref: '#/components/schemas/CustomerOrderCancellation'}
+        meta:
+          type: object
+          additionalProperties: false
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     InventoryAdjustmentRequest:
       type: object
       additionalProperties: false
@@ -4276,30 +4321,38 @@ paths:
               schema: {$ref: '#/components/schemas/ApiError'}
   /customer/orders/{orderId}/cancel:
     post:
-      summary: Cancel eligible order
-      tags:
-      - Customer
+      operationId: cancelCustomerOrder
+      summary: Cancel an eligible customer order
+      description: Idempotently cancels a customer-owned order before merchant acceptance, releases every active order reservation, stops merchant alerting, and initiates a refund when payment was captured.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
       parameters:
       - name: orderId
         in: path
         required: true
-        schema:
-          type: string
-          format: uuid
+        schema: {type: string, format: uuid}
       - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Order cancelled or an identical cancellation safely replayed
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/CancelCustomerOrderResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Cancellation response or order state is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Cancellation storage or refund preparation is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
   /customer/wardrobe/upload-intents:
     post:
       operationId: createWardrobeUploadIntent
