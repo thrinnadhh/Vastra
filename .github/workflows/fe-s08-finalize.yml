@@ -203,6 +203,11 @@ jobs:
             exit 1
           fi
 
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.109.1
+
       - name: Run database tests
         run: |
           if ! pnpm db:test > /tmp/fe-s08-db.log 2>&1; then
