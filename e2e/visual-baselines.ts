@@ -32,15 +32,15 @@ export const VISUAL_BASELINES: VisualBaselines = {
     },
     darwin: {
       'primitive-primary-action-visual':
-        'a70d4afe07902a6c0a9964aa2654be449d4675ff06c6ca8058091299d1bf2c55',
+        '9d7d572667425347c64fe25e34fb019e33147e47c9d0f377a6fb3554e9c34a9d',
       'primitive-busy-action-visual':
-        'f97a257d94380c897a4a5cbebcf87312f29b4b5d33dadf243db6a151e7022140',
+        'e8879cce81fc097f0f6c4af315436a2d709e72ad0837a9b99351dfc248024e1c',
       'primitive-field-error-visual':
-        '593978d4ea9011389c304513b400aa05c2f2bac8d52074ac120aab20dc52bc1e',
+        '09e56264be640758acc59af63a160048c189e9dadfc4b431e3bb60fe5ff39fb2',
       'primitive-offline-recovery-visual':
-        '5d1eb6bc21bf137f4bf06b8e70b07437e4f18c21a4ae507bef5fec17cea2ceb9',
+        'c87cda78227911d866b626406d3d2669ec57032d534b8b13f90c826497a2d754',
       'primitive-success-toast-visual':
-        'd19360f89cf9e136bb0db689e6a143bc02434ec7366eb23bde8b22b5f07170e6',
+        '8c72cbdf1af36cde380d165096f3a3dd39b128bf24e4ebc1f6be6bf9c97307b8',
       'mobile-customer-shell-visual':
         '292ff20ddd8c676d7f9f48d1830f8ecbd5f1ba94362176a62af32e5d3d8ed441',
       'mobile-merchant-shell-visual':
