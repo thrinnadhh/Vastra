@@ -17,6 +17,7 @@ const REFUND: RefundExecutionRecord = {
   refundId: REFUND_ID,
   refundNumber: 'REF-1',
   returnId: RETURN_ID,
+  initiatedBy: CONTEXT.actor.id,
   orderId: '50000000-0000-4000-8000-000000000001',
   paymentId: '60000000-0000-4000-8000-000000000001',
   providerOrderId: 'order-1',
@@ -33,11 +34,11 @@ const REFUND: RefundExecutionRecord = {
 
 class GatewayStub implements RefundExecutionGateway {
   public appliedStatus: string | null = null;
+  public appliedActorId: string | null = null;
 
   public list(status: string | null, limit: number) {
-    void status;
     void limit;
-    return Promise.resolve([]);
+    return Promise.resolve(status === 'INITIATED' ? [REFUND] : []);
   }
 
   public get(refundId: string) {
@@ -65,7 +66,7 @@ class GatewayStub implements RefundExecutionGateway {
     processedAt: string | null,
     failureMessage: string | null,
   ) {
-    void actorId;
+    this.appliedActorId = actorId;
     void providerRefundId;
     void processedAt;
     void failureMessage;
@@ -112,6 +113,17 @@ describe('RefundExecutionService', () => {
       reasonCode: 'REFUND_EXECUTION',
     });
     expect(result.data.status).toBe('COMPLETED');
+    expect(gateway.appliedStatus).toBe('SUCCESS');
+  });
+
+  it('automatically executes initiated refunds under their immutable initiating actor', async () => {
+    const gateway = new GatewayStub();
+    const service = new RefundExecutionService(gateway, new ProviderStub());
+
+    const result = await service.processAutomatic(10);
+
+    expect(result).toEqual({ selected: 1, processed: 1, failed: 0 });
+    expect(gateway.appliedActorId).toBe(CONTEXT.actor.id);
     expect(gateway.appliedStatus).toBe('SUCCESS');
   });
 });
