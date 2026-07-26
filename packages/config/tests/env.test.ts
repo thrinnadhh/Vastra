@@ -78,6 +78,15 @@ describe('environment validation', () => {
     ).toThrow(EnvironmentValidationError);
   });
 
+  it('rejects unsafe Cashfree request timeouts', () => {
+    expect(() =>
+      parseServerEnv({
+        ...validServerEnvironment(),
+        PAYMENT_REQUEST_TIMEOUT_MS: '0',
+      }),
+    ).toThrow(EnvironmentValidationError);
+  });
+
   it('does not return backend secrets from the mobile schema', () => {
     const result = parseMobileEnv({
       ...commonEnvironment,
