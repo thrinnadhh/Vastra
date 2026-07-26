@@ -70,7 +70,7 @@ jobs:
           path = Path('apps/backend/src/admin/admin-module-contracts.test.ts')
           text = path.read_text(encoding='utf-8').replace(
               "    expect(\n      readMetadata(REQUIRED_PERMISSIONS_METADATA, AdminCapabilitiesController.prototype.get),\n    ).toBeUndefined();",
-              "    const descriptor = Object.getOwnPropertyDescriptor(\n      AdminCapabilitiesController.prototype,\n      'get',\n    );\n    expect(readMetadata(REQUIRED_PERMISSIONS_METADATA, descriptor?.value)).toBeUndefined();",
+              "    const handler: unknown = Object.getOwnPropertyDescriptor(\n      AdminCapabilitiesController.prototype,\n      'get',\n    )?.value;\n    if (typeof handler !== 'function') {\n      throw new TypeError('AdminCapabilitiesController.get must be a method');\n    }\n    expect(readMetadata(REQUIRED_PERMISSIONS_METADATA, handler)).toBeUndefined();",
           )
           path.write_text(text, encoding='utf-8')
 
@@ -119,7 +119,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: fe-s08-lint-diagnostics-2
+          name: fe-s08-lint-diagnostics-3
           path: /tmp/fe-s08-lint.log
           if-no-files-found: warn
           retention-days: 1
