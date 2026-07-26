@@ -118,8 +118,6 @@ jobs:
         run: pnpm exec playwright install chromium
 
       - name: Run frontend E2E and visual harness
-        env:
-          DEBUG: pw:webserver
         run: |
           if ! pnpm test:frontend:harness > /tmp/frontend-harness.log 2>&1; then
             tail -n 300 /tmp/frontend-harness.log
