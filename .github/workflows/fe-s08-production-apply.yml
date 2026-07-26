@@ -1,0 +1,105 @@
+name: FE-S08 apply and validate production backend
+
+on:
+  push:
+    branches:
+      - agent/fe-s08-backend-production
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fe-s08-production-backend
+  cancel-in-progress: true
+
+jobs:
+  apply-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out production branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/fe-s08-backend-production
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Decode production patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+          import gzip
+
+          chunks = sorted(Path('.github/fe-s08-production').glob('chunk-*'))
+          if len(chunks) != 5:
+              raise SystemExit(f'Expected 5 chunks, found {len(chunks)}')
+
+          encoded = ''.join(path.read_text(encoding='utf-8').strip() for path in chunks)
+          compressed = base64.b64decode(encoded, validate=True)
+          patch = gzip.decompress(compressed)
+          output = Path('/tmp/fe-s08-production.patch')
+          output.write_bytes(patch)
+          print(f'Decoded {len(patch)} patch bytes from {len(chunks)} chunks')
+          PY
+          test -s /tmp/fe-s08-production.patch
+
+      - name: Apply production implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply --check /tmp/fe-s08-production.patch
+          git apply /tmp/fe-s08-production.patch
+
+          rm -rf .github/fe-s08-production
+          rm -rf .github/fe-s08-final
+          rm -rf .github/fe-s08-patch
+          rm -f .github/workflows/fe-s08-materialize.yml
+          rm -f .github/workflows/fe-s08-production-apply.yml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format production tree
+        run: pnpm format
+
+      - name: Validate static quality
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm format:check
+          pnpm security:client-secrets
+          pnpm lint
+          pnpm typecheck
+
+      - name: Validate backend and contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @vastra/backend test
+          pnpm --filter @vastra/backend test:integration
+          pnpm openapi:check
+          pnpm db:test
+          pnpm build
+
+      - name: Commit validated production implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "feat(fe-s08): implement admin observation and recovery backend"
+          git push origin HEAD:agent/fe-s08-backend-production
