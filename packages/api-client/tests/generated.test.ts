@@ -25,4 +25,12 @@ describe('generated OpenAPI boundary', () => {
     expectTypeOf<OperationResponse<OperationId>>().not.toBeNever();
     expect(OPENAPI_OPERATIONS).toBeDefined();
   });
+
+  it('does not expose operations explicitly excluded from the frozen MVP', () => {
+    expect(
+      Object.values(OPENAPI_OPERATIONS).some(({ path }) =>
+        path.startsWith('/customer/group-style'),
+      ),
+    ).toBe(false);
+  });
 });
