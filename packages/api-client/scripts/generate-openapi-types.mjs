@@ -227,7 +227,7 @@ if (bundleResult.status !== 0) {
 
   for (const [path, rawPathItem] of Object.entries(paths)) {
     const pathItem = resolveReference(rawPathItem);
-    if (!isRecord(pathItem)) {
+    if (!isRecord(pathItem) || pathItem['x-vastra-mvp-excluded'] === true) {
       continue;
     }
     for (const [method, rawOperation] of Object.entries(pathItem)) {
