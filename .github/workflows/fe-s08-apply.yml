@@ -40,24 +40,57 @@ jobs:
       - name: Decode prepared implementation
         run: |
           mkdir -p /tmp/fe-s08-diagnostics
-          python3 - <<'PY'
+          touch /tmp/fe-s08-diagnostics/started.txt
+          set +e
+          python3 - <<'PY' > /tmp/fe-s08-diagnostics/decode.stdout 2> /tmp/fe-s08-diagnostics/decode.stderr
           from pathlib import Path
           import base64
           import gzip
+          import traceback
 
+          diagnostics = Path('/tmp/fe-s08-diagnostics')
           paths = sorted(Path('.github/fe-s08-patch').glob('chunk-*'))
-          if not paths:
-              raise SystemExit('No FE-S08 patch chunks found')
+          lengths = []
+          pieces = []
+          for path in paths:
+              text = path.read_text(encoding='utf-8').strip()
+              pieces.append(text)
+              lengths.append((path.name, len(text), text[:16], text[-16:]))
 
-          encoded = ''.join(path.read_text(encoding='utf-8').strip() for path in paths)
-          raw = base64.b64decode(encoded, validate=True)
-          patch = gzip.decompress(raw)
-          Path('/tmp/fe-s08.patch').write_bytes(patch)
-          Path('/tmp/fe-s08-diagnostics/decode.txt').write_text(
-              f'chunks={len(paths)}\nencoded_bytes={len(encoded)}\ncompressed_bytes={len(raw)}\npatch_bytes={len(patch)}\n',
+          encoded = ''.join(pieces)
+          diagnostics.joinpath('chunk-summary.txt').write_text(
+              '\n'.join(
+                  [f'chunks={len(paths)}', f'encoded_bytes={len(encoded)}', f'encoded_mod4={len(encoded) % 4}']
+                  + [f'{name}: bytes={size} first={first} last={last}' for name, size, first, last in lengths]
+              ) + '\n',
               encoding='utf-8',
           )
+
+          try:
+              padded = encoded + ('=' * (-len(encoded) % 4))
+              raw = base64.b64decode(padded, validate=False)
+              diagnostics.joinpath('compressed-summary.txt').write_text(
+                  f'compressed_bytes={len(raw)}\nmagic={raw[:8].hex()}\n',
+                  encoding='utf-8',
+              )
+              patch = gzip.decompress(raw)
+              Path('/tmp/fe-s08.patch').write_bytes(patch)
+              diagnostics.joinpath('decode.txt').write_text(
+                  f'patch_bytes={len(patch)}\n',
+                  encoding='utf-8',
+              )
+          except Exception:
+              diagnostics.joinpath('exception.txt').write_text(traceback.format_exc(), encoding='utf-8')
+              raise
           PY
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            cat /tmp/fe-s08-diagnostics/chunk-summary.txt || true
+            cat /tmp/fe-s08-diagnostics/compressed-summary.txt || true
+            cat /tmp/fe-s08-diagnostics/exception.txt || true
+            exit "$status"
+          fi
           test -s /tmp/fe-s08.patch
           sed -n '1,120p' /tmp/fe-s08.patch > /tmp/fe-s08-diagnostics/patch-head.txt
 
@@ -113,5 +146,5 @@ jobs:
         with:
           name: fe-s08-recovery-diagnostics
           path: /tmp/fe-s08-diagnostics
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 1
