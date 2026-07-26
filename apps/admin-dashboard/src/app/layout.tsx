@@ -6,7 +6,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Vastra Admin',
-  description: 'Vastra administration foundation',
+  description: 'Secure Vastra operations control room',
 };
 
 const ADMIN_NAVIGATION = [{ href: '/', label: 'Overview', current: true }] as const;

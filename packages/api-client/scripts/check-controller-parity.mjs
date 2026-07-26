@@ -133,7 +133,7 @@ function collectOpenApiRoutes() {
   }
   const operationsSection = generated.slice(markerIndex);
   const routePattern =
-    /"method": "(GET|PUT|POST|DELETE|PATCH|OPTIONS|HEAD|TRACE)",\s+"path": "([^"]+)"/gu;
+    /["']?method["']?\s*:\s*["'](GET|PUT|POST|DELETE|PATCH|OPTIONS|HEAD|TRACE)["'],\s+["']?path["']?\s*:\s*["']([^"']+)["']/gu;
   const routes = new Set();
   for (const match of operationsSection.matchAll(routePattern)) {
     const method = match[1];

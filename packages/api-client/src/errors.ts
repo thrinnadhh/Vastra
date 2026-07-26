@@ -1,4 +1,4 @@
-import type { ApiErrorKind, NormalizedApiError } from './types.js';
+import type { ApiErrorKind, NormalizedApiError } from './types';
 
 const MAX_RETRY_AFTER_MS = 30_000;
 const SAFE_CODE = /^[A-Z0-9_.:-]{1,80}$/u;

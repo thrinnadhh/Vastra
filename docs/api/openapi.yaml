@@ -2942,6 +2942,19 @@ components:
     AdminMutationReasonCode:
       type: string
       enum: [CUSTOMER_REQUEST, MERCHANT_REQUEST, CAPTAIN_REQUEST, DELIVERY_FAILURE, PAYMENT_RISK, FRAUD_RISK, POLICY_VIOLATION, SAFETY_INCIDENT, OPERATIONAL_RECOVERY, DATA_CORRECTION, OTHER]
+    AdminDashboardSummary:
+      type: object
+      additionalProperties: false
+      required: [openOrders, interventionOrders, searchingDeliveries, activeDeliveries, openCases, suspendedMerchants, suspendedCaptains, generatedAt]
+      properties:
+        openOrders: {type: integer, minimum: 0}
+        interventionOrders: {type: integer, minimum: 0}
+        searchingDeliveries: {type: integer, minimum: 0}
+        activeDeliveries: {type: integer, minimum: 0}
+        openCases: {type: integer, minimum: 0}
+        suspendedMerchants: {type: integer, minimum: 0}
+        suspendedCaptains: {type: integer, minimum: 0}
+        generatedAt: {type: string, format: date-time}
     AdminAccountApprovalRequest:
       type: object
       additionalProperties: false
@@ -7559,22 +7572,20 @@ paths:
         '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/dashboard:
     get:
+      operationId: getAdminDashboard
       summary: Get admin dashboard
-      tags:
-      - Admin
+      description: Return the current operational workload and intervention counters.
+      tags: [Admin]
+      security: [{bearerAuth: []}]
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Current operational summary
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/AdminDashboardSummary'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/orders:
     get:
       operationId: listAdminOperationalOrders
