@@ -1,9 +1,9 @@
 name: FE-S08 finalize backend implementation
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/fe-s08-backend-final
+      - main
 
 permissions:
   contents: write
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   apply-validate-publish:
-    if: github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]' && github.head_ref == 'agent/fe-s08-backend-final'
     runs-on: ubuntu-24.04
     steps:
       - name: Check out final branch
