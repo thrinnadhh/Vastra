@@ -100,6 +100,11 @@ add_disable(
         'react-hooks/set-state-in-effect',
     ),
 )
+replace_once(
+    runtime,
+    "  const [state, setState] = useState<RuntimeState>(fixture ? 'READY' : 'RESTORING');",
+    """  const [state, setState] = useState<RuntimeState>(\n    fixture ? 'READY' : dependencies === undefined ? 'NOT_CONFIGURED' : 'RESTORING',\n  );""",
+)
 
 ui = ROOT / 'apps/admin-dashboard/src/components/admin-ui.tsx'
 ui_text = ui.read_text(encoding='utf-8')
