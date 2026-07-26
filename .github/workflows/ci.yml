@@ -196,7 +196,20 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: |
+          if ! pnpm build > /tmp/workspace-build.log 2>&1; then
+            tail -n 300 /tmp/workspace-build.log
+            exit 1
+          fi
+
+      - name: Upload workspace build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-build-diagnostics-${{ github.run_attempt }}
+          path: /tmp/workspace-build.log
+          if-no-files-found: error
+          retention-days: 1
 
   verify:
     name: Verify repository
