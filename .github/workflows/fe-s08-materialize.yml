@@ -1,15 +1,16 @@
 name: FE-S08 materialize backend workspace
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/fe-s08-backend-closure
+      - main
 
 permissions:
   contents: read
 
 jobs:
   materialize:
+    if: github.head_ref == 'agent/fe-s08-backend-closure'
     runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
