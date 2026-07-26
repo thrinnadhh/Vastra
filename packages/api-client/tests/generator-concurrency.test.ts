@@ -25,23 +25,19 @@ const runGenerator = () =>
   });
 
 describe('OpenAPI generator concurrency', () => {
-  it(
-    'allows independent workspace gates to generate the contract concurrently',
-    async () => {
-      const results = await Promise.all([
-        runGenerator(),
-        runGenerator(),
-        runGenerator(),
-        runGenerator(),
-      ]);
+  it('allows independent workspace gates to generate the contract concurrently', async () => {
+    const results = await Promise.all([
+      runGenerator(),
+      runGenerator(),
+      runGenerator(),
+      runGenerator(),
+    ]);
 
-      expect(results).toEqual([
-        { code: 0, stderr: '' },
-        { code: 0, stderr: '' },
-        { code: 0, stderr: '' },
-        { code: 0, stderr: '' },
-      ]);
-    },
-    30_000,
-  );
+    expect(results).toEqual([
+      { code: 0, stderr: '' },
+      { code: 0, stderr: '' },
+      { code: 0, stderr: '' },
+      { code: 0, stderr: '' },
+    ]);
+  }, 30_000);
 });
