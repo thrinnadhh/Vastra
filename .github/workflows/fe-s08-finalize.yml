@@ -99,48 +99,75 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --reporter=append-only
 
       - name: Format implementation
-        run: pnpm format
+        run: pnpm format > /tmp/fe-s08-format.log 2>&1
 
       - name: Check formatting
-        run: pnpm format:check
+        run: |
+          if ! pnpm format:check > /tmp/fe-s08-format-check.log 2>&1; then
+            tail -n 200 /tmp/fe-s08-format-check.log
+            exit 1
+          fi
 
       - name: Run lint
         run: |
-          set +e
-          pnpm lint > /tmp/fe-s08-lint.log 2>&1
-          status=$?
-          cat /tmp/fe-s08-lint.log
-          exit "$status"
-
-      - name: Upload lint diagnostics
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: fe-s08-lint-diagnostics-3
-          path: /tmp/fe-s08-lint.log
-          if-no-files-found: warn
-          retention-days: 1
+          if ! pnpm lint > /tmp/fe-s08-lint.log 2>&1; then
+            tail -n 200 /tmp/fe-s08-lint.log
+            exit 1
+          fi
 
       - name: Run TypeScript checks
-        run: pnpm typecheck
+        run: |
+          if ! pnpm typecheck > /tmp/fe-s08-typecheck.log 2>&1; then
+            tail -n 200 /tmp/fe-s08-typecheck.log
+            exit 1
+          fi
 
       - name: Run backend unit tests
-        run: pnpm --filter @vastra/backend test
+        run: |
+          if ! pnpm --filter @vastra/backend test > /tmp/fe-s08-unit.log 2>&1; then
+            tail -n 240 /tmp/fe-s08-unit.log
+            exit 1
+          fi
 
       - name: Run backend integration tests
-        run: pnpm --filter @vastra/backend test:integration
+        run: |
+          if ! pnpm --filter @vastra/backend test:integration > /tmp/fe-s08-integration.log 2>&1; then
+            tail -n 300 /tmp/fe-s08-integration.log
+            exit 1
+          fi
+
+      - name: Upload integration diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: fe-s08-integration-diagnostics
+          path: /tmp/fe-s08-integration.log
+          if-no-files-found: ignore
+          retention-days: 1
 
       - name: Validate OpenAPI
-        run: pnpm openapi:check
+        run: |
+          if ! pnpm openapi:check > /tmp/fe-s08-openapi.log 2>&1; then
+            tail -n 200 /tmp/fe-s08-openapi.log
+            exit 1
+          fi
 
       - name: Run database tests
-        run: pnpm db:test
+        run: |
+          if ! pnpm db:test > /tmp/fe-s08-db.log 2>&1; then
+            tail -n 240 /tmp/fe-s08-db.log
+            exit 1
+          fi
 
       - name: Build backend
-        run: pnpm --filter @vastra/backend build
+        run: |
+          if ! pnpm --filter @vastra/backend build > /tmp/fe-s08-build.log 2>&1; then
+            tail -n 200 /tmp/fe-s08-build.log
+            exit 1
+          fi
 
       - name: Commit validated production tree
         run: |
