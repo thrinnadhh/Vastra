@@ -275,5 +275,20 @@ if (bundleResult.status !== 0) {
   const output = `/* eslint-disable */\n/**\n * Generated from docs/api/openapi.yaml by scripts/generate-openapi-types.mjs.\n * Do not edit manually.\n */\nexport const OPENAPI_SOURCE = 'docs/api/openapi.yaml' as const;\n\nexport const OPENAPI_SCHEMAS = ${JSON.stringify(schemas, null, 2)} as const;\n\nexport const OPENAPI_OPERATIONS = ${JSON.stringify(runtimeOperations, null, 2)} as const;\n\nexport interface components {\n  schemas: {\n    ${schemaMembers.join('\n    ')}\n  };\n}\n\nexport interface operations {\n  ${operationTypes.join('\n  ')}\n}\n\nexport type OperationId = keyof operations;\nexport type OperationRequest<Id extends OperationId> = operations[Id]['request'];\nexport type OperationResponse<Id extends OperationId> = operations[Id]['response'];\nexport type OperationErrorResponse<Id extends OperationId> = operations[Id]['error'];\n`;
 
   writeFileSync(outputPath, output, 'utf8');
-  console.log(`Generated ${operationEntries.length} OpenAPI operations at ${outputPath}`);
+  const formatResult = spawnSync(
+    pnpmExecutable,
+    ['exec', 'prettier', '--write', '--log-level', 'silent', outputPath],
+    { cwd: repositoryRoot, encoding: 'utf8' },
+  );
+  if (formatResult.status !== 0) {
+    if (formatResult.stdout.length > 0) {
+      console.error(formatResult.stdout);
+    }
+    if (formatResult.stderr.length > 0) {
+      console.error(formatResult.stderr);
+    }
+    process.exitCode = formatResult.status ?? 1;
+  } else {
+    console.log(`Generated ${operationEntries.length} OpenAPI operations at ${outputPath}`);
+  }
 }
