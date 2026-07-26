@@ -103,7 +103,9 @@ add_disable(
 replace_once(
     runtime,
     "  const [state, setState] = useState<RuntimeState>(fixture ? 'READY' : 'RESTORING');",
-    """  const [state, setState] = useState<RuntimeState>(\n    fixture ? 'READY' : dependencies === undefined ? 'NOT_CONFIGURED' : 'RESTORING',\n  );""",
+    """  const [state, setState] = useState<RuntimeState>(
+    fixture ? 'READY' : dependencies === undefined ? 'NOT_CONFIGURED' : 'RESTORING',
+  );""",
 )
 
 ui = ROOT / 'apps/admin-dashboard/src/components/admin-ui.tsx'
@@ -195,5 +197,8 @@ wrap_search_params_page(
 replace_once(
     ROOT / 'e2e/admin-shell.spec.ts',
     "  await page.getByRole('link', { name: /VAS-260726-001/u }).click();",
-    "  await page.getByRole('link', { name: 'VAS-260726-001 Sri Fashion', exact: true }).click();",
+    """  await page
+    .getByRole('list', { name: 'Search results' })
+    .getByRole('link', { name: /^VAS-260726-001\\b/u })
+    .click();""",
 )
