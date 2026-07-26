@@ -1,0 +1,33 @@
+name: FE-S08 materialize backend workspace
+
+on:
+  push:
+    branches:
+      - agent/fe-s08-backend-closure
+
+permissions:
+  contents: read
+
+jobs:
+  materialize:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Package repository source
+        run: |
+          tar \
+            --exclude=.git \
+            --exclude=node_modules \
+            --exclude='**/dist' \
+            --exclude='**/.turbo' \
+            -czf fe-s08-workspace.tar.gz .
+
+      - name: Upload workspace
+        uses: actions/upload-artifact@v6
+        with:
+          name: fe-s08-workspace
+          path: fe-s08-workspace.tar.gz
+          if-no-files-found: error
+          retention-days: 1
