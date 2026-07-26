@@ -157,18 +157,36 @@ replace_once(
     '''    setSearchResults(result.data);\n    const [onlyResult] = result.data;\n    if (result.data.length === 1 && onlyResult !== undefined) {\n      router.prefetch(resultHref(onlyResult));\n    }''',
 )
 
-audit = ROOT / 'apps/admin-dashboard/src/app/audit/page.tsx'
-replace_once(
-    audit,
+def wrap_search_params_page(
+    relative: str,
+    import_old: str,
+    import_new: str,
+    exported_name: str,
+    content_name: str,
+    loading_label: str,
+) -> None:
+    path = ROOT / relative
+    replace_once(path, import_old, import_new)
+    replace_once(path, f'export default function {exported_name}() {{', f'function {content_name}() {{')
+    text = path.read_text(encoding='utf-8')
+    wrapper = f'''\nexport default function {exported_name}() {{\n  return (\n    <Suspense fallback={{<LoadingPanel label="{loading_label}" />}}>\n      <{content_name} />\n    </Suspense>\n  );\n}}\n'''
+    if wrapper.strip() not in text:
+        path.write_text(text.rstrip() + '\n' + wrapper, encoding='utf-8')
+
+
+wrap_search_params_page(
+    'apps/admin-dashboard/src/app/audit/page.tsx',
     "import { useState, type FormEvent } from 'react';",
     "import { Suspense, useState, type FormEvent } from 'react';",
+    'AuditPage',
+    'AuditPageContent',
+    'Loading audit filters…',
 )
-replace_once(
-    audit,
-    'export default function AuditPage() {',
-    'function AuditPageContent() {',
+wrap_search_params_page(
+    'apps/admin-dashboard/src/app/orders/page.tsx',
+    "import { useMemo, useState, type FormEvent } from 'react';",
+    "import { Suspense, useMemo, useState, type FormEvent } from 'react';",
+    'OrdersPage',
+    'OrdersPageContent',
+    'Loading order filters…',
 )
-audit_text = audit.read_text(encoding='utf-8')
-wrapper = '''\nexport default function AuditPage() {\n  return (\n    <Suspense fallback={<LoadingPanel label="Loading audit filters…" />}>\n      <AuditPageContent />\n    </Suspense>\n  );\n}\n'''
-if wrapper.strip() not in audit_text:
-    audit.write_text(audit_text.rstrip() + '\n' + wrapper, encoding='utf-8')
