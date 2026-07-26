@@ -94,5 +94,8 @@ jobs:
       - name: Validate OpenAPI
         run: pnpm openapi:check
 
+      - name: Verify generated API client matches backend controllers
+        run: pnpm --filter @vastra/api-client contract:check
+
       - name: Build
         run: pnpm build

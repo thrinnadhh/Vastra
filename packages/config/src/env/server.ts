@@ -8,6 +8,10 @@ const secretSchema = z.string().min(16);
 export const serverEnvSchema = commonEnvSchema.extend({
   NODE_ENV: z.enum(['development', 'test', 'production']),
   PORT: z.coerce.number().int().min(1).max(65535),
+  CORS_ALLOWED_ORIGINS: z.string().min(1),
+  HTTP_BODY_LIMIT_KB: z.coerce.number().int().min(16).max(1_024).default(256),
+  HTTP_RATE_LIMIT_MAX: z.coerce.number().int().min(10).max(10_000).default(240),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(3).default(0),
 
   DATABASE_URL: z.url(),
 
