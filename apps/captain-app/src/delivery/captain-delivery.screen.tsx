@@ -22,6 +22,18 @@ interface CaptainDeliveryScreenProps {
   readonly locationProvider: CaptainLocationProvider;
 }
 
+interface EffectLifecycle {
+  active: boolean;
+}
+
+function createEffectLifecycle(): EffectLifecycle {
+  return { active: true };
+}
+
+function isEffectActive(lifecycle: EffectLifecycle): boolean {
+  return lifecycle.active;
+}
+
 function createIdempotencyKey(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -84,7 +96,7 @@ export function CaptainDeliveryScreen({
   const [issueOpen, setIssueOpen] = useState(false);
   const [issueSelection, setIssueSelection] = useState<IssueSelection | null>(null);
   const [issueNote, setIssueNote] = useState('');
-  const mounted = useRef<boolean>(true);
+  const mounted = useRef(createEffectLifecycle());
   const hasLoadedRef = useRef(false);
 
   const load = useCallback(
@@ -93,10 +105,10 @@ export function CaptainDeliveryScreen({
 
       try {
         const current = await client.getActive();
-        if (!mounted.current) return;
+        if (!isEffectActive(mounted.current)) return;
 
         const nextOffers = current === null ? await client.listOffers() : [];
-        if (!mounted.current) return;
+        if (!isEffectActive(mounted.current)) return;
 
         setActive(current);
         setOffers(nextOffers);
@@ -104,16 +116,17 @@ export function CaptainDeliveryScreen({
         setHasLoaded(true);
         if (!preserveNotice) setNotice(null);
       } catch (error: unknown) {
-        if (mounted.current) setNotice(messageFor(error));
+        if (isEffectActive(mounted.current)) setNotice(messageFor(error));
       } finally {
-        if (mounted.current) setLoading(false);
+        if (isEffectActive(mounted.current)) setLoading(false);
       }
     },
     [client],
   );
 
   useEffect(() => {
-    mounted.current = true;
+    const mountedLifecycle = mounted.current;
+    mountedLifecycle.active = true;
     queueMicrotask(() => {
       void load();
     });
@@ -125,7 +138,7 @@ export function CaptainDeliveryScreen({
     }, 1_000);
 
     return () => {
-      mounted.current = false;
+      mountedLifecycle.active = false;
       clearInterval(refresh);
       clearInterval(clock);
     };
@@ -133,7 +146,7 @@ export function CaptainDeliveryScreen({
 
   useEffect(() => {
     queueMicrotask(() => {
-      if (!mounted.current) return;
+      if (!isEffectActive(mounted.current)) return;
       setPickupCode('');
       setDeliveryOtp('');
       setCashConfirmed(false);
@@ -151,28 +164,28 @@ export function CaptainDeliveryScreen({
       return undefined;
     }
 
-    const lifecycle = { stopped: false };
+    const locationLifecycle = createEffectLifecycle();
     let stopWatching: (() => void) | undefined;
 
     void locationProvider
       .requestForegroundPermission()
       .then(async (permission) => {
-        if (!permission.granted || lifecycle.stopped) return;
+        if (!permission.granted || !isEffectActive(locationLifecycle)) return;
         stopWatching = await locationProvider.watchLocations((sample) => {
           void presenceClient
             .updateLocation({ ...sample, activeDeliveryTaskId: active.taskId })
             .catch(() => undefined);
         });
-        if (lifecycle.stopped) stopWatching();
+        if (!isEffectActive(locationLifecycle)) stopWatching();
       })
       .catch(() => {
-        if (!lifecycle.stopped && mounted.current) {
+        if (locationLifecycle.active && mounted.current.active) {
           setNotice('Live location paused. Check location permission and network access.');
         }
       });
 
     return () => {
-      lifecycle.stopped = true;
+      locationLifecycle.active = false;
       stopWatching?.();
     };
   }, [active, locationProvider, presenceClient]);
@@ -206,19 +219,19 @@ export function CaptainDeliveryScreen({
       setNotice(null);
       try {
         const result = await operation();
-        if (!mounted.current) return;
+        if (!isEffectActive(mounted.current)) return;
         setActive(result);
         setOffers([]);
         setNotice(success ?? null);
       } catch (error: unknown) {
-        if (mounted.current) {
+        if (isEffectActive(mounted.current)) {
           setNotice(messageFor(error));
           if (error instanceof CaptainDeliveryApiError && !error.retryable) {
             await load(true);
           }
         }
       } finally {
-        if (mounted.current) setBusy(false);
+        if (isEffectActive(mounted.current)) setBusy(false);
       }
     },
     [load],
@@ -228,7 +241,8 @@ export function CaptainDeliveryScreen({
     try {
       await Linking.openURL(url);
     } catch {
-      if (mounted.current) setNotice('Could not open that app. Try again when safely stopped.');
+      if (isEffectActive(mounted.current))
+        setNotice('Could not open that app. Try again when safely stopped.');
     }
   }, []);
 
@@ -246,14 +260,14 @@ export function CaptainDeliveryScreen({
       await client.rejectOffer(offer.assignmentId, reason, createIdempotencyKey());
       await load();
     } catch (error: unknown) {
-      if (mounted.current) {
+      if (isEffectActive(mounted.current)) {
         setNotice(messageFor(error));
         if (error instanceof CaptainDeliveryApiError && !error.retryable) {
           await load(true);
         }
       }
     } finally {
-      if (mounted.current) setBusy(false);
+      if (isEffectActive(mounted.current)) setBusy(false);
     }
   };
 

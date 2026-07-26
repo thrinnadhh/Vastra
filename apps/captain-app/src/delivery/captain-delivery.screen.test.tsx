@@ -111,38 +111,60 @@ function deliveryClient(
   return {
     listOffers: jest.fn(() => Promise.resolve(offers)),
     getActive: jest.fn(() => Promise.resolve(current)),
-    getTask: jest.fn(() =>
-      Promise.resolve(current ?? delivery('ASSIGNED')),
-    ) as jest.MockedFunction<CaptainDeliveryPort['getTask']>,
-    acceptOffer: jest.fn(() => {
+    getTask: jest.fn<
+      ReturnType<CaptainDeliveryPort['getTask']>,
+      Parameters<CaptainDeliveryPort['getTask']>
+    >(() => Promise.resolve(current ?? delivery('ASSIGNED'))),
+    acceptOffer: jest.fn<
+      ReturnType<CaptainDeliveryPort['acceptOffer']>,
+      Parameters<CaptainDeliveryPort['acceptOffer']>
+    >(() => {
       current = delivery('ASSIGNED');
       offers = [];
       return Promise.resolve(current);
-    }) as jest.MockedFunction<CaptainDeliveryPort['acceptOffer']>,
-    rejectOffer: jest.fn(() => {
+    }),
+    rejectOffer: jest.fn<
+      ReturnType<CaptainDeliveryPort['rejectOffer']>,
+      Parameters<CaptainDeliveryPort['rejectOffer']>
+    >(() => {
       offers = [];
       return Promise.resolve();
-    }) as jest.MockedFunction<CaptainDeliveryPort['rejectOffer']>,
-    arrivePickup: jest.fn(() => {
+    }),
+    arrivePickup: jest.fn<
+      ReturnType<CaptainDeliveryPort['arrivePickup']>,
+      Parameters<CaptainDeliveryPort['arrivePickup']>
+    >(() => {
       current = delivery('AT_PICKUP');
       return Promise.resolve(current);
-    }) as jest.MockedFunction<CaptainDeliveryPort['arrivePickup']>,
-    verifyPickup: jest.fn(() => {
+    }),
+    verifyPickup: jest.fn<
+      ReturnType<CaptainDeliveryPort['verifyPickup']>,
+      Parameters<CaptainDeliveryPort['verifyPickup']>
+    >(() => {
       current = delivery('PICKED_UP');
       return Promise.resolve(current);
-    }) as jest.MockedFunction<CaptainDeliveryPort['verifyPickup']>,
-    departPickup: jest.fn(() => {
+    }),
+    departPickup: jest.fn<
+      ReturnType<CaptainDeliveryPort['departPickup']>,
+      Parameters<CaptainDeliveryPort['departPickup']>
+    >(() => {
       current = delivery('IN_TRANSIT');
       return Promise.resolve(current);
-    }) as jest.MockedFunction<CaptainDeliveryPort['departPickup']>,
-    arriveDrop: jest.fn(() => {
+    }),
+    arriveDrop: jest.fn<
+      ReturnType<CaptainDeliveryPort['arriveDrop']>,
+      Parameters<CaptainDeliveryPort['arriveDrop']>
+    >(() => {
       current = delivery('AT_DROP');
       return Promise.resolve(current);
-    }) as jest.MockedFunction<CaptainDeliveryPort['arriveDrop']>,
-    complete: jest.fn(() => {
+    }),
+    complete: jest.fn<
+      ReturnType<CaptainDeliveryPort['complete']>,
+      Parameters<CaptainDeliveryPort['complete']>
+    >(() => {
       current = null;
       return Promise.resolve(completion());
-    }) as jest.MockedFunction<CaptainDeliveryPort['complete']>,
+    }),
     reportProblem: jest.fn((...args: Parameters<CaptainDeliveryPort['reportProblem']>) => {
       const [, reason, note] = args;
       current = null;
@@ -193,9 +215,10 @@ function locationProvider(): jest.Mocked<CaptainLocationProvider> {
       Promise.resolve({ granted: true, canAskAgain: true }),
     ),
     getCurrentLocation: jest.fn(() => Promise.resolve(LOCATION)),
-    watchLocations: jest.fn(() =>
-      Promise.resolve(() => undefined),
-    ) as jest.MockedFunction<CaptainLocationProvider['watchLocations']>,
+    watchLocations: jest.fn<
+      ReturnType<CaptainLocationProvider['watchLocations']>,
+      Parameters<CaptainLocationProvider['watchLocations']>
+    >(() => Promise.resolve(() => undefined)),
   };
 }
 
