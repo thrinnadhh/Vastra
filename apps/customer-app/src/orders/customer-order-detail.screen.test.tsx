@@ -234,9 +234,7 @@ describe('CustomerOrderDetailScreen', () => {
 
     expect(cancelOrder).toHaveBeenCalledWith(eligibleOrder.id, expect.any(String));
     expect(
-      await view.findByLabelText(
-        'Current order status Order cancelled. This order was cancelled.',
-      ),
+      await view.findByLabelText('Current order status Order cancelled. This order was cancelled.'),
     ).toBeTruthy();
     expect(view.queryByRole('button', { name: 'Cancel this order' })).toBeNull();
   });

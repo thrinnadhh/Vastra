@@ -204,8 +204,7 @@ function parseCancellationEnvelope(value: CancellationResponse): CustomerOrderCa
   if (
     !isRecord(cancellation) ||
     cancellation['status'] !== 'CANCELLED' ||
-    (cancellation['refundStatus'] !== null &&
-      cancellation['refundStatus'] !== 'INITIATED') ||
+    (cancellation['refundStatus'] !== null && cancellation['refundStatus'] !== 'INITIATED') ||
     typeof cancellation['replayed'] !== 'boolean'
   ) {
     throw new CustomerOrderError('MALFORMED_RESPONSE', null, false);

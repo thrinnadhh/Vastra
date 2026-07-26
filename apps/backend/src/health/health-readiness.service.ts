@@ -1,9 +1,6 @@
 import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
 
-import {
-  HEALTH_READINESS_GATEWAY,
-  type HealthReadinessGateway,
-} from './health-readiness.gateway';
+import { HEALTH_READINESS_GATEWAY, type HealthReadinessGateway } from './health-readiness.gateway';
 
 export interface HealthReadinessResponse {
   readonly service: 'vastra-backend';

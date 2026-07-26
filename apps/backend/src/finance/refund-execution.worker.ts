@@ -46,10 +46,7 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
   public constructor(private readonly service: RefundExecutionService) {}
 
   public onApplicationBootstrap(): void {
-    if (
-      process.env['NODE_ENV'] === 'test' ||
-      process.env['REFUND_PROCESSOR_ENABLED'] === 'false'
-    ) {
+    if (process.env['NODE_ENV'] === 'test' || process.env['REFUND_PROCESSOR_ENABLED'] === 'false') {
       return;
     }
     void this.drainOnce();

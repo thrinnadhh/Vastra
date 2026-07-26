@@ -73,20 +73,12 @@ describe('HTTP runtime configuration', () => {
   it('sets security and request-correlation headers without trusting malformed IDs', () => {
     const response = new ResponseStub();
     let nextCalls = 0;
-    createSecurityHeadersMiddleware(true)(
-      { headers: {} },
-      response,
-      () => {
-        nextCalls += 1;
-      },
-    );
-    createRequestIdMiddleware()(
-      { headers: { 'x-request-id': 'not-a-uuid' } },
-      response,
-      () => {
-        nextCalls += 1;
-      },
-    );
+    createSecurityHeadersMiddleware(true)({ headers: {} }, response, () => {
+      nextCalls += 1;
+    });
+    createRequestIdMiddleware()({ headers: { 'x-request-id': 'not-a-uuid' } }, response, () => {
+      nextCalls += 1;
+    });
 
     expect(response.headers.get('Strict-Transport-Security')).toContain('max-age=');
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');

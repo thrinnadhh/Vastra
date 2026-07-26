@@ -90,13 +90,10 @@ describe('AdminCaptainService', () => {
     const gateway = new GatewayStub();
     const service = new AdminCaptainService(gateway);
 
-    await service.approve(
-      CONTEXT,
-      CAPTAIN_ID,
-      KEY,
-      'request-approval-1',
-      { reasonCode: 'DATA_CORRECTION', note: 'Licence and vehicle checks completed' },
-    );
+    await service.approve(CONTEXT, CAPTAIN_ID, KEY, 'request-approval-1', {
+      reasonCode: 'DATA_CORRECTION',
+      note: 'Licence and vehicle checks completed',
+    });
 
     expect(gateway.input).toEqual({
       actorId: ACTOR_ID,

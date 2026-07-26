@@ -175,8 +175,8 @@ function OrderDetailContent({
           ) : (
             <>
               <Text style={styles.meta}>
-                Cancellation is final. Reserved stock will be released and any captured payment
-                will enter refund processing.
+                Cancellation is final. Reserved stock will be released and any captured payment will
+                enter refund processing.
               </Text>
               {cancellation.failure === null ? null : (
                 <Text accessibilityRole="alert" style={styles.errorText}>

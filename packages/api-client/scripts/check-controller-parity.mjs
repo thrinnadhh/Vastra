@@ -132,7 +132,8 @@ function collectOpenApiRoutes() {
     throw new Error('Generated OpenAPI operation registry is missing');
   }
   const operationsSection = generated.slice(markerIndex);
-  const routePattern = /"method": "(GET|PUT|POST|DELETE|PATCH|OPTIONS|HEAD|TRACE)",\s+"path": "([^"]+)"/gu;
+  const routePattern =
+    /"method": "(GET|PUT|POST|DELETE|PATCH|OPTIONS|HEAD|TRACE)",\s+"path": "([^"]+)"/gu;
   const routes = new Set();
   for (const match of operationsSection.matchAll(routePattern)) {
     const method = match[1];
@@ -154,9 +155,7 @@ function main() {
   const runtimeOnly = [...controllerRoutes.keys()]
     .filter((route) => !openApiRoutes.has(route))
     .sort();
-  const contractOnly = [...openApiRoutes]
-    .filter((route) => !controllerRoutes.has(route))
-    .sort();
+  const contractOnly = [...openApiRoutes].filter((route) => !controllerRoutes.has(route)).sort();
   const duplicateRuntimeRoutes = [...controllerRoutes.entries()]
     .filter(([, locations]) => locations.length > 1)
     .map(([route, locations]) => `${route} (${locations.join(', ')})`)

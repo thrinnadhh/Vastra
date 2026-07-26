@@ -186,7 +186,9 @@ describe('OperationalReadinessService', () => {
   });
 
   it('allows an active customer without merchant or captain readiness lookup', async () => {
-    await expect(service.assertOperationallyReady(createContext('CUSTOMER'))).resolves.toBeUndefined();
+    await expect(
+      service.assertOperationallyReady(createContext('CUSTOMER')),
+    ).resolves.toBeUndefined();
 
     expect(gateway.merchantCalls).toBe(0);
     expect(gateway.captainCalls).toBe(0);

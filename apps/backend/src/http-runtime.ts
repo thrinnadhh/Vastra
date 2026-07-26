@@ -49,7 +49,10 @@ function parseInteger(
   return value;
 }
 
-function parseAllowedOrigins(environment: NodeJS.ProcessEnv, production: boolean): readonly string[] {
+function parseAllowedOrigins(
+  environment: NodeJS.ProcessEnv,
+  production: boolean,
+): readonly string[] {
   const raw = environment['CORS_ALLOWED_ORIGINS']?.trim();
   if (raw === undefined || raw.length === 0) {
     if (production) throw new Error('Invalid environment configuration: CORS_ALLOWED_ORIGINS');
@@ -89,13 +92,7 @@ export function loadHttpRuntimeConfiguration(
   environment: NodeJS.ProcessEnv = process.env,
 ): HttpRuntimeConfiguration {
   const production = environment['NODE_ENV'] === 'production';
-  const bodyLimitKilobytes = parseInteger(
-    environment,
-    'HTTP_BODY_LIMIT_KB',
-    256,
-    16,
-    1_024,
-  );
+  const bodyLimitKilobytes = parseInteger(environment, 'HTTP_BODY_LIMIT_KB', 256, 16, 1_024);
 
   return {
     allowedOrigins: parseAllowedOrigins(environment, production),
@@ -146,7 +143,8 @@ export function createJsonContentTypeMiddleware() {
       (Number(request.headers['content-length'] ?? 0) > 0 &&
         Number.isFinite(Number(request.headers['content-length'])));
     const contentType = request.headers['content-type'];
-    const isJson = typeof contentType === 'string' && /^application\/json(?:\s*;|$)/iu.test(contentType);
+    const isJson =
+      typeof contentType === 'string' && /^application\/json(?:\s*;|$)/iu.test(contentType);
 
     if (requiresJson && hasBody && !isJson) {
       response.statusCode = 415;

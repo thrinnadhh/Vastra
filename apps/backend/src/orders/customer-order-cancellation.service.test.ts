@@ -94,11 +94,7 @@ describe('CustomerOrderCancellationService', () => {
     [new CustomerOrderCancellationNotAllowedError(), 409, 'ORDER_CANCELLATION_NOT_ALLOWED'],
     [new CustomerOrderCancellationIdempotencyConflictError(), 409, 'IDEMPOTENCY_CONFLICT'],
     [new CustomerOrderCancellationDataInvalidError(), 500, 'INTERNAL_ERROR'],
-    [
-      new CustomerOrderCancellationGatewayUnavailableError(),
-      503,
-      'EXTERNAL_SERVICE_UNAVAILABLE',
-    ],
+    [new CustomerOrderCancellationGatewayUnavailableError(), 503, 'EXTERNAL_SERVICE_UNAVAILABLE'],
   ])('maps cancellation domain errors', async (gatewayError, status, code) => {
     gateway.error = gatewayError;
 

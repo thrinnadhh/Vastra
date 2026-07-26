@@ -44,13 +44,7 @@ export class AdminMerchantController {
     @Headers('x-request-id') requestId: string | undefined,
     @Body() body: unknown,
   ) {
-    return this.service.approve(
-      context,
-      merchantId,
-      idempotencyKey,
-      body,
-      requestId ?? null,
-    );
+    return this.service.approve(context, merchantId, idempotencyKey, body, requestId ?? null);
   }
 
   @Post(':merchantId/pause-orders')

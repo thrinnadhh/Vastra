@@ -8,10 +8,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { AppModule } from '../app.module';
 import { CustomerOrderService } from '../orders/customer-order.service';
 import type { SupabaseClient } from './supabase-client.type';
-import type {
-  AuthenticationGateway,
-  TokenVerificationResult,
-} from './supabase.gateway';
+import type { AuthenticationGateway, TokenVerificationResult } from './supabase.gateway';
 import { AUTHENTICATION_GATEWAY } from './supabase.tokens';
 
 const CUSTOMER_ID = '10000000-0000-4000-8000-000000000001';

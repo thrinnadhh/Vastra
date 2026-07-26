@@ -190,16 +190,11 @@ export interface CustomerOrderCancellationResult {
 }
 
 export interface CustomerOrderCancellationPort {
-  cancelOrder(
-    orderId: string,
-    idempotencyKey: string,
-  ): Promise<CustomerOrderCancellationResult>;
+  cancelOrder(orderId: string, idempotencyKey: string): Promise<CustomerOrderCancellationResult>;
 }
 
 export interface CustomerOrderReadPort
-  extends CustomerOrdersListPort,
-    CustomerOrderDetailPort,
-    CustomerOrderCancellationPort {}
+  extends CustomerOrdersListPort, CustomerOrderDetailPort, CustomerOrderCancellationPort {}
 
 export type CustomerOrderFailureKind =
   | 'TRANSPORT'

@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AuthenticatedRequestContext } from '../auth/auth.types';
-import type {
-  AdminDashboardGateway,
-  AdminOrderListInput,
-} from './admin-dashboard.gateway';
+import type { AdminDashboardGateway, AdminOrderListInput } from './admin-dashboard.gateway';
 import {
   AdminDashboardService,
   AdminOrderListQueryInvalidError,
@@ -61,13 +58,7 @@ describe('AdminDashboardService', () => {
     const gateway = new GatewayStub();
     const service = new AdminDashboardService(gateway);
 
-    await service.listOrders(
-      CONTEXT,
-      'CAPTAIN_SEARCHING',
-      'UNASSIGNED',
-      undefined,
-      '999',
-    );
+    await service.listOrders(CONTEXT, 'CAPTAIN_SEARCHING', 'UNASSIGNED', undefined, '999');
 
     expect(gateway.orderInput).toEqual({
       status: 'CAPTAIN_SEARCHING',

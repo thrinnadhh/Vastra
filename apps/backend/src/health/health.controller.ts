@@ -1,10 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 
 import { Public } from '../auth/public.decorator';
-import {
-  HealthReadinessService,
-  type HealthReadinessResponse,
-} from './health-readiness.service';
+import { HealthReadinessService, type HealthReadinessResponse } from './health-readiness.service';
 
 export interface HealthResponse {
   readonly service: 'vastra-backend';

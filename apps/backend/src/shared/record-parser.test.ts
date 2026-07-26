@@ -96,9 +96,7 @@ describe('record-parser', () => {
       expect(() => requireBoolean({ active: 'true' }, 'active', TestParseError)).toThrow(
         TestParseError,
       );
-      expect(() => requireBoolean({ active: 1 }, 'active', TestParseError)).toThrow(
-        TestParseError,
-      );
+      expect(() => requireBoolean({ active: 1 }, 'active', TestParseError)).toThrow(TestParseError);
       expect(() => requireBoolean({}, 'active', TestParseError)).toThrow(TestParseError);
     });
   });
@@ -180,11 +178,7 @@ describe('record-parser', () => {
 
     it('throws on unsafe integers', () => {
       expect(() =>
-        requireNonNegativeInteger(
-          { qty: Number.MAX_SAFE_INTEGER + 1 },
-          'qty',
-          TestParseError,
-        ),
+        requireNonNegativeInteger({ qty: Number.MAX_SAFE_INTEGER + 1 }, 'qty', TestParseError),
       ).toThrow(TestParseError);
     });
   });
@@ -214,9 +208,7 @@ describe('record-parser', () => {
     });
 
     it('throws on invalid UUIDs', () => {
-      expect(() => requireUuid({ id: 'not-a-uuid' }, 'id', TestParseError)).toThrow(
-        TestParseError,
-      );
+      expect(() => requireUuid({ id: 'not-a-uuid' }, 'id', TestParseError)).toThrow(TestParseError);
       expect(() => requireUuid({ id: '' }, 'id', TestParseError)).toThrow(TestParseError);
     });
   });

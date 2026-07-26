@@ -122,9 +122,7 @@ function isKnownCancellationError(error: unknown): boolean {
 }
 
 @Injectable()
-export class SupabaseCustomerOrderCancellationGateway
-  implements CustomerOrderCancellationGateway
-{
+export class SupabaseCustomerOrderCancellationGateway implements CustomerOrderCancellationGateway {
   public constructor(
     @Inject(SUPABASE_SERVICE_CLIENT)
     private readonly client: SupabaseClient,
