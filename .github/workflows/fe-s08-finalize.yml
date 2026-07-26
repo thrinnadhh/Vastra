@@ -48,45 +48,88 @@ jobs:
           rm -f .github/workflows/fe-s08-apply.yml
           rm -f .github/workflows/fe-s08-finalize.yml
 
-      - name: Repair recovered static findings
+      - name: Repair recovered static and authorization findings
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          path = Path('apps/backend/src/admin/admin-capabilities.service.test.ts')
-          text = path.read_text(encoding='utf-8').replace(
+          def replace_once(path: Path, old: str, new: str) -> None:
+              text = path.read_text(encoding='utf-8')
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected exactly one replacement target, found {count}')
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          replace_once(
+              Path('apps/backend/src/admin/admin-capabilities.service.test.ts'),
               '  public listGrantedPermissions(_client: SupabaseClient) {\n    return Promise.resolve',
               '  public listGrantedPermissions(client: SupabaseClient) {\n    void client;\n    return Promise.resolve',
           )
-          path.write_text(text, encoding='utf-8')
 
-          path = Path('apps/backend/src/admin/admin-list.validation.ts')
-          text = path.read_text(encoding='utf-8').replace(
+          replace_once(
+              Path('apps/backend/src/admin/admin-list.validation.ts'),
               "  if (typeof value !== 'string' || !allowed.includes(value as T[number])) {\n    throw new AdminListQueryInvalidError();\n  }\n  return value as T[number];",
               "  if (typeof value !== 'string') throw new AdminListQueryInvalidError();\n  const matched = allowed.find((candidate) => candidate === value);\n  if (matched === undefined) throw new AdminListQueryInvalidError();\n  return matched;",
           )
-          path.write_text(text, encoding='utf-8')
 
-          path = Path('apps/backend/src/admin/admin-module-contracts.test.ts')
-          text = path.read_text(encoding='utf-8').replace(
-              "    expect(\n      readMetadata(REQUIRED_PERMISSIONS_METADATA, AdminCapabilitiesController.prototype.get),\n    ).toBeUndefined();",
-              "    const handler: unknown = Object.getOwnPropertyDescriptor(\n      AdminCapabilitiesController.prototype,\n      'get',\n    )?.value;\n    if (typeof handler !== 'function') {\n      throw new TypeError('AdminCapabilitiesController.get must be a method');\n    }\n    expect(readMetadata(REQUIRED_PERMISSIONS_METADATA, handler)).toBeUndefined();",
+          module_contracts = Path('apps/backend/src/admin/admin-module-contracts.test.ts')
+          replace_once(
+              module_contracts,
+              "import { ALLOWED_ACCOUNT_TYPES_METADATA } from '../auth/account-types.decorator';\nimport { OPERATIONAL_READINESS_METADATA } from '../auth/operational-readiness.decorator';",
+              "import { ALLOWED_ACCOUNT_TYPES_METADATA } from '../auth/account-types.decorator';\nimport { ALLOW_ADMIN_AAL1_METADATA } from '../auth/admin-mfa.decorator';\nimport { OPERATIONAL_READINESS_METADATA } from '../auth/operational-readiness.decorator';",
           )
-          path.write_text(text, encoding='utf-8')
+          replace_once(
+              module_contracts,
+              "    expect(\n      readMetadata(REQUIRED_PERMISSIONS_METADATA, AdminCapabilitiesController.prototype.get),\n    ).toBeUndefined();",
+              "    const handler: unknown = Object.getOwnPropertyDescriptor(\n      AdminCapabilitiesController.prototype,\n      'get',\n    )?.value;\n    if (typeof handler !== 'function') {\n      throw new TypeError('AdminCapabilitiesController.get must be a method');\n    }\n    expect(readMetadata(ALLOW_ADMIN_AAL1_METADATA, handler)).toBe(true);\n    expect(readMetadata(REQUIRED_PERMISSIONS_METADATA, handler)).toBeUndefined();",
+          )
 
-          path = Path('apps/backend/src/admin/admin-order-list.gateway.ts')
-          text = path.read_text(encoding='utf-8').replace(
+          replace_once(
+              Path('apps/backend/src/admin/admin-order-list.gateway.ts'),
               '  optionalPhoneLast4,\n  optionalString,\n  optionalUuid,',
               '  optionalPhoneLast4,\n  optionalUuid,',
           )
-          path.write_text(text, encoding='utf-8')
 
-          path = Path('apps/backend/src/admin/admin-read-model.parser.ts')
-          text = path.read_text(encoding='utf-8').replace(
+          replace_once(
+              Path('apps/backend/src/admin/admin-read-model.parser.ts'),
               "  const value = requireString(record, key);\n  if (!allowed.includes(value as T[number])) throw new AdminReadModelInvalidError();\n  return value as T[number];",
               "  const value = requireString(record, key);\n  const matched = allowed.find((candidate) => candidate === value);\n  if (matched === undefined) throw new AdminReadModelInvalidError();\n  return matched;",
           )
-          path.write_text(text, encoding='utf-8')
+
+          Path('apps/backend/src/auth/admin-mfa.decorator.ts').write_text(
+              "import { SetMetadata } from '@nestjs/common';\n\n"
+              "export const ALLOW_ADMIN_AAL1_METADATA = Symbol('vastra.allow-admin-aal1');\n\n"
+              "export function AllowAdminAal1(): MethodDecorator & ClassDecorator {\n"
+              "  return SetMetadata(ALLOW_ADMIN_AAL1_METADATA, true);\n"
+              "}\n",
+              encoding='utf-8',
+          )
+
+          admin_mfa_guard = Path('apps/backend/src/auth/admin-mfa.guard.ts')
+          replace_once(
+              admin_mfa_guard,
+              "import { Reflector } from '@nestjs/core';\n\nimport { createAuthRequiredException, createMfaRequiredException } from './auth-http-error';",
+              "import { Reflector } from '@nestjs/core';\n\nimport { ALLOW_ADMIN_AAL1_METADATA } from './admin-mfa.decorator';\nimport { createAuthRequiredException, createMfaRequiredException } from './auth-http-error';",
+          )
+          replace_once(
+              admin_mfa_guard,
+              "    if (authContext.actor.accountType !== 'ADMIN') {\n      return true;\n    }\n\n    if (authContext.assuranceLevel !== 'aal2') {",
+              "    if (authContext.actor.accountType !== 'ADMIN') {\n      return true;\n    }\n\n    const allowAdminAal1 = this.reflector.getAllAndOverride<boolean>(\n      ALLOW_ADMIN_AAL1_METADATA,\n      [executionContext.getHandler(), executionContext.getClass()],\n    );\n    if (allowAdminAal1) {\n      return true;\n    }\n\n    if (authContext.assuranceLevel !== 'aal2') {",
+          )
+
+          capabilities_controller = Path(
+              'apps/backend/src/admin/admin-capabilities.controller.ts'
+          )
+          replace_once(
+              capabilities_controller,
+              "import { AllowAccountTypes } from '../auth/account-types.decorator';\nimport type { AuthenticatedRequestContext } from '../auth/auth.types';",
+              "import { AllowAccountTypes } from '../auth/account-types.decorator';\nimport { AllowAdminAal1 } from '../auth/admin-mfa.decorator';\nimport type { AuthenticatedRequestContext } from '../auth/auth.types';",
+          )
+          replace_once(
+              capabilities_controller,
+              "  @Get('capabilities')\n  public get(",
+              "  @Get('capabilities')\n  @AllowAdminAal1()\n  public get(",
+          )
           PY
 
       - name: Install pnpm
@@ -147,6 +190,7 @@ jobs:
           path: |
             /tmp/fe-s08-integration.log
             apps/backend/src/admin
+            apps/backend/src/auth/admin-mfa.decorator.ts
             apps/backend/src/auth/admin-mfa.guard.ts
             apps/backend/src/auth/auth.module.ts
           if-no-files-found: ignore
