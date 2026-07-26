@@ -210,6 +210,18 @@ jobs:
             exit 1
           fi
 
+      - name: Upload database diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: fe-s08-database-diagnostics
+          path: |
+            /tmp/fe-s08-db.log
+            supabase/migrations
+            supabase/tests
+          if-no-files-found: ignore
+          retention-days: 1
+
       - name: Build backend
         run: |
           if ! pnpm --filter @vastra/backend build > /tmp/fe-s08-build.log 2>&1; then
