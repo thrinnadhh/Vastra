@@ -24,7 +24,7 @@
     "pilot:query-plans": "node scripts/run-pilot-query-plans.mjs",
     "pilot:staging:observe": "node scripts/run-staging-cod-observer.mjs",
     "security:client-secrets": "node scripts/scan-client-secrets.mjs",
-    "test": "turbo run test",
+    "test": "pnpm --filter @vastra/api-client build && turbo run test",
     "test:frontend:cod": "playwright test --project=cod-mobile --project=cod-desktop",
     "test:frontend:e2e": "playwright test --project=admin --project=mobile --project=cod-mobile --project=cod-desktop",
     "test:frontend:fixtures": "pnpm --filter @vastra/frontend-test-harness test",
