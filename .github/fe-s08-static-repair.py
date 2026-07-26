@@ -157,6 +157,7 @@ replace_once(
     '''    setSearchResults(result.data);\n    const [onlyResult] = result.data;\n    if (result.data.length === 1 && onlyResult !== undefined) {\n      router.prefetch(resultHref(onlyResult));\n    }''',
 )
 
+
 def wrap_search_params_page(
     relative: str,
     import_old: str,
@@ -189,4 +190,10 @@ wrap_search_params_page(
     'OrdersPage',
     'OrdersPageContent',
     'Loading order filters…',
+)
+
+replace_once(
+    ROOT / 'e2e/admin-shell.spec.ts',
+    "  await page.getByRole('link', { name: /VAS-260726-001/u }).click();",
+    "  await page.getByRole('link', { name: 'VAS-260726-001 Sri Fashion', exact: true }).click();",
 )
