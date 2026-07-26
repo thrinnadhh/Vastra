@@ -111,38 +111,38 @@ function deliveryClient(
   return {
     listOffers: jest.fn(() => Promise.resolve(offers)),
     getActive: jest.fn(() => Promise.resolve(current)),
-    getTask: jest.fn((..._args: Parameters<CaptainDeliveryPort['getTask']>) =>
+    getTask: jest.fn(() =>
       Promise.resolve(current ?? delivery('ASSIGNED')),
-    ),
-    acceptOffer: jest.fn((..._args: Parameters<CaptainDeliveryPort['acceptOffer']>) => {
+    ) as jest.MockedFunction<CaptainDeliveryPort['getTask']>,
+    acceptOffer: jest.fn(() => {
       current = delivery('ASSIGNED');
       offers = [];
       return Promise.resolve(current);
-    }),
-    rejectOffer: jest.fn((..._args: Parameters<CaptainDeliveryPort['rejectOffer']>) => {
+    }) as jest.MockedFunction<CaptainDeliveryPort['acceptOffer']>,
+    rejectOffer: jest.fn(() => {
       offers = [];
       return Promise.resolve();
-    }),
-    arrivePickup: jest.fn((..._args: Parameters<CaptainDeliveryPort['arrivePickup']>) => {
+    }) as jest.MockedFunction<CaptainDeliveryPort['rejectOffer']>,
+    arrivePickup: jest.fn(() => {
       current = delivery('AT_PICKUP');
       return Promise.resolve(current);
-    }),
-    verifyPickup: jest.fn((..._args: Parameters<CaptainDeliveryPort['verifyPickup']>) => {
+    }) as jest.MockedFunction<CaptainDeliveryPort['arrivePickup']>,
+    verifyPickup: jest.fn(() => {
       current = delivery('PICKED_UP');
       return Promise.resolve(current);
-    }),
-    departPickup: jest.fn((..._args: Parameters<CaptainDeliveryPort['departPickup']>) => {
+    }) as jest.MockedFunction<CaptainDeliveryPort['verifyPickup']>,
+    departPickup: jest.fn(() => {
       current = delivery('IN_TRANSIT');
       return Promise.resolve(current);
-    }),
-    arriveDrop: jest.fn((..._args: Parameters<CaptainDeliveryPort['arriveDrop']>) => {
+    }) as jest.MockedFunction<CaptainDeliveryPort['departPickup']>,
+    arriveDrop: jest.fn(() => {
       current = delivery('AT_DROP');
       return Promise.resolve(current);
-    }),
-    complete: jest.fn((..._args: Parameters<CaptainDeliveryPort['complete']>) => {
+    }) as jest.MockedFunction<CaptainDeliveryPort['arriveDrop']>,
+    complete: jest.fn(() => {
       current = null;
       return Promise.resolve(completion());
-    }),
+    }) as jest.MockedFunction<CaptainDeliveryPort['complete']>,
     reportProblem: jest.fn((...args: Parameters<CaptainDeliveryPort['reportProblem']>) => {
       const [, reason, note] = args;
       current = null;
@@ -193,9 +193,9 @@ function locationProvider(): jest.Mocked<CaptainLocationProvider> {
       Promise.resolve({ granted: true, canAskAgain: true }),
     ),
     getCurrentLocation: jest.fn(() => Promise.resolve(LOCATION)),
-    watchLocations: jest.fn((..._args: Parameters<CaptainLocationProvider['watchLocations']>) =>
+    watchLocations: jest.fn(() =>
       Promise.resolve(() => undefined),
-    ),
+    ) as jest.MockedFunction<CaptainLocationProvider['watchLocations']>,
   };
 }
 
@@ -243,11 +243,11 @@ describe('CaptainDeliveryScreen production closure', () => {
       fireEvent.press(view.getByText('Low battery'));
 
       await waitFor(() => {
-        expect(client.rejectOffer).toHaveBeenCalledWith(
+        expect(client.rejectOffer.mock.calls).toContainEqual([
           offer.assignmentId,
           'LOW_BATTERY',
           expect.any(String),
-        );
+        ]);
       });
     } finally {
       view.unmount();
@@ -264,19 +264,19 @@ describe('CaptainDeliveryScreen production closure', () => {
 
       fireEvent.changeText(view.getByLabelText('Customer delivery OTP'), '654321');
       fireEvent.press(view.getByText('Complete delivery with OTP'));
-      expect(client.complete).not.toHaveBeenCalled();
+      expect(client.complete.mock.calls).toHaveLength(0);
 
       fireEvent.press(view.getByText('I collected the exact cash amount shown above'));
       fireEvent.press(view.getByText('Complete delivery with OTP'));
 
       await waitFor(() => {
-        expect(client.complete).toHaveBeenCalledWith(
+        expect(client.complete.mock.calls).toContainEqual([
           delivery('AT_DROP').taskId,
           149900,
           '654321',
           expect.any(Object),
           expect.any(String),
-        );
+        ]);
       });
       expect(await view.findByText('Delivery completed and COD collection recorded.')).toBeTruthy();
     } finally {
@@ -306,13 +306,13 @@ describe('CaptainDeliveryScreen production closure', () => {
       fireEvent.press(view.getByText('Release to operations'));
 
       await waitFor(() => {
-        expect(client.release).toHaveBeenCalledWith(
+        expect(client.release.mock.calls).toContainEqual([
           delivery('ASSIGNED').taskId,
           'PERSONAL_EMERGENCY',
           null,
           expect.any(Object),
           expect.any(String),
-        );
+        ]);
       });
       expect(await view.findByText('Delivery released to operations before pickup.')).toBeTruthy();
     } finally {
@@ -339,13 +339,13 @@ describe('CaptainDeliveryScreen production closure', () => {
       fireEvent.press(view.getByText('Escalate to operations'));
 
       await waitFor(() => {
-        expect(client.reportProblem).toHaveBeenCalledWith(
+        expect(client.reportProblem.mock.calls).toContainEqual([
           delivery('IN_TRANSIT').taskId,
           'SAFETY_CONCERN',
           null,
           expect.any(Object),
           expect.any(String),
-        );
+        ]);
       });
       expect(
         await view.findByText('Problem escalated to operations. Package custody remains recorded.'),
@@ -380,7 +380,7 @@ describe('CaptainDeliveryScreen production closure', () => {
       fireEvent.press(view.getByText('Complete delivery with OTP'));
 
       await waitFor(() => {
-        expect(source.complete).toHaveBeenCalledTimes(2);
+        expect(source.complete.mock.calls).toHaveLength(2);
       });
       expect(source.complete.mock.calls[0]?.[4]).toBe(source.complete.mock.calls[1]?.[4]);
       expect(await view.findByText('Delivery completed and COD collection recorded.')).toBeTruthy();
@@ -417,12 +417,12 @@ describe('CaptainDeliveryScreen production closure', () => {
       fireEvent.press(view.getByText('Complete delivery with OTP'));
 
       expect(await view.findByText('Delivery completed and COD collection recorded.')).toBeTruthy();
-      expect(client.acceptOffer).toHaveBeenCalledTimes(1);
-      expect(client.arrivePickup).toHaveBeenCalledTimes(1);
-      expect(client.verifyPickup).toHaveBeenCalledTimes(1);
-      expect(client.departPickup).toHaveBeenCalledTimes(1);
-      expect(client.arriveDrop).toHaveBeenCalledTimes(1);
-      expect(client.complete).toHaveBeenCalledTimes(1);
+      expect(client.acceptOffer.mock.calls).toHaveLength(1);
+      expect(client.arrivePickup.mock.calls).toHaveLength(1);
+      expect(client.verifyPickup.mock.calls).toHaveLength(1);
+      expect(client.departPickup.mock.calls).toHaveLength(1);
+      expect(client.arriveDrop.mock.calls).toHaveLength(1);
+      expect(client.complete.mock.calls).toHaveLength(1);
     } finally {
       view.unmount();
     }
