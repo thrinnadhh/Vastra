@@ -118,7 +118,12 @@ jobs:
         run: pnpm exec playwright install chromium
 
       - name: Run frontend E2E and visual harness
-        run: pnpm test:frontend:harness
+        run: |
+          mkdir -p test-results/playwright
+          if ! pnpm test:frontend:harness > test-results/playwright/frontend-harness.log 2>&1; then
+            tail -n 300 test-results/playwright/frontend-harness.log
+            exit 1
+          fi
 
       - name: Upload frontend E2E evidence
         if: always()
