@@ -63,19 +63,29 @@ jobs:
       - name: Format implementation
         run: pnpm format
 
-      - name: Validate static quality
-        run: |
-          pnpm format:check
-          pnpm lint
-          pnpm typecheck
+      - name: Check formatting
+        run: pnpm format:check
 
-      - name: Validate backend and contracts
-        run: |
-          pnpm --filter @vastra/backend test
-          pnpm --filter @vastra/backend test:integration
-          pnpm openapi:check
-          pnpm db:test
-          pnpm --filter @vastra/backend build
+      - name: Run lint
+        run: pnpm lint
+
+      - name: Run TypeScript checks
+        run: pnpm typecheck
+
+      - name: Run backend unit tests
+        run: pnpm --filter @vastra/backend test
+
+      - name: Run backend integration tests
+        run: pnpm --filter @vastra/backend test:integration
+
+      - name: Validate OpenAPI
+        run: pnpm openapi:check
+
+      - name: Run database tests
+        run: pnpm db:test
+
+      - name: Build backend
+        run: pnpm --filter @vastra/backend build
 
       - name: Commit validated production tree
         run: |
