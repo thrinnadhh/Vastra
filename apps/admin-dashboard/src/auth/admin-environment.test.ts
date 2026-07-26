@@ -29,6 +29,17 @@ describe('readAdminEnvironment', () => {
       NEXT_PUBLIC_SUPABASE_URL: 'http://project.supabase.co',
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'publishable-key',
     },
+    {
+      NEXT_PUBLIC_API_BASE_URL: 'https://api.vastra.example/v1',
+      NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_secret_must-never-enter-a-client',
+    },
+    {
+      NEXT_PUBLIC_API_BASE_URL: 'https://api.vastra.example/v1',
+      NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+        'eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.test-signature',
+    },
   ])('fails closed for missing or unsafe public configuration', (environment) => {
     expect(() => readAdminEnvironment(environment)).toThrow(AdminEnvironmentError);
   });
