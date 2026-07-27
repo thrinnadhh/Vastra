@@ -22,7 +22,11 @@ describe('RefundExecutionWorker', () => {
   it('waits for an in-flight drain and prevents new work during shutdown', async () => {
     let completeProcessing!: () => void;
     let calls = 0;
-    const pending = new Promise<{ selected: number; processed: number; failed: number }>((resolve) => {
+    const pending = new Promise<{
+      selected: number;
+      processed: number;
+      failed: number;
+    }>((resolve) => {
       completeProcessing = () => resolve({ selected: 1, processed: 1, failed: 0 });
     });
     const service = {
