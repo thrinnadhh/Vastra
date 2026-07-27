@@ -12,15 +12,15 @@ export const VISUAL_BASELINES: VisualBaselines = {
   hashesByPlatform: {
     linux: {
       'primitive-primary-action-visual':
-        '55391078f167cfcd880988883f8ce99ff06f031cdee28ccd3640e478d9833c03',
+        '8f296a7d38a5fd9e77983ed3fe72b0095ba65f54e058dceeea88a49c6a1d9f97',
       'primitive-busy-action-visual':
-        '5be11dda5c251594af00608a31d3301a1ad8feb5ef27688f1e646cbdc7b7ff46',
+        'b0f32b57a7a190be1bd04510e330e24a5ffc953e2b0ae0d2afbb8f761baa0407',
       'primitive-field-error-visual':
-        '93c7491089e7e97c368c4b4bd426e5098534494e0c9a3dd3773d1ef491c862d0',
+        'e3341849b9ae4f699e5dc513714f4786da7c717a68a707095811f0de9a1139c9',
       'primitive-offline-recovery-visual':
-        '840047e9e1a33ff70a207f15b1d780422e6be7fa522695a6827179ce6dcc645e',
+        '2614efd7f2aaf956225e6513d4a5c279cdd6e2aa66c2f5fd9d2a3002a39dcdf3',
       'primitive-success-toast-visual':
-        '68ab2c5d1632d6b4d0e98c02a52b72cfa20e0a045a7d7fa6bfea25d42eaaed4d',
+        'f9da3738dd3a20f7d7851d62edac944425fbf53db1f9b4e8f5d13223071cc0e3',
       'mobile-customer-shell-visual':
         'cde95ad75a7c0ca0d2a46d670805d2a88eef56d680dd90e3df02399ab1455630',
       'mobile-merchant-shell-visual':
