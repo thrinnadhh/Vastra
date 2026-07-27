@@ -41,7 +41,8 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
     100,
   );
   private timer: NodeJS.Timeout | null = null;
-  private draining = false;
+  private activeDrain: Promise<void> | null = null;
+  private stopping = false;
 
   public constructor(private readonly service: RefundExecutionService) {}
 
@@ -54,13 +55,28 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
     this.timer.unref();
   }
 
-  public onApplicationShutdown(): void {
-    if (this.timer !== null) clearInterval(this.timer);
+  public async onApplicationShutdown(): Promise<void> {
+    this.stopping = true;
+    if (this.timer !== null) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    await this.activeDrain;
   }
 
-  public async drainOnce(): Promise<void> {
-    if (this.draining) return;
-    this.draining = true;
+  public drainOnce(): Promise<void> {
+    if (this.stopping) return Promise.resolve();
+    if (this.activeDrain !== null) return this.activeDrain;
+
+    const drain = this.performDrain();
+    this.activeDrain = drain;
+    void drain.finally(() => {
+      if (this.activeDrain === drain) this.activeDrain = null;
+    });
+    return drain;
+  }
+
+  private async performDrain(): Promise<void> {
     try {
       const result = await this.service.processAutomatic(this.batchSize);
       if (result.selected > 0) {
@@ -71,8 +87,6 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
     } catch (error: unknown) {
       const reason = error instanceof Error ? error.name : 'UNKNOWN_ERROR';
       this.logger.warn(`automatic refund drain failed reason=${reason}`);
-    } finally {
-      this.draining = false;
     }
   }
 }
