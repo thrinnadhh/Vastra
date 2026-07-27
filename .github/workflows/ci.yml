@@ -27,10 +27,10 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@a7487c7e49f0e2732c2e3dd763a8fc153ce12569 # v4.0.0
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@39370e3970a6d050c08020d06ec300280237072d # v4.1.0
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 20.20.2
           cache: pnpm
@@ -91,10 +91,10 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@a7487c7e49f0e2732c2e3dd763a8fc153ce12569 # v4.0.0
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@39370e3970a6d050c08020d06ec300280237072d # v4.1.0
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 20.20.2
           cache: pnpm
@@ -134,10 +134,10 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@a7487c7e49f0e2732c2e3dd763a8fc153ce12569 # v4.0.0
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@39370e3970a6d050c08020d06ec300280237072d # v4.1.0
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 20.20.2
           cache: pnpm
@@ -180,10 +180,10 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@a7487c7e49f0e2732c2e3dd763a8fc153ce12569 # v4.0.0
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@39370e3970a6d050c08020d06ec300280237072d # v4.1.0
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 20.20.2
           cache: pnpm
@@ -218,10 +218,10 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@a7487c7e49f0e2732c2e3dd763a8fc153ce12569 # v4.0.0
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@39370e3970a6d050c08020d06ec300280237072d # v4.1.0
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 20.20.2
           cache: pnpm
