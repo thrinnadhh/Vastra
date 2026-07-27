@@ -46,7 +46,7 @@ jobs:
             -czf /tmp/vastra-fe-s08-workspace.tgz .
 
       - name: Upload exact workspace
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: vastra-fe-s08-workspace
           path: /tmp/vastra-fe-s08-workspace.tgz

@@ -86,21 +86,21 @@ jobs:
           )"
           test "$restored_version" = "$PNPM_VERSION"
       - name: Upload workspace
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vastra-main-workspace
           path: /tmp/vastra-main-workspace.tar.gz
           if-no-files-found: error
           retention-days: 1
       - name: Upload toolchain
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: node20-toolchain
           path: /tmp/node20-toolchain.tar.gz
           if-no-files-found: error
           retention-days: 1
       - name: Upload dependencies
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vastra-workspace-dependencies
           path: /tmp/vastra-workspace-dependencies.tar.gz
