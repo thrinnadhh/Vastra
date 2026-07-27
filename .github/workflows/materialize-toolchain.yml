@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Check out one main snapshot
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 0
@@ -39,7 +39,7 @@ jobs:
           echo "SOURCE_SHA=$source_sha" >> "$GITHUB_ENV"
           tar -czf /tmp/vastra-main-workspace.tar.gz .
       - name: Use repository Node version
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 20.20.2
       - name: Prepare repository pnpm inside the toolchain
@@ -86,21 +86,21 @@ jobs:
           )"
           test "$restored_version" = "$PNPM_VERSION"
       - name: Upload workspace
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: vastra-main-workspace
           path: /tmp/vastra-main-workspace.tar.gz
           if-no-files-found: error
           retention-days: 1
       - name: Upload toolchain
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: node20-toolchain
           path: /tmp/node20-toolchain.tar.gz
           if-no-files-found: error
           retention-days: 1
       - name: Upload dependencies
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: vastra-workspace-dependencies
           path: /tmp/vastra-workspace-dependencies.tar.gz
