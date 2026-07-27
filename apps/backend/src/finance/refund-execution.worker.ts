@@ -1,9 +1,12 @@
 import {
+  Inject,
   Injectable,
   Logger,
   type OnApplicationBootstrap,
   type OnApplicationShutdown,
 } from '@nestjs/common';
+
+import { RefundExecutionService } from './refund-execution.service';
 
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
 const DEFAULT_BATCH_SIZE = 10;
@@ -53,7 +56,10 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
   private activeDrain: Promise<void> | null = null;
   private stopping = false;
 
-  public constructor(private readonly service: RefundProcessorPort) {}
+  public constructor(
+    @Inject(RefundExecutionService)
+    private readonly service: RefundProcessorPort,
+  ) {}
 
   public onApplicationBootstrap(): void {
     if (this.stopping || this.timer !== null) {
@@ -83,7 +89,7 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
         }, this.shutdownTimeoutMs);
       });
 
-      await Promise.race([this.activeDrain.catch(() => {}), timeoutPromise]);
+      await Promise.race([this.activeDrain.catch(() => undefined), timeoutPromise]);
 
       if (timeoutHandle !== null) {
         clearTimeout(timeoutHandle);
@@ -98,14 +104,14 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
     const drain = this.performDrain();
     this.activeDrain = drain;
 
-    drain
+    void drain
       .finally(() => {
         if (this.activeDrain === drain) {
           this.activeDrain = null;
         }
       })
       .catch(() => {
-        // Prevent unhandled rejection warning on internal listener chain
+        // Prevent an unhandled rejection on the internal cleanup chain.
       });
 
     return drain;
