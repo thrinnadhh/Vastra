@@ -1,0 +1,54 @@
+name: FE-S08 materialize exact frontend workspace
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  package-workspace:
+    if: github.head_ref == 'automation/fe-s08-workspace'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate OpenAPI client
+        run: pnpm --filter @vastra/api-client generate
+
+      - name: Package exact workspace
+        run: |
+          tar \
+            --exclude=.git \
+            --exclude=node_modules \
+            --exclude=.turbo \
+            --exclude=.next \
+            --exclude=dist \
+            -czf /tmp/vastra-fe-s08-workspace.tgz .
+
+      - name: Upload exact workspace
+        uses: actions/upload-artifact@v6
+        with:
+          name: vastra-fe-s08-workspace
+          path: /tmp/vastra-fe-s08-workspace.tgz
+          if-no-files-found: error
+          retention-days: 1

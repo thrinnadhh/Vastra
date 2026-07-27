@@ -50,6 +50,7 @@ function parseUrl(rawValue: string | undefined, kind: 'API' | 'SUPABASE'): strin
     (value.hostname === 'localhost' || value.hostname === '127.0.0.1');
   if (
     (value.protocol !== 'https:' && !localApiHost) ||
+    value.hostname === 'example.invalid' ||
     value.username.length > 0 ||
     value.password.length > 0 ||
     value.search.length > 0 ||
@@ -68,6 +69,7 @@ export function readAdminEnvironment(
   if (
     publishableKey === undefined ||
     publishableKey.length < 8 ||
+    publishableKey.startsWith('replace-') ||
     isPrivilegedSupabaseKey(publishableKey)
   ) {
     throw new AdminEnvironmentError();

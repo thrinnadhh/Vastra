@@ -1,22 +1,24 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import RootLayout from './layout';
+import RootLayout, { metadata } from './layout';
 
 describe('RootLayout', () => {
-  it('provides the shared admin skip-link, navigation, and main landmark', () => {
+  it('publishes the operational admin metadata', () => {
+    expect(metadata.description).toContain('Permission-aware');
+    expect(metadata.title).toStrictEqual({
+      default: 'Vastra Admin',
+      template: '%s · Vastra Admin',
+    });
+  });
+
+  it('fails closed when public runtime configuration is absent', () => {
     const markup = renderToStaticMarkup(
       <RootLayout>
-        <section aria-label="Test content">Content</section>
+        <p>Protected content</p>
       </RootLayout>,
     );
-
-    expect(markup).toContain('Skip to main content');
-    expect(markup).toContain('href="#admin-main-content"');
-    expect(markup).toContain('aria-label="Admin navigation"');
-    expect(markup).toContain('aria-current="page"');
-    expect(markup).toContain('<main');
-    expect(markup).toContain('id="admin-main-content"');
-    expect(markup).toContain('Content');
+    expect(markup).toContain('Vastra Admin is not configured');
+    expect(markup).not.toContain('Protected content');
   });
 });

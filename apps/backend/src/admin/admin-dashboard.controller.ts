@@ -31,16 +31,4 @@ export class AdminDashboardController {
   ) {
     return this.service.search(context, query, limit);
   }
-
-  @Get('orders')
-  @RequirePermissions('admin.orders.read')
-  public listOrders(
-    @CurrentAuthContext() context: AuthenticatedRequestContext,
-    @Query('status') status: unknown,
-    @Query('issue') issue: unknown,
-    @Query('cursor') cursor: unknown,
-    @Query('limit') limit: unknown,
-  ) {
-    return this.service.listOrders(context, status, issue, cursor, limit);
-  }
 }

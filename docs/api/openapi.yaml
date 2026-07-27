@@ -7570,9 +7570,20 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/capabilities:
+    get:
+      operationId: getAdminCapabilities
+      summary: Read the current administrator permissions and MFA assurance level
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Admin capabilities, content: {application/json: {schema: {type: object}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/dashboard:
     get:
-      operationId: getAdminDashboard
+      operationId: getAdminOperationsDashboard
       summary: Get admin dashboard
       description: Return the current operational workload and intervention counters.
       tags: [Admin]
@@ -7594,18 +7605,18 @@ paths:
       tags: [Admin]
       security: [{bearerAuth: []}]
       parameters:
+      - name: queue
+        in: query
+        required: false
+        schema: {type: string}
       - name: status
         in: query
         required: false
-        schema:
-          type: string
-          enum: [PAYMENT_PENDING, WAITING_FOR_MERCHANT, MERCHANT_ACCEPTED, PACKING, READY_FOR_PICKUP, CAPTAIN_SEARCHING, CAPTAIN_ASSIGNED, CAPTAIN_AT_STORE, PICKED_UP, OUT_FOR_DELIVERY, CAPTAIN_AT_CUSTOMER, DELIVERED, COMPLETED, PROBLEM_REPORTED, CANCELLED]
-      - name: issue
+        schema: {type: string}
+      - name: shopId
         in: query
         required: false
-        schema:
-          type: string
-          enum: [DELAYED, UNASSIGNED, MERCHANT_TIMEOUT, CAPTAIN_ISSUE, PAYMENT_ISSUE]
+        schema: {type: string, format: uuid}
       - name: cursor
         in: query
         required: false
@@ -7613,13 +7624,13 @@ paths:
       - name: limit
         in: query
         required: false
-        schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+        schema: {type: integer, minimum: 1, maximum: 100, default: 25}
       responses:
         '200':
           description: Operational order page
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/AdminOrderListResponse'}
+              schema: {type: object}
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
@@ -7688,7 +7699,7 @@ paths:
         '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/audit:
     get:
-      operationId: listAdminAuditEntries
+      operationId: listAdminAudit
       summary: List immutable administrative audit entries
       tags: [Admin]
       security: [{bearerAuth: []}]
@@ -7749,7 +7760,7 @@ paths:
         '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/orders/{orderId}/cancel:
     post:
-      operationId: cancelAdminOrder
+      operationId: cancelAdminOrderOperation
       summary: Cancel an eligible order through an audited operational override
       tags: [Admin]
       security: [{bearerAuth: []}]
@@ -7843,9 +7854,28 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/merchants:
+    get:
+      operationId: listAdminMerchants
+      summary: List privacy-minimal merchant operations profiles
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - {name: q, in: query, required: false, schema: {type: string}}
+      - {name: profileStatus, in: query, required: false, schema: {type: string}}
+      - {name: onboardingStatus, in: query, required: false, schema: {type: string}}
+      - {name: kycStatus, in: query, required: false, schema: {type: string}}
+      - {name: cursor, in: query, required: false, schema: {type: string}}
+      - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100}}
+      responses:
+        '200': {description: Merchant operations page, content: {application/json: {schema: {type: object}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/merchants/{merchantId}:
     get:
-      operationId: getAdminMerchant
+      operationId: getAdminMerchantOperations
       summary: Read merchant onboarding and operating status
       tags: [Admin]
       security: [{bearerAuth: []}]
@@ -7932,9 +7962,28 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/captains:
+    get:
+      operationId: listAdminCaptains
+      summary: List privacy-minimal captain operations profiles
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - {name: q, in: query, required: false, schema: {type: string}}
+      - {name: profileStatus, in: query, required: false, schema: {type: string}}
+      - {name: kycStatus, in: query, required: false, schema: {type: string}}
+      - {name: availabilityStatus, in: query, required: false, schema: {type: string}}
+      - {name: cursor, in: query, required: false, schema: {type: string}}
+      - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100}}
+      responses:
+        '200': {description: Captain operations page, content: {application/json: {schema: {type: object}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/captains/{captainId}:
     get:
-      operationId: getAdminCaptain
+      operationId: getAdminCaptainOperations
       summary: Read captain onboarding, availability, and assignment status
       tags: [Admin]
       security: [{bearerAuth: []}]

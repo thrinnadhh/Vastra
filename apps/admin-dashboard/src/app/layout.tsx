@@ -1,27 +1,26 @@
-import { AdminApplicationShell } from '@vastra/app-shells/admin';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
+import { AdminRuntimeProvider } from '../auth/admin-runtime';
+import { AdminShell } from '../components/admin-shell';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Vastra Admin',
-  description: 'Secure Vastra operations control room',
+  title: { default: 'Vastra Admin', template: '%s · Vastra Admin' },
+  description: 'Permission-aware Vastra operations observation and recovery control plane',
 };
 
-const ADMIN_NAVIGATION = [{ href: '/', label: 'Overview', current: true }] as const;
-
-interface RootLayoutProps {
+export default function RootLayout({
+  children,
+}: {
   readonly children: ReactNode;
-}
-
-export default function RootLayout({ children }: RootLayoutProps): React.JSX.Element {
+}): React.JSX.Element {
   return (
-    <html lang="en">
+    <html lang="en-IN">
       <body>
-        <AdminApplicationShell navigation={ADMIN_NAVIGATION} productLabel="Vastra Admin">
-          {children}
-        </AdminApplicationShell>
+        <AdminRuntimeProvider>
+          <AdminShell>{children}</AdminShell>
+        </AdminRuntimeProvider>
       </body>
     </html>
   );

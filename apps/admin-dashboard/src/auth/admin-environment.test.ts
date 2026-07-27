@@ -36,6 +36,16 @@ describe('readAdminEnvironment', () => {
     },
     {
       NEXT_PUBLIC_API_BASE_URL: 'https://api.vastra.example/v1',
+      NEXT_PUBLIC_SUPABASE_URL: 'https://example.invalid',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'publishable-key',
+    },
+    {
+      NEXT_PUBLIC_API_BASE_URL: 'https://api.vastra.example/v1',
+      NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'replace-with-publishable-key',
+    },
+    {
+      NEXT_PUBLIC_API_BASE_URL: 'https://api.vastra.example/v1',
       NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
         'eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.test-signature',

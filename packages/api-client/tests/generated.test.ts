@@ -35,7 +35,7 @@ describe('generated OpenAPI boundary', () => {
   });
 
   it('exposes the admin dashboard as an authenticated typed operation', () => {
-    expect(OPENAPI_OPERATIONS.getAdminDashboard).toMatchObject({
+    expect(OPENAPI_OPERATIONS.getAdminOperationsDashboard).toMatchObject({
       method: 'GET',
       path: '/admin/dashboard',
       requiresAuth: true,

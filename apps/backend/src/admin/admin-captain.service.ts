@@ -1,14 +1,33 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import type { AuthenticatedRequestContext } from '../auth/auth.types';
-import type {
-  AdminCaptainAvailability,
-  AdminCaptainAvailabilityInput,
-  AdminCaptainGateway,
-  AdminCaptainMutationInput,
-  AdminCaptainSnapshot,
-  AdminCaptainStatusInput,
-  AdminCaptainTargetStatus,
+import {
+  ADMIN_CAPTAIN_AVAILABILITY_STATUSES,
+  ADMIN_KYC_STATUSES,
+  ADMIN_PROFILE_STATUSES,
+  type ListAdminCaptainsResponse,
+} from './admin-actor-list.types';
+import {
+  createAdminReadProviderUnavailableException,
+  createInvalidAdminListQueryException,
+} from './admin-http-error';
+import {
+  AdminListQueryInvalidError,
+  encodeAdminListCursor,
+  parseAdminListCursor,
+  parseAdminListLimit,
+  parseAdminOptionalEnum,
+  parseAdminOptionalSearch,
+} from './admin-list.validation';
+import {
+  AdminCaptainGatewayUnavailableError,
+  type AdminCaptainAvailability,
+  type AdminCaptainAvailabilityInput,
+  type AdminCaptainGateway,
+  type AdminCaptainMutationInput,
+  type AdminCaptainSnapshot,
+  type AdminCaptainStatusInput,
+  type AdminCaptainTargetStatus,
 } from './admin-captain.gateway';
 import { ADMIN_CAPTAIN_GATEWAY } from './admin.tokens';
 import { ADMIN_MUTATION_REASON_CODES, type AdminMutationReasonCode } from './admin.types';
@@ -84,6 +103,43 @@ export class AdminCaptainService {
       note: optionalString(record['note'], 1000),
       requestId: optionalString(requestId, 200),
     };
+  }
+
+  public async list(
+    _context: AuthenticatedRequestContext,
+    queryValue: unknown,
+    profileStatusValue: unknown,
+    kycStatusValue: unknown,
+    availabilityStatusValue: unknown,
+    cursorValue: unknown,
+    limitValue: unknown,
+  ): Promise<ListAdminCaptainsResponse> {
+    try {
+      const page = await this.gateway.list({
+        query: parseAdminOptionalSearch(queryValue),
+        profileStatus: parseAdminOptionalEnum(profileStatusValue, ADMIN_PROFILE_STATUSES),
+        kycStatus: parseAdminOptionalEnum(kycStatusValue, ADMIN_KYC_STATUSES),
+        availabilityStatus: parseAdminOptionalEnum(
+          availabilityStatusValue,
+          ADMIN_CAPTAIN_AVAILABILITY_STATUSES,
+        ),
+        cursor: parseAdminListCursor(cursorValue),
+        limit: parseAdminListLimit(limitValue),
+      });
+      return {
+        success: true,
+        data: { captains: page.items, nextCursor: encodeAdminListCursor(page.nextCursor) },
+        meta: { requestId: null },
+      };
+    } catch (error: unknown) {
+      if (error instanceof AdminListQueryInvalidError) {
+        throw createInvalidAdminListQueryException();
+      }
+      if (error instanceof AdminCaptainGatewayUnavailableError) {
+        throw createAdminReadProviderUnavailableException();
+      }
+      throw error;
+    }
   }
 
   public async get(

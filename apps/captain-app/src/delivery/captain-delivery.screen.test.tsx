@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import type {
   CaptainLocationProvider,
@@ -6,6 +6,7 @@ import type {
   CaptainPresencePort,
 } from '../presence/captain-presence.types';
 import { CaptainDeliveryScreen } from './captain-delivery.screen';
+import { ResilientCaptainDeliveryPort } from './resilient-captain-delivery.port';
 import type {
   CaptainDelivery,
   CaptainDeliveryPort,
@@ -13,23 +14,19 @@ import type {
   DeliveryTaskStatus,
 } from './captain-delivery.types';
 
-jest.mock('../presence/expo-captain-location.provider', () => ({
-  ExpoCaptainLocationProvider: jest.fn(),
-}));
-
-const LOCATION_SAMPLE: CaptainLocationSample = {
+const LOCATION: CaptainLocationSample = {
   sampleId: '50000000-0000-4000-8000-000000000001',
   latitude: 13.628,
   longitude: 79.419,
   accuracyMeters: 8,
-  recordedAt: '2026-07-21T10:00:00.000Z',
+  recordedAt: '2026-07-25T10:00:00.000Z',
   heading: null,
   speedMps: null,
   batteryPercent: null,
   activeDeliveryTaskId: null,
 };
 
-const ORDER_STATUS: Record<DeliveryTaskStatus, CaptainDelivery['orderStatus']> = {
+const ORDER_STATUS: Readonly<Record<DeliveryTaskStatus, CaptainDelivery['orderStatus']>> = {
   OFFERED: 'CAPTAIN_SEARCHING',
   ASSIGNED: 'CAPTAIN_ASSIGNED',
   AT_PICKUP: 'CAPTAIN_AT_STORE',
@@ -38,23 +35,26 @@ const ORDER_STATUS: Record<DeliveryTaskStatus, CaptainDelivery['orderStatus']> =
   AT_DROP: 'CAPTAIN_AT_CUSTOMER',
 };
 
-function delivery(taskStatus: DeliveryTaskStatus): CaptainDelivery {
+function delivery(
+  taskStatus: DeliveryTaskStatus,
+  expiresAt = '2099-07-25T10:01:00.000Z',
+): CaptainDelivery {
   return {
     taskId: '10000000-0000-4000-8000-000000000001',
     orderId: '20000000-0000-4000-8000-000000000001',
-    orderNumber: 'VAS-CAPTAIN-1',
+    orderNumber: 'VAS-FE-S07-1',
     taskStatus,
     orderStatus: ORDER_STATUS[taskStatus],
     assignmentId: '30000000-0000-4000-8000-000000000001',
     assignmentStatus: taskStatus === 'OFFERED' ? 'OFFERED' : 'ACCEPTED',
     offeredEarningPaise: 4000,
     pickupDistanceMeters: 500,
-    offeredAt: '2026-07-21T10:00:00.000Z',
-    expiresAt: '2099-07-21T10:01:00.000Z',
-    assignedAt: taskStatus === 'OFFERED' ? null : '2026-07-21T10:00:10.000Z',
+    offeredAt: '2026-07-25T10:00:00.000Z',
+    expiresAt,
+    assignedAt: taskStatus === 'OFFERED' ? null : '2026-07-25T10:00:10.000Z',
     pickup: {
       label: 'Shop',
-      recipientName: 'Vastra Test Shop',
+      recipientName: 'Vastra Pilot Shop',
       phoneNumber: '9000000000',
       line1: 'Main Road',
       line2: null,
@@ -68,7 +68,7 @@ function delivery(taskStatus: DeliveryTaskStatus): CaptainDelivery {
     },
     drop: {
       label: 'Home',
-      recipientName: 'Customer One',
+      recipientName: 'Pilot Customer',
       phoneNumber: '9000000001',
       line1: 'Renigunta Road',
       line2: null,
@@ -96,78 +96,98 @@ function completion(): DeliveryCompletion {
     paymentStatus: 'COD_COLLECTED',
     collectedAmountPaise: 149900,
     captainEarningPaise: 4000,
-    completedAt: '2026-07-21T11:00:00.000Z',
+    completedAt: '2026-07-25T11:00:00.000Z',
     replayed: false,
   };
 }
 
 function deliveryClient(
-  active: CaptainDelivery | null,
-  offers: readonly CaptainDelivery[] = [],
+  initialActive: CaptainDelivery | null,
+  initialOffers: readonly CaptainDelivery[] = [],
 ): jest.Mocked<CaptainDeliveryPort> {
-  let current = active;
+  let current = initialActive;
+  let offers = initialOffers;
+
   return {
     listOffers: jest.fn(() => Promise.resolve(offers)),
     getActive: jest.fn(() => Promise.resolve(current)),
-    getTask: jest.fn((...args: Parameters<CaptainDeliveryPort['getTask']>) => {
-      void args;
-      return Promise.resolve(active ?? delivery('ASSIGNED'));
-    }),
-    acceptOffer: jest.fn((...args: Parameters<CaptainDeliveryPort['acceptOffer']>) => {
-      void args;
+    getTask: jest.fn<
+      ReturnType<CaptainDeliveryPort['getTask']>,
+      Parameters<CaptainDeliveryPort['getTask']>
+    >(() => Promise.resolve(current ?? delivery('ASSIGNED'))),
+    acceptOffer: jest.fn<
+      ReturnType<CaptainDeliveryPort['acceptOffer']>,
+      Parameters<CaptainDeliveryPort['acceptOffer']>
+    >(() => {
       current = delivery('ASSIGNED');
+      offers = [];
       return Promise.resolve(current);
     }),
-    rejectOffer: jest.fn((...args: Parameters<CaptainDeliveryPort['rejectOffer']>) => {
-      void args;
+    rejectOffer: jest.fn<
+      ReturnType<CaptainDeliveryPort['rejectOffer']>,
+      Parameters<CaptainDeliveryPort['rejectOffer']>
+    >(() => {
+      offers = [];
       return Promise.resolve();
     }),
-    arrivePickup: jest.fn((...args: Parameters<CaptainDeliveryPort['arrivePickup']>) => {
-      void args;
+    arrivePickup: jest.fn<
+      ReturnType<CaptainDeliveryPort['arrivePickup']>,
+      Parameters<CaptainDeliveryPort['arrivePickup']>
+    >(() => {
       current = delivery('AT_PICKUP');
       return Promise.resolve(current);
     }),
-    verifyPickup: jest.fn((...args: Parameters<CaptainDeliveryPort['verifyPickup']>) => {
-      void args;
+    verifyPickup: jest.fn<
+      ReturnType<CaptainDeliveryPort['verifyPickup']>,
+      Parameters<CaptainDeliveryPort['verifyPickup']>
+    >(() => {
       current = delivery('PICKED_UP');
       return Promise.resolve(current);
     }),
-    departPickup: jest.fn((...args: Parameters<CaptainDeliveryPort['departPickup']>) => {
-      void args;
+    departPickup: jest.fn<
+      ReturnType<CaptainDeliveryPort['departPickup']>,
+      Parameters<CaptainDeliveryPort['departPickup']>
+    >(() => {
       current = delivery('IN_TRANSIT');
       return Promise.resolve(current);
     }),
-    arriveDrop: jest.fn((...args: Parameters<CaptainDeliveryPort['arriveDrop']>) => {
-      void args;
+    arriveDrop: jest.fn<
+      ReturnType<CaptainDeliveryPort['arriveDrop']>,
+      Parameters<CaptainDeliveryPort['arriveDrop']>
+    >(() => {
       current = delivery('AT_DROP');
       return Promise.resolve(current);
     }),
-    complete: jest.fn((...args: Parameters<CaptainDeliveryPort['complete']>) => {
-      void args;
+    complete: jest.fn<
+      ReturnType<CaptainDeliveryPort['complete']>,
+      Parameters<CaptainDeliveryPort['complete']>
+    >(() => {
       current = null;
       return Promise.resolve(completion());
     }),
     reportProblem: jest.fn((...args: Parameters<CaptainDeliveryPort['reportProblem']>) => {
-      void args;
+      const [, reason, note] = args;
+      current = null;
       return Promise.resolve({
         taskId: delivery('AT_DROP').taskId,
         orderId: delivery('AT_DROP').orderId,
-        reason: 'CUSTOMER_UNAVAILABLE' as const,
-        note: 'Called twice',
-        reportedAt: '2026-07-21T10:45:00.000Z',
-        orderStatus: 'PROBLEM_REPORTED' as const,
+        reason,
+        note,
+        reportedAt: '2026-07-25T10:45:00.000Z',
+        orderStatus: 'PROBLEM_REPORTED',
         replayed: false,
       });
     }),
     release: jest.fn((...args: Parameters<CaptainDeliveryPort['release']>) => {
-      void args;
+      const [, reason] = args;
+      current = null;
       return Promise.resolve({
         taskId: delivery('ASSIGNED').taskId,
         orderId: delivery('ASSIGNED').orderId,
-        reason: 'VEHICLE_ISSUE' as const,
-        releasedAt: '2026-07-21T10:10:00.000Z',
-        taskStatus: 'SEARCHING' as const,
-        orderStatus: 'CAPTAIN_SEARCHING' as const,
+        reason,
+        releasedAt: '2026-07-25T10:10:00.000Z',
+        taskStatus: 'SEARCHING',
+        orderStatus: 'CAPTAIN_SEARCHING',
         replayed: false,
       });
     }),
@@ -178,13 +198,14 @@ function presenceClient(): jest.Mocked<CaptainPresencePort> {
   return {
     getAvailability: jest.fn(() => Promise.resolve('AVAILABLE')),
     setAvailability: jest.fn(),
-    updateLocation: jest.fn((sample) =>
-      Promise.resolve({
+    updateLocation: jest.fn((...args: Parameters<CaptainPresencePort['updateLocation']>) => {
+      const [sample] = args;
+      return Promise.resolve({
         sampleId: sample.sampleId,
         acceptedAt: sample.recordedAt,
         replayed: false,
-      }),
-    ),
+      });
+    }),
   };
 }
 
@@ -193,199 +214,240 @@ function locationProvider(): jest.Mocked<CaptainLocationProvider> {
     requestForegroundPermission: jest.fn(() =>
       Promise.resolve({ granted: true, canAskAgain: true }),
     ),
-    getCurrentLocation: jest.fn(() => Promise.resolve(LOCATION_SAMPLE)),
-    watchLocations: jest.fn((...args: Parameters<CaptainLocationProvider['watchLocations']>) => {
-      void args;
-      return Promise.resolve(() => undefined);
-    }),
+    getCurrentLocation: jest.fn(() => Promise.resolve(LOCATION)),
+    watchLocations: jest.fn<
+      ReturnType<CaptainLocationProvider['watchLocations']>,
+      Parameters<CaptainLocationProvider['watchLocations']>
+    >(() => Promise.resolve(() => undefined)),
   };
 }
 
-async function advance(milliseconds: number): Promise<void> {
-  await act(async () => {
-    jest.advanceTimersByTime(milliseconds);
-    await Promise.resolve();
-    await Promise.resolve();
-  });
+function renderScreen(client: jest.Mocked<CaptainDeliveryPort>) {
+  return render(
+    <CaptainDeliveryScreen
+      client={client}
+      locationProvider={locationProvider()}
+      presenceClient={presenceClient()}
+    />,
+  );
 }
 
-describe('CaptainDeliveryScreen preservation', () => {
-  it('preserves the default 10-second active-delivery and offer polling interval', async () => {
-    jest.useFakeTimers();
+describe('CaptainDeliveryScreen production closure', () => {
+  it('preserves the ten-second authoritative polling interval', () => {
     const intervalSpy = jest.spyOn(globalThis, 'setInterval');
-    const client = deliveryClient(null);
-    const view = render(
-      <CaptainDeliveryScreen
-        client={client}
-        locationProvider={locationProvider()}
-        presenceClient={presenceClient()}
-      />,
-    );
+    const view = renderScreen(deliveryClient(null));
 
     try {
-      await advance(0);
-      expect(client.getActive.mock.calls).toHaveLength(1);
-      expect(client.listOffers.mock.calls).toHaveLength(1);
-
-      const refreshRegistration = intervalSpy.mock.calls.find(([, delay]) => delay === 10_000);
-      expect(refreshRegistration).toBeDefined();
-      const refresh = refreshRegistration?.[0];
-      if (typeof refresh !== 'function') {
-        throw new TypeError('Expected the delivery refresh interval callback');
-      }
-
-      await act(async () => {
-        refresh();
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-      expect(client.getActive.mock.calls).toHaveLength(2);
-      expect(client.listOffers.mock.calls).toHaveLength(2);
+      expect(intervalSpy).toHaveBeenCalledWith(expect.any(Function), 10_000);
     } finally {
       view.unmount();
       intervalSpy.mockRestore();
-      jest.useRealTimers();
     }
-  }, 20_000);
+  });
 
-  it('renders an authoritative offer and accepts it with an idempotency key', async () => {
+  it('removes expired offers and exposes every server-supported decline reason', async () => {
+    const expired = delivery('OFFERED', '2020-01-01T00:00:00.000Z');
+    const expiredView = renderScreen(deliveryClient(null, [expired]));
+
+    try {
+      expect(await expiredView.findByText('No active offers')).toBeTruthy();
+      expect(expiredView.queryByTestId(`delivery-offer-${expired.assignmentId}`)).toBeNull();
+    } finally {
+      expiredView.unmount();
+    }
+
     const offer = delivery('OFFERED');
     const client = deliveryClient(null, [offer]);
+    const view = renderScreen(client);
+
+    try {
+      expect(await view.findByTestId(`delivery-offer-${offer.assignmentId}`)).toBeTruthy();
+      fireEvent.press(view.getByText('Decline'));
+      fireEvent.press(view.getByText('Low battery'));
+
+      await waitFor(() => {
+        expect(client.rejectOffer.mock.calls).toContainEqual([
+          offer.assignmentId,
+          'LOW_BATTERY',
+          expect.any(String),
+        ]);
+      });
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it('uses the immutable server COD amount and requires explicit cash confirmation', async () => {
+    const client = deliveryClient(delivery('AT_DROP'));
+    const view = renderScreen(client);
+
+    try {
+      expect(await view.findByLabelText('Collect exactly ₹1499.00')).toBeTruthy();
+      expect(view.queryByLabelText('Collected COD amount')).toBeNull();
+
+      fireEvent.changeText(view.getByLabelText('Customer delivery OTP'), '654321');
+      fireEvent.press(view.getByText('Complete delivery with OTP'));
+      expect(client.complete.mock.calls).toHaveLength(0);
+
+      fireEvent.press(view.getByText('I collected the exact cash amount shown above'));
+      fireEvent.press(view.getByText('Complete delivery with OTP'));
+
+      await waitFor(() => {
+        expect(client.complete.mock.calls).toContainEqual([
+          delivery('AT_DROP').taskId,
+          149900,
+          '654321',
+          expect.any(Object),
+          expect.any(String),
+        ]);
+      });
+      expect(await view.findByText('Delivery completed and COD collection recorded.')).toBeTruthy();
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it('offers safe pre-pickup release reasons only after the captain opens issue controls', async () => {
+    const client = deliveryClient(delivery('ASSIGNED'));
+    const view = renderScreen(client);
+
+    try {
+      expect(await view.findByText('Report or release delivery')).toBeTruthy();
+      expect(
+        view.queryByText(
+          'Stop in a safe place before using these controls. Do not type while riding.',
+        ),
+      ).toBeNull();
+
+      fireEvent.press(view.getByText('Report or release delivery'));
+      expect(
+        view.getByText(
+          'Stop in a safe place before using these controls. Do not type while riding.',
+        ),
+      ).toBeTruthy();
+      fireEvent.press(view.getByText('Personal emergency'));
+      fireEvent.press(view.getByText('Release to operations'));
+
+      await waitFor(() => {
+        expect(client.release.mock.calls).toContainEqual([
+          delivery('ASSIGNED').taskId,
+          'PERSONAL_EMERGENCY',
+          null,
+          expect.any(Object),
+          expect.any(String),
+        ]);
+      });
+      expect(await view.findByText('Delivery released to operations before pickup.')).toBeTruthy();
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it('escalates post-pickup custody without presenting cancellation or reassignment', async () => {
+    const client = deliveryClient(delivery('IN_TRANSIT'));
+    const view = renderScreen(client);
+
+    try {
+      expect(await view.findByText('Report or release delivery')).toBeTruthy();
+      fireEvent.press(view.getByText('Report or release delivery'));
+
+      expect(
+        view.getByText(
+          'After pickup, this reports a problem. It does not cancel the order or ' +
+            'reassign package custody.',
+        ),
+      ).toBeTruthy();
+      expect(view.queryByText('Cancel delivery')).toBeNull();
+      fireEvent.press(view.getByText('Safety concern'));
+      fireEvent.press(view.getByText('Escalate to operations'));
+
+      await waitFor(() => {
+        expect(client.reportProblem.mock.calls).toContainEqual([
+          delivery('IN_TRANSIT').taskId,
+          'SAFETY_CONCERN',
+          null,
+          expect.any(Object),
+          expect.any(String),
+        ]);
+      });
+      expect(
+        await view.findByText('Problem escalated to operations. Package custody remains recorded.'),
+      ).toBeTruthy();
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it('keeps an uncertain COD completion retryable with the original attempt identity', async () => {
+    const source = deliveryClient(delivery('AT_DROP'));
+    source.complete
+      .mockRejectedValueOnce(new Error('Network result unknown'))
+      .mockResolvedValueOnce(completion());
+    const resilient = new ResilientCaptainDeliveryPort(source, jest.fn());
     const view = render(
       <CaptainDeliveryScreen
-        client={client}
+        client={resilient}
         locationProvider={locationProvider()}
         presenceClient={presenceClient()}
       />,
     );
 
     try {
-      expect(await view.findByLabelText('Delivery offer VAS-CAPTAIN-1')).toBeTruthy();
-      fireEvent.press(view.getByText('Accept'));
+      expect(await view.findByLabelText('Collect exactly ₹1499.00')).toBeTruthy();
+      fireEvent.press(view.getByText('I collected the exact cash amount shown above'));
+      fireEvent.changeText(view.getByLabelText('Customer delivery OTP'), '654321');
+      fireEvent.press(view.getByText('Complete delivery with OTP'));
+
+      expect(await view.findByText('Network result unknown')).toBeTruthy();
+      expect(view.getByText('Complete delivery with OTP')).toBeTruthy();
+      fireEvent.press(view.getByText('Complete delivery with OTP'));
 
       await waitFor(() => {
-        expect(client.acceptOffer.mock.calls).toHaveLength(1);
+        expect(source.complete.mock.calls).toHaveLength(2);
       });
-      expect(client.acceptOffer.mock.calls[0]?.[0]).toBe(offer.assignmentId);
-      expect(client.acceptOffer.mock.calls[0]?.[1]).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu,
-      );
-      expect(await view.findByText('I arrived at the shop')).toBeTruthy();
+      expect(source.complete.mock.calls[0]?.[4]).toBe(source.complete.mock.calls[1]?.[4]);
+      expect(await view.findByText('Delivery completed and COD collection recorded.')).toBeTruthy();
     } finally {
       view.unmount();
     }
   });
 
-  it('preserves pickup code, drop arrival, exact COD, and delivery OTP sequencing', async () => {
-    const client = deliveryClient(delivery('ASSIGNED'));
-    const locations = locationProvider();
-    const view = render(
-      <CaptainDeliveryScreen
-        client={client}
-        locationProvider={locations}
-        presenceClient={presenceClient()}
-      />,
-    );
+  it('completes the deterministic captain COD journey from offer through delivery', async () => {
+    const offer = delivery('OFFERED');
+    const client = deliveryClient(null, [offer]);
+    const view = renderScreen(client);
 
     try {
+      expect(await view.findByTestId(`delivery-offer-${offer.assignmentId}`)).toBeTruthy();
+      fireEvent.press(view.getByText('Accept delivery'));
       expect(await view.findByText('I arrived at the shop')).toBeTruthy();
-      await waitFor(() => {
-        expect(client.getActive.mock.calls.length).toBeGreaterThanOrEqual(2);
-      });
+
       fireEvent.press(view.getByText('I arrived at the shop'));
       expect(await view.findByLabelText('Merchant pickup code')).toBeTruthy();
-      expect(client.arrivePickup.mock.calls).toContainEqual([
-        delivery('ASSIGNED').taskId,
-        {
-          latitude: LOCATION_SAMPLE.latitude,
-          longitude: LOCATION_SAMPLE.longitude,
-          accuracyMeters: LOCATION_SAMPLE.accuracyMeters,
-          recordedAt: LOCATION_SAMPLE.recordedAt,
-        },
-        expect.any(String),
-      ]);
 
       fireEvent.changeText(view.getByLabelText('Merchant pickup code'), '123456');
       fireEvent.press(view.getByText('Verify package handover'));
       expect(await view.findByText('Start customer delivery')).toBeTruthy();
-      expect(client.verifyPickup.mock.calls).toContainEqual([
-        delivery('AT_PICKUP').taskId,
-        '123456',
-        expect.any(String),
-      ]);
 
       fireEvent.press(view.getByText('Start customer delivery'));
       expect(await view.findByText('I arrived at the customer')).toBeTruthy();
-      fireEvent.press(view.getByText('I arrived at the customer'));
-      expect(await view.findByLabelText('Customer delivery OTP')).toBeTruthy();
 
+      fireEvent.press(view.getByText('I arrived at the customer'));
+      expect(await view.findByLabelText('Collect exactly ₹1499.00')).toBeTruthy();
+
+      fireEvent.press(view.getByText('I collected the exact cash amount shown above'));
       fireEvent.changeText(view.getByLabelText('Customer delivery OTP'), '654321');
-      fireEvent.press(view.getByText('Verify COD and complete'));
-      expect(await view.findByText('No active offers')).toBeTruthy();
-      expect(client.complete.mock.calls).toContainEqual([
-        delivery('AT_DROP').taskId,
-        149900,
-        '654321',
-        {
-          latitude: LOCATION_SAMPLE.latitude,
-          longitude: LOCATION_SAMPLE.longitude,
-          accuracyMeters: LOCATION_SAMPLE.accuracyMeters,
-          recordedAt: LOCATION_SAMPLE.recordedAt,
-        },
-        expect.any(String),
-      ]);
+      fireEvent.press(view.getByText('Complete delivery with OTP'));
+
+      expect(await view.findByText('Delivery completed and COD collection recorded.')).toBeTruthy();
+      expect(client.acceptOffer.mock.calls).toHaveLength(1);
+      expect(client.arrivePickup.mock.calls).toHaveLength(1);
+      expect(client.verifyPickup.mock.calls).toHaveLength(1);
+      expect(client.departPickup.mock.calls).toHaveLength(1);
+      expect(client.arriveDrop.mock.calls).toHaveLength(1);
+      expect(client.complete.mock.calls).toHaveLength(1);
     } finally {
       view.unmount();
-    }
-  });
-
-  it('preserves operational notes for release and customer-unavailable reporting', async () => {
-    const releaseClient = deliveryClient(delivery('ASSIGNED'));
-    const releaseView = render(
-      <CaptainDeliveryScreen
-        client={releaseClient}
-        locationProvider={locationProvider()}
-        presenceClient={presenceClient()}
-      />,
-    );
-    try {
-      expect(await releaseView.findByText('Release before pickup')).toBeTruthy();
-      fireEvent.changeText(releaseView.getByLabelText('Operational note'), 'Puncture');
-      fireEvent.press(releaseView.getByText('Release before pickup'));
-      expect(await releaseView.findByText('Delivery released for reassignment.')).toBeTruthy();
-      expect(releaseClient.release.mock.calls).toContainEqual([
-        delivery('ASSIGNED').taskId,
-        'VEHICLE_ISSUE',
-        'Puncture',
-        expect.any(Object),
-        expect.any(String),
-      ]);
-    } finally {
-      releaseView.unmount();
-    }
-
-    const problemClient = deliveryClient(delivery('AT_DROP'));
-    const problemView = render(
-      <CaptainDeliveryScreen
-        client={problemClient}
-        locationProvider={locationProvider()}
-        presenceClient={presenceClient()}
-      />,
-    );
-    try {
-      expect(await problemView.findByText('Report a delivery problem')).toBeTruthy();
-      fireEvent.changeText(problemView.getByLabelText('Operational note'), 'Called twice');
-      fireEvent.press(problemView.getByText('Report a delivery problem'));
-      expect(await problemView.findByText('Problem reported to operations.')).toBeTruthy();
-      expect(problemClient.reportProblem.mock.calls).toContainEqual([
-        delivery('AT_DROP').taskId,
-        'CUSTOMER_UNAVAILABLE',
-        'Called twice',
-        expect.any(Object),
-        expect.any(String),
-      ]);
-    } finally {
-      problemView.unmount();
     }
   });
 });

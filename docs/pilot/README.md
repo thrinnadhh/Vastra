@@ -16,9 +16,12 @@ This directory contains Sprint 11 execution plans and evidence for the limited T
 ## Evidence layout
 
 - `evidence/manifest.json` — machine-validated release gates, defects, decision, and sign-off.
+- `evidence/templates/` — truthful `NOT_RUN` execution-report structures.
 - `reports/` — generated or manually reviewed execution reports. Create reports only after running the corresponding procedure.
+- `execution-tooling.md` — exact staging COD, Android/FCM, load/query, admin-recovery, and sign-off commands.
 - `device-matrix.md` — physical-device and app-lifecycle execution matrix.
 - `load-test-plan.md` — staging-only performance and concurrency procedure.
+- `load-scenario-plan.template.json` — controlled HTTP read/command scenario template.
 - `payment-failure-drills.md` — payment, refund, webhook, and COD recovery drills.
 - `backup-restore-rehearsal.md` — backup, restore, and rollback evidence procedure.
 - `observability-alerts.md` — pilot dashboards, metrics, and alert thresholds.
@@ -30,6 +33,11 @@ This directory contains Sprint 11 execution plans and evidence for the limited T
 
 ```bash
 pnpm pilot:evidence:check
+pnpm pilot:execution-report:check --report <repository-relative-report.json>
+pnpm pilot:staging:observe
+pnpm pilot:query-plans
+pnpm pilot:load -- --plan <plan.json> --query-plans <plans.json> --invariants <invariants.json> --output <report.json>
+pnpm pilot:invariants
 pnpm security:client-secrets
 pnpm test:pilot-tooling
 ```
@@ -47,9 +55,10 @@ pnpm pilot:go-no-go
 Use UTC dates and stable ticket identifiers:
 
 ```text
-docs/pilot/reports/S11-05-load-2026-07-19.json
-docs/pilot/reports/S11-06-merchant-device-2026-07-19.md
-docs/pilot/reports/S11-08-restore-2026-07-19.md
+docs/pilot/reports/S11-05-load-2026-07-25.json
+docs/pilot/reports/S11-06-merchant-device-2026-07-25.json
+docs/pilot/reports/S11-11-staging-cod-2026-07-25.json
+docs/pilot/reports/S11-12-admin-recovery-2026-07-25.json
 ```
 
 Evidence paths in the manifest must be repository-relative and may not escape the repository root.

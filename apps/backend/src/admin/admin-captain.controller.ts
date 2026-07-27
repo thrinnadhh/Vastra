@@ -8,6 +8,7 @@ import {
   Inject,
   Param,
   Post,
+  Query,
 } from '@nestjs/common';
 
 import { AllowAccountTypes } from '../auth/account-types.decorator';
@@ -15,6 +16,7 @@ import type { AuthenticatedRequestContext } from '../auth/auth.types';
 import { CurrentAuthContext } from '../auth/current-auth-context.decorator';
 import { RequireOperationalReadiness } from '../auth/operational-readiness.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
+import type { ListAdminCaptainsResponse } from './admin-actor-list.types';
 import { AdminCaptainService } from './admin-captain.service';
 
 @Controller('admin/captains')
@@ -22,6 +24,28 @@ import { AdminCaptainService } from './admin-captain.service';
 @RequireOperationalReadiness()
 export class AdminCaptainController {
   public constructor(@Inject(AdminCaptainService) private readonly service: AdminCaptainService) {}
+
+  @Get()
+  @RequirePermissions('admin.captains.read')
+  public list(
+    @CurrentAuthContext() context: AuthenticatedRequestContext,
+    @Query('q') query: unknown,
+    @Query('profileStatus') profileStatus: unknown,
+    @Query('kycStatus') kycStatus: unknown,
+    @Query('availabilityStatus') availabilityStatus: unknown,
+    @Query('cursor') cursor: unknown,
+    @Query('limit') limit: unknown,
+  ): Promise<ListAdminCaptainsResponse> {
+    return this.service.list(
+      context,
+      query,
+      profileStatus,
+      kycStatus,
+      availabilityStatus,
+      cursor,
+      limit,
+    );
+  }
 
   @Get(':captainId')
   @RequirePermissions('admin.captains.read')

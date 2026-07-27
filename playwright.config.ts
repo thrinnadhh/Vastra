@@ -27,15 +27,11 @@ export default defineConfig({
     },
     {
       command:
-        'pnpm --filter @vastra/admin-dashboard exec next build && pnpm --filter @vastra/admin-dashboard exec next start -H 127.0.0.1 -p 4179',
-      env: {
-        NEXT_PUBLIC_API_BASE_URL: 'http://127.0.0.1:4177/v1',
-        NEXT_PUBLIC_SUPABASE_URL: 'https://example.invalid',
-        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'publishable-browser-test-key',
-      },
+        'test -f packages/api-client/dist/index.js || pnpm --filter @vastra/api-client build; pnpm --filter @vastra/admin-dashboard exec next dev -H 127.0.0.1 -p 4179',
+      env: { NEXT_PUBLIC_ADMIN_E2E_FIXTURE: '1' },
       url: adminOrigin,
       reuseExistingServer: false,
-      timeout: 120_000,
+      timeout: 60_000,
     },
   ],
   projects: [

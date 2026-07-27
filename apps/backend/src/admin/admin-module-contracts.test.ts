@@ -5,14 +5,17 @@ import { METHOD_METADATA, MODULE_METADATA } from '@nestjs/common/constants';
 import { describe, expect, it } from 'vitest';
 
 import { ALLOWED_ACCOUNT_TYPES_METADATA } from '../auth/account-types.decorator';
+import { ALLOW_ADMIN_AAL1_METADATA } from '../auth/admin-mfa.decorator';
 import { OPERATIONAL_READINESS_METADATA } from '../auth/operational-readiness.decorator';
 import { REQUIRED_PERMISSIONS_METADATA } from '../auth/permissions.decorator';
+import { AdminCapabilitiesController } from './admin-capabilities.controller';
 import { AdminAuditController } from './admin-audit.controller';
 import { AdminCaptainController } from './admin-captain.controller';
 import { AdminCaseController } from './admin-case.controller';
 import { AdminConfigurationController } from './admin-configuration.controller';
 import { AdminDashboardController } from './admin-dashboard.controller';
 import { AdminMerchantController } from './admin-merchant.controller';
+import { AdminOrderListController } from './admin-order-list.controller';
 import { AdminOrderInvestigationController } from './admin-order-investigation.controller';
 import { AdminOrderOperationsController } from './admin-order-operations.controller';
 import { AdminModule } from './admin.module';
@@ -24,8 +27,10 @@ import {
 } from './admin.permissions';
 
 const ADMIN_CONTROLLERS = [
+  AdminCapabilitiesController,
   AdminAuditController,
   AdminDashboardController,
+  AdminOrderListController,
   AdminOrderInvestigationController,
   AdminOrderOperationsController,
   AdminMerchantController,
@@ -33,6 +38,10 @@ const ADMIN_CONTROLLERS = [
   AdminConfigurationController,
   AdminCaseController,
 ] as const;
+
+const OPERATIONAL_ADMIN_CONTROLLERS = ADMIN_CONTROLLERS.filter(
+  (controller) => controller !== AdminCapabilitiesController,
+);
 
 const GET_REQUEST_METHOD: number = RequestMethod.GET;
 
@@ -59,9 +68,29 @@ describe('Sprint 9 admin module contracts', () => {
     expect(new Set(registered).size).toBe(ADMIN_CONTROLLERS.length);
   });
 
-  it('keeps every admin route account-, readiness- and permission-gated', () => {
+  it('keeps every admin route account-gated', () => {
     for (const controller of ADMIN_CONTROLLERS) {
       expect(readMetadata(ALLOWED_ACCOUNT_TYPES_METADATA, controller)).toStrictEqual(['ADMIN']);
+    }
+  });
+
+  it('keeps the capability bootstrap available before AAL2 readiness', () => {
+    expect(
+      readMetadata(OPERATIONAL_READINESS_METADATA, AdminCapabilitiesController),
+    ).toBeUndefined();
+    const handler: unknown = Object.getOwnPropertyDescriptor(
+      AdminCapabilitiesController.prototype,
+      'get',
+    )?.value;
+    if (typeof handler !== 'function') {
+      throw new TypeError('AdminCapabilitiesController.get must be a method');
+    }
+    expect(readMetadata(ALLOW_ADMIN_AAL1_METADATA, handler)).toBe(true);
+    expect(readMetadata(REQUIRED_PERMISSIONS_METADATA, handler)).toBeUndefined();
+  });
+
+  it('keeps every operational admin route readiness- and permission-gated', () => {
+    for (const controller of OPERATIONAL_ADMIN_CONTROLLERS) {
       expect(readMetadata(OPERATIONAL_READINESS_METADATA, controller)).toBe(true);
 
       const prototype: object = controller.prototype;

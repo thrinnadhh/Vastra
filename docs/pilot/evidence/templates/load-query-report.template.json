@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "type": "load-query",
+  "releaseCommit": "0000000000000000000000000000000000000000",
+  "environment": "staging",
+  "status": "NOT_RUN",
+  "startedAt": "1970-01-01T00:00:00.000Z",
+  "completedAt": null,
+  "operator": "replace-me",
+  "notes": "Generate this report with pnpm pilot:load after query-plan and dataset gates pass.",
+  "dataset": {
+    "shops": 0,
+    "products": 0,
+    "variants": 0,
+    "orders": 0,
+    "captains": 0
+  },
+  "metrics": {
+    "criticalReadSuccessRate": 0,
+    "criticalCommandSuccessRate": 0,
+    "p95CriticalReadMs": 0,
+    "p95CriticalCommandMs": 0,
+    "invariantViolations": 0
+  },
+  "steps": [
+    {
+      "id": "nearby-shop-discovery",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "product-search",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "customer-order-read",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "merchant-order-queue",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "captain-offer-read",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "checkout-quote",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "cod-order-idempotency",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "merchant-decision-race",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "captain-assignment-race",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "pickup-delivery-retry",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    },
+    {
+      "id": "outbox-worker-contention",
+      "status": "NOT_RUN",
+      "observedAt": null,
+      "requestIds": [],
+      "evidence": [],
+      "notes": "Not executed."
+    }
+  ]
+}

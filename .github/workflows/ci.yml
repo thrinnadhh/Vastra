@@ -15,10 +15,85 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: Verify repository
+  static-quality:
+    name: Static quality
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Validate environment templates
+        run: pnpm env:check
+
+      - name: Test Sprint 11 pilot tooling
+        run: pnpm test:pilot-tooling
+
+      - name: Validate Sprint 11 evidence structure
+        run: pnpm pilot:evidence:check
+
+      - name: Scan client apps for privileged secrets
+        run: pnpm security:client-secrets
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+  application-tests:
+    name: Application tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+  frontend-validation:
+    name: Frontend E2E and visual
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Check out repository
@@ -42,35 +117,12 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm exec playwright install chromium
 
-      - name: Check formatting
-        run: pnpm format:check
-
-      - name: Validate environment templates
-        run: pnpm env:check
-
-      - name: Test Sprint 11 pilot tooling
-        run: pnpm test:pilot-tooling
-
-      - name: Validate Sprint 11 evidence structure
-        run: pnpm pilot:evidence:check
-
-      - name: Scan client apps for privileged secrets
-        run: pnpm security:client-secrets
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Run unit tests
-        run: pnpm test
-
-      - name: Run integration tests
-        run: pnpm test:integration
-
       - name: Run frontend E2E and visual harness
-        run: pnpm test:frontend:harness
+        run: |
+          if ! pnpm test:frontend:harness > /tmp/frontend-harness.log 2>&1; then
+            tail -n 300 /tmp/frontend-harness.log
+            exit 1
+          fi
 
       - name: Upload frontend E2E evidence
         if: always()
@@ -78,10 +130,35 @@ jobs:
         with:
           name: frontend-e2e-evidence-${{ github.run_attempt }}
           path: |
+            /tmp/frontend-harness.log
             test-results/playwright
             playwright-report
           if-no-files-found: warn
           retention-days: 14
+
+  database-contracts:
+    name: Database and OpenAPI
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v3
@@ -94,8 +171,72 @@ jobs:
       - name: Validate OpenAPI
         run: pnpm openapi:check
 
-      - name: Verify generated API client matches backend controllers
+      - name: Verify generated API contract
         run: pnpm --filter @vastra/api-client contract:check
 
+  workspace-build:
+    name: Workspace build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Build
-        run: pnpm build
+        run: |
+          if ! pnpm build > /tmp/workspace-build.log 2>&1; then
+            tail -n 300 /tmp/workspace-build.log
+            exit 1
+          fi
+
+      - name: Upload workspace build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-build-diagnostics-${{ github.run_attempt }}
+          path: /tmp/workspace-build.log
+          if-no-files-found: error
+          retention-days: 1
+
+  verify:
+    name: Verify repository
+    if: ${{ always() }}
+    needs:
+      - static-quality
+      - application-tests
+      - frontend-validation
+      - database-contracts
+      - workspace-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Require every verification lane
+        env:
+          STATIC_QUALITY: ${{ needs.static-quality.result }}
+          APPLICATION_TESTS: ${{ needs.application-tests.result }}
+          FRONTEND_VALIDATION: ${{ needs.frontend-validation.result }}
+          DATABASE_CONTRACTS: ${{ needs.database-contracts.result }}
+          WORKSPACE_BUILD: ${{ needs.workspace-build.result }}
+        run: |
+          test "$STATIC_QUALITY" = "success"
+          test "$APPLICATION_TESTS" = "success"
+          test "$FRONTEND_VALIDATION" = "success"
+          test "$DATABASE_CONTRACTS" = "success"
+          test "$WORKSPACE_BUILD" = "success"
