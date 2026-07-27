@@ -61,17 +61,23 @@ jobs:
             exit 1
           fi
 
+      - name: Typecheck
+        run: |
+          if ! pnpm typecheck > /tmp/typecheck.log 2>&1; then
+            tail -n 300 /tmp/typecheck.log
+            exit 1
+          fi
+
       - name: Upload static-quality diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: static-quality-diagnostics-${{ github.run_attempt }}
-          path: /tmp/lint.log
+          path: |
+            /tmp/lint.log
+            /tmp/typecheck.log
           if-no-files-found: warn
           retention-days: 7
-
-      - name: Typecheck
-        run: pnpm typecheck
 
   application-tests:
     name: Application tests
