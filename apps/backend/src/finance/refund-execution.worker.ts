@@ -81,7 +81,7 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
     }
 
     if (this.activeDrain !== null) {
-      let timeoutHandle: NodeJS.Timeout | null = null;
+      let timeoutHandle!: NodeJS.Timeout;
       const timeoutPromise = new Promise<void>((resolve) => {
         timeoutHandle = setTimeout(() => {
           this.logger.warn('application shutdown timed out waiting for active refund drain');
@@ -90,10 +90,7 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
       });
 
       await Promise.race([this.activeDrain.catch(() => undefined), timeoutPromise]);
-
-      if (timeoutHandle !== null) {
-        clearTimeout(timeoutHandle);
-      }
+      clearTimeout(timeoutHandle);
     }
   }
 
