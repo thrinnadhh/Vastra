@@ -15,11 +15,7 @@ cleanup() {
   trap - EXIT
 
   if [[ "$started_stack" -eq 1 ]]; then
-    if ! supabase stop; then
-      if [[ "$exit_code" -eq 0 ]]; then
-        exit_code=1
-      fi
-    fi
+    supabase stop --no-backup >/dev/null 2>&1 || true
   fi
 
   exit "$exit_code"
