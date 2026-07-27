@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { isClientBundlePath, scanClientBundle } from './client-bundle-scan-lib.mjs';
 import { isClientSourcePath, scanClientSource } from './client-secret-scan-lib.mjs';
 import { validatePilotManifest } from './pilot-evidence-lib.mjs';
 import {
@@ -232,6 +233,39 @@ function runSecretScannerTests() {
       'apps/captain-app/src/config.ts',
       'const key = "-----BEGIN PRIVATE KEY-----";',
     ).some((violation) => violation.rule === 'private key material'),
+  );
+
+  assert.equal(isClientBundlePath('apps/admin-dashboard/.next/static/chunks/app.js'), true);
+  assert.equal(isClientBundlePath('apps/customer-app/dist/_expo/static/js/web/index.js'), true);
+  assert.equal(isClientBundlePath('apps/customer-app/src/config.ts'), false);
+
+  assert.deepEqual(
+    scanClientBundle(
+      'apps/admin-dashboard/.next/static/chunks/app.js',
+      'const pubKey = "sbp_publishable_12345";',
+    ),
+    [],
+  );
+
+  assert.ok(
+    scanClientBundle(
+      'apps/admin-dashboard/.next/static/chunks/app.js',
+      'const secret = "VASSTRA_CANARY_SUPABASE_SECRET_12345";',
+    ).some((violation) => violation.rule === 'canary secret injected during CI'),
+  );
+
+  assert.ok(
+    scanClientBundle(
+      'apps/customer-app/dist/bundle.js',
+      'const db = "postgres://admin:secretpass@db.example.test:5432/vastra";',
+    ).some((violation) => violation.rule === 'database URL with credentials'),
+  );
+
+  assert.ok(
+    scanClientBundle(
+      'apps/merchant-app/dist/bundle.js',
+      'const key = process.env.CASHFREE_CLIENT_SECRET;',
+    ).some((violation) => violation.rule.includes('CASHFREE_CLIENT_SECRET')),
   );
 }
 

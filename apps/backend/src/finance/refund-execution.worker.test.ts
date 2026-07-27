@@ -1,17 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import type { RefundExecutionService } from './refund-execution.service';
-import { RefundExecutionWorker } from './refund-execution.worker';
+import { RefundExecutionWorker, type RefundProcessorPort } from './refund-execution.worker';
 
 describe('RefundExecutionWorker', () => {
   it('drains the bounded automatic refund queue', async () => {
     const calls: number[] = [];
-    const service = {
+    const service: RefundProcessorPort = {
       processAutomatic(limit: number) {
         calls.push(limit);
         return Promise.resolve({ selected: 1, processed: 1, failed: 0 });
       },
-    } as unknown as RefundExecutionService;
+    };
     const worker = new RefundExecutionWorker(service);
 
     await worker.drainOnce();
@@ -28,12 +27,12 @@ describe('RefundExecutionWorker', () => {
       },
     );
 
-    const service = {
+    const service: RefundProcessorPort = {
       processAutomatic() {
         calls += 1;
         return pending;
       },
-    } as unknown as RefundExecutionService;
+    };
     const worker = new RefundExecutionWorker(service);
 
     const firstDrain = worker.drainOnce();
@@ -54,12 +53,12 @@ describe('RefundExecutionWorker', () => {
         completeProcessing = () => resolve({ selected: 1, processed: 1, failed: 0 });
       },
     );
-    const service = {
+    const service: RefundProcessorPort = {
       processAutomatic() {
         calls += 1;
         return pending;
       },
-    } as unknown as RefundExecutionService;
+    };
     const worker = new RefundExecutionWorker(service);
 
     const firstDrain = worker.drainOnce();
@@ -79,12 +78,12 @@ describe('RefundExecutionWorker', () => {
 
   it('no new drain starts after shutdown begins', async () => {
     let calls = 0;
-    const service = {
+    const service: RefundProcessorPort = {
       processAutomatic() {
         calls += 1;
         return Promise.resolve({ selected: 0, processed: 0, failed: 0 });
       },
-    } as unknown as RefundExecutionService;
+    };
     const worker = new RefundExecutionWorker(service);
 
     await worker.onApplicationShutdown();
@@ -95,12 +94,12 @@ describe('RefundExecutionWorker', () => {
 
   it('active drain is cleared after success', async () => {
     let calls = 0;
-    const service = {
+    const service: RefundProcessorPort = {
       processAutomatic() {
         calls += 1;
         return Promise.resolve({ selected: 1, processed: 1, failed: 0 });
       },
-    } as unknown as RefundExecutionService;
+    };
     const worker = new RefundExecutionWorker(service);
 
     const firstDrain = worker.drainOnce();
@@ -115,12 +114,12 @@ describe('RefundExecutionWorker', () => {
 
   it('active drain is cleared after rejection', async () => {
     let calls = 0;
-    const service = {
+    const service: RefundProcessorPort = {
       processAutomatic() {
         calls += 1;
         return Promise.reject(new Error('Database failure'));
       },
-    } as unknown as RefundExecutionService;
+    };
     const worker = new RefundExecutionWorker(service);
 
     await worker.drainOnce();
@@ -131,11 +130,11 @@ describe('RefundExecutionWorker', () => {
   });
 
   it('no unhandled rejection is created by .finally()', async () => {
-    const service = {
+    const service: RefundProcessorPort = {
       processAutomatic() {
         return Promise.reject(new Error('Simulated failure'));
       },
-    } as unknown as RefundExecutionService;
+    };
     const worker = new RefundExecutionWorker(service);
 
     let caughtError: unknown = null;
@@ -149,11 +148,11 @@ describe('RefundExecutionWorker', () => {
   });
 
   it('calling shutdown twice remains safe', async () => {
-    const service = {
+    const service: RefundProcessorPort = {
       processAutomatic() {
         return Promise.resolve({ selected: 0, processed: 0, failed: 0 });
       },
-    } as unknown as RefundExecutionService;
+    };
     const worker = new RefundExecutionWorker(service);
 
     await worker.onApplicationShutdown();
@@ -167,12 +166,12 @@ describe('RefundExecutionWorker', () => {
     process.env['NODE_ENV'] = 'production';
 
     let calls = 0;
-    const service = {
+    const service: RefundProcessorPort = {
       processAutomatic() {
         calls += 1;
         return Promise.resolve({ selected: 0, processed: 0, failed: 0 });
       },
-    } as unknown as RefundExecutionService;
+    };
     const worker = new RefundExecutionWorker(service);
 
     try {
@@ -190,15 +189,13 @@ describe('RefundExecutionWorker', () => {
     process.env['REFUND_PROCESSOR_SHUTDOWN_TIMEOUT_MS'] = '100';
 
     try {
-      const service = {
+      const service: RefundProcessorPort = {
         processAutomatic() {
-          return new Promise<{ selected: number; processed: number; failed: number }>(
-            () => {
-              // Never resolves
-            },
-          );
+          return new Promise<{ selected: number; processed: number; failed: number }>(() => {
+            // Never resolves
+          });
         },
-      } as unknown as RefundExecutionService;
+      };
       const worker = new RefundExecutionWorker(service);
 
       void worker.drainOnce();

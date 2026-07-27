@@ -5,8 +5,6 @@ import {
   type OnApplicationShutdown,
 } from '@nestjs/common';
 
-import { RefundExecutionService } from './refund-execution.service';
-
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
 const DEFAULT_BATCH_SIZE = 10;
 const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5_000;
@@ -24,6 +22,10 @@ function parseBoundedInteger(
     throw new Error(`Invalid environment configuration: ${name}`);
   }
   return value;
+}
+
+export interface RefundProcessorPort {
+  processAutomatic(limit: number): Promise<{ selected: number; processed: number; failed: number }>;
 }
 
 @Injectable()
@@ -51,7 +53,7 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
   private activeDrain: Promise<void> | null = null;
   private stopping = false;
 
-  public constructor(private readonly service: RefundExecutionService) {}
+  public constructor(private readonly service: RefundProcessorPort) {}
 
   public onApplicationBootstrap(): void {
     if (this.stopping || this.timer !== null) {

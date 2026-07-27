@@ -23,6 +23,7 @@
     "pilot:load": "node scripts/run-pilot-http-load.mjs",
     "pilot:query-plans": "node scripts/run-pilot-query-plans.mjs",
     "pilot:staging:observe": "node scripts/run-staging-cod-observer.mjs",
+    "security:client-bundles": "node scripts/scan-client-bundles.mjs",
     "security:client-secrets": "node scripts/scan-client-secrets.mjs",
     "test": "pnpm --filter @vastra/api-client build && turbo run test",
     "test:frontend:cod": "playwright test --project=cod-mobile --project=cod-desktop",

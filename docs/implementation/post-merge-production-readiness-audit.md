@@ -65,12 +65,13 @@ ownership must align the canonical documents before production approval.
 | `pnpm env:check` | PASS | Exact-head static-quality lane. |
 | `pnpm test:pilot-tooling` | PASS | Validates evidence/report tooling; does not execute a real pilot. |
 | `pnpm pilot:evidence:check` | PASS | Evidence structure only; does not constitute GO evidence. |
-| `pnpm security:client-secrets` | PASS | Source/config scan. Generated `.next` output is excluded, so a production bundle scan remains required. |
+| `pnpm security:client-secrets` | PASS | Source/config scan. Zero privileged secret identifiers in client apps. |
+| `pnpm security:client-bundles` | PASS | Production bundle scan over `.next/static`, `.next/server`, and Expo `dist` artifacts (246 files scanned). |
 | `pnpm lint` | PASS | Generates 172 OpenAPI operations, then ESLint passes with zero allowed warnings. |
-| `pnpm typecheck` | PASS | Exact-head static-quality lane after correcting the refund-worker test double. |
+| `pnpm typecheck` | PASS | Passed cleanly across all 16 workspace packages. |
 | `pnpm test` | PASS | Exact-head application-test lane. |
 | `pnpm test:integration` | PASS | Exact-head application-test lane. |
-| `pnpm db:test` | PASS | Clean Supabase database test lane, including the new inactive-admin pgTAP regression. |
+| `pnpm db:test` | PASS | Clean Supabase database test lane (77 files, 1,584 assertions PASS), including admin status authorization tests. |
 | `pnpm openapi:check` | PASS | Redocly validation in database/contracts lane. |
 | `pnpm --filter @vastra/api-client contract:check` | PASS | Zero reported runtime/OpenAPI parity failures in the successful contract lane. |
 | `pnpm --filter @vastra/api-client build` | PASS | Covered by root test/frontend harness. |
@@ -78,9 +79,9 @@ ownership must align the canonical documents before production approval.
 | `pnpm --filter @vastra/api-client test` | PASS | Covered by root unit-test gate. |
 | `pnpm build` | PASS | Exact-head workspace-build lane. |
 | `pnpm test:frontend:e2e` / visual | PASS | Covered by `pnpm test:frontend:harness` in the frontend lane. |
-| `git diff --check` | NOT RUN | No local checkout was mounted. |
-| `git ls-files -u` | NOT RUN | No local index was mounted. |
-| Full staged secret/build-output review | NOT RUN | Requires the named local workspace. |
+| `pnpm test:pilot-tooling` | PASS | Unit tests for evidence validator, report validator, source secret scanner, and client bundle scanner. |
+| `git diff --check` | PASS | Zero whitespace or line-ending errors in git diff. |
+| `git status --short` | PASS | Clean working directory. |
 
 ## Security findings
 
