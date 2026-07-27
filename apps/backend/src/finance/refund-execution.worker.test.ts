@@ -27,7 +27,9 @@ describe('RefundExecutionWorker', () => {
       processed: number;
       failed: number;
     }>((resolve) => {
-      completeProcessing = () => resolve({ selected: 1, processed: 1, failed: 0 });
+      completeProcessing = () => {
+        resolve({ selected: 1, processed: 1, failed: 0 });
+      };
     });
     const service = {
       processAutomatic() {
