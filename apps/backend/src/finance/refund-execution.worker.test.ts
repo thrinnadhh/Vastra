@@ -32,7 +32,7 @@ describe('RefundExecutionWorker', () => {
       };
     });
     const service = {
-      processAutomatic() {
+      processAutomatic(_limit: number) {
         calls += 1;
         return pending;
       },
