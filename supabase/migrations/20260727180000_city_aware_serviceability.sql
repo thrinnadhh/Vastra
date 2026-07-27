@@ -179,14 +179,12 @@ begin
     c.id,
     c.status,
     sz.id,
-    sz.status,
-    cc
+    sz.status
   into
     v_city_id,
     v_city_status,
     v_service_zone_id,
-    v_zone_status,
-    v_configuration
+    v_zone_status
   from public.service_zone_pincodes szp
   join public.cities c
     on c.id = szp.city_id
@@ -211,6 +209,11 @@ begin
   limit 1;
 
   if found then
+    select *
+    into strict v_configuration
+    from public.city_configurations cc
+    where cc.city_id = v_city_id;
+
     return jsonb_build_object(
       'resolved', true,
       'cityId', v_city_id,
