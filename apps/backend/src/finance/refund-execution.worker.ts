@@ -9,6 +9,7 @@ import { RefundExecutionService } from './refund-execution.service';
 
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
 const DEFAULT_BATCH_SIZE = 10;
+const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5_000;
 
 function parseBoundedInteger(
   name: string,
@@ -40,6 +41,12 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
     1,
     100,
   );
+  private readonly shutdownTimeoutMs = parseBoundedInteger(
+    'REFUND_PROCESSOR_SHUTDOWN_TIMEOUT_MS',
+    DEFAULT_SHUTDOWN_TIMEOUT_MS,
+    100,
+    60_000,
+  );
   private timer: NodeJS.Timeout | null = null;
   private activeDrain: Promise<void> | null = null;
   private stopping = false;
@@ -47,6 +54,9 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
   public constructor(private readonly service: RefundExecutionService) {}
 
   public onApplicationBootstrap(): void {
+    if (this.stopping || this.timer !== null) {
+      return;
+    }
     if (process.env['NODE_ENV'] === 'test' || process.env['REFUND_PROCESSOR_ENABLED'] === 'false') {
       return;
     }
@@ -61,7 +71,22 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
       clearInterval(this.timer);
       this.timer = null;
     }
-    await this.activeDrain;
+
+    if (this.activeDrain !== null) {
+      let timeoutHandle: NodeJS.Timeout | null = null;
+      const timeoutPromise = new Promise<void>((resolve) => {
+        timeoutHandle = setTimeout(() => {
+          this.logger.warn('application shutdown timed out waiting for active refund drain');
+          resolve();
+        }, this.shutdownTimeoutMs);
+      });
+
+      await Promise.race([this.activeDrain.catch(() => {}), timeoutPromise]);
+
+      if (timeoutHandle !== null) {
+        clearTimeout(timeoutHandle);
+      }
+    }
   }
 
   public drainOnce(): Promise<void> {
@@ -70,9 +95,17 @@ export class RefundExecutionWorker implements OnApplicationBootstrap, OnApplicat
 
     const drain = this.performDrain();
     this.activeDrain = drain;
-    void drain.finally(() => {
-      if (this.activeDrain === drain) this.activeDrain = null;
-    });
+
+    drain
+      .finally(() => {
+        if (this.activeDrain === drain) {
+          this.activeDrain = null;
+        }
+      })
+      .catch(() => {
+        // Prevent unhandled rejection warning on internal listener chain
+      });
+
     return drain;
   }
 
