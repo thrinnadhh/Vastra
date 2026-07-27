@@ -2,32 +2,279 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  restore-ci:
-    name: Restore repository CI
+  static-quality:
+    name: Static quality
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
 
     steps:
-      - name: Check out Phase 2C branch
+      - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: agent/phase-2c-serviceability-catalogue
-          persist-credentials: true
-          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Restore main CI and remove diagnostics
-        shell: bash
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Validate environment templates
+        run: pnpm env:check
+
+      - name: Test Sprint 11 pilot tooling
+        run: pnpm test:pilot-tooling
+
+      - name: Validate Sprint 11 evidence structure
+        run: pnpm pilot:evidence:check
+
+      - name: Scan client apps for privileged secrets
+        run: pnpm security:client-secrets
+
+      - name: Lint
         run: |
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/ci.yml
-          git rm -f .github/workflows/phase2c-database-diagnostics.yml
-          git config user.name 'vastra-ci'
-          git config user.email 'vastra-ci@users.noreply.github.com'
-          git commit -m 'chore(ci): remove Phase 2C diagnostics'
-          git push origin HEAD:agent/phase-2c-serviceability-catalogue
+          if ! pnpm lint > /tmp/lint.log 2>&1; then
+            tail -n 300 /tmp/lint.log
+            exit 1
+          fi
+
+      - name: Typecheck
+        run: |
+          if ! pnpm typecheck > /tmp/typecheck.log 2>&1; then
+            tail -n 300 /tmp/typecheck.log
+            exit 1
+          fi
+
+      - name: Upload static-quality diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: static-quality-diagnostics-${{ github.run_attempt }}
+          path: |
+            /tmp/lint.log
+            /tmp/typecheck.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  application-tests:
+    name: Application tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: |
+          if ! pnpm test > /tmp/unit-tests.log 2>&1; then
+            tail -n 300 /tmp/unit-tests.log
+            exit 1
+          fi
+
+      - name: Upload application-test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: application-test-diagnostics-${{ github.run_attempt }}
+          path: /tmp/unit-tests.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+  frontend-validation:
+    name: Frontend E2E and visual
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium
+
+      - name: Run frontend E2E and visual harness
+        run: |
+          if ! pnpm test:frontend:harness > /tmp/frontend-harness.log 2>&1; then
+            tail -n 300 /tmp/frontend-harness.log
+            exit 1
+          fi
+
+      - name: Upload frontend E2E evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frontend-e2e-evidence-${{ github.run_attempt }}
+          path: |
+            /tmp/frontend-harness.log
+            test-results/playwright
+            playwright-report
+          if-no-files-found: warn
+          retention-days: 14
+
+  database-contracts:
+    name: Database and OpenAPI
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
+        with:
+          version: 2.109.1
+
+      - name: Run database tests
+        run: pnpm db:test
+
+      - name: Validate OpenAPI
+        run: pnpm openapi:check
+
+      - name: Verify generated API contract
+        run: pnpm --filter @vastra/api-client contract:check
+
+  workspace-build:
+    name: Workspace build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace with synthetic canary secrets
+        env:
+          VASTRA_CANARY_SUPABASE_SECRET_KEY: 'VASSTRA_CANARY_SUPABASE_SECRET_CI_CANARY_VALUE'
+          VASTRA_CANARY_CASHFREE_SECRET_KEY: 'VASSTRA_CANARY_CASHFREE_SECRET_CI_CANARY_VALUE'
+        run: |
+          if ! pnpm build > /tmp/workspace-build.log 2>&1; then
+            tail -n 300 /tmp/workspace-build.log
+            exit 1
+          fi
+
+      - name: Scan final production bundles for secrets
+        run: pnpm security:client-bundles
+
+      - name: Upload workspace build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workspace-build-diagnostics-${{ github.run_attempt }}
+          path: /tmp/workspace-build.log
+          if-no-files-found: error
+          retention-days: 1
+
+  verify:
+    name: Verify repository
+    if: ${{ always() }}
+    needs:
+      - static-quality
+      - application-tests
+      - frontend-validation
+      - database-contracts
+      - workspace-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Require every verification lane
+        env:
+          STATIC_QUALITY: ${{ needs.static-quality.result }}
+          APPLICATION_TESTS: ${{ needs.application-tests.result }}
+          FRONTEND_VALIDATION: ${{ needs.frontend-validation.result }}
+          DATABASE_CONTRACTS: ${{ needs.database-contracts.result }}
+          WORKSPACE_BUILD: ${{ needs.workspace-build.result }}
+        run: |
+          test "$STATIC_QUALITY" = "success"
+          test "$APPLICATION_TESTS" = "success"
+          test "$FRONTEND_VALIDATION" = "success"
+          test "$DATABASE_CONTRACTS" = "success"
+          test "$WORKSPACE_BUILD" = "success"
