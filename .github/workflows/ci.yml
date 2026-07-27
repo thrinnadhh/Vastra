@@ -55,10 +55,29 @@ jobs:
         run: pnpm security:client-secrets
 
       - name: Lint
-        run: pnpm lint
+        run: |
+          if ! pnpm lint > /tmp/lint.log 2>&1; then
+            tail -n 300 /tmp/lint.log
+            exit 1
+          fi
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: |
+          if ! pnpm typecheck > /tmp/typecheck.log 2>&1; then
+            tail -n 300 /tmp/typecheck.log
+            exit 1
+          fi
+
+      - name: Upload static-quality diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-quality-diagnostics-${{ github.run_attempt }}
+          path: |
+            /tmp/lint.log
+            /tmp/typecheck.log
+          if-no-files-found: warn
+          retention-days: 7
 
   application-tests:
     name: Application tests
@@ -85,7 +104,20 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run unit tests
-        run: pnpm test
+        run: |
+          if ! pnpm test > /tmp/unit-tests.log 2>&1; then
+            tail -n 300 /tmp/unit-tests.log
+            exit 1
+          fi
+
+      - name: Upload application-test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: application-test-diagnostics-${{ github.run_attempt }}
+          path: /tmp/unit-tests.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Run integration tests
         run: pnpm test:integration
