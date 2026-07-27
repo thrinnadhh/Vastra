@@ -60,6 +60,7 @@ export function isClientSourcePath(relativePath) {
     normalizedPath.includes('/node_modules/') ||
     normalizedPath.includes('/dist/') ||
     normalizedPath.includes('/build/') ||
+    normalizedPath.includes('/.next/') ||
     normalizedPath.includes('/coverage/') ||
     normalizedPath.includes('/.expo/')
   ) {

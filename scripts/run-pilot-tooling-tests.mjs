@@ -210,6 +210,7 @@ function runSecretScannerTests() {
   assert.equal(isClientSourcePath('apps/customer-app/src/config.ts'), true);
   assert.equal(isClientSourcePath('apps/backend/src/config.ts'), false);
   assert.equal(isClientSourcePath('apps/merchant-app/dist/config.js'), false);
+  assert.equal(isClientSourcePath('apps/admin-dashboard/.next/server/config.js'), false);
 
   assert.deepEqual(
     scanClientSource(
