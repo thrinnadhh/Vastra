@@ -21,7 +21,7 @@ describe('RefundExecutionWorker', () => {
 
   it('waits for an in-flight drain and prevents new work during shutdown', async () => {
     let completeProcessing!: () => void;
-    let calls = 0;
+    const calls: number[] = [];
     const pending = new Promise<{
       selected: number;
       processed: number;
@@ -32,8 +32,8 @@ describe('RefundExecutionWorker', () => {
       };
     });
     const service = {
-      processAutomatic(_limit: number) {
-        calls += 1;
+      processAutomatic(limit: number) {
+        calls.push(limit);
         return pending;
       },
     } as unknown as RefundExecutionService;
@@ -49,7 +49,7 @@ describe('RefundExecutionWorker', () => {
     await Promise.resolve();
 
     expect(concurrentDrain).toBe(firstDrain);
-    expect(calls).toBe(1);
+    expect(calls).toEqual([10]);
     expect(shutdownCompleted).toBe(false);
 
     completeProcessing();
@@ -57,6 +57,6 @@ describe('RefundExecutionWorker', () => {
     await worker.drainOnce();
 
     expect(shutdownCompleted).toBe(true);
-    expect(calls).toBe(1);
+    expect(calls).toEqual([10]);
   });
 });
