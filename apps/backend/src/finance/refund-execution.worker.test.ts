@@ -11,7 +11,7 @@ describe('RefundExecutionWorker', () => {
         calls.push(limit);
         return Promise.resolve({ selected: 1, processed: 1, failed: 0 });
       },
-    } as RefundExecutionService;
+    } as unknown as RefundExecutionService;
     const worker = new RefundExecutionWorker(service);
 
     await worker.drainOnce();
@@ -36,7 +36,7 @@ describe('RefundExecutionWorker', () => {
         calls += 1;
         return pending;
       },
-    } as RefundExecutionService;
+    } as unknown as RefundExecutionService;
     const worker = new RefundExecutionWorker(service);
 
     const firstDrain = worker.drainOnce();
