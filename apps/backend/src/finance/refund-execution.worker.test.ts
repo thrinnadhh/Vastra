@@ -45,7 +45,9 @@ describe('RefundExecutionWorker', () => {
     let completeProcessing!: () => void;
     const pending = new Promise<{ selected: number; processed: number; failed: number }>(
       (resolve) => {
-        completeProcessing = () => resolve({ selected: 1, processed: 1, failed: 0 });
+        completeProcessing = () => {
+          resolve({ selected: 1, processed: 1, failed: 0 });
+        };
       },
     );
 
@@ -72,7 +74,9 @@ describe('RefundExecutionWorker', () => {
     let calls = 0;
     const pending = new Promise<{ selected: number; processed: number; failed: number }>(
       (resolve) => {
-        completeProcessing = () => resolve({ selected: 1, processed: 1, failed: 0 });
+        completeProcessing = () => {
+          resolve({ selected: 1, processed: 1, failed: 0 });
+        };
       },
     );
     const service: RefundProcessorPort = {
@@ -170,8 +174,10 @@ describe('RefundExecutionWorker', () => {
   });
 
   it('calling shutdown twice remains safe', async () => {
+    let calls = 0;
     const service: RefundProcessorPort = {
       processAutomatic() {
+        calls += 1;
         return Promise.resolve({ selected: 0, processed: 0, failed: 0 });
       },
     };
@@ -179,6 +185,9 @@ describe('RefundExecutionWorker', () => {
 
     await worker.onApplicationShutdown();
     await worker.onApplicationShutdown();
+    await worker.drainOnce();
+
+    expect(calls).toBe(0);
   });
 
   it('calling bootstrap twice cannot create two intervals', async () => {
