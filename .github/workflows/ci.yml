@@ -7,15 +7,11 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  database-contracts:
-    name: Database and OpenAPI
+  restore-ci:
+    name: Restore repository CI
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
 
     steps:
       - name: Check out Phase 2C branch
@@ -23,104 +19,15 @@ jobs:
         with:
           ref: agent/phase-2c-serviceability-catalogue
           persist-credentials: true
+          fetch-depth: 0
 
-      - name: Apply composite-row migration fix
+      - name: Restore main CI and remove diagnostics
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-
-          path = Path('supabase/migrations/20260727180000_city_aware_serviceability.sql')
-          text = path.read_text()
-          pattern = re.compile(
-              r"  select\n"
-              r"    c\.id,\n"
-              r"    c\.status,\n"
-              r"    sz\.id,\n"
-              r"    sz\.status,\n"
-              r"    cc\n"
-              r"  into\n"
-              r"    v_city_id,\n"
-              r"    v_city_status,\n"
-              r"    v_service_zone_id,\n"
-              r"    v_zone_status,\n"
-              r"    v_configuration\n"
-              r"(?P<body>  from public\.service_zone_pincodes szp\n"
-              r"(?:.*\n)*?"
-              r"  limit 1;\n\n)"
-              r"  if found then\n",
-              re.MULTILINE,
-          )
-          replacement = (
-              "  select\n"
-              "    c.id,\n"
-              "    c.status,\n"
-              "    sz.id,\n"
-              "    sz.status\n"
-              "  into\n"
-              "    v_city_id,\n"
-              "    v_city_status,\n"
-              "    v_service_zone_id,\n"
-              "    v_zone_status\n"
-              r"\g<body>"
-              "  if found then\n"
-              "    select *\n"
-              "    into strict v_configuration\n"
-              "    from public.city_configurations cc\n"
-              "    where cc.city_id = v_city_id;\n\n"
-          )
-          updated, count = pattern.subn(replacement, text, count=1)
-          if count != 1:
-              raise SystemExit(f'expected one composite-row block, replaced {count}')
-          path.write_text(updated)
-          PY
-
+          git fetch origin main
+          git checkout origin/main -- .github/workflows/ci.yml
+          git rm -f .github/workflows/phase2c-database-diagnostics.yml
           git config user.name 'vastra-ci'
           git config user.email 'vastra-ci@users.noreply.github.com'
-          git add supabase/migrations/20260727180000_city_aware_serviceability.sql
-          git commit -m 'fix(db): load city configuration separately'
+          git commit -m 'chore(ci): remove Phase 2C diagnostics'
           git push origin HEAD:agent/phase-2c-serviceability-catalogue
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: 20.20.2
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Set up Supabase CLI
-        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
-        with:
-          version: 2.109.1
-
-      - name: Run database tests with complete capture
-        id: database
-        shell: bash
-        run: |
-          set +e
-          pnpm db:test > /tmp/phase2c-database.log 2>&1
-          status=$?
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          tail -n 250 /tmp/phase2c-database.log
-          exit 0
-
-      - name: Upload database diagnostics
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: phase2c-database-diagnostics-${{ github.run_attempt }}
-          path: /tmp/phase2c-database.log
-          if-no-files-found: error
-          retention-days: 2
-
-      - name: Preserve database result
-        env:
-          DATABASE_STATUS: ${{ steps.database.outputs.status }}
-        run: test "$DATABASE_STATUS" = "0"
