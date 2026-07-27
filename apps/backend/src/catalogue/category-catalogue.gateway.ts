@@ -1,5 +1,12 @@
-import type { SupabaseClient } from '../auth/supabase-client.type';
 import { Injectable } from '@nestjs/common';
+
+import type { SupabaseClient } from '../auth/supabase-client.type';
+import {
+  isRecord,
+  nullableString as sharedNullableString,
+  requireNonNegativeInteger as sharedRequireNonNegativeInteger,
+  requireString as sharedRequireString,
+} from '../shared/record-parser';
 
 import type { MerchantCatalogueCategorySnapshot } from './category-catalogue.types';
 
@@ -28,48 +35,16 @@ export class CategoryCatalogueDataInvalidError extends Error {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function requireString(record: Record<string, unknown>, key: string): string {
-  const value = record[key];
-
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new CategoryCatalogueDataInvalidError();
-  }
-
-  return value;
+  return sharedRequireString(record, key, CategoryCatalogueDataInvalidError);
 }
 
 function requireNullableString(record: Record<string, unknown>, key: string): string | null {
-  const value = record[key];
-
-  if (value === null) {
-    return null;
-  }
-
-  if (typeof value !== 'string') {
-    throw new CategoryCatalogueDataInvalidError();
-  }
-
-  return value;
+  return sharedNullableString(record, key, CategoryCatalogueDataInvalidError);
 }
 
 function requireSafeNonNegativeInteger(record: Record<string, unknown>, key: string): number {
-  const rawValue = record[key];
-  const value =
-    typeof rawValue === 'number'
-      ? rawValue
-      : typeof rawValue === 'string' && rawValue.trim().length > 0
-        ? Number(rawValue)
-        : Number.NaN;
-
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new CategoryCatalogueDataInvalidError();
-  }
-
-  return value;
+  return sharedRequireNonNegativeInteger(record, key, CategoryCatalogueDataInvalidError);
 }
 
 function parseCategory(value: unknown): MerchantCatalogueCategorySnapshot {

@@ -17,11 +17,13 @@ const FE_S08_OPERATION_IDS = [
   'resetAdminDeliveryVerification',
   'listAdminMerchants',
   'getAdminMerchantOperations',
+  'approveAdminMerchant',
   'pauseAdminMerchantOrders',
   'suspendAdminMerchant',
   'restoreAdminMerchant',
   'listAdminCaptains',
   'getAdminCaptainOperations',
+  'approveAdminCaptain',
   'suspendAdminCaptain',
   'restoreAdminCaptain',
   'correctAdminCaptainAvailability',
@@ -29,11 +31,7 @@ const FE_S08_OPERATION_IDS = [
   'listAdminAudit',
 ] as const;
 
-const STALE_PLACEHOLDER_OPERATION_IDS = [
-  'assignCaptainToAdminOrder',
-  'approveAdminMerchant',
-  'approveAdminCaptain',
-] as const;
+const STALE_PLACEHOLDER_OPERATION_IDS = ['assignCaptainToAdminOrder'] as const;
 
 describe('Frontend Sprint 8 admin OpenAPI parity', () => {
   it('contracts every observation and recovery operation used by the admin frontend', () => {
@@ -42,7 +40,7 @@ describe('Frontend Sprint 8 admin OpenAPI parity', () => {
     }
   });
 
-  it('does not advertise unsupported order-level assignment or KYC commands', () => {
+  it('does not advertise unsupported order-level assignment commands', () => {
     for (const operationId of STALE_PLACEHOLDER_OPERATION_IDS) {
       expect(OPENAPI).not.toContain(`operationId: ${operationId}`);
     }

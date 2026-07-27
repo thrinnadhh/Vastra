@@ -4,7 +4,18 @@ import { expect, test } from '@playwright/test';
 
 import { FRONTEND_VISUAL_ENTRY_POINTS } from '@vastra/frontend-test-harness';
 
-import { VISUAL_BASELINES } from './visual-baselines';
+import { type SupportedVisualPlatform, VISUAL_BASELINES } from './visual-baselines';
+
+const getExpectedHashes = (): Readonly<Record<string, string>> => {
+  if (process.platform !== 'darwin' && process.platform !== 'linux') {
+    throw new Error(
+      `Visual baselines are not configured for platform "${process.platform}". ` +
+        'Run pnpm --filter @vastra/frontend-test-harness visual:update on that platform.',
+    );
+  }
+
+  return VISUAL_BASELINES.hashesByPlatform[process.platform satisfies SupportedVisualPlatform];
+};
 
 for (const entryPoint of FRONTEND_VISUAL_ENTRY_POINTS) {
   test(`${entryPoint.id} matches the deterministic visual hash`, async ({ page, browserName }) => {
@@ -15,9 +26,15 @@ for (const entryPoint of FRONTEND_VISUAL_ENTRY_POINTS) {
       await document.fonts.ready;
     });
 
+    const dimensions = await page.evaluate(() => ({
+      contentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+    }));
+    expect(dimensions.contentWidth).toBe(dimensions.viewportWidth);
+
     const screenshot = await page.screenshot({ animations: 'disabled', fullPage: true });
     const actualHash = createHash('sha256').update(screenshot).digest('hex');
-    const expectedHash = VISUAL_BASELINES.hashes[entryPoint.id];
+    const expectedHash = getExpectedHashes()[entryPoint.id];
     expect(actualHash).toBe(expectedHash);
   });
 }

@@ -16,6 +16,8 @@ type OrderErrorCode =
   | 'MERCHANT_RESPONSE_EXPIRED'
   | 'MERCHANT_ORDER_ALERT_NOT_FOUND'
   | 'ORDER_ITEM_NOT_VERIFIED'
+  | 'ORDER_ALREADY_CANCELLED'
+  | 'ORDER_CANCELLATION_NOT_ALLOWED'
   | 'INTERNAL_ERROR'
   | 'EXTERNAL_SERVICE_UNAVAILABLE';
 
@@ -154,6 +156,69 @@ export function createCustomerOrderProviderUnavailableException(): HttpException
     HttpStatus.SERVICE_UNAVAILABLE,
     'EXTERNAL_SERVICE_UNAVAILABLE',
     'Order placement is temporarily unavailable.',
+    true,
+  );
+}
+
+export function createInvalidCustomerOrderCancellationException(): HttpException {
+  return createOrderException(
+    HttpStatus.BAD_REQUEST,
+    'VALIDATION_ERROR',
+    'The customer order cancellation request is invalid.',
+    false,
+  );
+}
+
+export function createCustomerOrderCancellationIdempotencyKeyRequiredException(): HttpException {
+  return createOrderException(
+    HttpStatus.BAD_REQUEST,
+    'IDEMPOTENCY_KEY_REQUIRED',
+    'A valid Idempotency-Key header is required to cancel an order.',
+    false,
+  );
+}
+
+export function createCustomerOrderAlreadyCancelledException(): HttpException {
+  return createOrderException(
+    HttpStatus.CONFLICT,
+    'ORDER_ALREADY_CANCELLED',
+    'The order has already been cancelled.',
+    false,
+  );
+}
+
+export function createCustomerOrderCancellationNotAllowedException(): HttpException {
+  return createOrderException(
+    HttpStatus.CONFLICT,
+    'ORDER_CANCELLATION_NOT_ALLOWED',
+    'The customer cancellation window has closed for this order.',
+    false,
+  );
+}
+
+export function createCustomerOrderCancellationIdempotencyConflictException(): HttpException {
+  return createOrderException(
+    HttpStatus.CONFLICT,
+    'IDEMPOTENCY_CONFLICT',
+    'The idempotency key was already used for another cancellation request.',
+    false,
+  );
+}
+
+export function createCustomerOrderCancellationStateInvalidException(): HttpException {
+  return createOrderException(
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    'INTERNAL_ERROR',
+    'The cancelled order response is internally inconsistent.',
+    false,
+  );
+}
+
+export function createCustomerOrderCancellationProviderUnavailableException(): HttpException {
+  return createOrderException(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'EXTERNAL_SERVICE_UNAVAILABLE',
+    'Order cancellation is temporarily unavailable.',
     true,
   );
 }

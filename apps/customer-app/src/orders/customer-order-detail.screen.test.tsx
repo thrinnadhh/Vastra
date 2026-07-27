@@ -194,4 +194,75 @@ describe('CustomerOrderDetailScreen', () => {
     expect(queryByText('Detail Customer')).toBeNull();
     expect(queryByText('Detail Shop')).toBeNull();
   });
+
+  it('confirms and cancels an eligible order, then refreshes its state', async () => {
+    const eligibleOrder: CustomerOrderDetail = {
+      ...ORDER,
+      status: 'WAITING_FOR_MERCHANT',
+      acceptedAt: null,
+      readyAt: null,
+    };
+    const cancelledOrder: CustomerOrderDetail = {
+      ...eligibleOrder,
+      status: 'CANCELLED',
+      cancelledAt: '2026-07-26T10:00:00.000Z',
+    };
+    const getOrder = jest
+      .fn()
+      .mockResolvedValueOnce(eligibleOrder)
+      .mockResolvedValueOnce(cancelledOrder);
+    const cancelOrder = jest.fn().mockResolvedValue({
+      orderId: ORDER.id,
+      orderNumber: ORDER.orderNumber,
+      status: 'CANCELLED',
+      paymentStatus: 'COD_PENDING',
+      refundId: null,
+      refundStatus: null,
+      reservationsReleased: 1,
+      cancelledAt: '2026-07-26T10:00:00.000Z',
+      replayed: false,
+    });
+    const view = render(
+      <CustomerOrderDetailScreen
+        orderClient={{ getOrder, cancelOrder }}
+        orderId={eligibleOrder.id}
+      />,
+    );
+
+    fireEvent.press(await view.findByRole('button', { name: 'Cancel this order' }));
+    fireEvent.press(await view.findByRole('button', { name: 'Confirm order cancellation' }));
+
+    expect(cancelOrder).toHaveBeenCalledWith(eligibleOrder.id, expect.any(String));
+    expect(
+      await view.findByLabelText('Current order status Order cancelled. This order was cancelled.'),
+    ).toBeTruthy();
+    expect(view.queryByRole('button', { name: 'Cancel this order' })).toBeNull();
+  });
+
+  it('shows a recoverable cancellation error without hiding order details', async () => {
+    const eligibleOrder: CustomerOrderDetail = {
+      ...ORDER,
+      status: 'WAITING_FOR_MERCHANT',
+      acceptedAt: null,
+      readyAt: null,
+    };
+    const cancelOrder = jest
+      .fn()
+      .mockRejectedValue(new CustomerOrderError('TRANSPORT', null, true));
+    const view = render(
+      <CustomerOrderDetailScreen
+        orderClient={{ getOrder: () => Promise.resolve(eligibleOrder), cancelOrder }}
+        orderId={eligibleOrder.id}
+      />,
+    );
+
+    fireEvent.press(await view.findByRole('button', { name: 'Cancel this order' }));
+    fireEvent.press(await view.findByRole('button', { name: 'Confirm order cancellation' }));
+
+    expect(
+      await view.findByText('Cancellation could not be completed. Please try again.'),
+    ).toBeTruthy();
+    expect(view.getByText('Detail Shop')).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Retry order cancellation' })).toBeTruthy();
+  });
 });

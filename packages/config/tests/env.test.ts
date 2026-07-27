@@ -25,6 +25,7 @@ function validServerEnvironment() {
     ...commonEnvironment,
     NODE_ENV: 'test',
     PORT: '8080',
+    CORS_ALLOWED_ORIGINS: 'http://localhost:3000',
     DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
     SUPABASE_URL: 'http://127.0.0.1:54321',
     SUPABASE_PUBLISHABLE_KEY: 'local-publishable-placeholder',
@@ -74,6 +75,15 @@ describe('environment validation', () => {
       parseServerEnv({
         ...validServerEnvironment(),
         PAYMENT_PROVIDER: 'razorpay',
+      }),
+    ).toThrow(EnvironmentValidationError);
+  });
+
+  it('rejects unsafe Cashfree request timeouts', () => {
+    expect(() =>
+      parseServerEnv({
+        ...validServerEnvironment(),
+        PAYMENT_REQUEST_TIMEOUT_MS: '0',
       }),
     ).toThrow(EnvironmentValidationError);
   });

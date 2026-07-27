@@ -2,10 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { createAccountBlockedException, createAccountPendingException } from './auth-http-error';
 import type { AuthenticatedRequestContext } from './auth.types';
-import {
-  createAccountTypeForbiddenException,
-  createAuthorizationProviderUnavailableException,
-} from './authorization-http-error';
+import { createAuthorizationProviderUnavailableException } from './authorization-http-error';
 import {
   OperationalReadinessDataInvalidError,
   OperationalReadinessGatewayUnavailableError,
@@ -43,7 +40,10 @@ export class OperationalReadinessService {
         // merchant or captain operational profile to evaluate here.
         return;
       case 'CUSTOMER':
-        throw createAccountTypeForbiddenException();
+        // Customer readiness is established by the authenticated ACTIVE
+        // profile. Required profile fields are completed through /me/profile;
+        // customer operational routes must remain available during onboarding.
+        return;
     }
   }
 

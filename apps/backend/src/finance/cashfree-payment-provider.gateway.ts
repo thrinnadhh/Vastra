@@ -24,12 +24,35 @@ export class PaymentProviderOperationNotImplementedError extends Error {}
 export class PaymentWebhookSignatureInvalidError extends Error {}
 export class PaymentWebhookPayloadInvalidError extends Error {}
 
+const PAYMENT_WEBHOOK_REPLAY_WINDOW_MS = 5 * 60 * 1_000;
+const DEFAULT_PAYMENT_REQUEST_TIMEOUT_MS = 10_000;
+const MINIMUM_PAYMENT_REQUEST_TIMEOUT_MS = 10;
+const MAXIMUM_PAYMENT_REQUEST_TIMEOUT_MS = 60_000;
+
 function requireEnvironment(name: string): string {
   const value = process.env[name];
   if (value === undefined || value.trim().length === 0) {
     throw new PaymentProviderUnavailableError();
   }
   return value.trim();
+}
+
+function paymentRequestTimeoutMs(): number {
+  const rawValue = process.env['PAYMENT_REQUEST_TIMEOUT_MS'];
+  if (rawValue === undefined || rawValue.trim().length === 0) {
+    return DEFAULT_PAYMENT_REQUEST_TIMEOUT_MS;
+  }
+  const normalized = rawValue.trim();
+  if (!/^\d+$/u.test(normalized)) throw new PaymentProviderUnavailableError();
+  const timeout = Number(normalized);
+  if (
+    !Number.isSafeInteger(timeout) ||
+    timeout < MINIMUM_PAYMENT_REQUEST_TIMEOUT_MS ||
+    timeout > MAXIMUM_PAYMENT_REQUEST_TIMEOUT_MS
+  ) {
+    throw new PaymentProviderUnavailableError();
+  }
+  return timeout;
 }
 
 function requireRecord(value: unknown): Record<string, unknown> {
@@ -100,7 +123,14 @@ function cashfreeRoot(): string {
 
 function verifyCashfreeSignature(input: VerifyProviderWebhookInput): void {
   if (input.version !== CASHFREE_API_VERSION) throw new PaymentWebhookPayloadInvalidError();
-  if (!/^\d{10,16}$/u.test(input.timestamp)) throw new PaymentWebhookPayloadInvalidError();
+  if (!/^\d{13}$/u.test(input.timestamp)) throw new PaymentWebhookPayloadInvalidError();
+  const timestamp = Number(input.timestamp);
+  if (
+    !Number.isSafeInteger(timestamp) ||
+    Math.abs(Date.now() - timestamp) > PAYMENT_WEBHOOK_REPLAY_WINDOW_MS
+  ) {
+    throw new PaymentWebhookPayloadInvalidError();
+  }
   if (input.idempotencyKey.length < 16 || input.idempotencyKey.length > 256) {
     throw new PaymentWebhookPayloadInvalidError();
   }
@@ -198,11 +228,26 @@ export class CashfreePaymentProviderGateway implements PaymentProviderGateway {
     };
   }
 
+  protected async request(url: string, init: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      controller.abort();
+    }, paymentRequestTimeoutMs());
+    timer.unref();
+    try {
+      return await fetch(url, { ...init, signal: controller.signal });
+    } catch {
+      throw new PaymentProviderUnavailableError();
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   public async createOrder(input: CreateProviderOrderInput): Promise<ProviderCheckoutSession> {
     const orderMeta: Record<string, string> = {};
     if (input.returnUrl.trim().length > 0) orderMeta['return_url'] = input.returnUrl.trim();
     if (input.notifyUrl.trim().length > 0) orderMeta['notify_url'] = input.notifyUrl.trim();
-    const response = await fetch(`${cashfreeRoot()}/pg/orders`, {
+    const response = await this.request(`${cashfreeRoot()}/pg/orders`, {
       method: 'POST',
       headers: this.headers(input.idempotencyKey),
       body: JSON.stringify({
@@ -246,7 +291,7 @@ export class CashfreePaymentProviderGateway implements PaymentProviderGateway {
   }
 
   public async fetchOrder(providerOrderId: string): Promise<ProviderOrderSnapshot> {
-    const response = await fetch(
+    const response = await this.request(
       `${cashfreeRoot()}/pg/orders/${encodeURIComponent(providerOrderId)}`,
       {
         method: 'GET',

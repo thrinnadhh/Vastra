@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 
 import { CustomerOrderController } from './customer-order.controller';
+import { CustomerOrderCancellationController } from './customer-order-cancellation.controller';
+import { SupabaseCustomerOrderCancellationGateway } from './customer-order-cancellation.gateway';
+import { CustomerOrderCancellationService } from './customer-order-cancellation.service';
+import { CUSTOMER_ORDER_CANCELLATION_GATEWAY } from './customer-order-cancellation.tokens';
 import { SupabaseCustomerOrderGateway } from './customer-order.gateway';
 import { CustomerOrderReadController } from './customer-order-read.controller';
 import { SupabaseCustomerOrderReadGateway } from './customer-order-read.gateway';
@@ -28,28 +32,40 @@ import { MerchantOrderReadyController } from './merchant-order-ready.controller'
 import { SupabaseMerchantOrderReadyGateway } from './merchant-order-ready.gateway';
 import { MerchantOrderReadyService } from './merchant-order-ready.service';
 import { MERCHANT_ORDER_READY_GATEWAY } from './merchant-order-ready.tokens';
+import { MerchantDashboardController } from './merchant-dashboard.controller';
+import { SupabaseMerchantDashboardGateway } from './merchant-dashboard.gateway';
+import { MerchantDashboardService } from './merchant-dashboard.service';
+import { MERCHANT_DASHBOARD_GATEWAY } from './merchant-dashboard.tokens';
 
 @Module({
   controllers: [
     CustomerOrderController,
+    CustomerOrderCancellationController,
     CustomerOrderReadController,
     MerchantOrderAlertController,
     MerchantOrderDecisionController,
     MerchantOrderPackingController,
     MerchantOrderReadyController,
     MerchantOrderReadController,
+    MerchantDashboardController,
   ],
   providers: [
     CustomerOrderService,
+    CustomerOrderCancellationService,
     CustomerOrderReadService,
     MerchantOrderAlertService,
     MerchantOrderReadService,
     MerchantOrderDecisionService,
     MerchantOrderPackingService,
     MerchantOrderReadyService,
+    MerchantDashboardService,
     {
       provide: CUSTOMER_ORDER_GATEWAY,
       useClass: SupabaseCustomerOrderGateway,
+    },
+    {
+      provide: CUSTOMER_ORDER_CANCELLATION_GATEWAY,
+      useClass: SupabaseCustomerOrderCancellationGateway,
     },
     {
       provide: CUSTOMER_ORDER_READ_GATEWAY,
@@ -66,13 +82,19 @@ import { MERCHANT_ORDER_READY_GATEWAY } from './merchant-order-ready.tokens';
       provide: MERCHANT_ORDER_READ_GATEWAY,
       useClass: SupabaseMerchantOrderReadGateway,
     },
+    {
+      provide: MERCHANT_DASHBOARD_GATEWAY,
+      useClass: SupabaseMerchantDashboardGateway,
+    },
   ],
   exports: [
     CUSTOMER_ORDER_GATEWAY,
+    CUSTOMER_ORDER_CANCELLATION_GATEWAY,
     CUSTOMER_ORDER_READ_GATEWAY,
     MERCHANT_ORDER_ALERT_GATEWAY,
     MERCHANT_ORDER_PACKING_GATEWAY,
     MERCHANT_ORDER_READ_GATEWAY,
+    MERCHANT_DASHBOARD_GATEWAY,
   ],
 })
 export class OrdersModule {}

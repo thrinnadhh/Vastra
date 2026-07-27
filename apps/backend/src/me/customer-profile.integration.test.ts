@@ -120,7 +120,7 @@ function requireHttpServer(application: INestApplication): Server {
   return server;
 }
 
-describe('PATCH /me/profile integration', () => {
+describe('PATCH /me integration', () => {
   let app: INestApplication | undefined;
   let httpServer: Server;
 
@@ -151,14 +151,14 @@ describe('PATCH /me/profile integration', () => {
   });
 
   it('requires authentication', async () => {
-    const response = await request(httpServer).patch('/me/profile').send({ fullName: 'Trinadh B' });
+    const response = await request(httpServer).patch('/me').send({ fullName: 'Trinadh B' });
 
     expect(response.status).toBe(401);
   });
 
   it('rejects invalid profile input', async () => {
     const response = await request(httpServer)
-      .patch('/me/profile')
+      .patch('/me')
       .set('Authorization', 'Bearer active-token')
       .send({ fullName: ' ' });
 
@@ -177,7 +177,7 @@ describe('PATCH /me/profile integration', () => {
 
   it('updates required profile data and returns the authoritative account', async () => {
     const response = await request(httpServer)
-      .patch('/me/profile')
+      .patch('/me')
       .set('Authorization', 'Bearer active-token')
       .send({ fullName: '  Trinadh   B ' });
 

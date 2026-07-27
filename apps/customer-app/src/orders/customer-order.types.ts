@@ -177,7 +177,24 @@ export interface CustomerOrderDetailPort {
   getOrder(orderId: string): Promise<CustomerOrderDetail>;
 }
 
-export interface CustomerOrderReadPort extends CustomerOrdersListPort, CustomerOrderDetailPort {}
+export interface CustomerOrderCancellationResult {
+  readonly orderId: string;
+  readonly orderNumber: string;
+  readonly status: 'CANCELLED';
+  readonly paymentStatus: CustomerOrderPaymentStatus;
+  readonly refundId: string | null;
+  readonly refundStatus: 'INITIATED' | null;
+  readonly reservationsReleased: number;
+  readonly cancelledAt: string;
+  readonly replayed: boolean;
+}
+
+export interface CustomerOrderCancellationPort {
+  cancelOrder(orderId: string, idempotencyKey: string): Promise<CustomerOrderCancellationResult>;
+}
+
+export interface CustomerOrderReadPort
+  extends CustomerOrdersListPort, CustomerOrderDetailPort, CustomerOrderCancellationPort {}
 
 export type CustomerOrderFailureKind =
   | 'TRANSPORT'

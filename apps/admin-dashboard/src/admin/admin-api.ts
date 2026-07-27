@@ -232,9 +232,7 @@ export class ApiAdminPort implements AdminPort {
 
   public audit(input: Parameters<AdminPort['audit']>[0] = {}) {
     const query = {
-      ...(input.resourceType === undefined || input.resourceType === ''
-        ? {}
-        : { resourceType: input.resourceType }),
+      ...(input.resourceType === undefined ? {} : { resourceType: input.resourceType }),
       ...(input.resourceId === undefined || input.resourceId === ''
         ? {}
         : { resourceId: input.resourceId }),
@@ -326,6 +324,18 @@ export class ApiAdminPort implements AdminPort {
     return read(operation, parser);
   }
 
+  public approveMerchant(merchantId: string, input: AdminMutationInput) {
+    return this.actorMutation(
+      () =>
+        this.client.request('approveAdminMerchant', {
+          path: { merchantId },
+          headers: { 'Idempotency-Key': input.idempotencyKey },
+          body: mutationBody(input),
+        }),
+      parseMerchantSnapshot,
+    );
+  }
+
   public pauseMerchant(merchantId: string, input: AdminMutationInput) {
     return this.actorMutation(
       () =>
@@ -359,6 +369,18 @@ export class ApiAdminPort implements AdminPort {
           body: mutationBody(input),
         }),
       parseMerchantSnapshot,
+    );
+  }
+
+  public approveCaptain(captainId: string, input: AdminMutationInput) {
+    return this.actorMutation(
+      () =>
+        this.client.request('approveAdminCaptain', {
+          path: { captainId },
+          headers: { 'Idempotency-Key': input.idempotencyKey },
+          body: mutationBody(input),
+        }),
+      parseCaptainSnapshot,
     );
   }
 

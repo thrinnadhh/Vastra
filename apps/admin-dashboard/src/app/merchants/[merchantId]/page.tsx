@@ -27,7 +27,7 @@ import {
   useAdminResource,
 } from '../../../components/admin-ui';
 
-type MerchantAction = 'PAUSE' | 'SUSPEND' | 'RESTORE';
+type MerchantAction = 'APPROVE' | 'PAUSE' | 'SUSPEND' | 'RESTORE';
 
 function wrapSnapshot(
   result: AdminResult<AdminMerchantSnapshot>,
@@ -58,6 +58,8 @@ export default function MerchantDetailPage() {
   if (!runtime.hasPermission('admin.merchants.read'))
     return <AccessDenied permission="admin.merchants.read" />;
   const submit = async (input: AdminMutationInput): Promise<AdminResult<AdminOperationOutcome>> => {
+    if (action === 'APPROVE')
+      return wrapSnapshot(await runtime.port.approveMerchant(merchantId, input));
     if (action === 'PAUSE')
       return wrapSnapshot(await runtime.port.pauseMerchant(merchantId, input));
     if (action === 'SUSPEND')
@@ -69,6 +71,11 @@ export default function MerchantDetailPage() {
       ? null
       : (
           {
+            APPROVE: [
+              'Approve merchant',
+              'Verifies the eligible merchant, single shop, KYC documents and primary bank account before activation.',
+              'Approve merchant',
+            ],
             PAUSE: [
               'Pause merchant online orders',
               'Pauses eligible shop online ordering without deleting catalogue or KYC records.',
@@ -159,6 +166,15 @@ export default function MerchantDetailPage() {
             </div>
             {runtime.hasPermission('admin.merchants.manage') ? (
               <div className="action-grid">
+                {resource.data.merchant.onboardingStatus === 'ACTIVE' ? null : (
+                  <button
+                    className="primary-action"
+                    onClick={() => setAction('APPROVE')}
+                    type="button"
+                  >
+                    Approve merchant
+                  </button>
+                )}
                 <button
                   className="secondary-action"
                   onClick={() => setAction('PAUSE')}

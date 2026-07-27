@@ -39,6 +39,7 @@ export interface AdminMerchantMutationInput {
 export interface AdminMerchantGateway {
   list(query: AdminMerchantListQuery): Promise<AdminMerchantListPage>;
   get(merchantId: string): Promise<AdminMerchantSnapshot | null>;
+  approve(input: AdminMerchantMutationInput): Promise<AdminMerchantSnapshot>;
   setStatus(input: AdminMerchantMutationInput): Promise<AdminMerchantSnapshot>;
 }
 
@@ -132,6 +133,29 @@ export class SupabaseAdminMerchantGateway implements AdminMerchantGateway {
       p_actor_id: input.actorId,
       p_merchant_id: input.merchantId,
       p_target_status: input.targetStatus,
+      p_reason_code: input.reasonCode,
+      p_note: input.note,
+      p_request_id: input.requestId,
+      p_idempotency_key: input.idempotencyKey,
+    });
+    if (error !== null) {
+      if (error.message.includes('ADMIN_IDEMPOTENCY_CONFLICT')) {
+        throw new AdminMerchantIdempotencyConflictError();
+      }
+      if (error.message.includes('ADMIN_MERCHANT_STATE_CONFLICT')) {
+        throw new AdminMerchantStateConflictError();
+      }
+      throw new AdminMerchantGatewayUnavailableError();
+    }
+    const snapshot = parseSnapshot(data);
+    if (snapshot === null) throw new AdminMerchantGatewayUnavailableError();
+    return snapshot;
+  }
+
+  public async approve(input: AdminMerchantMutationInput): Promise<AdminMerchantSnapshot> {
+    const { data, error } = await this.client.rpc('admin_approve_merchant', {
+      p_actor_id: input.actorId,
+      p_merchant_id: input.merchantId,
       p_reason_code: input.reasonCode,
       p_note: input.note,
       p_request_id: input.requestId,

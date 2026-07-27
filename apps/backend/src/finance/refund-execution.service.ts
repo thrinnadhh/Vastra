@@ -21,7 +21,11 @@ import {
   RefundExecutionNotFoundError,
   RefundExecutionStateConflictError,
 } from './refund-execution.gateway';
-import type { RefundExecutionRecord, RefundExecutionResponse } from './refund-execution.types';
+import type {
+  AutomaticRefundProcessingSummary,
+  RefundExecutionRecord,
+  RefundExecutionResponse,
+} from './refund-execution.types';
 import {
   RefundExecutionValidationError,
   parseRefundExecutionCommand,
@@ -79,6 +83,30 @@ export class RefundExecutionService {
     } catch (error: unknown) {
       return this.rethrowMapped(error);
     }
+  }
+
+  public async processAutomatic(limit: number): Promise<AutomaticRefundProcessingSummary> {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+      throw new RefundExecutionValidationError();
+    }
+    const candidates = [
+      ...(await this.gateway.list('INITIATED', limit)),
+      ...(await this.gateway.list('PROCESSING', limit)),
+    ];
+    const unique = [
+      ...new Map(candidates.map((refund) => [refund.refundId, refund] as const)).values(),
+    ].slice(0, limit);
+    let processed = 0;
+    let failed = 0;
+    for (const refund of unique) {
+      try {
+        await this.execute(refund.initiatedBy, refund);
+        processed += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    return { selected: unique.length, processed, failed };
   }
 
   public async create(

@@ -1,4 +1,4 @@
-import type { ApiClientLogEvent, ApiClientLogger, ActorType, ApiErrorKind } from './types.js';
+import type { ApiClientLogEvent, ApiClientLogger, ActorType, ApiErrorKind } from './types';
 
 export type LogContext = Readonly<{
   phase: ApiClientLogEvent['phase'];

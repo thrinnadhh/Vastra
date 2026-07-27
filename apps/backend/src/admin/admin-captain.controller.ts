@@ -56,6 +56,19 @@ export class AdminCaptainController {
     return this.service.get(context, captainId);
   }
 
+  @Post(':captainId/approve')
+  @RequirePermissions('admin.captains.manage')
+  @HttpCode(HttpStatus.OK)
+  public approve(
+    @CurrentAuthContext() context: AuthenticatedRequestContext,
+    @Param('captainId') captainId: unknown,
+    @Headers('idempotency-key') idempotencyKey: unknown,
+    @Headers('x-request-id') requestId: unknown,
+    @Body() body: unknown,
+  ) {
+    return this.service.approve(context, captainId, idempotencyKey, requestId, body);
+  }
+
   @Post(':captainId/suspend')
   @RequirePermissions('admin.captains.manage')
   @HttpCode(HttpStatus.OK)

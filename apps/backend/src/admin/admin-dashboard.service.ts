@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import type { AuthenticatedRequestContext } from '../auth/auth.types';
 import type { AdminDashboardGateway } from './admin-dashboard.gateway';
-import type { AdminDashboardSummary, AdminSearchResult } from './admin-dashboard.types';
+import { type AdminDashboardSummary, type AdminSearchResult } from './admin-dashboard.types';
 import { ADMIN_DASHBOARD_GATEWAY } from './admin.tokens';
 
 export class AdminSearchQueryInvalidError extends Error {}

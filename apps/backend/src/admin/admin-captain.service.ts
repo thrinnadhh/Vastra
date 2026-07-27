@@ -166,6 +166,18 @@ export class AdminCaptainService {
     return this.gateway.setStatus(input);
   }
 
+  public approve(
+    context: AuthenticatedRequestContext,
+    captainId: unknown,
+    idempotencyKey: unknown,
+    requestId: unknown,
+    body: unknown,
+  ): Promise<AdminCaptainSnapshot> {
+    return this.gateway.approve(
+      this.parseMutation(context, captainId, idempotencyKey, requestId, body),
+    );
+  }
+
   public correctAvailability(
     context: AuthenticatedRequestContext,
     captainId: unknown,

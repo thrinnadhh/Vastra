@@ -12,6 +12,7 @@
     }
   },
   "scripts": {
+    "contract:check": "pnpm generate && node scripts/check-controller-parity.mjs",
     "generate": "node scripts/generate-openapi-types.mjs",
     "lint": "pnpm generate && eslint . --max-warnings=0",
     "typecheck": "pnpm generate && tsc --noEmit",

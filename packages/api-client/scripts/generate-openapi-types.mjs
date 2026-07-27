@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import console from 'node:console';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import process from 'node:process';
@@ -9,11 +10,17 @@ const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = resolve(packageRoot, '../..');
 const openApiPath = resolve(repositoryRoot, 'docs/api/openapi.yaml');
 const generatedDirectory = resolve(packageRoot, 'src/generated');
-const bundledPath = resolve(generatedDirectory, '.openapi.bundle.json');
+const generationId = `${String(process.pid)}-${randomUUID()}`;
+const bundledPath = resolve(generatedDirectory, `.openapi.bundle.${generationId}.json`);
 const outputPath = resolve(generatedDirectory, 'openapi.ts');
+const temporaryOutputPath = resolve(generatedDirectory, `.openapi.${generationId}.ts`);
 const pnpmExecutable = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 
 mkdirSync(generatedDirectory, { recursive: true });
+process.once('exit', () => {
+  rmSync(bundledPath, { force: true });
+  rmSync(temporaryOutputPath, { force: true });
+});
 
 const bundleResult = spawnSync(
   pnpmExecutable,
@@ -227,7 +234,7 @@ if (bundleResult.status !== 0) {
 
   for (const [path, rawPathItem] of Object.entries(paths)) {
     const pathItem = resolveReference(rawPathItem);
-    if (!isRecord(pathItem)) {
+    if (!isRecord(pathItem) || pathItem['x-vastra-mvp-excluded'] === true) {
       continue;
     }
     for (const [method, rawOperation] of Object.entries(pathItem)) {
@@ -274,6 +281,22 @@ if (bundleResult.status !== 0) {
 
   const output = `/* eslint-disable */\n/**\n * Generated from docs/api/openapi.yaml by scripts/generate-openapi-types.mjs.\n * Do not edit manually.\n */\nexport const OPENAPI_SOURCE = 'docs/api/openapi.yaml' as const;\n\nexport const OPENAPI_SCHEMAS = ${JSON.stringify(schemas, null, 2)} as const;\n\nexport const OPENAPI_OPERATIONS = ${JSON.stringify(runtimeOperations, null, 2)} as const;\n\nexport interface components {\n  schemas: {\n    ${schemaMembers.join('\n    ')}\n  };\n}\n\nexport interface operations {\n  ${operationTypes.join('\n  ')}\n}\n\nexport type OperationId = keyof operations;\nexport type OperationRequest<Id extends OperationId> = operations[Id]['request'];\nexport type OperationResponse<Id extends OperationId> = operations[Id]['response'];\nexport type OperationErrorResponse<Id extends OperationId> = operations[Id]['error'];\n`;
 
-  writeFileSync(outputPath, output, 'utf8');
-  console.log(`Generated ${operationEntries.length} OpenAPI operations at ${outputPath}`);
+  writeFileSync(temporaryOutputPath, output, 'utf8');
+  const formatResult = spawnSync(
+    pnpmExecutable,
+    ['exec', 'prettier', '--write', '--log-level', 'silent', temporaryOutputPath],
+    { cwd: repositoryRoot, encoding: 'utf8' },
+  );
+  if (formatResult.status !== 0) {
+    if (formatResult.stdout.length > 0) {
+      console.error(formatResult.stdout);
+    }
+    if (formatResult.stderr.length > 0) {
+      console.error(formatResult.stderr);
+    }
+    process.exitCode = formatResult.status ?? 1;
+  } else {
+    renameSync(temporaryOutputPath, outputPath);
+    console.log(`Generated ${operationEntries.length} OpenAPI operations at ${outputPath}`);
+  }
 }

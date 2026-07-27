@@ -2109,6 +2109,51 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['string', 'null'], format: uuid}
+    CustomerOrderCancellation:
+      type: object
+      additionalProperties: false
+      required:
+      - orderId
+      - orderNumber
+      - status
+      - paymentStatus
+      - refundId
+      - refundStatus
+      - reservationsReleased
+      - cancelledAt
+      - replayed
+      properties:
+        orderId: {type: string, format: uuid}
+        orderNumber: {type: string, minLength: 1}
+        status: {type: string, const: CANCELLED}
+        paymentStatus:
+          type: string
+          enum: [PENDING, AUTHORIZED, CAPTURED, FAILED, PARTIALLY_REFUNDED, REFUNDED, COD_PENDING, COD_COLLECTED]
+        refundId: {type: ['string', 'null'], format: uuid}
+        refundStatus:
+          type: ['string', 'null']
+          enum: [INITIATED, null]
+        reservationsReleased: {type: integer, minimum: 0}
+        cancelledAt: {type: string, format: date-time}
+        replayed: {type: boolean}
+    CancelCustomerOrderResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          additionalProperties: false
+          required: [cancellation]
+          properties:
+            cancellation: {$ref: '#/components/schemas/CustomerOrderCancellation'}
+        meta:
+          type: object
+          additionalProperties: false
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     InventoryAdjustmentRequest:
       type: object
       additionalProperties: false
@@ -2894,6 +2939,217 @@ components:
       properties:
         collectedAmountPaise: {type: integer, minimum: 0}
         reason: {type: string, minLength: 10, maxLength: 500}
+    AdminMutationReasonCode:
+      type: string
+      enum: [CUSTOMER_REQUEST, MERCHANT_REQUEST, CAPTAIN_REQUEST, DELIVERY_FAILURE, PAYMENT_RISK, FRAUD_RISK, POLICY_VIOLATION, SAFETY_INCIDENT, OPERATIONAL_RECOVERY, DATA_CORRECTION, OTHER]
+    AdminDashboardSummary:
+      type: object
+      additionalProperties: false
+      required: [openOrders, interventionOrders, searchingDeliveries, activeDeliveries, openCases, suspendedMerchants, suspendedCaptains, generatedAt]
+      properties:
+        openOrders: {type: integer, minimum: 0}
+        interventionOrders: {type: integer, minimum: 0}
+        searchingDeliveries: {type: integer, minimum: 0}
+        activeDeliveries: {type: integer, minimum: 0}
+        openCases: {type: integer, minimum: 0}
+        suspendedMerchants: {type: integer, minimum: 0}
+        suspendedCaptains: {type: integer, minimum: 0}
+        generatedAt: {type: string, format: date-time}
+    AdminAccountApprovalRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode]
+      properties:
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminMerchantOperationsSnapshot:
+      type: object
+      additionalProperties: false
+      required: [merchant, shops, metrics]
+      properties:
+        merchant:
+          type: object
+          additionalProperties: false
+          required: [id, fullName, phoneNumber, profileStatus, legalName, onboardingStatus, kycStatus, approvedAt, approvedBy, updatedAt]
+          properties:
+            id: {type: string, format: uuid}
+            fullName: {type: ['string', 'null']}
+            phoneNumber: {type: ['string', 'null']}
+            profileStatus: {type: string}
+            legalName: {type: string}
+            onboardingStatus: {type: string}
+            kycStatus: {type: string}
+            approvedAt: {type: ['string', 'null'], format: date-time}
+            approvedBy: {type: ['string', 'null'], format: uuid}
+            updatedAt: {type: string, format: date-time}
+        shops:
+          type: array
+          maxItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, shopCode, name, verificationStatus, operationalStatus, acceptsOnlineOrders, updatedAt]
+            properties:
+              id: {type: string, format: uuid}
+              shopCode: {type: string}
+              name: {type: string}
+              verificationStatus: {type: string}
+              operationalStatus: {type: string}
+              acceptsOnlineOrders: {type: boolean}
+              updatedAt: {type: string, format: date-time}
+        metrics:
+          type: object
+          additionalProperties: false
+          required: [openOrders, cancelledOrders30d, problemOrders30d]
+          properties:
+            openOrders: {type: integer, minimum: 0}
+            cancelledOrders30d: {type: integer, minimum: 0}
+            problemOrders30d: {type: integer, minimum: 0}
+    AdminCaptainOperationsSnapshot:
+      type: object
+      required: [captain, activeDelivery, location, metrics]
+      properties:
+        captain:
+          type: object
+          required: [id, captainCode, fullName, phoneNumber, profileStatus, kycStatus, availabilityStatus, vehicleType, vehicleNumber, ratingAverage, ratingCount, completedDeliveries, cashBalancePaise, approvedAt, updatedAt]
+          properties:
+            id: {type: string, format: uuid}
+            captainCode: {type: string}
+            fullName: {type: ['string', 'null']}
+            phoneNumber: {type: ['string', 'null']}
+            profileStatus: {type: string}
+            kycStatus: {type: string}
+            availabilityStatus: {type: string}
+            vehicleType: {type: ['string', 'null']}
+            vehicleNumber: {type: ['string', 'null']}
+            ratingAverage: {type: ['number', 'null']}
+            ratingCount: {type: integer, minimum: 0}
+            completedDeliveries: {type: integer, minimum: 0}
+            cashBalancePaise: {type: integer, minimum: 0}
+            approvedAt: {type: ['string', 'null'], format: date-time}
+            updatedAt: {type: string, format: date-time}
+        activeDelivery:
+          type: ['object', 'null']
+          additionalProperties: true
+        location:
+          type: ['object', 'null']
+          additionalProperties: true
+        metrics:
+          type: object
+          required: [problemDeliveries30d, pendingEarningsPaise]
+          properties:
+            problemDeliveries30d: {type: integer, minimum: 0}
+            pendingEarningsPaise: {type: integer, minimum: 0}
+    AdminOperationalOrder:
+      type: object
+      additionalProperties: false
+      required: [id, orderNumber, status, paymentStatus, fulfilmentType, totalPaise, itemCount, customer, shop, deliveryTaskId, deliveryStatus, interventionReason, estimatedDeliveryAt, placedAt, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        orderNumber: {type: string}
+        status:
+          type: string
+          enum: [PAYMENT_PENDING, WAITING_FOR_MERCHANT, MERCHANT_ACCEPTED, PACKING, READY_FOR_PICKUP, CAPTAIN_SEARCHING, CAPTAIN_ASSIGNED, CAPTAIN_AT_STORE, PICKED_UP, OUT_FOR_DELIVERY, CAPTAIN_AT_CUSTOMER, DELIVERED, COMPLETED, PROBLEM_REPORTED, CANCELLED]
+        paymentStatus: {type: string}
+        fulfilmentType: {type: string}
+        totalPaise: {type: integer, minimum: 0}
+        itemCount: {type: integer, minimum: 0}
+        customer:
+          type: object
+          additionalProperties: false
+          required: [id, name, phoneNumber]
+          properties:
+            id: {type: string, format: uuid}
+            name: {type: ['string', 'null']}
+            phoneNumber: {type: ['string', 'null']}
+        shop:
+          type: object
+          additionalProperties: false
+          required: [id, name, merchantId]
+          properties:
+            id: {type: string, format: uuid}
+            name: {type: string}
+            merchantId: {type: string, format: uuid}
+        deliveryTaskId: {type: ['string', 'null'], format: uuid}
+        deliveryStatus: {type: ['string', 'null']}
+        interventionReason:
+          type: ['string', 'null']
+          enum: [DELAYED, UNASSIGNED, MERCHANT_TIMEOUT, CAPTAIN_ISSUE, PAYMENT_ISSUE, null]
+        estimatedDeliveryAt: {type: ['string', 'null'], format: date-time}
+        placedAt: {type: ['string', 'null'], format: date-time}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    AdminOrderListResponse:
+      type: object
+      additionalProperties: false
+      required: [orders, nextCursor]
+      properties:
+        orders:
+          type: array
+          items: {$ref: '#/components/schemas/AdminOperationalOrder'}
+        nextCursor: {type: ['string', 'null']}
+    MerchantDashboard:
+      type: object
+      additionalProperties: false
+      required: [shop, orders, alerts, inventory, sales, generatedAt]
+      properties:
+        shop:
+          type: object
+          additionalProperties: false
+          required: [id, name, operationalStatus, acceptsOnlineOrders]
+          properties:
+            id: {type: string, format: uuid}
+            name: {type: string}
+            operationalStatus: {type: string}
+            acceptsOnlineOrders: {type: boolean}
+        orders:
+          type: object
+          additionalProperties: false
+          required: [waitingForMerchant, packing, readyForPickup, activeDelivery, problemReported]
+          properties:
+            waitingForMerchant: {type: integer, minimum: 0}
+            packing: {type: integer, minimum: 0}
+            readyForPickup: {type: integer, minimum: 0}
+            activeDelivery: {type: integer, minimum: 0}
+            problemReported: {type: integer, minimum: 0}
+        alerts:
+          type: object
+          additionalProperties: false
+          required: [unacknowledged]
+          properties:
+            unacknowledged: {type: integer, minimum: 0}
+        inventory:
+          type: object
+          additionalProperties: false
+          required: [lowStockVariants]
+          properties:
+            lowStockVariants: {type: integer, minimum: 0}
+        sales:
+          type: object
+          additionalProperties: false
+          required: [completedToday, grossTodayPaise]
+          properties:
+            completedToday: {type: integer, minimum: 0}
+            grossTodayPaise: {type: integer, minimum: 0}
+        generatedAt: {type: string, format: date-time}
+    MerchantDashboardResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          additionalProperties: false
+          required: [dashboard]
+          properties:
+            dashboard: {$ref: '#/components/schemas/MerchantDashboard'}
+        meta:
+          type: object
+          additionalProperties: false
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
     DeliveryAddressSnapshot:
       type: object
       additionalProperties: false
@@ -3389,10 +3645,523 @@ components:
           required: [requestId]
           properties:
             requestId: {type: ['null']}
+    FlexibleRecord:
+      type: object
+      additionalProperties: true
+    FlexibleRecordResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data: {$ref: '#/components/schemas/FlexibleRecord'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    FlexibleRecordListResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/FlexibleRecord'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    PlaceCustomerOnlineOrderRequest:
+      type: object
+      additionalProperties: false
+      required: [cartId, quoteId, addressId]
+      properties:
+        cartId: {type: string, format: uuid}
+        quoteId: {type: string, format: uuid}
+        addressId: {type: string, format: uuid}
+        customerNote: {type: ['string', 'null'], maxLength: 500}
+    CustomerPaymentCheckout:
+      type: object
+      additionalProperties: false
+      required: [orderId, orderNumber, paymentId, provider, providerOrderId, providerReferenceId, paymentSessionId, amountPaise, currency, paymentStatus, expiresAt, replayed]
+      properties:
+        orderId: {type: string, format: uuid}
+        orderNumber: {type: string}
+        paymentId: {type: string, format: uuid}
+        provider: {type: string, const: cashfree}
+        providerOrderId: {type: string}
+        providerReferenceId: {type: string}
+        paymentSessionId: {type: string}
+        amountPaise: {type: integer, minimum: 0}
+        currency: {type: string, const: INR}
+        paymentStatus: {type: string, const: PENDING}
+        expiresAt: {type: ['string', 'null'], format: date-time}
+        replayed: {type: boolean}
+    CustomerPaymentCheckoutResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data: {$ref: '#/components/schemas/CustomerPaymentCheckout'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    CustomerReturnReasonCode:
+      type: string
+      enum: [WRONG_SIZE, WRONG_COLOUR, WRONG_PRODUCT, DAMAGED, QUALITY, DIFFERENT_FROM_IMAGE, MISSING_ITEM, CHANGED_MIND, OTHER]
+    CustomerReturnEligibilityItem:
+      type: object
+      additionalProperties: false
+      required: [orderItemId, productName, sku, colourName, sizeLabel, purchasedQuantity, requestedQuantity, remainingQuantity, maximumRefundPaise]
+      properties:
+        orderItemId: {type: string, format: uuid}
+        productName: {type: string}
+        sku: {type: string}
+        colourName: {type: ['string', 'null']}
+        sizeLabel: {type: ['string', 'null']}
+        purchasedQuantity: {type: integer, minimum: 1}
+        requestedQuantity: {type: integer, minimum: 0}
+        remainingQuantity: {type: integer, minimum: 0}
+        maximumRefundPaise: {type: integer, minimum: 0}
+    CustomerReturnEligibility:
+      type: object
+      additionalProperties: false
+      required: [orderId, orderNumber, deliveredAt, returnDeadline, eligible, reason, items]
+      properties:
+        orderId: {type: string, format: uuid}
+        orderNumber: {type: string}
+        deliveredAt: {type: ['string', 'null'], format: date-time}
+        returnDeadline: {type: ['string', 'null'], format: date-time}
+        eligible: {type: boolean}
+        reason:
+          type: ['string', 'null']
+          enum: [ORDER_NOT_DELIVERED, RETURN_WINDOW_CLOSED, NO_REMAINING_QUANTITY, null]
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CustomerReturnEligibilityItem'}
+    CustomerReturnItem:
+      type: object
+      required: [returnItemId, orderItemId, quantity, reasonCode, requestedRefundPaise, inspectionStatus, merchantDecision]
+      properties:
+        returnItemId: {type: string, format: uuid}
+        orderItemId: {type: string, format: uuid}
+        quantity: {type: integer, minimum: 1}
+        reasonCode: {$ref: '#/components/schemas/CustomerReturnReasonCode'}
+        requestedRefundPaise: {type: integer, minimum: 0}
+        inspectionStatus: {type: string}
+        merchantDecision: {type: ['string', 'null']}
+        merchantNote: {type: ['string', 'null']}
+        adminApprovedQuantity: {type: ['integer', 'null'], minimum: 0}
+        adminApprovedRefundPaise: {type: ['integer', 'null'], minimum: 0}
+        adminReasonCode: {type: ['string', 'null']}
+    ReturnStatusHistoryEntry:
+      type: object
+      required: [previousStatus, newStatus, changedBy, reasonCode, note, createdAt]
+      properties:
+        previousStatus: {type: ['string', 'null']}
+        newStatus: {type: string}
+        changedBy: {type: ['string', 'null'], format: uuid}
+        reasonCode: {type: ['string', 'null']}
+        note: {type: ['string', 'null']}
+        createdAt: {type: string, format: date-time}
+    ReturnDetail:
+      type: object
+      required: [returnId, returnNumber, orderId, shopId, reasonCode, customerNote, status, refundMethod, requestedAt, approvedAt, completedAt, items, replayed]
+      properties:
+        returnId: {type: string, format: uuid}
+        returnNumber: {type: string}
+        orderId: {type: string, format: uuid}
+        customerId: {type: string, format: uuid}
+        shopId: {type: string, format: uuid}
+        reasonCode: {$ref: '#/components/schemas/CustomerReturnReasonCode'}
+        customerNote: {type: ['string', 'null']}
+        status: {type: string}
+        refundMethod: {type: string}
+        requestedAt: {type: string, format: date-time}
+        approvedAt: {type: ['string', 'null'], format: date-time}
+        completedAt: {type: ['string', 'null'], format: date-time}
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CustomerReturnItem'}
+        decisions:
+          type: array
+          items: {$ref: '#/components/schemas/FlexibleRecord'}
+        history:
+          type: array
+          items: {$ref: '#/components/schemas/ReturnStatusHistoryEntry'}
+        replayed: {type: boolean}
+    CustomerReturnResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data: {$ref: '#/components/schemas/ReturnDetail'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    CustomerReturnEligibilityResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data: {$ref: '#/components/schemas/CustomerReturnEligibility'}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId: {type: ['string', 'null'], format: uuid}
+    CreateCustomerReturnRequest:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 25
+          items:
+            type: object
+            additionalProperties: false
+            required: [orderItemId, quantity, reasonCode]
+            properties:
+              orderItemId: {type: string, format: uuid}
+              quantity: {type: integer, minimum: 1}
+              reasonCode: {$ref: '#/components/schemas/CustomerReturnReasonCode'}
+        customerNote: {type: ['string', 'null'], maxLength: 1000}
+    ReturnEvidenceUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [evidenceType, mimeType, sizeBytes]
+      properties:
+        evidenceType: {type: string, enum: [CUSTOMER_PHOTO, VIDEO, DOCUMENT]}
+        mimeType: {type: string, enum: [image/jpeg, image/png, image/webp, video/mp4, application/pdf]}
+        sizeBytes: {type: integer, minimum: 1, maximum: 15728640}
+    ReturnEvidenceUploadAuthorization:
+      type: object
+      required: [intentId, returnId, objectKey, evidenceType, mimeType, sizeBytes, expiresAt, signedUploadUrl]
+      properties:
+        intentId: {type: string, format: uuid}
+        returnId: {type: string, format: uuid}
+        objectKey: {type: string}
+        evidenceType: {type: string, enum: [CUSTOMER_PHOTO, VIDEO, DOCUMENT]}
+        mimeType: {type: string, enum: [image/jpeg, image/png, image/webp, video/mp4, application/pdf]}
+        sizeBytes: {type: integer, minimum: 1, maximum: 15728640}
+        expiresAt: {type: string, format: date-time}
+        signedUploadUrl: {type: string, format: uri}
+    FinalizeReturnEvidenceRequest:
+      type: object
+      additionalProperties: false
+      required: [objectKey]
+      properties:
+        objectKey: {type: string, minLength: 20, maxLength: 500}
+        description: {type: ['string', 'null'], maxLength: 1000}
+    ReturnEvidenceRecord:
+      type: object
+      required: [evidenceId, returnId, evidenceType, objectKey, mimeType, sizeBytes, description, createdAt]
+      properties:
+        evidenceId: {type: string, format: uuid}
+        returnId: {type: string, format: uuid}
+        evidenceType: {type: string, enum: [CUSTOMER_PHOTO, VIDEO, DOCUMENT]}
+        objectKey: {type: string}
+        mimeType: {type: string}
+        sizeBytes: {type: integer, minimum: 1}
+        description: {type: ['string', 'null']}
+        createdAt: {type: string, format: date-time}
+    ReturnEvidenceReadAuthorization:
+      type: object
+      required: [evidenceId, objectKey, signedReadUrl, expiresInSeconds]
+      properties:
+        evidenceId: {type: string, format: uuid}
+        objectKey: {type: string}
+        signedReadUrl: {type: string, format: uri}
+        expiresInSeconds: {type: integer, minimum: 1}
+    ReturnEvidenceUploadResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data: {$ref: '#/components/schemas/ReturnEvidenceUploadAuthorization'}
+        meta: {type: object, required: [requestId], properties: {requestId: {type: ['null']}}}
+    ReturnEvidenceRecordResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data: {$ref: '#/components/schemas/ReturnEvidenceRecord'}
+        meta: {type: object, required: [requestId], properties: {requestId: {type: ['null']}}}
+    ReturnEvidenceReadResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data: {$ref: '#/components/schemas/ReturnEvidenceReadAuthorization'}
+        meta: {type: object, required: [requestId], properties: {requestId: {type: ['null']}}}
+    MerchantReturnCommandRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        note: {type: ['string', 'null'], maxLength: 1000}
+    MerchantReturnInspectionRequest:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required: [returnItemId, inspectionStatus, merchantDecision]
+            properties:
+              returnItemId: {type: string, format: uuid}
+              inspectionStatus: {type: string, enum: [SELLABLE, DAMAGED, USED, WRONG_ITEM, DISPUTED]}
+              merchantDecision: {type: string, enum: [ACCEPTED, DISPUTED, PARTIAL]}
+              note: {type: ['string', 'null'], maxLength: 1000}
+              evidenceObjectKey: {type: ['string', 'null'], maxLength: 500}
+    AdminReturnDecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [decision, reasonCode]
+      properties:
+        decision: {type: string, enum: [APPROVE, REJECT, VERIFY]}
+        reasonCode: {type: string, pattern: '^[A-Z][A-Z0-9_]{1,63}$'}
+        note: {type: ['string', 'null'], maxLength: 1000}
+        items:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required: [returnItemId, approvedQuantity]
+            properties:
+              returnItemId: {type: string, format: uuid}
+              approvedQuantity: {type: integer, minimum: 0}
+              reasonCode: {type: ['string', 'null']}
+    RefundExecutionCommandRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode]
+      properties:
+        reasonCode: {type: string, pattern: '^[A-Z][A-Z0-9_]{1,63}$'}
+        note: {type: ['string', 'null'], maxLength: 1000}
+    RefundExecutionRecord:
+      type: object
+      additionalProperties: false
+      required: [refundId, refundNumber, returnId, initiatedBy, orderId, paymentId, providerOrderId, providerPaymentId, providerRefundId, amountPaise, idempotencyKey, status, failureMessage, initiatedAt, completedAt, replayed]
+      properties:
+        refundId: {type: string, format: uuid}
+        refundNumber: {type: string}
+        returnId: {type: ['string', 'null'], format: uuid}
+        initiatedBy: {type: string, format: uuid}
+        orderId: {type: string, format: uuid}
+        paymentId: {type: string, format: uuid}
+        providerOrderId: {type: string}
+        providerPaymentId: {type: string}
+        providerRefundId: {type: ['string', 'null']}
+        amountPaise: {type: integer, minimum: 0}
+        idempotencyKey: {type: string, format: uuid}
+        status: {type: string, enum: [PENDING, APPROVAL_REQUIRED, INITIATED, PROCESSING, COMPLETED, FAILED, CANCELLED]}
+        failureMessage: {type: ['string', 'null']}
+        initiatedAt: {type: ['string', 'null'], format: date-time}
+        completedAt: {type: ['string', 'null'], format: date-time}
+        replayed: {type: boolean}
+    RefundExecutionResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data: {$ref: '#/components/schemas/RefundExecutionRecord'}
+        meta: {type: object, required: [requestId], properties: {requestId: {type: ['null']}}}
+    RefundExecutionListResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data: {type: array, items: {$ref: '#/components/schemas/RefundExecutionRecord'}}
+        meta: {type: object, required: [requestId], properties: {requestId: {type: ['null']}}}
+    AdminMutationRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode]
+      properties:
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminCaptainAvailabilityRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode, targetAvailability]
+      properties:
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+        targetAvailability: {type: string, enum: [OFFLINE, AVAILABLE, ON_BREAK]}
+    AdminResetVerificationRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode, verificationKind]
+      properties:
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+        verificationKind: {type: string, enum: [PICKUP_CODE, DELIVERY_OTP]}
+    AdminCreateCaseRequest:
+      type: object
+      additionalProperties: false
+      required: [category, priority, subject, description, reasonCode]
+      properties:
+        category: {type: string, enum: [ORDER_ISSUE, DELIVERY_INCIDENT, MERCHANT_CONDUCT, CAPTAIN_CONDUCT, SAFETY, FRAUD, OTHER]}
+        priority: {type: string, enum: [LOW, MEDIUM, HIGH, URGENT]}
+        subject: {type: string, minLength: 1, maxLength: 200}
+        description: {type: string, minLength: 1, maxLength: 4000}
+        orderId: {type: ['string', 'null'], format: uuid}
+        shopId: {type: ['string', 'null'], format: uuid}
+        deliveryTaskId: {type: ['string', 'null'], format: uuid}
+        returnRequestId: {type: ['string', 'null'], format: uuid}
+        merchantId: {type: ['string', 'null'], format: uuid}
+        captainId: {type: ['string', 'null'], format: uuid}
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+    AdminAssignCaseRequest:
+      type: object
+      additionalProperties: false
+      required: [assignedTo, reasonCode]
+      properties:
+        assignedTo: {type: string, format: uuid}
+        assignedTeam: {type: ['string', 'null'], minLength: 1, maxLength: 120}
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminCaseNoteRequest:
+      type: object
+      additionalProperties: false
+      required: [message, reasonCode]
+      properties:
+        message: {type: string, minLength: 1, maxLength: 4000}
+        attachmentObjectKey: {type: ['string', 'null'], minLength: 1, maxLength: 500}
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminResolveCaseRequest:
+      type: object
+      additionalProperties: false
+      required: [resolutionCode, resolutionNote, reasonCode]
+      properties:
+        resolutionCode: {type: string, minLength: 1, maxLength: 120}
+        resolutionNote: {type: string, minLength: 1, maxLength: 2000}
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminConfigurationUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [value, reasonCode]
+      properties:
+        value: {}
+        scopeType: {type: string, enum: [GLOBAL, CITY, SHOP], default: GLOBAL}
+        scopeId: {type: ['string', 'null'], minLength: 1, maxLength: 120}
+        expectedVersion: {type: ['integer', 'null'], minimum: 1}
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    ReconcileCodCollectionRequest:
+      type: object
+      additionalProperties: false
+      required: [depositedAmountPaise, reasonCode]
+      properties:
+        depositedAmountPaise: {type: integer, minimum: 1}
+        reasonCode: {type: string, const: COD_RECONCILIATION}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    CreateCaptainPayoutRequest:
+      type: object
+      additionalProperties: false
+      required: [captainId, periodStart, periodEnd, reasonCode]
+      properties:
+        captainId: {type: string, format: uuid}
+        periodStart: {type: string, format: date}
+        periodEnd: {type: string, format: date}
+        reasonCode: {type: string, const: PAYOUT_CYCLE}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    CreateMerchantSettlementRequest:
+      type: object
+      additionalProperties: false
+      required: [shopId, periodStart, periodEnd, reasonCode]
+      properties:
+        shopId: {type: string, format: uuid}
+        periodStart: {type: string, format: date}
+        periodEnd: {type: string, format: date}
+        reasonCode: {type: string, minLength: 2, maxLength: 120}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    PaymentEventRetryRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    PaymentWebhookReceiptResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: {type: boolean, const: true}
+        data:
+          type: object
+          additionalProperties: false
+          required: [eventId, providerEventId, paymentId, processingStatus, replayed]
+          properties:
+            eventId: {type: string, format: uuid}
+            providerEventId: {type: string}
+            paymentId: {type: ['string', 'null'], format: uuid}
+            processingStatus: {type: string, const: RECEIVED}
+            replayed: {type: boolean}
+        meta: {type: object, required: [requestId], properties: {requestId: {type: ['null']}}}
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [service, status, scope]
+      properties:
+        service: {type: string, const: vastra-backend}
+        status: {type: string, const: ready}
+        scope: {type: string, const: infrastructure}
+    HealthReadinessResponse:
+      type: object
+      additionalProperties: false
+      required: [service, status, scope]
+      properties:
+        service: {type: string, const: vastra-backend}
+        status: {type: string, enum: [ready, unavailable]}
+        scope: {type: string, const: dependencies}
 security:
 - bearerAuth: []
 
 paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Read the backend process health marker
+      tags: [Common]
+      security: []
+      responses:
+        '200':
+          description: Process is accepting requests
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HealthResponse'}
+  /health/ready:
+    get:
+      operationId: getHealthReadiness
+      summary: Check database dependency readiness
+      tags: [Common]
+      security: []
+      responses:
+        '200':
+          description: Required dependencies are available
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HealthReadinessResponse'}
+        '503':
+          description: A required dependency is unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HealthReadinessResponse'}
   /me:
     get:
       operationId: getCurrentAccount
@@ -4276,30 +5045,38 @@ paths:
               schema: {$ref: '#/components/schemas/ApiError'}
   /customer/orders/{orderId}/cancel:
     post:
-      summary: Cancel eligible order
-      tags:
-      - Customer
+      operationId: cancelCustomerOrder
+      summary: Cancel an eligible customer order
+      description: Idempotently cancels a customer-owned order before merchant acceptance, releases every active order reservation, stops merchant alerting, and initiates a refund when payment was captured.
+      tags: [Customer]
+      security: [{bearerAuth: []}]
       parameters:
       - name: orderId
         in: path
         required: true
-        schema:
-          type: string
-          format: uuid
+        schema: {type: string, format: uuid}
       - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Order cancelled or an identical cancellation safely replayed
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/CancelCustomerOrderResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500':
+          description: Cancellation response or order state is internally inconsistent
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
+        '503':
+          description: Cancellation storage or refund preparation is temporarily unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiError'}
   /customer/wardrobe/upload-intents:
     post:
       operationId: createWardrobeUploadIntent
@@ -4606,6 +5383,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
   /customer/group-style/rooms:
+    x-vastra-mvp-excluded: true
     get:
       operationId: listGroupStyleRooms
       summary: List rooms owned by or joined by the authenticated customer
@@ -4650,6 +5428,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '409': {$ref: '#/components/responses/Conflict'}
   /customer/group-style/memberships:
+    x-vastra-mvp-excluded: true
     post:
       operationId: joinGroupStyleRoom
       summary: Join an open room using an invite token or join code
@@ -4674,6 +5453,7 @@ paths:
         '409': {$ref: '#/components/responses/Conflict'}
         '410': {$ref: '#/components/responses/Gone'}
   /customer/group-style/rooms/{roomId}:
+    x-vastra-mvp-excluded: true
     get:
       operationId: getGroupStyleRoom
       summary: Get room activity with refreshed product price and availability
@@ -4695,6 +5475,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
   /customer/group-style/rooms/{roomId}/closure:
+    x-vastra-mvp-excluded: true
     post:
       operationId: closeGroupStyleRoom
       summary: Close an owned room and make it read-only
@@ -4723,6 +5504,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
   /customer/group-style/rooms/{roomId}/invites:
+    x-vastra-mvp-excluded: true
     post:
       operationId: createGroupStyleInvite
       summary: Create an expiring room invite link or join code
@@ -4751,6 +5533,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
   /customer/group-style/rooms/{roomId}/members/{customerId}:
+    x-vastra-mvp-excluded: true
     delete:
       operationId: removeGroupStyleMember
       summary: Remove a participant from an owned room
@@ -4778,6 +5561,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
   /customer/group-style/rooms/{roomId}/shares:
+    x-vastra-mvp-excluded: true
     post:
       operationId: createGroupStyleShare
       summary: Share a Vastra product or owned saved look with a room
@@ -4806,6 +5590,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
   /customer/group-style/rooms/{roomId}/shares/{shareId}/vote:
+    x-vastra-mvp-excluded: true
     put:
       operationId: setGroupStyleVote
       summary: Create or replace the participant's single effective vote
@@ -4837,6 +5622,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
   /customer/group-style/rooms/{roomId}/shares/{shareId}/comments:
+    x-vastra-mvp-excluded: true
     post:
       operationId: createGroupStyleComment
       summary: Add a durable comment to a shared item
@@ -4869,6 +5655,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
   /customer/group-style/rooms/{roomId}/shares/{shareId}/cart-items:
+    x-vastra-mvp-excluded: true
     post:
       operationId: addGroupStyleProductToCart
       summary: Add an available shared product to the participant's individual cart
@@ -4901,6 +5688,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
   /customer/group-style/rooms/{roomId}/shortlist/{shareId}:
+    x-vastra-mvp-excluded: true
     put:
       operationId: addGroupStyleShortlistItem
       summary: Add a shared item to the room shortlist
@@ -4952,6 +5740,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
   /customer/group-style/rooms/{roomId}/reports:
+    x-vastra-mvp-excluded: true
     post:
       operationId: createGroupStyleAbuseReport
       summary: Privately report room content or activity for abuse review
@@ -5779,22 +6568,20 @@ paths:
               schema: {$ref: '#/components/schemas/ApiError'}
   /merchant/dashboard:
     get:
+      operationId: getMerchantDashboard
       summary: Get merchant dashboard
-      tags:
-      - Merchant
+      description: Returns the authenticated merchant's one-shop operational snapshot, live work queues, low-stock count, and UTC-day sales totals.
+      tags: [Merchant]
+      security: [{bearerAuth: []}]
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Merchant operational dashboard
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/MerchantDashboardResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /merchant/orders:
     get:
       operationId: listMerchantOrders
@@ -6786,117 +7573,291 @@ paths:
   /admin/capabilities:
     get:
       operationId: getAdminCapabilities
-      summary: Read the current admin permissions and MFA assurance
+      summary: Read the current administrator permissions and MFA assurance level
       tags: [Admin]
       security: [{bearerAuth: []}]
       responses:
         '200': {description: Admin capabilities, content: {application/json: {schema: {type: object}}}}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/dashboard:
     get:
       operationId: getAdminOperationsDashboard
-      summary: Get the live COD operations dashboard
+      summary: Get admin dashboard
+      description: Return the current operational workload and intervention counters.
       tags: [Admin]
       security: [{bearerAuth: []}]
       responses:
-        '200': {description: Operational counters, content: {application/json: {schema: {type: object}}}}
+        '200':
+          description: Current operational summary
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminDashboardSummary'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/orders:
+    get:
+      operationId: listAdminOperationalOrders
+      summary: List operational orders
+      description: Keyset-paginated operations queue with optional lifecycle and intervention filters.
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: queue
+        in: query
+        required: false
+        schema: {type: string}
+      - name: status
+        in: query
+        required: false
+        schema: {type: string}
+      - name: shopId
+        in: query
+        required: false
+        schema: {type: string, format: uuid}
+      - name: cursor
+        in: query
+        required: false
+        schema: {type: string}
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 100, default: 25}
+      responses:
+        '200':
+          description: Operational order page
+          content:
+            application/json:
+              schema: {type: object}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/merchants/{merchantId}/approve:
+    post:
+      operationId: approveAdminMerchant
+      summary: Approve merchant
+      description: Atomically verifies the merchant's single shop, documents, and primary bank account; activates the account; writes an immutable admin audit entry; and emits notification events.
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminAccountApprovalRequest'}
+      responses:
+        '200':
+          description: Merchant approved or an identical request safely replayed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminMerchantOperationsSnapshot'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/captains/{captainId}/approve:
+    post:
+      operationId: approveAdminCaptain
+      summary: Approve captain
+      description: Atomically validates captain licence and vehicle details, activates the account in OFFLINE state, writes an immutable admin audit entry, and emits notification events.
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: captainId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminAccountApprovalRequest'}
+      responses:
+        '200':
+          description: Captain approved or an identical request safely replayed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AdminCaptainOperationsSnapshot'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/audit:
+    get:
+      operationId: listAdminAudit
+      summary: List immutable administrative audit entries
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: resourceType
+        in: query
+        schema: {type: string, enum: [ORDER, DELIVERY_TASK, MERCHANT, CAPTAIN, CASE, CONFIGURATION]}
+      - name: resourceId
+        in: query
+        schema: {type: string, format: uuid}
+      - name: actorId
+        in: query
+        schema: {type: string, format: uuid}
+      - name: limit
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+      responses:
+        '200': {description: Audit entries, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordListResponse'}}}}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/search:
     get:
       operationId: searchAdminOperations
-      summary: Search operational resources by supported identifiers
+      summary: Search operational orders, merchants, captains, and cases
       tags: [Admin]
       security: [{bearerAuth: []}]
       parameters:
-      - {name: q, in: query, required: true, schema: {type: string, minLength: 2, maxLength: 120}}
-      - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 50, default: 20}}
+      - name: q
+        in: query
+        required: true
+        schema: {type: string, minLength: 2, maxLength: 120}
+      - name: limit
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 50, default: 20}
       responses:
-        '200': {description: Search results, content: {application/json: {schema: {type: array, items: {type: object}}}}}
+        '200': {description: Operational search results, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordListResponse'}}}}
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-  /admin/orders:
-    get:
-      operationId: listAdminOperationalOrders
-      summary: List keyset-paginated operational orders
-      tags: [Admin]
-      security: [{bearerAuth: []}]
-      parameters:
-      - {name: queue, in: query, required: false, schema: {type: string}}
-      - {name: status, in: query, required: false, schema: {type: string}}
-      - {name: shopId, in: query, required: false, schema: {type: string, format: uuid}}
-      - {name: cursor, in: query, required: false, schema: {type: string}}
-      - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
-      responses:
-        '200': {description: Operational order page, content: {application/json: {schema: {type: object}}}}
-        '400': {$ref: '#/components/responses/BadRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/orders/{orderId}/investigation:
     get:
       operationId: getAdminOrderInvestigation
-      summary: Get full operational order investigation timeline
+      summary: Read the full immutable operational timeline for an order
       tags: [Admin]
       security: [{bearerAuth: []}]
       parameters:
-      - {name: orderId, in: path, required: true, schema: {type: string, format: uuid}}
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
       responses:
-        '200': {description: Investigation projection, content: {application/json: {schema: {type: object}}}}
+        '200': {description: Order investigation view, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/orders/{orderId}/cancel:
+    post:
+      operationId: cancelAdminOrderOperation
+      summary: Cancel an eligible order through an audited operational override
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: Order cancelled or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-  /admin/orders/{orderId}/cancel:
-    post:
-      operationId: cancelAdminOrderOperation
-      summary: Execute an audited order cancellation recovery command
-      tags: [Admin]
-      security: [{bearerAuth: []}]
-      parameters:
-      - {name: orderId, in: path, required: true, schema: {type: string, format: uuid}}
-      - {$ref: '#/components/parameters/IdempotencyKey'}
-      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Recovery result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/orders/{orderId}/retry-dispatch:
     post:
       operationId: retryAdminOrderDispatch
-      summary: Retry dispatch for an eligible order
+      summary: Retry delivery dispatch for an eligible order
       tags: [Admin]
       security: [{bearerAuth: []}]
       parameters:
-      - {name: orderId, in: path, required: true, schema: {type: string, format: uuid}}
-      - {$ref: '#/components/parameters/IdempotencyKey'}
-      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Recovery result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: Dispatch retried or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/delivery-tasks/{taskId}/release-operation:
     post:
       operationId: releaseAdminDeliveryOperation
-      summary: Release an eligible delivery task through audited operations recovery
+      summary: Release an active delivery assignment through audited operations
       tags: [Admin]
       security: [{bearerAuth: []}]
       parameters:
-      - {name: taskId, in: path, required: true, schema: {type: string, format: uuid}}
-      - {$ref: '#/components/parameters/IdempotencyKey'}
-      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Recovery result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: Assignment released or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/delivery-tasks/{taskId}/reset-verification:
     post:
       operationId: resetAdminDeliveryVerification
-      summary: Reset locked delivery verification through audited recovery
+      summary: Rotate a pickup code or delivery OTP through audited operations
       tags: [Admin]
       security: [{bearerAuth: []}]
       parameters:
-      - {name: taskId, in: path, required: true, schema: {type: string, format: uuid}}
-      - {$ref: '#/components/parameters/IdempotencyKey'}
-      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Recovery result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+      - name: taskId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminResetVerificationRequest'}}}
+      responses:
+        '200': {description: Verification rotated or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/merchants:
     get:
       operationId: listAdminMerchants
-      summary: List operational merchant profiles
+      summary: List privacy-minimal merchant operations profiles
       tags: [Admin]
       security: [{bearerAuth: []}]
       parameters:
@@ -6906,46 +7867,105 @@ paths:
       - {name: kycStatus, in: query, required: false, schema: {type: string}}
       - {name: cursor, in: query, required: false, schema: {type: string}}
       - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100}}
-      responses: {'200': {description: Merchant page, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+      responses:
+        '200': {description: Merchant operations page, content: {application/json: {schema: {type: object}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/merchants/{merchantId}:
     get:
       operationId: getAdminMerchantOperations
-      summary: Get merchant operational detail
+      summary: Read merchant onboarding and operating status
       tags: [Admin]
       security: [{bearerAuth: []}]
-      parameters: [{name: merchantId, in: path, required: true, schema: {type: string, format: uuid}}]
-      responses: {'200': {description: Merchant operations detail, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Merchant operations snapshot, content: {application/json: {schema: {$ref: '#/components/schemas/AdminMerchantOperationsSnapshot'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/merchants/{merchantId}/pause-orders:
     post:
       operationId: pauseAdminMerchantOrders
-      summary: Pause merchant online orders
+      summary: Pause new orders for a merchant
       tags: [Admin]
       security: [{bearerAuth: []}]
-      parameters: [{name: merchantId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
-      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Merchant command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: Merchant order intake paused, content: {application/json: {schema: {$ref: '#/components/schemas/AdminMerchantOperationsSnapshot'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/merchants/{merchantId}/suspend:
     post:
       operationId: suspendAdminMerchant
-      summary: Suspend merchant operations
+      summary: Suspend a merchant account
       tags: [Admin]
       security: [{bearerAuth: []}]
-      parameters: [{name: merchantId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
-      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Merchant command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: Merchant suspended, content: {application/json: {schema: {$ref: '#/components/schemas/AdminMerchantOperationsSnapshot'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/merchants/{merchantId}/restore:
     post:
       operationId: restoreAdminMerchant
-      summary: Restore merchant operations
+      summary: Restore a suspended merchant account
       tags: [Admin]
       security: [{bearerAuth: []}]
-      parameters: [{name: merchantId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
-      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Merchant command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: Merchant restored, content: {application/json: {schema: {$ref: '#/components/schemas/AdminMerchantOperationsSnapshot'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/captains:
     get:
       operationId: listAdminCaptains
-      summary: List operational captain profiles
+      summary: List privacy-minimal captain operations profiles
       tags: [Admin]
       security: [{bearerAuth: []}]
       parameters:
@@ -6955,113 +7975,1059 @@ paths:
       - {name: availabilityStatus, in: query, required: false, schema: {type: string}}
       - {name: cursor, in: query, required: false, schema: {type: string}}
       - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100}}
-      responses: {'200': {description: Captain page, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+      responses:
+        '200': {description: Captain operations page, content: {application/json: {schema: {type: object}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/captains/{captainId}:
     get:
       operationId: getAdminCaptainOperations
-      summary: Get captain operational detail
-      tags: [Admin]
-      security: [{bearerAuth: []}]
-      parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}]
-      responses: {'200': {description: Captain operations detail, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
-  /admin/captains/{captainId}/suspend:
-    post:
-      operationId: suspendAdminCaptain
-      summary: Suspend a captain
-      tags: [Admin]
-      security: [{bearerAuth: []}]
-      parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
-      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Captain command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
-  /admin/captains/{captainId}/restore:
-    post:
-      operationId: restoreAdminCaptain
-      summary: Restore a captain
-      tags: [Admin]
-      security: [{bearerAuth: []}]
-      parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
-      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Captain command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
-  /admin/captains/{captainId}/correct-availability:
-    post:
-      operationId: correctAdminCaptainAvailability
-      summary: Correct captain availability
-      tags: [Admin]
-      security: [{bearerAuth: []}]
-      parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
-      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Captain command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
-  /admin/captains/{captainId}/release-active-assignment:
-    post:
-      operationId: releaseAdminCaptainAssignment
-      summary: Release captain active assignment
-      tags: [Admin]
-      security: [{bearerAuth: []}]
-      parameters: [{name: captainId, in: path, required: true, schema: {type: string, format: uuid}}, {$ref: '#/components/parameters/IdempotencyKey'}]
-      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
-      responses: {'200': {description: Captain command result, content: {application/json: {schema: {type: object}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
-  /admin/audit:
-    get:
-      operationId: listAdminAudit
-      summary: List immutable admin audit records
+      summary: Read captain onboarding, availability, and assignment status
       tags: [Admin]
       security: [{bearerAuth: []}]
       parameters:
-      - {name: resourceType, in: query, required: false, schema: {type: string}}
-      - {name: resourceId, in: query, required: false, schema: {type: string, format: uuid}}
-      - {name: actorId, in: query, required: false, schema: {type: string, format: uuid}}
-      - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100}}
-      responses: {'200': {description: Audit records, content: {application/json: {schema: {type: array, items: {type: object}}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
-  /admin/returns/{returnId}/approve:
+      - name: captainId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Captain operations snapshot, content: {application/json: {schema: {$ref: '#/components/schemas/AdminCaptainOperationsSnapshot'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/captains/{captainId}/suspend:
     post:
-      summary: Approve return
-      tags:
-      - Admin
+      operationId: suspendAdminCaptain
+      summary: Suspend a captain account
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: captainId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: Captain suspended, content: {application/json: {schema: {$ref: '#/components/schemas/AdminCaptainOperationsSnapshot'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/captains/{captainId}/restore:
+    post:
+      operationId: restoreAdminCaptain
+      summary: Restore a suspended captain account
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: captainId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: Captain restored, content: {application/json: {schema: {$ref: '#/components/schemas/AdminCaptainOperationsSnapshot'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/captains/{captainId}/correct-availability:
+    post:
+      operationId: correctAdminCaptainAvailability
+      summary: Correct captain availability through an audited operation
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: captainId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminCaptainAvailabilityRequest'}}}
+      responses:
+        '200': {description: Captain availability corrected, content: {application/json: {schema: {$ref: '#/components/schemas/AdminCaptainOperationsSnapshot'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/captains/{captainId}/release-active-assignment:
+    post:
+      operationId: releaseAdminCaptainAssignment
+      summary: Release a captain's active assignment through audited recovery
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: captainId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: Active assignment released, content: {application/json: {schema: {$ref: '#/components/schemas/AdminCaptainOperationsSnapshot'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cases:
+    get:
+      operationId: listAdminCases
+      summary: List operational support cases
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: status
+        in: query
+        schema: {type: string, enum: [OPEN, ASSIGNED, IN_PROGRESS, WAITING_FOR_USER, ESCALATED, RESOLVED, CLOSED]}
+      - name: priority
+        in: query
+        schema: {type: string, enum: [LOW, MEDIUM, HIGH, URGENT]}
+      - name: assignedTo
+        in: query
+        schema: {type: string, format: uuid}
+      - name: limit
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+      responses:
+        '200': {description: Operational cases, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordListResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+    post:
+      operationId: createAdminCase
+      summary: Open an idempotent operational case
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminCreateCaseRequest'}}}
+      responses:
+        '200': {description: Case opened or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cases/{caseId}:
+    get:
+      operationId: getAdminCase
+      summary: Read an operational case and its immutable history
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Operational case, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cases/{caseId}/assign:
+    post:
+      operationId: assignAdminCase
+      summary: Assign an operational case
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminAssignCaseRequest'}}}
+      responses:
+        '200': {description: Case assigned or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cases/{caseId}/notes:
+    post:
+      operationId: addAdminCaseNote
+      summary: Append an immutable note to an operational case
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminCaseNoteRequest'}}}
+      responses:
+        '200': {description: Note appended or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cases/{caseId}/escalate:
+    post:
+      operationId: escalateAdminCase
+      summary: Escalate an operational case
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: Case escalated or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cases/{caseId}/resolve:
+    post:
+      operationId: resolveAdminCase
+      summary: Resolve an operational case with a coded resolution
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminResolveCaseRequest'}}}
+      responses:
+        '200': {description: Case resolved or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cases/{caseId}/close:
+    post:
+      operationId: closeAdminCase
+      summary: Close a resolved operational case
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: Case closed or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/configuration:
+    get:
+      operationId: listAdminConfiguration
+      summary: List versioned operational configuration
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: scopeType
+        in: query
+        schema: {type: string, enum: [GLOBAL, CITY, SHOP], default: GLOBAL}
+      - name: scopeId
+        in: query
+        schema: {type: string, minLength: 1, maxLength: 120}
+      responses:
+        '200': {description: Operational settings, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordListResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/configuration/{key}:
+    put:
+      operationId: updateAdminConfiguration
+      summary: Update a versioned operational setting through an audited command
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [dispatch.offer_ttl_seconds, dispatch.initial_radius_meters, dispatch.radius_step_meters, dispatch.max_radius_meters, dispatch.max_offer_waves, operations.order_intervention_minutes, feature.admin_case_escalation]
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminConfigurationUpdateRequest'}}}
+      responses:
+        '200': {description: Setting updated or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cod/collections:
+    get:
+      operationId: listAdminCodCollections
+      summary: List captain cash-on-delivery collection liabilities
+      tags: [Admin, Finance]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: status
+        in: query
+        schema: {type: string}
+      - name: limit
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 100, default: 25}
+      responses:
+        '200': {description: COD collection liabilities, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordListResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cod/collections/{collectionId}/reconcile:
+    post:
+      operationId: reconcileAdminCodCollection
+      summary: Reconcile a captain COD collection
+      tags: [Admin, Finance]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: collectionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ReconcileCodCollectionRequest'}}}
+      responses:
+        '200': {description: Collection reconciled or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/payouts/eligibility:
+    get:
+      operationId: getAdminCaptainPayoutEligibility
+      summary: Calculate captain payout eligibility for a UTC date range
+      tags: [Admin, Finance]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: captainId
+        in: query
+        required: true
+        schema: {type: string, format: uuid}
+      - name: periodStart
+        in: query
+        required: true
+        schema: {type: string, format: date}
+      - name: periodEnd
+        in: query
+        required: true
+        schema: {type: string, format: date}
+      responses:
+        '200': {description: Payout eligibility, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/payouts:
+    post:
+      operationId: createAdminCaptainPayout
+      summary: Create an idempotent captain payout
+      tags: [Admin, Finance]
+      security: [{bearerAuth: []}]
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/CreateCaptainPayoutRequest'}}}
+      responses:
+        '200': {description: Payout created or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/payouts/{payoutId}:
+    get:
+      operationId: getAdminCaptainPayout
+      summary: Read a captain payout and its status history
+      tags: [Admin, Finance]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: payoutId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Captain payout, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/settlements/eligibility:
+    get:
+      operationId: getAdminMerchantSettlementEligibility
+      summary: Calculate merchant settlement eligibility for a UTC date range
+      tags: [Admin, Finance]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: shopId
+        in: query
+        required: true
+        schema: {type: string, format: uuid}
+      - name: periodStart
+        in: query
+        required: true
+        schema: {type: string, format: date}
+      - name: periodEnd
+        in: query
+        required: true
+        schema: {type: string, format: date}
+      responses:
+        '200': {description: Settlement eligibility, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/settlements:
+    post:
+      operationId: createAdminMerchantSettlement
+      summary: Create an idempotent merchant settlement
+      tags: [Admin, Finance]
+      security: [{bearerAuth: []}]
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/CreateMerchantSettlementRequest'}}}
+      responses:
+        '201': {description: Settlement created or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/settlements/{settlementId}:
+    get:
+      operationId: getAdminMerchantSettlement
+      summary: Read a merchant settlement and its immutable status history
+      tags: [Admin, Finance]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: settlementId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Merchant settlement, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/payments/process-events:
+    post:
+      operationId: processAdminPaymentEvents
+      summary: Process a bounded batch of durably received payment events
+      tags: [Admin, Payments]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: limit
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 100, default: 25}
+      responses:
+        '200': {description: Payment processing summary, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/payments/events/{eventId}/retry:
+    post:
+      operationId: retryAdminPaymentEvent
+      summary: Retry one failed payment event
+      tags: [Admin, Payments]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: eventId
+        in: path
+        required: true
+        schema: {type: integer, minimum: 1}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PaymentEventRetryRequest'}}}
+      responses:
+        '200': {description: Event retried or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/refunds:
+    get:
+      operationId: listAdminRefunds
+      summary: List refund executions for reconciliation
+      tags: [Admin, Payments]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: status
+        in: query
+        schema: {type: string}
+      - name: limit
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 100, default: 25}
+      responses:
+        '200': {description: Refund executions, content: {application/json: {schema: {$ref: '#/components/schemas/RefundExecutionListResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/refunds/{refundId}:
+    get:
+      operationId: getAdminRefund
+      summary: Read a refund execution and provider references
+      tags: [Admin, Payments]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: refundId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Refund execution, content: {application/json: {schema: {$ref: '#/components/schemas/RefundExecutionResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/returns/{returnId}/refunds:
+    post:
+      operationId: createAdminReturnRefund
+      summary: Create and execute an idempotent refund for an approved return
+      tags: [Admin, Payments, Returns]
+      security: [{bearerAuth: []}]
       parameters:
       - name: returnId
         in: path
         required: true
-        schema:
-          type: string
-          format: uuid
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RefundExecutionCommandRequest'}}}
       responses:
-        '200':
-          description: Success
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /webhooks/payments/{provider}:
+        '200': {description: Refund executed or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/RefundExecutionResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/refunds/{refundId}/retry:
     post:
-      summary: Receive payment webhook
-      tags:
-      - Webhooks
+      operationId: retryAdminRefund
+      summary: Retry an eligible failed refund
+      tags: [Admin, Payments]
+      security: [{bearerAuth: []}]
       parameters:
-      - name: provider
+      - name: refundId
         in: path
         required: true
-        schema:
-          type: string
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Refund retried, content: {application/json: {schema: {$ref: '#/components/schemas/RefundExecutionResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/refunds/{refundId}/reconcile:
+    post:
+      operationId: reconcileAdminRefund
+      summary: Reconcile a refund with its payment provider
+      tags: [Admin, Payments]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: refundId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Refund reconciled, content: {application/json: {schema: {$ref: '#/components/schemas/RefundExecutionResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /orders/online:
+    post:
+      operationId: placeCustomerOnlineOrder
+      summary: Atomically place an online-payment order and create its provider checkout session
+      tags: [Customer, Payments]
+      security: [{bearerAuth: []}]
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PlaceCustomerOnlineOrderRequest'}
       responses:
         '200':
-          description: Success
-        '400':
-          description: Bad request
+          description: Checkout session created or safely replayed
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+              schema: {$ref: '#/components/schemas/CustomerPaymentCheckoutResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /orders/{orderId}/payments/latest:
+    get:
+      operationId: getCustomerLatestOrderPayment
+      summary: Read the latest payment attempt for an owned order
+      tags: [Customer, Payments]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Latest payment
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerPaymentCheckoutResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /orders/{orderId}/return-eligibility:
+    get:
+      operationId: getCustomerReturnEligibility
+      summary: Check remaining return eligibility for an owned order
+      tags: [Customer, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Return eligibility
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerReturnEligibilityResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /orders/{orderId}/returns:
+    post:
+      operationId: createCustomerReturn
+      summary: Request a return for eligible order items
+      tags: [Customer, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateCustomerReturnRequest'}
+      responses:
+        '200':
+          description: Return requested or safely replayed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerReturnResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /returns/{returnId}:
+    get:
+      operationId: getCustomerReturn
+      summary: Read an owned return request and its immutable status history
+      tags: [Customer, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: returnId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Return details
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerReturnResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /returns/{returnId}/evidence/upload-url:
+    post:
+      operationId: authorizeCustomerReturnEvidenceUpload
+      summary: Authorize a constrained private return-evidence upload
+      tags: [Customer, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: returnId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReturnEvidenceUploadRequest'}
+      responses:
+        '200':
+          description: Short-lived signed upload authorization
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ReturnEvidenceUploadResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /returns/{returnId}/evidence:
+    post:
+      operationId: finalizeCustomerReturnEvidence
+      summary: Finalize a previously authorized private evidence object
+      tags: [Customer, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: returnId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FinalizeReturnEvidenceRequest'}
+      responses:
+        '200':
+          description: Evidence record created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ReturnEvidenceRecordResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /returns/{returnId}/evidence/{evidenceId}/url:
+    get:
+      operationId: authorizeCustomerReturnEvidenceRead
+      summary: Authorize a short-lived read of private return evidence
+      tags: [Customer, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: returnId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: evidenceId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Short-lived signed read authorization
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ReturnEvidenceReadResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /merchant/returns:
+    get:
+      operationId: listMerchantReturns
+      summary: List return requests for the authenticated merchant's shop
+      tags: [Merchant, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: limit
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 100, default: 25}
+      responses:
+        '200':
+          description: Merchant returns
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FlexibleRecordListResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /merchant/returns/{returnId}:
+    get:
+      operationId: getMerchantReturn
+      summary: Read a return request for the authenticated merchant's shop
+      tags: [Merchant, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: returnId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Merchant return, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /merchant/returns/{returnId}/receive:
+    post:
+      operationId: receiveMerchantReturn
+      summary: Record physical receipt of a return at the merchant
+      tags: [Merchant, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: returnId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MerchantReturnCommandRequest'}
+      responses:
+        '200': {description: Return receipt recorded or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /merchant/returns/{returnId}/inspection:
+    post:
+      operationId: inspectMerchantReturn
+      summary: Record item-level merchant inspection findings
+      tags: [Merchant, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: returnId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MerchantReturnInspectionRequest'}
+      responses:
+        '200': {description: Inspection recorded or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/returns:
+    get:
+      operationId: listAdminReturns
+      summary: List returns for operational review
+      tags: [Admin, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: status
+        in: query
+        schema: {type: string}
+      - name: limit
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 100, default: 25}
+      responses:
+        '200': {description: Administrative returns, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordListResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/returns/{returnId}:
+    get:
+      operationId: getAdminReturn
+      summary: Read a return with operational evidence and decision history
+      tags: [Admin, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: returnId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Administrative return, content: {application/json: {schema: {$ref: '#/components/schemas/CustomerReturnResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/returns/{returnId}/decision:
+    post:
+      operationId: decideAdminReturn
+      summary: Approve, reject, or require further verification for a return
+      tags: [Admin, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: returnId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminReturnDecisionRequest'}
+      responses:
+        '200': {description: Decision recorded or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/CustomerReturnResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/returns/{returnId}/assign-pickup:
+    post:
+      operationId: assignAdminReturnPickup
+      summary: Create or replay the delivery task used to collect an approved return
+      tags: [Admin, Returns]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: returnId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reasonCode]
+              properties:
+                reasonCode: {type: string, const: RETURN_LOGISTICS}
+      responses:
+        '200': {description: Pickup assigned or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /webhooks/payments/cashfree:
+    post:
+      operationId: receiveCashfreePaymentWebhook
+      summary: Verify, durably ingest, and deduplicate a Cashfree payment webhook
+      tags: [Webhooks, Payments]
       security: []
+      parameters:
+      - name: x-webhook-signature
+        in: header
+        required: true
+        schema: {type: string}
+      - name: x-webhook-timestamp
+        in: header
+        required: true
+        schema: {type: string}
+      - name: x-webhook-version
+        in: header
+        required: false
+        schema: {type: string}
+      - name: x-idempotency-key
+        in: header
+        required: false
+        schema: {type: string, minLength: 1, maxLength: 255}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FlexibleRecord'}
+      responses:
+        '200':
+          description: Authenticated event accepted or safely replayed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PaymentWebhookReceiptResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
 
   /customer/favourite-shops:
     get:

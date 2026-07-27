@@ -18,12 +18,11 @@ import {
 import { ApiAdminPort } from '../admin/admin-api';
 import { FixtureAdminPort } from '../admin/admin-fixture';
 import type { AdminCapabilities, AdminPermission, AdminPort } from '../admin/admin-types';
-
-interface RuntimeEnvironment {
-  readonly apiBaseUrl: string;
-  readonly supabaseUrl: string;
-  readonly supabasePublishableKey: string;
-}
+import {
+  AdminEnvironmentError,
+  readAdminEnvironment,
+  type AdminEnvironment,
+} from './admin-environment';
 
 type RuntimeState =
   | 'RESTORING'
@@ -46,20 +45,9 @@ interface AdminRuntimeValue {
 const AdminRuntimeContext = createContext<AdminRuntimeValue | null>(null);
 const runtimeFetch = globalThis.fetch as unknown as FetchLike;
 
-function readEnvironment(): RuntimeEnvironment | null {
-  const apiBaseUrl = process.env['NEXT_PUBLIC_API_BASE_URL']?.trim();
-  const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']?.trim();
-  const supabasePublishableKey = process.env['NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY']?.trim();
-  if (!apiBaseUrl || !supabaseUrl || !supabasePublishableKey) return null;
-  if (supabaseUrl.includes('example.invalid') || supabasePublishableKey.startsWith('replace-')) {
-    return null;
-  }
-  return { apiBaseUrl, supabaseUrl, supabasePublishableKey };
-}
-
-function createAdminClient(environment: RuntimeEnvironment): SupabaseClient {
+function createAdminClient(environment: AdminEnvironment): SupabaseClient {
   return createClient(environment.supabaseUrl, environment.supabasePublishableKey, {
-    auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true },
+    auth: { autoRefreshToken: true, persistSession: false, detectSessionInUrl: false },
   });
 }
 
@@ -287,11 +275,17 @@ function MfaGate({
 }
 
 export function AdminRuntimeProvider({ children }: { readonly children: ReactNode }) {
-  const fixture = process.env['NEXT_PUBLIC_ADMIN_E2E_FIXTURE'] === '1';
+  const fixture =
+    process.env.NODE_ENV !== 'production' && process.env['NEXT_PUBLIC_ADMIN_E2E_FIXTURE'] === '1';
   const dependencies = useMemo(() => {
     if (fixture) return null;
-    const environment = readEnvironment();
-    if (environment === null) return undefined;
+    let environment: AdminEnvironment;
+    try {
+      environment = readAdminEnvironment();
+    } catch (error: unknown) {
+      if (error instanceof AdminEnvironmentError) return undefined;
+      throw error;
+    }
     const client = createAdminClient(environment);
     const api = createApiClient({
       baseUrl: environment.apiBaseUrl,

@@ -157,6 +157,17 @@ export interface AdminAuditEntry {
   readonly createdAt: string;
 }
 
+export const ADMIN_AUDIT_RESOURCE_TYPES = [
+  'ORDER',
+  'DELIVERY_TASK',
+  'MERCHANT',
+  'CAPTAIN',
+  'CASE',
+  'CONFIGURATION',
+] as const;
+
+export type AdminAuditResourceType = (typeof ADMIN_AUDIT_RESOURCE_TYPES)[number];
+
 export interface AdminOrderInvestigation {
   readonly order: {
     readonly id: string;
@@ -374,7 +385,7 @@ export interface AdminPort {
   }): Promise<AdminResult<AdminCaptainPage>>;
   captain(captainId: string): Promise<AdminResult<AdminCaptainSnapshot>>;
   audit(input?: {
-    readonly resourceType?: string;
+    readonly resourceType?: AdminAuditResourceType;
     readonly resourceId?: string;
     readonly actorId?: string;
     readonly limit?: number;
@@ -407,6 +418,10 @@ export interface AdminPort {
     reason: string,
     idempotencyKey: string,
   ): Promise<AdminResult<AdminOperationOutcome>>;
+  approveMerchant(
+    merchantId: string,
+    input: AdminMutationInput,
+  ): Promise<AdminResult<AdminMerchantSnapshot>>;
   pauseMerchant(
     merchantId: string,
     input: AdminMutationInput,
@@ -419,6 +434,10 @@ export interface AdminPort {
     merchantId: string,
     input: AdminMutationInput,
   ): Promise<AdminResult<AdminMerchantSnapshot>>;
+  approveCaptain(
+    captainId: string,
+    input: AdminMutationInput,
+  ): Promise<AdminResult<AdminCaptainSnapshot>>;
   suspendCaptain(
     captainId: string,
     input: AdminMutationInput,

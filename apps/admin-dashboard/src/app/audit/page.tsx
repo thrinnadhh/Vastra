@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState, type FormEvent } from 'react';
 
+import { ADMIN_AUDIT_RESOURCE_TYPES, type AdminAuditResourceType } from '../../admin/admin-types';
 import { useAdminRuntime } from '../../auth/admin-runtime';
 import {
   AccessDenied,
@@ -19,15 +20,29 @@ import {
   useAdminResource,
 } from '../../components/admin-ui';
 
+function parseResourceType(value: string | null): AdminAuditResourceType | '' {
+  return ADMIN_AUDIT_RESOURCE_TYPES.includes(value as AdminAuditResourceType)
+    ? (value as AdminAuditResourceType)
+    : '';
+}
+
 function AuditPageContent() {
   const runtime = useAdminRuntime();
   const params = useSearchParams();
-  const [resourceType, setResourceType] = useState(params.get('resourceType') ?? '');
+  const [resourceType, setResourceType] = useState<AdminAuditResourceType | ''>(
+    parseResourceType(params.get('resourceType')),
+  );
   const [resourceId, setResourceId] = useState(params.get('resourceId') ?? '');
   const [actorId, setActorId] = useState('');
   const [filters, setFilters] = useState({ resourceType, resourceId, actorId });
   const resource = useAdminResource(
-    () => runtime.port.audit({ ...filters, limit: 100 }),
+    () =>
+      runtime.port.audit({
+        ...(filters.resourceType === '' ? {} : { resourceType: filters.resourceType }),
+        resourceId: filters.resourceId,
+        actorId: filters.actorId,
+        limit: 100,
+      }),
     [runtime.port, filters.resourceType, filters.resourceId, filters.actorId],
   );
   if (!runtime.hasPermission('admin.audit.read'))
@@ -51,13 +66,14 @@ function AuditPageContent() {
       <form className="filter-bar" onSubmit={apply}>
         <label>
           Resource type
-          <select onChange={(event) => setResourceType(event.target.value)} value={resourceType}>
+          <select
+            onChange={(event) => setResourceType(parseResourceType(event.target.value))}
+            value={resourceType}
+          >
             <option value="">Any</option>
-            {['ORDER', 'DELIVERY_TASK', 'MERCHANT', 'CAPTAIN', 'CASE', 'CONFIGURATION'].map(
-              (value) => (
-                <option key={value}>{value}</option>
-              ),
-            )}
+            {ADMIN_AUDIT_RESOURCE_TYPES.map((value) => (
+              <option key={value}>{value}</option>
+            ))}
           </select>
         </label>
         <label>

@@ -9,7 +9,8 @@ export interface RefundExecutionCommandInput {
 export interface RefundExecutionRecord {
   readonly refundId: string;
   readonly refundNumber: string;
-  readonly returnId: string;
+  readonly returnId: string | null;
+  readonly initiatedBy: string;
   readonly orderId: string;
   readonly paymentId: string;
   readonly providerOrderId: string;
@@ -29,6 +30,12 @@ export interface RefundExecutionRecord {
   readonly initiatedAt: string | null;
   readonly completedAt: string | null;
   readonly replayed: boolean;
+}
+
+export interface AutomaticRefundProcessingSummary {
+  readonly selected: number;
+  readonly processed: number;
+  readonly failed: number;
 }
 
 export interface RefundExecutionResponse<T> {

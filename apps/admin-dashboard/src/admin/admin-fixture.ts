@@ -417,6 +417,20 @@ export class FixtureAdminPort implements AdminPort {
       }),
     );
   }
+  public approveMerchant(merchantId: string, input: AdminMutationInput) {
+    outcome('admin.merchant.approved', 'MERCHANT', merchantId, input);
+    return Promise.resolve(
+      success({
+        ...merchantSnapshot,
+        merchant: {
+          ...merchantSnapshot.merchant,
+          profileStatus: 'ACTIVE',
+          onboardingStatus: 'ACTIVE',
+          kycStatus: 'VERIFIED',
+        },
+      }),
+    );
+  }
   public pauseMerchant(merchantId: string, input: AdminMutationInput) {
     outcome('admin.merchant.paused', 'MERCHANT', merchantId, input);
     return Promise.resolve(
@@ -442,6 +456,21 @@ export class FixtureAdminPort implements AdminPort {
   public restoreMerchant(merchantId: string, input: AdminMutationInput) {
     outcome('admin.merchant.active', 'MERCHANT', merchantId, input);
     return Promise.resolve(success(merchantSnapshot));
+  }
+  public approveCaptain(captainId: string, input: AdminMutationInput) {
+    outcome('admin.captain.approved', 'CAPTAIN', captainId, input);
+    return Promise.resolve(
+      success({
+        ...captainSnapshot,
+        captain: {
+          ...captainSnapshot.captain,
+          profileStatus: 'ACTIVE',
+          kycStatus: 'VERIFIED',
+          availabilityStatus: 'OFFLINE',
+          approvedAt: new Date().toISOString(),
+        },
+      }),
+    );
   }
   public suspendCaptain(captainId: string, input: AdminMutationInput) {
     outcome('admin.captain.suspended', 'CAPTAIN', captainId, input);

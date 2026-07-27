@@ -28,7 +28,8 @@ import {
   useAdminResource,
 } from '../../../components/admin-ui';
 
-type CaptainAction = 'SUSPEND' | 'RESTORE' | 'RELEASE' | 'OFFLINE' | 'AVAILABLE' | 'ON_BREAK';
+type CaptainAction =
+  'APPROVE' | 'SUSPEND' | 'RESTORE' | 'RELEASE' | 'OFFLINE' | 'AVAILABLE' | 'ON_BREAK';
 
 function wrapSnapshot(
   result: AdminResult<AdminCaptainSnapshot>,
@@ -59,6 +60,8 @@ export default function CaptainDetailPage() {
   if (!runtime.hasPermission('admin.captains.read'))
     return <AccessDenied permission="admin.captains.read" />;
   const submit = async (input: AdminMutationInput): Promise<AdminResult<AdminOperationOutcome>> => {
+    if (action === 'APPROVE')
+      return wrapSnapshot(await runtime.port.approveCaptain(captainId, input));
     if (action === 'SUSPEND')
       return wrapSnapshot(await runtime.port.suspendCaptain(captainId, input));
     if (action === 'RESTORE')
@@ -74,6 +77,11 @@ export default function CaptainDetailPage() {
       ? null
       : (
           {
+            APPROVE: [
+              'Approve captain',
+              'Verifies the eligible captain licence, KYC and vehicle details before activating the account in offline state.',
+              'Approve captain',
+            ],
             SUSPEND: [
               'Suspend captain',
               'Suspends an eligible captain. A pre-pickup assignment may be released by the backend; post-pickup custody remains protected.',
@@ -193,6 +201,15 @@ export default function CaptainDetailPage() {
             </div>
             {runtime.hasPermission('admin.captains.manage') ? (
               <div className="action-grid">
+                {resource.data.captain.approvedAt === null ? (
+                  <button
+                    className="primary-action"
+                    onClick={() => setAction('APPROVE')}
+                    type="button"
+                  >
+                    Approve captain
+                  </button>
+                ) : null}
                 <button
                   className="danger-action"
                   onClick={() => setAction('SUSPEND')}

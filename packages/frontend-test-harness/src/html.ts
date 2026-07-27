@@ -16,10 +16,10 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .fixture-card { display: block; min-height: 140px; padding: 20px; border: 1px solid #cfd5df; border-radius: 16px; background: #fff; color: inherit; text-decoration: none; }
 .fixture-card strong { display: block; margin-bottom: 8px; }
 .fixture-stage { min-height: 100vh; padding: 24px; display: grid; place-items: center; }
-.fixture-panel { width: min(100%, 760px); padding: 24px; border: 1px solid #cfd5df; border-radius: 20px; background: #fff; box-shadow: 0 12px 30px rgba(20, 31, 51, 0.08); }
+.fixture-panel { min-width: 0; width: min(100%, 760px); padding: 24px; border: 1px solid #cfd5df; border-radius: 20px; background: #fff; box-shadow: 0 12px 30px rgba(20, 31, 51, 0.08); }
 .fixture-eyebrow { margin: 0 0 8px; color: #5d6575; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .fixture-description { color: #4a5568; line-height: 1.5; }
-.fixture-json { overflow: auto; padding: 16px; border-radius: 12px; background: #111827; color: #f9fafb; font-size: 12px; line-height: 1.5; }
+.fixture-json { max-width: 100%; overflow: auto; overflow-wrap: anywhere; padding: 16px; border-radius: 12px; background: #111827; color: #f9fafb; font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
 .primitive-preview { display: grid; gap: 14px; margin: 24px 0; padding: 20px; border-radius: 14px; background: #f8fafc; }
 .primitive-button { min-height: 48px; border: 0; border-radius: 12px; padding: 0 20px; background: #3157d5; color: #fff; font-weight: 700; }
 .primitive-button[disabled] { background: #8e99ad; }

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { formatDistance, formatPaiseAsInrCompact, formatPriceRange } from '@vastra/formatting';
+
 import { CustomerNetworkStateBoundary } from '../ui/customer-network-state';
 import { resolveCustomerNetworkState } from '../ui/resolve-customer-network-state';
 import type {
@@ -24,32 +26,6 @@ export interface CustomerHomeScreenProps {
   readonly onOpenCheckout: () => void;
 }
 
-function formatRupees(paise: number): string {
-  const rupees = Math.floor(paise / 100);
-  const groups: string[] = [];
-  let remainder = String(rupees);
-
-  if (remainder.length > 3) {
-    groups.unshift(remainder.slice(-3));
-    remainder = remainder.slice(0, -3);
-    while (remainder.length > 2) {
-      groups.unshift(remainder.slice(-2));
-      remainder = remainder.slice(0, -2);
-    }
-  }
-
-  groups.unshift(remainder);
-  return `₹${groups.join(',')}`;
-}
-
-function formatDistance(distanceMeters: number): string {
-  if (distanceMeters < 1000) {
-    return `${String(Math.round(distanceMeters))} m away`;
-  }
-
-  return `${(distanceMeters / 1000).toFixed(1)} km away`;
-}
-
 function shopStatus(shop: CustomerHomeShop): string {
   if (shop.operationalStatus === 'OPEN' && shop.acceptsOnlineOrders) {
     return 'Open for online orders';
@@ -60,21 +36,6 @@ function shopStatus(shop: CustomerHomeShop): string {
   }
 
   return shop.operationalStatus.replaceAll('_', ' ').toLowerCase();
-}
-
-function productPrice(product: CustomerHomeProduct): string {
-  if (product.minimumSellingPricePaise === null) {
-    return 'Price unavailable';
-  }
-
-  if (
-    product.maximumSellingPricePaise !== null &&
-    product.maximumSellingPricePaise !== product.minimumSellingPricePaise
-  ) {
-    return `${formatRupees(product.minimumSellingPricePaise)}–${formatRupees(product.maximumSellingPricePaise)}`;
-  }
-
-  return formatRupees(product.minimumSellingPricePaise);
 }
 
 function SectionHeader({
@@ -131,7 +92,7 @@ function ShopCard({
         <Text style={styles.shopMeta}>{shopStatus(shop)}</Text>
         <Text style={styles.shopMeta}>
           {shop.averagePreparationMinutes} min preparation · Minimum{' '}
-          {formatRupees(shop.minimumOrderPaise)}
+          {formatPaiseAsInrCompact(shop.minimumOrderPaise)}
         </Text>
       </View>
     </Pressable>
@@ -149,7 +110,7 @@ function ProductCard({
 
   return (
     <Pressable
-      accessibilityLabel={`${product.name} from ${product.shopName}. ${productPrice(product)}. ${
+      accessibilityLabel={`${product.name} from ${product.shopName}. ${formatPriceRange(product.minimumSellingPricePaise, product.maximumSellingPricePaise)}. ${
         selectable ? 'Available' : 'Currently unavailable'
       }`}
       accessibilityRole="button"
@@ -180,7 +141,9 @@ function ProductCard({
         <Text numberOfLines={1} style={styles.productShop}>
           {product.shopName}
         </Text>
-        <Text style={styles.productPrice}>{productPrice(product)}</Text>
+        <Text style={styles.productPrice}>
+          {formatPriceRange(product.minimumSellingPricePaise, product.maximumSellingPricePaise)}
+        </Text>
         <Text style={selectable ? styles.availableText : styles.unavailableText}>
           {selectable
             ? `${String(product.availableVariantCount)} variant${product.availableVariantCount === 1 ? '' : 's'} available`

@@ -31,6 +31,10 @@ class GatewayStub implements AdminCaptainGateway {
   public get() {
     return Promise.resolve({ captain: { id: CAPTAIN_ID } });
   }
+  public approve(input: AdminCaptainMutationInput) {
+    this.input = input;
+    return Promise.resolve({ captain: { id: CAPTAIN_ID, kycStatus: 'VERIFIED' } });
+  }
   public setStatus(input: AdminCaptainStatusInput) {
     this.input = input;
     return Promise.resolve({ captain: { id: CAPTAIN_ID } });
@@ -113,5 +117,24 @@ describe('AdminCaptainService', () => {
         targetAvailability: 'DELIVERING',
       }),
     ).toThrow(AdminCaptainRequestInvalidError);
+  });
+
+  it('builds an actor-bound, idempotent captain approval command', async () => {
+    const gateway = new GatewayStub();
+    const service = new AdminCaptainService(gateway);
+
+    await service.approve(CONTEXT, CAPTAIN_ID, KEY, 'request-approval-1', {
+      reasonCode: 'DATA_CORRECTION',
+      note: 'Licence and vehicle checks completed',
+    });
+
+    expect(gateway.input).toEqual({
+      actorId: ACTOR_ID,
+      captainId: CAPTAIN_ID,
+      idempotencyKey: KEY,
+      reasonCode: 'DATA_CORRECTION',
+      note: 'Licence and vehicle checks completed',
+      requestId: 'request-approval-1',
+    });
   });
 });

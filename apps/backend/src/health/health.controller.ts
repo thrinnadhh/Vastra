@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 
 import { Public } from '../auth/public.decorator';
+import { HealthReadinessService, type HealthReadinessResponse } from './health-readiness.service';
 
 export interface HealthResponse {
   readonly service: 'vastra-backend';
@@ -11,6 +12,8 @@ export interface HealthResponse {
 @Public()
 @Controller('health')
 export class HealthController {
+  public constructor(private readonly readinessService: HealthReadinessService) {}
+
   @Get()
   public getHealth(): HealthResponse {
     return {
@@ -18,5 +21,10 @@ export class HealthController {
       status: 'ready',
       scope: 'infrastructure',
     };
+  }
+
+  @Get('ready')
+  public getReadiness(): Promise<HealthReadinessResponse> {
+    return this.readinessService.getReadiness();
   }
 }

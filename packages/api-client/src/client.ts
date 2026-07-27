@@ -4,10 +4,10 @@ import {
   type OperationId,
   type OperationRequest,
   type OperationResponse,
-} from './generated/openapi.js';
-import { ApiClientError, createLocalError, normalizeHttpError } from './errors.js';
-import { writeClientLog } from './logging.js';
-import { validateJsonSchema, type JsonSchema, type SchemaRegistry } from './schema.js';
+} from './generated/openapi';
+import { ApiClientError, createLocalError, normalizeHttpError } from './errors';
+import { writeClientLog } from './logging';
+import { validateJsonSchema, type JsonSchema, type SchemaRegistry } from './schema';
 import type {
   AbortSignalLike,
   AccessTokenProvider,
@@ -17,7 +17,7 @@ import type {
   FetchLike,
   FetchRequestInitLike,
   RequestIdProvider,
-} from './types.js';
+} from './types';
 
 export type OperationRuntimeContract = Readonly<{
   method: string;
@@ -427,7 +427,9 @@ export const createApiClient = (options: ApiClientOptions): ApiClient => {
       input: OperationRequest<Id>,
       requestOptions?: RequestOptions,
     ): Promise<ApiClientResponse<OperationResponse<Id>>> =>
-      client.request(operationId, input, requestOptions),
+      client.request(operationId, input, requestOptions) as Promise<
+        ApiClientResponse<OperationResponse<Id>>
+      >,
   };
 };
 

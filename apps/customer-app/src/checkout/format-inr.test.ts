@@ -1,6 +1,10 @@
 import { formatPaiseAsInr } from './format-inr';
 
-describe('formatPaiseAsInr', () => {
+/**
+ * Verify that the re-export from @vastra/formatting works correctly.
+ * Primary tests live in packages/formatting/src/formatting.test.ts.
+ */
+describe('formatPaiseAsInr (re-export)', () => {
   it('formats integer paise with Indian digit grouping', () => {
     expect(formatPaiseAsInr(0)).toBe('₹0.00');
     expect(formatPaiseAsInr(123_456)).toBe('₹1,234.56');

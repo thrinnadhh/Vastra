@@ -1,20 +1,23 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CashfreeFinanceProviderGateway } from './cashfree-finance-provider.gateway';
+import { PaymentProviderUnavailableError } from './cashfree-payment-provider.gateway';
 
 afterEach(() => {
   vi.unstubAllGlobals();
   delete process.env['PAYMENT_CLIENT_ID'];
   delete process.env['PAYMENT_SECRET_KEY'];
+  delete process.env['PAYMENT_REQUEST_TIMEOUT_MS'];
 });
 
 describe('CashfreeFinanceProviderGateway', () => {
   it('creates and validates a Cashfree refund snapshot', async () => {
     process.env['PAYMENT_CLIENT_ID'] = 'client';
     process.env['PAYMENT_SECRET_KEY'] = 'secret';
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
+    let receivedSignal: AbortSignal | null = null;
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => {
+      receivedSignal = init.signal instanceof AbortSignal ? init.signal : null;
+      return Promise.resolve({
         ok: true,
         json: () =>
           Promise.resolve({
@@ -26,8 +29,9 @@ describe('CashfreeFinanceProviderGateway', () => {
             refund_status: 'SUCCESS',
             processed_at: '2026-07-18T12:00:00.000Z',
           }),
-      }),
-    );
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
 
     const gateway = new CashfreeFinanceProviderGateway();
     const result = await gateway.createRefund({
@@ -44,5 +48,30 @@ describe('CashfreeFinanceProviderGateway', () => {
       status: 'SUCCESS',
       amountPaise: 12500,
     });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(receivedSignal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('aborts a Cashfree request that exceeds the configured timeout', async () => {
+    process.env['PAYMENT_CLIENT_ID'] = 'client';
+    process.env['PAYMENT_SECRET_KEY'] = 'secret';
+    process.env['PAYMENT_REQUEST_TIMEOUT_MS'] = '10';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init: RequestInit) => {
+        return new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => {
+            reject(new DOMException('aborted', 'AbortError'));
+          });
+        });
+      }),
+    );
+
+    await expect(
+      new CashfreeFinanceProviderGateway().fetchRefund(
+        'order-1',
+        '30000000-0000-4000-8000-000000000001',
+      ),
+    ).rejects.toBeInstanceOf(PaymentProviderUnavailableError);
   });
 });

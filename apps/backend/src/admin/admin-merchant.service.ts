@@ -134,4 +134,23 @@ export class AdminMerchantService {
       requestId,
     });
   }
+
+  public approve(
+    context: AuthenticatedRequestContext,
+    merchantId: unknown,
+    idempotencyKey: unknown,
+    body: unknown,
+    requestId: string | null,
+  ): Promise<AdminMerchantSnapshot> {
+    const parsed = parseBody(body);
+    return this.gateway.approve({
+      actorId: context.actor.id,
+      merchantId: requireUuid(merchantId),
+      idempotencyKey: requireUuid(idempotencyKey),
+      targetStatus: 'ACTIVE',
+      reasonCode: parsed.reasonCode,
+      note: parsed.note,
+      requestId,
+    });
+  }
 }

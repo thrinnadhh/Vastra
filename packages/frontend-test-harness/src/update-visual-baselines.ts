@@ -6,6 +6,16 @@ import { chromium } from '@playwright/test';
 import { FRONTEND_VISUAL_ENTRY_POINTS } from './manifest';
 import { startFixtureServer } from './server';
 
+import { type SupportedVisualPlatform, VISUAL_BASELINES } from '../../../e2e/visual-baselines';
+
+if (process.platform !== 'darwin' && process.platform !== 'linux') {
+  throw new Error(
+    `Visual baselines are not configured for platform "${process.platform}". ` +
+      'Add the platform to SupportedVisualPlatform before updating baselines.',
+  );
+}
+
+const platform = process.platform satisfies SupportedVisualPlatform;
 const server = await startFixtureServer({ port: 0 });
 const browser = await chromium.launch();
 
@@ -26,10 +36,19 @@ try {
     await page.close();
   }
 
-  const baselineEntries = Object.entries(hashes)
-    .map(([id, hash]) => `    '${id}':\n      '${hash}',`)
+  const hashesByPlatform = {
+    ...VISUAL_BASELINES.hashesByPlatform,
+    [platform]: hashes,
+  };
+  const platformEntries = Object.entries(hashesByPlatform)
+    .map(([platformName, platformHashes]) => {
+      const hashEntries = Object.entries(platformHashes)
+        .map(([id, hash]) => `      '${id}':\n        '${hash}',`)
+        .join('\n');
+      return `    ${platformName}: {\n${hashEntries}\n    },`;
+    })
     .join('\n');
-  const baselineSource = `interface VisualBaselines {\n  readonly browser: 'chromium';\n  readonly hashes: Readonly<Record<string, string>>;\n}\n\nexport const VISUAL_BASELINES: VisualBaselines = {\n  browser: 'chromium',\n  hashes: {\n${baselineEntries}\n  },\n};\n`;
+  const baselineSource = `export type SupportedVisualPlatform = 'darwin' | 'linux';\n\ntype VisualHashes = Readonly<Record<string, string>>;\n\ninterface VisualBaselines {\n  readonly browser: 'chromium';\n  readonly hashesByPlatform: Readonly<Record<SupportedVisualPlatform, VisualHashes>>;\n}\n\nexport const VISUAL_BASELINES: VisualBaselines = {\n  browser: 'chromium',\n  hashesByPlatform: {\n${platformEntries}\n  },\n};\n`;
   const baselinePath = new URL('../../../e2e/visual-baselines.ts', import.meta.url);
   await writeFile(baselinePath, baselineSource, 'utf8');
 } finally {

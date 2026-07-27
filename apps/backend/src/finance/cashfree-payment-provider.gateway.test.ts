@@ -1,9 +1,10 @@
 import { createHmac } from 'node:crypto';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   CashfreePaymentProviderGateway,
+  PaymentWebhookPayloadInvalidError,
   PaymentWebhookSignatureInvalidError,
 } from './cashfree-payment-provider.gateway';
 
@@ -39,10 +40,13 @@ describe('CashfreePaymentProviderGateway webhook verification', () => {
   const previousSecret = process.env['PAYMENT_SECRET_KEY'];
 
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Number(TIMESTAMP));
     process.env['PAYMENT_SECRET_KEY'] = SECRET;
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     if (previousSecret === undefined) delete process.env['PAYMENT_SECRET_KEY'];
     else process.env['PAYMENT_SECRET_KEY'] = previousSecret;
   });
@@ -77,5 +81,43 @@ describe('CashfreePaymentProviderGateway webhook verification', () => {
         idempotencyKey: EVENT_ID,
       }),
     ).toThrow(PaymentWebhookSignatureInvalidError);
+  });
+
+  it('rejects a correctly signed webhook outside the replay window', () => {
+    const rawBody = payload();
+    const staleTimestamp = String(Number(TIMESTAMP) - 5 * 60 * 1_000 - 1);
+    const staleSignature = createHmac('sha256', SECRET)
+      .update(staleTimestamp)
+      .update(rawBody)
+      .digest('base64');
+
+    expect(() =>
+      new CashfreePaymentProviderGateway().verifyWebhook({
+        rawBody,
+        signature: staleSignature,
+        timestamp: staleTimestamp,
+        version: '2025-01-01',
+        idempotencyKey: EVENT_ID,
+      }),
+    ).toThrow(PaymentWebhookPayloadInvalidError);
+  });
+
+  it('rejects a correctly signed webhook timestamp too far in the future', () => {
+    const rawBody = payload();
+    const futureTimestamp = String(Number(TIMESTAMP) + 5 * 60 * 1_000 + 1);
+    const futureSignature = createHmac('sha256', SECRET)
+      .update(futureTimestamp)
+      .update(rawBody)
+      .digest('base64');
+
+    expect(() =>
+      new CashfreePaymentProviderGateway().verifyWebhook({
+        rawBody,
+        signature: futureSignature,
+        timestamp: futureTimestamp,
+        version: '2025-01-01',
+        idempotencyKey: EVENT_ID,
+      }),
+    ).toThrow(PaymentWebhookPayloadInvalidError);
   });
 });
