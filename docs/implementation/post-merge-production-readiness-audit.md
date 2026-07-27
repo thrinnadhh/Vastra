@@ -2,221 +2,122 @@
 
 ---
 audit_date: 2026-07-27
-target_branch: fix/ci-supabase-db-only
-audited_merge_commit: a83fbdc37df255ec914ce68e726b3d10e99ace9b
-remediation_code_commit: d33ab2eab7ca86b72f91635f0532d871626105d5
-verification_run: 30249692925
+target_branch: fix/s12-post-merge-ci-hotfix
+incident_merge_commit: 17f85aac79971b6e6a80684c4bea0a8a1213b372
+verified_code_commit: 64a4553a7e9d56cef2735814f9d96c3f4951cd6b
+verification_run: 30258003678
 code_readiness: ready-with-explicit-conditions
 deployment_readiness: not-ready
 operational_pilot_readiness: not-ready
 ---
 
-## Audited commit and merge integrity
+## Executive summary
 
-- Audited merge commit: `a83fbdc37df255ec914ce68e726b3d10e99ace9b`
-- First parent: `b53027f7c1a0a909016e9f62bc8a71be46cf922b`
-- Second parent: `80a03a9ce6d1dd367afd6db83781872a6595169a`
-- Remediation code commit: `d33ab2eab7ca86b72f91635f0532d871626105d5`
-- Target branch: `fix/ci-supabase-db-only`
-- GitHub comparison: branch is ahead of `main` and not behind it.
+PR #151 was merged before its required CI completed successfully. CI run `30253736911`
+failed during job setup because three pinned GitHub Action revisions could not be resolved,
+so none of the repository verification lanes executed against that merge.
 
-GitHub code search found no `<<<<<<<` or `>>>>>>>` conflict markers. The execution
-environment did not contain `/Users/trinadh/projects/vastra`, so local index and
-working-tree checks could not be run. In particular, this audit does **not** claim
-results for `git status --short`, `git diff --check`, `git ls-files -u`,
-`git diff --cached`, or local staged-secret/build-output inspection. Those checks
-remain mandatory in a normal checkout before merge.
+The post-merge review also identified:
 
-## Scope
+- a NestJS runtime dependency-injection defect in `RefundExecutionWorker`, where an erased
+  TypeScript interface had no explicit runtime injection token;
+- a fail-open condition in the final client-bundle scanner, which could report success when
+  required build output directories were absent or empty.
 
-The audit covers the merged NestJS backend, Supabase migrations and pgTAP tests,
-OpenAPI/generated-client parity, current customer/merchant/captain/admin integrations,
-CI, security boundaries, payment/refund processing, database authorization, runtime
-shutdown behavior, and available pilot evidence.
+PR #154 repairs these findings. Its runtime-code head
+`64a4553a7e9d56cef2735814f9d96c3f4951cd6b` passed the complete repository gate in CI run
+`30258003678`.
 
-No excluded AI sizing, body scanning, virtual try-on, multi-shop cart, or multiple
-merchant staff functionality was introduced by the remediation. A scope-authority
-conflict remains: `docs/product/mvp-scope.md`, `docs/product/business-rules.md`,
-`docs/architecture/security-model.md`, and `docs/testing/acceptance-tests.md` include
-private Group Style, while the production-readiness mission and customer-app repository
-rules exclude Group Style. This audit does not add or remove that feature. Product
-ownership must align the canonical documents before production approval.
+## Verification scope and result
 
-## Architecture summary
+The CI run tested GitHub's pull-request merge ref for PR #154, combining the listed code
+head with the current `main` base. Every required lane and the final aggregation job passed.
 
-- Backend: NestJS TypeScript modular monolith with controllers, domain services,
-  Supabase gateways/repositories, global authentication/account/permission/MFA guards,
-  request IDs, runtime limits, health endpoints, and bounded background workers.
-- Database: Supabase PostgreSQL with RLS, privileged service-role RPCs, transactional
-  order/inventory/payment commands, immutable history/audit records, idempotency
-  receipts, row locking, and durable outbox records.
-- Clients: customer, merchant, captain, and admin applications consume the shared
-  generated API client for implemented backend integrations.
-- External dependencies: Supabase Auth/Storage/Realtime, Cashfree, SMS/OTP, FCM,
-  mapping, monitoring, backups, and production secret stores require environment-specific
-  evidence and are not proven by repository CI.
+| Gate | Result |
+|---|---|
+| Immutable GitHub Action resolution | PASS |
+| `pnpm install --frozen-lockfile` | PASS |
+| `pnpm format:check` | PASS |
+| `pnpm env:check` | PASS |
+| `pnpm test:pilot-tooling` | PASS |
+| `pnpm pilot:evidence:check` | PASS |
+| `pnpm security:client-secrets` | PASS |
+| `pnpm lint` | PASS |
+| `pnpm typecheck` | PASS |
+| `pnpm test` | PASS |
+| `pnpm test:integration` | PASS |
+| `pnpm db:test` | PASS |
+| `pnpm openapi:check` | PASS |
+| generated API-client/controller contract check | PASS |
+| frontend E2E and visual harness | PASS |
+| complete workspace build | PASS |
+| fail-closed final client-bundle secret scan | PASS |
+| final `Verify repository` aggregation | PASS |
 
-## Verification matrix
-
-| Command or gate | Result | Evidence / limitation |
-|---|---|---|
-| `pnpm install --frozen-lockfile` | PASS | Executed independently in each CI lane. |
-| `pnpm format:check` | PASS | Exact-head static-quality lane. |
-| `pnpm env:check` | PASS | Exact-head static-quality lane. |
-| `pnpm test:pilot-tooling` | PASS | Validates evidence/report tooling; does not execute a real pilot. |
-| `pnpm pilot:evidence:check` | PASS | Evidence structure only; does not constitute GO evidence. |
-| `pnpm security:client-secrets` | PASS | Source/config scan. Zero privileged secret identifiers in client apps. |
-| `pnpm security:client-bundles` | PASS | Production bundle scan over `.next/static`, `.next/server`, and Expo `dist` artifacts (246 files scanned). |
-| `pnpm lint` | PASS | Generates 172 OpenAPI operations, then ESLint passes with zero allowed warnings. |
-| `pnpm typecheck` | PASS | Passed cleanly across all 16 workspace packages. |
-| `pnpm test` | PASS | Exact-head application-test lane. |
-| `pnpm test:integration` | PASS | Exact-head application-test lane. |
-| `pnpm db:test` | PASS | Clean Supabase database test lane (77 files, 1,584 assertions PASS), including admin status authorization tests. |
-| `pnpm openapi:check` | PASS | Redocly validation in database/contracts lane. |
-| `pnpm --filter @vastra/api-client contract:check` | PASS | Zero reported runtime/OpenAPI parity failures in the successful contract lane. |
-| `pnpm --filter @vastra/api-client build` | PASS | Covered by root test/frontend harness. |
-| `pnpm --filter @vastra/api-client typecheck` | PASS | Covered by root typecheck. |
-| `pnpm --filter @vastra/api-client test` | PASS | Covered by root unit-test gate. |
-| `pnpm build` | PASS | Exact-head workspace-build lane. |
-| `pnpm test:frontend:e2e` / visual | PASS | Covered by `pnpm test:frontend:harness` in the frontend lane. |
-| `pnpm test:pilot-tooling` | PASS | Unit tests for evidence validator, report validator, source secret scanner, and client bundle scanner. |
-| `git diff --check` | PASS | Zero whitespace or line-ending errors in git diff. |
-| `git status --short` | PASS | Clean working directory. |
-
-## Security findings
-
-### P1 fixed — inactive administrator retained database elevation
-
-The previous `authz.is_admin()` authorization path could accept an AAL2 identity with
-an administrator record without requiring the corresponding profile to remain ACTIVE.
-Because the predicate is used by administrator RLS and permission checks, a suspended,
-blocked, or deleted administrator could retain cross-tenant database authority through
-an existing token.
-
-Migration `20260727090000_admin_status_authorization_hardening.sql` now requires an
-ACTIVE profile for both administrator identity paths. The function remains
-`SECURITY DEFINER`, uses an empty `search_path`, fully qualifies relations, revokes
-public execution, and grants execution only to `authenticated` and `service_role`.
-`0096_admin_status_authorization.test.sql` proves an active AAL2 administrator receives
-the expected RLS access and loses administrator elevation, blanket permission, and
-cross-user reads immediately after suspension.
-
-### Client and API boundaries
-
-- Service-role/payment/SMS/FCM/database secrets are forbidden in client source/config.
-- Backend authorization remains server-side; frontend control visibility is not treated
-  as permission.
-- Admin AAL2/MFA, account-state, account-type, fine-grained permission, ownership, and
-  business-state checks remain required for protected operations.
-- Payment success remains provider/webhook authoritative, not client authoritative.
-- The current secret scanner intentionally excludes generated `.next` files. This avoids
-  dependency/build-output false positives but means production bundle inspection must be
-  performed separately before deployment.
-
-### Unresolved security hardening
-
-- Several older service-role-only `SECURITY DEFINER` functions still use broader
-  `public` or `public, private` search paths instead of fully qualified objects with an
-  empty path. No direct client execution was proven, but consolidation remains a P2 item.
-- Multiple permissive RLS policy advisor warnings require consolidation and query-plan
-  review before scale testing, even though current pgTAP isolation tests pass.
-
-## Database findings
-
-- The new authorization migration is forward-only; no released migration was deleted or
-  rewritten.
-- The migration uses an empty search path, qualified relations, explicit revocation, and
-  restricted grants.
-- Database CI rebuild and pgTAP passed on the verified remediation code.
-- Existing transaction evidence covers row-locked variant reservation, exactly-once
-  release paths, immutable movements/history, idempotent commands, delivery assignment,
-  COD/earnings, payment webhook replay, refunds, and administrator approval/recovery.
-- Production/staging migration timing, lock impact, backup/restore, rollback-forward
-  recovery, and real data query plans remain unverified.
-
-## API parity result
-
-The generated client currently contains 172 OpenAPI operations. OpenAPI lint and the
-controller/generated-client contract check pass in CI. No route mismatch or duplicate
-runtime-route failure was reported. Request/response contract changes were not introduced
-by the remediation.
-
-## Core transaction evidence
-
-Repository tests cover the frozen COD path from order placement and atomic reservation
-through merchant alert/accept/packing, exclusive captain assignment, pickup code,
-delivery OTP, exact COD recording, and exactly-once earnings/history effects. Additional
-tests cover cancellation/rejection release, webhook signature/replay behavior,
-administrator approvals, audit, and selected recovery commands.
-
-This is code-level evidence only. A staging order using real Supabase migrations,
-Cashfree sandbox/live-mode configuration as applicable, SMS/OTP, FCM devices, and
-operational dashboards has not been evidenced for this release commit.
-
-## Frontend integration status
-
-- Generated API client creation, type checking, tests, and workspace compilation are
-  covered by repository gates.
-- Current frontend harness passes customer/merchant/captain/admin E2E and visual tests.
-- Admin approval and operational surfaces are present in the merged baseline.
-- Real session expiry, MFA enrollment/recovery, push delivery on physical devices,
-  production responsive layouts, accessibility assistive-technology checks, and provider
-  failure UX require staging/device evidence.
+This report does not claim results for an unmounted developer working tree, staged files,
+or local-only Git index state. The pull request's required checks remain authoritative for
+the final report-only head.
 
 ## Fixed findings
 
-1. **P1:** inactive administrator database/RLS elevation removed, with pgTAP regression.
-2. **P2:** automatic refund worker coalesces concurrent drains, blocks new work during
-   shutdown, clears its timer, and awaits the in-flight financial drain.
-3. **P2:** refund-worker regression test lint and service-stub type signature corrected.
-4. **P2:** CI preserves lint, typecheck, unit-test, and build diagnostics as artifacts.
-5. **P3:** client secret source scanner excludes generated `.next` output and has tooling
-   coverage; production bundle scanning remains a deployment condition.
+### CI supply-chain resolution
 
-## Unresolved findings and blockers
+The workflow now pins `pnpm/action-setup`, `actions/setup-node`, and `supabase/setup-cli`
+to immutable revisions that were previously resolved successfully by this repository.
+The checkout and artifact actions remain pinned to immutable revisions.
 
-1. Local merge/index/staging checks have not been executed in the specified workspace.
-2. Canonical Group Style scope conflicts with the explicit production-readiness mission.
-3. Production secrets and environment configuration have not been provisioned or checked.
-4. Staging migrations and a complete order-to-delivery smoke test have no release-bound evidence.
-5. Cashfree webhook/refund, SMS/OTP, realtime, and physical FCM behavior are not externally verified.
-6. Monitoring, alert routing, failed-notification visibility, on-call ownership, recovery
-   drills, backup/restore, and query-plan/load evidence are incomplete.
-7. Broad legacy `SECURITY DEFINER` search paths and RLS policy consolidation remain P2 work.
-8. Product, engineering, and operations pilot sign-offs are absent.
+### Refund worker runtime wiring
 
-## Required environment and infrastructure checks
+`RefundExecutionWorker` keeps the narrow `RefundProcessorPort` compile-time interface but
+uses `RefundExecutionService` as its explicit Nest runtime injection token. A Nest testing
+module regression compiles and resolves the worker, preventing a repeat of the erased-
+interface startup failure.
 
-- Run staging migrations from a clean baseline and from the current production-equivalent
-  schema; capture duration, locks, checksums, and roll-forward recovery evidence.
-- Execute one COD and one online-payment order end-to-end with real provider callbacks,
-  OTP, FCM, merchant ringing, captain assignment, delivery completion, settlement, and audit.
-- Verify production environment parsing fails closed and inject secrets only through the
-  approved vault/runtime configuration.
-- Scan built web/mobile bundles for privileged identifiers and secret-value patterns.
-- Run pilot load/query-plan checks on representative data and resolve advisor warnings.
-- Exercise refund retry/reconciliation, notification failure recovery, admin recovery,
-  backup/restore, and incident alerting runbooks.
-- Obtain product, engineering, and operations sign-off against the same release commit.
+The worker also retains bounded shutdown waiting, single-flight drain behaviour, duplicate
+bootstrap protection, rejection-safe cleanup, and deterministic lifecycle tests.
 
-## Final three-part readiness verdict
+### Final-bundle secret scan
 
-### 1. Code readiness — READY WITH EXPLICIT CONDITIONS
+The scanner now requires every expected Next.js and Expo build output directory to exist
+and contain at least one scannable artifact. Missing, empty, or zero-output builds fail the
+gate. Dedicated tooling tests cover complete, missing, and empty output matrices.
 
-The exact remediation code commit passed formatting, environment validation, source
-secret scanning, lint, typecheck, unit tests, integration tests, database tests,
-OpenAPI validation, generated-client contract parity, workspace build, frontend E2E,
-and visual verification in CI run `30249692925`. The remaining code-readiness
-conditions are the local merge/index/diff/staged-artifact checks in the named workspace,
-canonical Group Style scope alignment, and a final green CI run after this report-only
-commit.
+## Remaining code and security work
 
-### 2. Deployment readiness — NOT READY
+The hotfix does not claim to close unrelated repository-wide hardening work. In particular:
 
-Production/staging configuration, migrations, bundle-secret inspection, provider
-callbacks, deployment smoke tests, monitoring, and recovery evidence are not complete.
+- legacy `SECURITY DEFINER` functions with broader search paths still require systematic
+  consolidation where previously documented;
+- overlapping permissive RLS advisor findings still require query-plan and policy review;
+- the canonical Group Style product-scope conflict remains unresolved;
+- mutation-testing targets and broader supply-chain checks remain follow-up work unless
+  separately evidenced.
 
-### 3. Operational/pilot readiness — NOT READY
+These items must remain tracked and risk-ranked; they are not grounds for claiming full
+production deployment readiness.
 
-The controlled pilot lacks release-bound device/provider/load/recovery evidence and the
-required product, engineering, and operations sign-offs.
+## Deployment and pilot blockers
+
+Deployment remains **NOT READY** until production-like staging evidence exists for:
+
+- migrations from clean and production-equivalent baselines;
+- production secrets and environment configuration;
+- final deployed bundle attestation;
+- Cashfree, SMS/OTP, FCM, realtime, and physical-device flows;
+- monitoring, alerting, rollback, backup/restore, and recovery drills;
+- representative load, query-plan, and invariant evidence.
+
+Operational/pilot readiness remains **NOT READY** until issue #140 is completed against one
+immutable release commit, including physical Android evidence, the full staging COD journey,
+admin recovery drills, load thresholds, invariant checks, and product, engineering, and
+operations sign-offs.
+
+## Final three-part verdict
+
+1. **Code readiness — READY WITH EXPLICIT CONDITIONS.** The corrected runtime code passed
+   every required repository verification lane. The final report-only PR head must retain a
+   green required `Verify repository` status and no unresolved critical/high review finding.
+2. **Deployment readiness — NOT READY.** Environment, migration, provider, monitoring,
+   rollback, and recovery evidence remain incomplete.
+3. **Operational/pilot readiness — NOT READY.** Release-bound staging, device, load,
+   recovery, and owner-sign-off evidence remains incomplete.

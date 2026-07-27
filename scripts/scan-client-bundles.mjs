@@ -1,15 +1,12 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 
-import { isClientBundlePath, scanClientBundle } from './client-bundle-scan-lib.mjs';
-
-const BUNDLE_DIRECTORIES = [
-  'apps/admin-dashboard/.next/static',
-  'apps/admin-dashboard/.next/server',
-  'apps/customer-app/dist',
-  'apps/merchant-app/dist',
-  'apps/captain-app/dist',
-];
+import {
+  CLIENT_BUNDLE_DIRECTORIES,
+  isClientBundlePath,
+  scanClientBundle,
+  validateClientBundleCoverage,
+} from './client-bundle-scan-lib.mjs';
 
 function collectFiles(directoryPath) {
   const files = [];
@@ -30,13 +27,16 @@ function collectFiles(directoryPath) {
 try {
   const repositoryRoot = process.cwd();
   const violations = [];
+  const directoryFileCounts = {};
   let scannedFilesCount = 0;
 
-  for (const directory of BUNDLE_DIRECTORIES) {
+  for (const directory of CLIENT_BUNDLE_DIRECTORIES) {
     const absoluteDirectory = resolve(repositoryRoot, directory);
     if (!existsSync(absoluteDirectory)) {
       continue;
     }
+
+    directoryFileCounts[directory] = 0;
 
     for (const absolutePath of collectFiles(absoluteDirectory)) {
       const relativePath = relative(repositoryRoot, absolutePath).replaceAll('\\', '/');
@@ -46,9 +46,15 @@ try {
       }
 
       scannedFilesCount += 1;
+      directoryFileCounts[directory] += 1;
       const contents = readFileSync(absolutePath, 'utf8');
       violations.push(...scanClientBundle(relativePath, contents));
     }
+  }
+
+  const coverageErrors = validateClientBundleCoverage(directoryFileCounts);
+  for (const error of coverageErrors) {
+    console.error(`ERROR: ${error}`);
   }
 
   violations.sort((left, right) => {
@@ -56,14 +62,15 @@ try {
     return pathComparison === 0 ? left.line - right.line : pathComparison;
   });
 
-  if (violations.length > 0) {
-    for (const violation of violations) {
-      console.error(`ERROR: ${violation.path}:${violation.line} — ${violation.rule}`);
-    }
+  for (const violation of violations) {
+    console.error(`ERROR: ${violation.path}:${violation.line} — ${violation.rule}`);
+  }
+
+  if (coverageErrors.length > 0 || violations.length > 0) {
     process.exitCode = 1;
   } else {
     console.log(
-      `OK: scanned ${String(scannedFilesCount)} client build artifacts; no secret material found.`,
+      `OK: scanned ${String(scannedFilesCount)} client build artifacts across every required output directory; no secret material found.`,
     );
   }
 } catch (error) {

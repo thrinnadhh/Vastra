@@ -33,7 +33,7 @@
     "test:frontend:visual": "playwright test --project=visual",
     "test:frontend:visual:update": "pnpm --filter @vastra/frontend-test-harness visual:update",
     "test:integration": "turbo run test:integration",
-    "test:pilot-tooling": "node scripts/run-pilot-tooling-tests.mjs",
+    "test:pilot-tooling": "node scripts/run-pilot-tooling-tests.mjs && node scripts/run-client-bundle-scan-tests.mjs",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {

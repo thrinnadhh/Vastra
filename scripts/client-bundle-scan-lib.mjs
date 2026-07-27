@@ -1,10 +1,12 @@
-const BUNDLE_ROOTS = [
-  'apps/admin-dashboard/.next/static/',
-  'apps/admin-dashboard/.next/server/',
-  'apps/customer-app/dist/',
-  'apps/merchant-app/dist/',
-  'apps/captain-app/dist/',
-];
+export const CLIENT_BUNDLE_DIRECTORIES = Object.freeze([
+  'apps/admin-dashboard/.next/static',
+  'apps/admin-dashboard/.next/server',
+  'apps/customer-app/dist',
+  'apps/merchant-app/dist',
+  'apps/captain-app/dist',
+]);
+
+const BUNDLE_ROOTS = CLIENT_BUNDLE_DIRECTORIES.map((directory) => `${directory}/`);
 
 const ALLOWED_BUNDLE_EXTENSIONS = new Set(['.cjs', '.html', '.js', '.json', '.map', '.mjs']);
 
@@ -70,6 +72,24 @@ export function isClientBundlePath(relativePath) {
   const extension = extensionIndex >= 0 ? finalSegment.slice(extensionIndex) : '';
 
   return ALLOWED_BUNDLE_EXTENSIONS.has(extension);
+}
+
+export function validateClientBundleCoverage(directoryFileCounts) {
+  const errors = [];
+
+  for (const directory of CLIENT_BUNDLE_DIRECTORIES) {
+    if (!Object.prototype.hasOwnProperty.call(directoryFileCounts, directory)) {
+      errors.push(`required client bundle directory is missing: ${directory}`);
+      continue;
+    }
+
+    const count = directoryFileCounts[directory];
+    if (!Number.isSafeInteger(count) || count < 1) {
+      errors.push(`required client bundle directory has no scannable artifacts: ${directory}`);
+    }
+  }
+
+  return errors;
 }
 
 export function scanClientBundle(relativePath, contents) {

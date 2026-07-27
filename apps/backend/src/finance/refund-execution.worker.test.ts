@@ -1,8 +1,30 @@
+import { Test } from '@nestjs/testing';
 import { describe, expect, it } from 'vitest';
 
+import { RefundExecutionService } from './refund-execution.service';
 import { RefundExecutionWorker, type RefundProcessorPort } from './refund-execution.worker';
 
 describe('RefundExecutionWorker', () => {
+  it('resolves its processor through the explicit Nest runtime token', async () => {
+    const processor: RefundProcessorPort = {
+      processAutomatic() {
+        return Promise.resolve({ selected: 0, processed: 0, failed: 0 });
+      },
+    };
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        RefundExecutionWorker,
+        {
+          provide: RefundExecutionService,
+          useValue: processor,
+        },
+      ],
+    }).compile();
+
+    expect(moduleRef.get(RefundExecutionWorker)).toBeInstanceOf(RefundExecutionWorker);
+    await moduleRef.close();
+  });
+
   it('drains the bounded automatic refund queue', async () => {
     const calls: number[] = [];
     const service: RefundProcessorPort = {
@@ -23,7 +45,9 @@ describe('RefundExecutionWorker', () => {
     let completeProcessing!: () => void;
     const pending = new Promise<{ selected: number; processed: number; failed: number }>(
       (resolve) => {
-        completeProcessing = () => resolve({ selected: 1, processed: 1, failed: 0 });
+        completeProcessing = () => {
+          resolve({ selected: 1, processed: 1, failed: 0 });
+        };
       },
     );
 
@@ -50,7 +74,9 @@ describe('RefundExecutionWorker', () => {
     let calls = 0;
     const pending = new Promise<{ selected: number; processed: number; failed: number }>(
       (resolve) => {
-        completeProcessing = () => resolve({ selected: 1, processed: 1, failed: 0 });
+        completeProcessing = () => {
+          resolve({ selected: 1, processed: 1, failed: 0 });
+        };
       },
     );
     const service: RefundProcessorPort = {
@@ -144,12 +170,14 @@ describe('RefundExecutionWorker', () => {
       caughtError = error;
     }
 
-    expect(caughtError).toBeNull(); // performDrain catches internally and resolves
+    expect(caughtError).toBeNull();
   });
 
   it('calling shutdown twice remains safe', async () => {
+    let calls = 0;
     const service: RefundProcessorPort = {
       processAutomatic() {
+        calls += 1;
         return Promise.resolve({ selected: 0, processed: 0, failed: 0 });
       },
     };
@@ -157,8 +185,9 @@ describe('RefundExecutionWorker', () => {
 
     await worker.onApplicationShutdown();
     await worker.onApplicationShutdown();
+    await worker.drainOnce();
 
-    expect(true).toBe(true);
+    expect(calls).toBe(0);
   });
 
   it('calling bootstrap twice cannot create two intervals', async () => {
@@ -179,6 +208,7 @@ describe('RefundExecutionWorker', () => {
       worker.onApplicationBootstrap();
 
       await worker.onApplicationShutdown();
+      expect(calls).toBe(1);
     } finally {
       process.env['NODE_ENV'] = originalEnv;
     }
@@ -192,7 +222,7 @@ describe('RefundExecutionWorker', () => {
       const service: RefundProcessorPort = {
         processAutomatic() {
           return new Promise<{ selected: number; processed: number; failed: number }>(() => {
-            // Never resolves
+            // Intentionally never resolves.
           });
         },
       };
