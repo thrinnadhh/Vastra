@@ -25,15 +25,15 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
+        uses: pnpm/action-setup@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@39370e3970a6d050c08020d06ec300280237072d # v4.1.0
+        uses: actions/setup-node@v4
         with:
           node-version: 20.20.2
           cache: pnpm
@@ -73,7 +73,7 @@ jobs:
 
       - name: Upload static-quality diagnostics
         if: failure()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@v4
         with:
           name: static-quality-diagnostics-${{ github.run_attempt }}
           path: |
@@ -89,15 +89,15 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
+        uses: pnpm/action-setup@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@39370e3970a6d050c08020d06ec300280237072d # v4.1.0
+        uses: actions/setup-node@v4
         with:
           node-version: 20.20.2
           cache: pnpm
@@ -115,7 +115,7 @@ jobs:
 
       - name: Upload application-test diagnostics
         if: failure()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@v4
         with:
           name: application-test-diagnostics-${{ github.run_attempt }}
           path: /tmp/unit-tests.log
@@ -132,15 +132,15 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
+        uses: pnpm/action-setup@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@39370e3970a6d050c08020d06ec300280237072d # v4.1.0
+        uses: actions/setup-node@v4
         with:
           node-version: 20.20.2
           cache: pnpm
@@ -161,7 +161,7 @@ jobs:
 
       - name: Upload frontend E2E evidence
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@v4
         with:
           name: frontend-e2e-evidence-${{ github.run_attempt }}
           path: |
@@ -178,15 +178,15 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
+        uses: pnpm/action-setup@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@39370e3970a6d050c08020d06ec300280237072d # v4.1.0
+        uses: actions/setup-node@v4
         with:
           node-version: 20.20.2
           cache: pnpm
@@ -196,7 +196,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Set up Supabase CLI
-        uses: supabase/setup-cli@v3 # v3.0.0
+        uses: supabase/setup-cli@v3
         with:
           version: 2.109.1
 
@@ -216,15 +216,15 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
+        uses: pnpm/action-setup@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@39370e3970a6d050c08020d06ec300280237072d # v4.1.0
+        uses: actions/setup-node@v4
         with:
           node-version: 20.20.2
           cache: pnpm
@@ -248,7 +248,7 @@ jobs:
 
       - name: Upload workspace build diagnostics
         if: failure()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@v4
         with:
           name: workspace-build-diagnostics-${{ github.run_attempt }}
           path: /tmp/workspace-build.log
