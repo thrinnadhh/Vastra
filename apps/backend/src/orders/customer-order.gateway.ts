@@ -318,6 +318,8 @@ function mapRpcError(error: { readonly code?: string }): Error {
       return new CustomerOrderBranchUnavailableError();
     case 'P0024':
       return new CustomerOrderCodNotEligibleError();
+    case undefined:
+      return new CustomerOrderGatewayUnavailableError();
     default:
       return new CustomerOrderGatewayUnavailableError();
   }

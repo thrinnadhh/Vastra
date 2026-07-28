@@ -328,6 +328,8 @@ function mapRpcError(error: { readonly code?: string }): Error {
       return new CustomerCheckoutQuoteNoFulfilmentBranchError();
     case 'P0022':
       return new CustomerCheckoutQuotePostalPricingRequiredError();
+    case undefined:
+      return new CustomerCheckoutQuoteGatewayUnavailableError();
     default:
       return new CustomerCheckoutQuoteGatewayUnavailableError();
   }
