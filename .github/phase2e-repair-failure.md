@@ -1,7 +1,7 @@
 # Phase 2E repair failure
 
-Run: 30371319954
-Head: 469eb4240d3679732f14c7918fcd6f0481a607b5
+Run: 30371757241
+Head: a9e0b096791cd65957d4e761586c8ef443793e8e
 
 ## phase2e-apply.log
 ```text
@@ -15,12 +15,12 @@ Head: 469eb4240d3679732f14c7918fcd6f0481a607b5
 
 [1m[46m RUN [49m[22m [36mv3.2.7 [39m[90m/home/runner/work/Vastra/Vastra/apps/backend[39m
 
- [32m✓[39m src/admin/admin-city.gateway.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/admin/admin-city.gateway.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
 [2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
-[2m   Start at [22m 15:02:14
-[2m   Duration [22m 503ms[2m (transform 93ms, setup 0ms, collect 238ms, tests 7ms, environment 0ms, prepare 90ms)[22m
+[2m   Start at [22m 15:07:20
+[2m   Duration [22m 456ms[2m (transform 87ms, setup 0ms, collect 219ms, tests 6ms, environment 0ms, prepare 66ms)[22m
 
 ```
 ## phase2e-db.log
@@ -49,13 +49,14 @@ dcccee43ad5d: Pulling fs layer
 a22cb17b3b93: Pulling fs layer
 4f4fb700ef54: Pulling fs layer
 4f4fb700ef54: Waiting
-a22cb17b3b93: Download complete
 dcccee43ad5d: Download complete
-06d62d0de6d7: Verifying Checksum
-06d62d0de6d7: Download complete
+a22cb17b3b93: Verifying Checksum
+a22cb17b3b93: Download complete
+dcccee43ad5d: Pull complete
 4f4fb700ef54: Verifying Checksum
 4f4fb700ef54: Download complete
-dcccee43ad5d: Pull complete
+06d62d0de6d7: Verifying Checksum
+06d62d0de6d7: Download complete
 06d62d0de6d7: Pull complete
 a22cb17b3b93: Pull complete
 4f4fb700ef54: Pull complete
@@ -211,59 +212,35 @@ psql:/home/runner/work/Vastra/Vastra/supabase/tests/0101_phase_2d_atomic_checkou
 psql:/home/runner/work/Vastra/Vastra/supabase/tests/0102_phase_2d_checkout_behaviour.test.sql:2: NOTICE:  extension "pgtap" already exists, skipping
 /home/runner/work/Vastra/Vastra/supabase/tests/0102_phase_2d_checkout_behaviour.test.sql ............... ok
 psql:/home/runner/work/Vastra/Vastra/supabase/tests/0103_phase_2e_city_activation.test.sql:3: NOTICE:  extension "pgtap" already exists, skipping
-psql:/home/runner/work/Vastra/Vastra/supabase/tests/0103_phase_2e_city_activation.test.sql:708: ERROR:  MERCHANT_BRANCH_LOCAL_ZONE_REQUIRED
-CONTEXT:  PL/pgSQL function private.validate_merchant_branch() line 158 at RAISE
-SQL statement "with activated_branches as (
-      update public.merchant_branches mb
-      set status = 'ACTIVE', updated_by = p_actor_id
-      from public.shops shop, public.merchant_profiles merchant, public.profiles merchant_profile
-      where mb.city_id = p_city_id
-        and mb.status = 'APPROVED'
-        and mb.verification_status = 'VERIFIED'
-        and mb.geography_status = 'VERIFIED'
-        and mb.local_delivery_enabled
-        and shop.id = mb.shop_id
-        and shop.deleted_at is null
-        and shop.verification_status = 'VERIFIED'
-        and shop.operational_status not in ('PAUSED', 'SUSPENDED')
-        and merchant.user_id = mb.merchant_id
-        and merchant.kyc_status = 'VERIFIED'
-        and merchant.onboarding_status = 'ACTIVE'
-        and merchant_profile.id = mb.merchant_id
-        and merchant_profile.status = 'ACTIVE'
-      returning mb.id, mb.city_id
-    )
-    insert into private.merchant_branch_activation_history(
-      branch_id,
-      city_id,
-      from_status,
-      to_status,
-      actor_id,
-      request_id,
-      idempotency_key,
-      activated_at
-    )
-    select
-      branch.id,
-      branch.city_id,
-      'APPROVED',
-      'ACTIVE',
-      p_actor_id,
-      nullif(btrim(p_request_id), ''),
-      p_idempotency_key,
-      clock_timestamp()
-    from activated_branches branch"
-PL/pgSQL function public.admin_transition_city(uuid,uuid,text,text,text,text,uuid) line 70 at SQL statement
 /home/runner/work/Vastra/Vastra/supabase/tests/0103_phase_2e_city_activation.test.sql .................. 
-Dubious, test returned 3 (wstat 768, 0x300)
-Failed 14/49 subtests 
+# Failed test 46: "Phase 2E preserves existing finance audit resource types"
+#     died: 42883: function digest(text, unknown) does not exist
+#         HINT:       No function matches the given name and argument types. You might need to add explicit type casts.
+#         CONTEXT:
+#             PL/pgSQL function record_admin_audit(uuid,text,text,uuid,text,text,text,uuid,jsonb,jsonb) line 11 at assignment
+#             SQL statement "
+#                 select public.record_admin_audit(
+#                   'e3000000-0000-4000-8000-000000000001',
+#                   'admin.refund.phase2e_regression',
+#                   'REFUND',
+#                   'e3a00000-0000-4000-8000-000000000001',
+#                   'OPERATIONAL_RECOVERY',
+#                   'Finance resource remains accepted',
+#                   'phase2e-request-finance',
+#                   'e3b00000-0000-4000-8000-000000000001',
+#                   null,
+#                   '{"status":"QUEUED"}'::jsonb
+#                 )
+#               "
+#             PL/pgSQL function lives_ok(text,text) line 14 at EXECUTE
+# Looks like you failed 1 test of 49
+Failed 1/49 subtests 
 
 Test Summary Report
 -------------------
-/home/runner/work/Vastra/Vastra/supabase/tests/0103_phase_2e_city_activation.test.sql                (Wstat: 768 (exited 3) Tests: 35 Failed: 0)
-  Non-zero exit status: 3
-  Parse errors: Bad plan.  You planned 49 tests but ran 35.
-Files=84, Tests=1820,  5 wallclock secs ( 0.27 usr  0.12 sys +  0.64 cusr  0.42 csys =  1.45 CPU)
+/home/runner/work/Vastra/Vastra/supabase/tests/0103_phase_2e_city_activation.test.sql                (Wstat: 0 Tests: 49 Failed: 1)
+  Failed test:  46
+Files=84, Tests=1834,  5 wallclock secs ( 0.26 usr  0.13 sys +  0.66 cusr  0.40 csys =  1.45 CPU)
 Result: FAIL
 [31merror running container: exit 1[39m
 Try rerunning the command with --debug to troubleshoot the error.
