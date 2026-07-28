@@ -84,6 +84,6 @@ test('Phase 2E exposes fail-closed city configuration and activation evidence', 
   await dialog.getByRole('button', { name: 'Run preflight' }).click();
 
   await expect(page.getByRole('heading', { name: 'Latest preflight' })).toBeVisible();
-  await expect(page.getByText('Merchants')).toBeVisible();
+  await expect(page.getByRole('main').getByText('Merchants', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Activate city' })).toBeDisabled();
 });
