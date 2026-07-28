@@ -24,9 +24,31 @@ export interface CustomerCheckoutQuoteShop {
   readonly name: string;
   readonly slug: string;
   readonly minimumOrderPaise: number;
-  readonly averagePreparationMinutes: number;
+}
+
+export interface CustomerCheckoutQuoteBranch {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly type: 'PHYSICAL_STORE' | 'CLOUD_SHOP';
+  readonly addressId: string;
+  readonly returnAddressId: string;
+  readonly pincode: string | null;
+  readonly latitude: number;
+  readonly longitude: number;
+}
+
+export interface CustomerCheckoutQuoteGeography {
+  readonly cityId: string;
+  readonly cityCode: string;
+  readonly cityName: string;
+  readonly serviceZoneId: string;
+  readonly serviceZoneCode: string;
+  readonly serviceZoneName: string;
+  readonly customerPincode: string;
+  readonly fulfilmentMode: 'LOCAL_DELIVERY';
   readonly distanceMeters: number;
-  readonly serviceRadiusMeters: number;
+  readonly deliveryRadiusMeters: number;
 }
 
 export interface CustomerCheckoutQuoteItem {
@@ -42,7 +64,7 @@ export interface CustomerCheckoutQuoteItem {
   readonly unitPricePaise: number;
   readonly priceChanged: boolean;
   readonly availableQuantity: number;
-  readonly inventoryVersion: number;
+  readonly branchInventoryVersion: number;
   readonly lineTotalPaise: number;
 }
 
@@ -58,14 +80,21 @@ export interface CustomerCheckoutQuoteTotals {
 
 export interface CustomerCheckoutQuote {
   readonly id: string;
+  readonly contractVersion: 2;
   readonly cartId: string;
   readonly address: CustomerCheckoutQuoteAddress;
   readonly shop: CustomerCheckoutQuoteShop;
+  readonly branch: CustomerCheckoutQuoteBranch;
+  readonly geography: CustomerCheckoutQuoteGeography;
   readonly items: readonly CustomerCheckoutQuoteItem[];
   readonly totals: CustomerCheckoutQuoteTotals;
+  readonly fulfilmentMode: 'LOCAL_DELIVERY';
+  readonly codEligible: boolean;
+  readonly codLimitPaise: number;
   readonly estimatedPreparationMinutes: number;
   readonly estimatedTravelMinutes: number;
   readonly estimatedDeliveryAt: string;
+  readonly cityConfigurationVersion: number;
   readonly expiresAt: string;
   readonly createdAt: string;
 }
@@ -82,6 +111,8 @@ export type CustomerCheckoutQuoteFailureKind =
   | 'UNAVAILABLE_ITEM'
   | 'CHANGED_PRICE'
   | 'UNSERVICEABLE_ADDRESS'
+  | 'NO_FULFILMENT_BRANCH'
+  | 'POSTAL_PRICING_REQUIRED'
   | 'STALE_QUOTE'
   | 'SHOP_UNAVAILABLE'
   | 'CONFLICT'
