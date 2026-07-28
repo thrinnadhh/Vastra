@@ -1,4 +1,5 @@
 name: Phase 2E modal lint repair
+# Registered trigger for the Phase 2E modal correction.
 
 on:
   push:
