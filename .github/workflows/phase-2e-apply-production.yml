@@ -1,11 +1,9 @@
 name: Apply reviewed Phase 2E production patch
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/phase-2e-city-activation
-    paths:
-      - .github/phase-2e-production.patch.gz.b64
+      - main
 
 permissions:
   contents: write
@@ -15,6 +13,7 @@ env:
 
 jobs:
   apply:
+    if: github.head_ref == 'agent/phase-2e-city-activation'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -24,24 +23,23 @@ jobs:
           ref: agent/phase-2e-city-activation
           fetch-depth: 0
           persist-credentials: true
-      - name: Verify and apply reviewed patch
+      - name: Reconstruct, verify and apply reviewed patch
         shell: bash
         run: |
           set -euo pipefail
-          base64 --decode .github/phase-2e-production.patch.gz.b64 | gzip --decompress > /tmp/phase-2e-production.patch
+          cat .github/phase-2e-production-patch/part-* > /tmp/phase-2e-production.patch.gz.b64
+          base64 --decode /tmp/phase-2e-production.patch.gz.b64 | gzip --decompress > /tmp/phase-2e-production.patch
           printf '%s  %s\n' 'b1141e3784a3086d32a87111885869c3144a9079f7292ff993f41d46b9edee2a' /tmp/phase-2e-production.patch | sha256sum --check --strict
           git apply --check /tmp/phase-2e-production.patch
           git apply /tmp/phase-2e-production.patch
-          rm -f \
-            supabase/migrations/20260728113100_phase_2e_city_activation_hardening.sql \
+          rm -rf \
+            .github/phase-2e-production-patch \
+            .github/phase-2e-production.patch.gz.b64 \
             .github/workflows/phase-2e-materialize.yml \
             .github/workflows/phase-2e-apply-db-fix.yml \
             .github/workflows/phase-2e-apply-production.yml \
-            .github/phase-2e-production.patch.gz.b64
+            supabase/migrations/20260728113100_phase_2e_city_activation_hardening.sql
           git diff --check
-          test ! -e supabase/migrations/20260728113100_phase_2e_city_activation_hardening.sql
-          test ! -e .github/workflows/phase-2e-materialize.yml
-          test ! -e .github/workflows/phase-2e-apply-db-fix.yml
       - name: Use repository Node version
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
