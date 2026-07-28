@@ -1,19 +1,19 @@
-name: PR 163 Customer Fixture Apply
+name: PR 163 Customer Fixture Diagnostics
 
 on:
   pull_request:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: pr163-customer-fixture-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  fix:
-    name: Apply customer fixture fixes
+  diagnose:
+    name: Diagnose customer fixture fixes
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: agent/phase-2d-b-checkout-integration
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
@@ -41,17 +41,13 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require('node:fs');
-
           function replaceOnce(path, oldValue, newValue) {
             const source = fs.readFileSync(path, 'utf8');
             const count = source.split(oldValue).length - 1;
-            if (count !== 1) {
-              throw new Error(`${path}: expected one match, found ${count}`);
-            }
+            if (count !== 1) throw new Error(`${path}: expected one match, found ${count}`);
             fs.writeFileSync(path, source.replace(oldValue, newValue));
           }
-
-          const branchAndGeography = `  branch: {
+          const contract = `  branch: {
             id: 'a0000000-0000-4000-8000-000000000001',
             code: 'TIR-01',
             name: 'Tirupati Branch',
@@ -75,100 +71,80 @@ jobs:
             deliveryRadiusMeters: 5000,
           },
           `;
-
           const screen = 'apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx';
           replaceOnce(screen, '  id: QUOTE_ID,\n  cartId: CART_ID,', '  id: QUOTE_ID,\n  contractVersion: 2,\n  cartId: CART_ID,');
-          replaceOnce(
-            screen,
-            `  shop: {
-              id: '50000000-0000-4000-8000-000000000001',
-              name: 'Synthetic Quote Shop',
-              slug: 'synthetic-quote-shop',
-              minimumOrderPaise: 0,
-              averagePreparationMinutes: 20,
-              distanceMeters: 500,
-              serviceRadiusMeters: 5000,
-            },
-            `,
-            `  shop: {
-              id: '50000000-0000-4000-8000-000000000001',
-              name: 'Synthetic Quote Shop',
-              slug: 'synthetic-quote-shop',
-              minimumOrderPaise: 0,
-            },
-            ${branchAndGeography}`,
-          );
+          replaceOnce(screen, `  shop: {
+            id: '50000000-0000-4000-8000-000000000001',
+            name: 'Synthetic Quote Shop',
+            slug: 'synthetic-quote-shop',
+            minimumOrderPaise: 0,
+            averagePreparationMinutes: 20,
+            distanceMeters: 500,
+            serviceRadiusMeters: 5000,
+          },
+          `, `  shop: {
+            id: '50000000-0000-4000-8000-000000000001',
+            name: 'Synthetic Quote Shop',
+            slug: 'synthetic-quote-shop',
+            minimumOrderPaise: 0,
+          },
+          ${contract}`);
           replaceOnce(screen, '      inventoryVersion: 1,', '      branchInventoryVersion: 1,');
-          replaceOnce(
-            screen,
-            '  estimatedPreparationMinutes: 20,',
-            `  fulfilmentMode: 'LOCAL_DELIVERY',
-            codEligible: true,
-            codLimitPaise: 100_000,
-            estimatedPreparationMinutes: 20,`,
-          );
-          replaceOnce(
-            screen,
-            "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',",
-            "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',\n  cityConfigurationVersion: 1,",
-          );
-
+          replaceOnce(screen, '  estimatedPreparationMinutes: 20,', `  fulfilmentMode: 'LOCAL_DELIVERY',
+          codEligible: true,
+          codLimitPaise: 100_000,
+          estimatedPreparationMinutes: 20,`);
+          replaceOnce(screen, "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',", "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',\n  cityConfigurationVersion: 1,");
           const journey = 'apps/customer-app/src/orders/customer-cod-order-journey.test.tsx';
           replaceOnce(journey, '  id: QUOTE_ID,\n  cartId: CART_ID,', '  id: QUOTE_ID,\n  contractVersion: 2,\n  cartId: CART_ID,');
-          replaceOnce(
-            journey,
-            `  shop: {
-              id: SHOP_ID,
-              name: 'Synthetic Journey Shop',
-              slug: 'synthetic-journey-shop',
-              minimumOrderPaise: 0,
-              averagePreparationMinutes: 20,
-              distanceMeters: 500,
-              serviceRadiusMeters: 5000,
-            },
-            `,
-            `  shop: {
-              id: SHOP_ID,
-              name: 'Synthetic Journey Shop',
-              slug: 'synthetic-journey-shop',
-              minimumOrderPaise: 0,
-            },
-            ${branchAndGeography}`,
-          );
+          replaceOnce(journey, `  shop: {
+            id: SHOP_ID,
+            name: 'Synthetic Journey Shop',
+            slug: 'synthetic-journey-shop',
+            minimumOrderPaise: 0,
+            averagePreparationMinutes: 20,
+            distanceMeters: 500,
+            serviceRadiusMeters: 5000,
+          },
+          `, `  shop: {
+            id: SHOP_ID,
+            name: 'Synthetic Journey Shop',
+            slug: 'synthetic-journey-shop',
+            minimumOrderPaise: 0,
+          },
+          ${contract}`);
           replaceOnce(journey, '      inventoryVersion: 7,', '      branchInventoryVersion: 7,');
-          replaceOnce(
-            journey,
-            '  estimatedPreparationMinutes: 20,',
-            `  fulfilmentMode: 'LOCAL_DELIVERY',
-            codEligible: true,
-            codLimitPaise: 100_000,
-            estimatedPreparationMinutes: 20,`,
-          );
-          replaceOnce(
-            journey,
-            "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',",
-            "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',\n  cityConfigurationVersion: 1,",
-          );
+          replaceOnce(journey, '  estimatedPreparationMinutes: 20,', `  fulfilmentMode: 'LOCAL_DELIVERY',
+          codEligible: true,
+          codLimitPaise: 100_000,
+          estimatedPreparationMinutes: 20,`);
+          replaceOnce(journey, "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',", "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',\n  cityConfigurationVersion: 1,");
           NODE
-
-      - name: Format and verify customer app
-        run: |
           pnpm exec prettier --write \
             apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx \
             apps/customer-app/src/orders/customer-cod-order-journey.test.tsx
-          pnpm --filter @vastra/customer-app typecheck
-          pnpm --filter @vastra/customer-app test
 
-      - name: Commit customer fixture fixes
+      - name: Capture customer validation
+        shell: bash
         run: |
-          if git diff --quiet; then
-            echo "No customer fixture changes required."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx \
+          set +e
+          pnpm --filter @vastra/customer-app typecheck > /tmp/customer-typecheck.log 2>&1
+          typecheck_status=$?
+          pnpm --filter @vastra/customer-app test > /tmp/customer-test.log 2>&1
+          test_status=$?
+          echo "$typecheck_status" > /tmp/typecheck-status.txt
+          echo "$test_status" > /tmp/test-status.txt
+          exit 0
+
+      - name: Upload customer diagnostics
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr163-customer-diagnostics
+          path: |
+            /tmp/customer-typecheck.log
+            /tmp/customer-test.log
+            /tmp/typecheck-status.txt
+            /tmp/test-status.txt
+            apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx
             apps/customer-app/src/orders/customer-cod-order-journey.test.tsx
-          git commit -m "test(checkout): align customer fixtures with Phase 2D"
-          git push origin HEAD:agent/phase-2d-b-checkout-integration
+          retention-days: 1
