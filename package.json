@@ -12,7 +12,7 @@
     "db:test": "bash scripts/run-db-tests.sh",
     "env:check": "tsx scripts/validate-env.mts",
     "format": "prettier --write .",
-    "format:check": "prettier --write eslint.config.mjs && cat eslint.config.mjs && prettier --check .",
+    "format:check": "prettier --check .",
     "lint": "pnpm --filter @vastra/api-client generate && eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "openapi:check": "redocly lint docs/api/openapi.yaml --extends=spec",

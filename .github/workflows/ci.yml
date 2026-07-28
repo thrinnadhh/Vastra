@@ -8,65 +8,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  phase2e-modal-repair:
-    name: Phase 2E modal source repair
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/phase-2e-city-activation' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Check out Phase 2E branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: agent/phase-2e-city-activation
-          fetch-depth: 0
-
-      - name: Replace render-time ref mutation and remove suppression
-        run: |
-          python3 .github/phase2e_modal_source_fix.py
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 20.20.2
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Format and verify repair
-        run: |
-          pnpm exec prettier --write apps/admin-dashboard/src/app/cities/page.tsx eslint.config.mjs
-          pnpm lint
-          pnpm typecheck
-
-      - name: Restore repository infrastructure and push source fix
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main --depth=1
-          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
-          git show origin/main:package.json > package.json
-          git show origin/main:eslint.config.mjs > eslint.config.mjs
-          rm -f \
-            .github/workflows/phase2e-lint-fix.yml \
-            .github/phase2e-modal-lint-failure.md \
-            .github/phase2e_modal_source_fix.py
-          git add -A
-          git commit -m "fix: satisfy modal lifecycle lint"
-          git push origin HEAD:agent/phase-2e-city-activation
-
   static-quality:
     name: Static quality
     runs-on: ubuntu-latest

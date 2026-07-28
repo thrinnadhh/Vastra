@@ -100,34 +100,36 @@ function CityCommandDialog<T>({
   const [failure, setFailure] = useState<AdminFailure | null>(null);
   const idempotencyKey = useRef(createIdempotencyKey());
   const dialog = useRef<HTMLDialogElement>(null);
-  const busyRef = useRef(busy);
-  const onCloseRef = useRef(onClose);
-  busyRef.current = busy;
-  onCloseRef.current = onClose;
 
   useEffect(() => {
     const element = dialog.current;
     if (element === null) return;
     if (!element.open) element.showModal();
 
-    const cancel = (event: Event) => {
-      event.preventDefault();
-      if (busyRef.current) return;
-      element.close();
-      onCloseRef.current();
-    };
-
-    element.addEventListener('cancel', cancel);
     return () => {
-      element.removeEventListener('cancel', cancel);
       if (element.open) element.close();
     };
   }, []);
 
+  useEffect(() => {
+    const element = dialog.current;
+    if (element === null) return;
+
+    const cancel = (event: Event) => {
+      event.preventDefault();
+      if (busy) return;
+      element.close();
+      onClose();
+    };
+
+    element.addEventListener('cancel', cancel);
+    return () => element.removeEventListener('cancel', cancel);
+  }, [busy, onClose]);
+
   const requestClose = () => {
-    if (busyRef.current) return;
+    if (busy) return;
     if (dialog.current?.open) dialog.current.close();
-    onCloseRef.current();
+    onClose();
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
