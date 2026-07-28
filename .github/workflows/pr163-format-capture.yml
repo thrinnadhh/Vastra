@@ -1,30 +1,28 @@
-name: PR 163 Format Capture
+name: PR 163 Format Apply
 
 on:
   pull_request:
-  push:
-    branches:
-      - agent/phase-2d-b-checkout-integration
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: pr163-format-${{ github.ref }}
+  group: pr163-format-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   format:
-    name: Format PR 163 files
+    name: Format and commit PR 163 files
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
-      - name: Check out repository
+      - name: Check out PR branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          ref: agent/phase-2d-b-checkout-integration
+          persist-credentials: true
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
@@ -56,9 +54,15 @@ jobs:
             apps/customer-app/src/checkout/customer-checkout-quote.client.test.ts \
             apps/customer-app/src/checkout/customer-checkout-quote.types.ts
 
-      - name: Archive formatted files
+      - name: Commit formatting changes
         run: |
-          tar -czf /tmp/pr163-formatted.tar.gz \
+          if git diff --quiet; then
+            echo "No formatting changes required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
             apps/backend/src/catalogue/customer-checkout-quote.gateway.ts \
             apps/backend/src/catalogue/customer-checkout-quote.service.ts \
             apps/backend/src/catalogue/customer-checkout-quote.types.ts \
@@ -72,10 +76,5 @@ jobs:
             apps/customer-app/src/checkout/customer-checkout-quote.client.ts \
             apps/customer-app/src/checkout/customer-checkout-quote.client.test.ts \
             apps/customer-app/src/checkout/customer-checkout-quote.types.ts
-
-      - name: Upload formatted files
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: pr163-formatted-files
-          path: /tmp/pr163-formatted.tar.gz
-          retention-days: 1
+          git commit -m "style(checkout): format Phase 2D integration"
+          git push origin HEAD:agent/phase-2d-b-checkout-integration
