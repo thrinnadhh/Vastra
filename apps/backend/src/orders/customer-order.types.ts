@@ -30,6 +30,41 @@ export interface CustomerOrderShopSnapshot {
   readonly slug: string;
 }
 
+export interface CustomerOrderBranchSnapshot {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly type: 'PHYSICAL_STORE' | 'CLOUD_SHOP';
+  readonly addressId: string;
+  readonly returnAddressId: string;
+  readonly pincode: string | null;
+  readonly latitude: number;
+  readonly longitude: number;
+}
+
+export interface CustomerOrderGeographySnapshot {
+  readonly cityId: string;
+  readonly cityCode: string;
+  readonly cityName: string;
+  readonly serviceZoneId: string;
+  readonly serviceZoneCode: string;
+  readonly serviceZoneName: string;
+  readonly customerPincode: string;
+  readonly fulfilmentMode: 'LOCAL_DELIVERY';
+  readonly distanceMeters: number;
+  readonly deliveryRadiusMeters: number;
+}
+
+export interface CustomerOrderCommercialSnapshot {
+  readonly deliveryFeePaise: number;
+  readonly codEligible: boolean;
+  readonly codLimitPaise: number;
+  readonly merchantCommissionBps: number;
+  readonly cityConfigurationVersion: number;
+  readonly cancellationPolicy: Readonly<Record<string, unknown>>;
+  readonly refundPolicy: Readonly<Record<string, unknown>>;
+}
+
 export interface CustomerOrderItemSnapshot {
   readonly id: string;
   readonly productId: string;
@@ -44,6 +79,8 @@ export interface CustomerOrderItemSnapshot {
   readonly unitSellingPricePaise: number;
   readonly discountPaise: number;
   readonly totalPaise: number;
+  readonly branchInventoryVersion: number;
+  readonly branchInventoryReservationId: string;
 }
 
 export interface CustomerOrderTotalsSnapshot {
@@ -61,12 +98,17 @@ export interface CustomerCodOrderSnapshot {
   readonly orderNumber: string;
   readonly cartId: string;
   readonly quoteId: string;
+  readonly contractVersion: 2;
   readonly shop: CustomerOrderShopSnapshot;
+  readonly branch: CustomerOrderBranchSnapshot;
+  readonly geography: CustomerOrderGeographySnapshot;
+  readonly commercial: CustomerOrderCommercialSnapshot;
   readonly address: CustomerOrderAddressSnapshot;
   readonly status: 'WAITING_FOR_MERCHANT';
   readonly paymentStatus: 'COD_PENDING';
   readonly paymentMethod: 'COD';
   readonly fulfilmentType: 'DELIVERY';
+  readonly fulfilmentMode: 'LOCAL_DELIVERY';
   readonly items: readonly CustomerOrderItemSnapshot[];
   readonly totals: CustomerOrderTotalsSnapshot;
   readonly estimatedDeliveryAt: string;
