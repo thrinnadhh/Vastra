@@ -1,6 +1,7 @@
 name: PR 163 Format Capture
 
 on:
+  pull_request:
   push:
     branches:
       - agent/phase-2d-b-checkout-integration
