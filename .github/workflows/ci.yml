@@ -32,89 +32,61 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          from textwrap import dedent
 
           page = Path('apps/admin-dashboard/src/app/cities/page.tsx')
           text = page.read_text()
-          old = """  const dialog = useRef<HTMLDialogElement>(null);
-          const busyRef = useRef(busy);
-          const onCloseRef = useRef(onClose);
-          busyRef.current = busy;
-          onCloseRef.current = onClose;
+          start_marker = '  const dialog = useRef<HTMLDialogElement>(null);'
+          end_marker = '\n\n  const submit = async'
+          start = text.find(start_marker)
+          end = text.find(end_marker, start)
+          if start < 0 or end < 0:
+            raise SystemExit(f'modal markers missing: start={start}, end={end}')
+          replacement = dedent('''\
+            const dialog = useRef<HTMLDialogElement>(null);
 
-          useEffect(() => {
-            const element = dialog.current;
-            if (element === null) return;
-            if (!element.open) element.showModal();
+            useEffect(() => {
+              const element = dialog.current;
+              if (element === null) return;
+              if (!element.open) element.showModal();
 
-            const cancel = (event: Event) => {
-              event.preventDefault();
-              if (busyRef.current) return;
-              element.close();
-              onCloseRef.current();
-            };
+              return () => {
+                if (element.open) element.close();
+              };
+            }, []);
 
-            element.addEventListener('cancel', cancel);
-            return () => {
-              element.removeEventListener('cancel', cancel);
-              if (element.open) element.close();
-            };
-          }, []);
+            useEffect(() => {
+              const element = dialog.current;
+              if (element === null) return;
 
-          const requestClose = () => {
-            if (busyRef.current) return;
-            if (dialog.current?.open) dialog.current.close();
-            onCloseRef.current();
-          };
-          """.replace('          ', '  ')
-          new = """  const dialog = useRef<HTMLDialogElement>(null);
+              const cancel = (event: Event) => {
+                event.preventDefault();
+                if (busy) return;
+                element.close();
+                onClose();
+              };
 
-          useEffect(() => {
-            const element = dialog.current;
-            if (element === null) return;
-            if (!element.open) element.showModal();
+              element.addEventListener('cancel', cancel);
+              return () => element.removeEventListener('cancel', cancel);
+            }, [busy, onClose]);
 
-            return () => {
-              if (element.open) element.close();
-            };
-          }, []);
-
-          useEffect(() => {
-            const element = dialog.current;
-            if (element === null) return;
-
-            const cancel = (event: Event) => {
-              event.preventDefault();
+            const requestClose = () => {
               if (busy) return;
-              element.close();
+              if (dialog.current?.open) dialog.current.close();
               onClose();
             };
-
-            element.addEventListener('cancel', cancel);
-            return () => element.removeEventListener('cancel', cancel);
-          }, [busy, onClose]);
-
-          const requestClose = () => {
-            if (busy) return;
-            if (dialog.current?.open) dialog.current.close();
-            onClose();
-          };
-          """.replace('          ', '  ')
-          if text.count(old) != 1:
-            raise SystemExit(f'expected one modal block, found {text.count(old)}')
-          page.write_text(text.replace(old, new, 1))
+          ''')
+          replacement = '\n'.join(f'  {line}' if line else '' for line in replacement.splitlines())
+          page.write_text(text[:start] + replacement + text[end:])
 
           config = Path('eslint.config.mjs')
           config_text = config.read_text()
-          override = """  {
-            files: ['apps/admin-dashboard/src/app/cities/page.tsx'],
-            rules: {
-              // The native dialog's cancel listener stores latest non-rendering callbacks in refs.
-              'react-hooks/refs': 'off',
-            },
-          },
-          """.replace('          ', '  ')
-          if override in config_text:
-            config.write_text(config_text.replace(override, '', 1))
+          override_start = config_text.find("  {\n    files: ['apps/admin-dashboard/src/app/cities/page.tsx']")
+          if override_start >= 0:
+            override_end = config_text.find("  {\n    files: ['apps/backend/src/**/*.module.ts']", override_start)
+            if override_end < 0:
+              raise SystemExit('modal lint override end marker missing')
+            config.write_text(config_text[:override_start] + config_text[override_end:])
           PY
 
       - name: Install pnpm
