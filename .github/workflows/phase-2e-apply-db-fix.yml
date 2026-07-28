@@ -31,134 +31,154 @@ jobs:
           path = Path('supabase/migrations/20260728113000_phase_2e_city_activation.sql')
           source = path.read_text()
 
-          source = source.replace(
-              "      'CONFIGURATION',\n      'CITY',",
-              "      'CONFIGURATION',\n      'PAYMENT',\n      'PAYMENT_EVENT',\n      'RETURN_REQUEST',\n      'REFUND',\n      'MERCHANT_SETTLEMENT',\n      'CAPTAIN_EARNING',\n      'CAPTAIN_PAYOUT',\n      'COD_RECONCILIATION',\n      'CITY',",
-          )
-          source = source.replace(
-              "from jsonb_object_keys(p_patch) as key\n  where key not in (",
-              "from jsonb_object_keys(p_patch) as patch_key(key)\n  where key not in (",
-          )
-          source = source.replace(
-              "v_resource_id := coalesce(p_zone_id, gen_random_uuid());",
-              "v_resource_id := coalesce(p_zone_id, p_idempotency_key);",
-          )
-          source = source.replace(
-              "v_resource_id uuid := coalesce(p_mapping_id, gen_random_uuid());",
-              "v_resource_id uuid := coalesce(p_mapping_id, p_idempotency_key);",
-          )
-          source = source.replace(
-              "z.status in ('READY_FOR_VALIDATION', 'ACTIVE')",
-              "z.status in ('READY_FOR_VALIDATION', 'ACTIVE', 'PAUSED')",
-          )
+          replacements = [
+              (
+                  "      'CONFIGURATION',\n      'CITY',",
+                  "      'CONFIGURATION',\n      'PAYMENT',\n      'PAYMENT_EVENT',\n      'RETURN_REQUEST',\n      'REFUND',\n      'MERCHANT_SETTLEMENT',\n      'CAPTAIN_EARNING',\n      'CAPTAIN_PAYOUT',\n      'COD_RECONCILIATION',\n      'CITY',",
+              ),
+              (
+                  "from jsonb_object_keys(p_patch) as key\n  where key not in (",
+                  "from jsonb_object_keys(p_patch) as patch_key(key)\n  where key not in (",
+              ),
+              (
+                  "v_resource_id := coalesce(p_zone_id, gen_random_uuid());",
+                  "v_resource_id := coalesce(p_zone_id, p_idempotency_key);",
+              ),
+              (
+                  "v_resource_id uuid := coalesce(p_mapping_id, gen_random_uuid());",
+                  "v_resource_id uuid := coalesce(p_mapping_id, p_idempotency_key);",
+              ),
+              (
+                  "z.status in ('READY_FOR_VALIDATION', 'ACTIVE')",
+                  "z.status in ('READY_FOR_VALIDATION', 'ACTIVE', 'PAUSED')",
+              ),
+              (
+                  "when invalid_text_representation or numeric_value_out_of_range then\n    raise exception 'ADMIN_CITY_CONFIGURATION_INVALID';",
+                  "when invalid_text_representation or numeric_value_out_of_range or not_null_violation or check_violation then\n    raise exception 'ADMIN_CITY_CONFIGURATION_INVALID';",
+              ),
+          ]
+          for old, new in replacements:
+              if old not in source:
+                  raise SystemExit(f'required correction target not found: {old[:60]}')
+              source = source.replace(old, new)
 
-          old = """  from public.merchant_branches mb
-          where mb.city_id = p_city_id
-            and mb.status = 'ACTIVE'
-            and mb.verification_status = 'VERIFIED'
-            and mb.geography_status = 'VERIFIED'
-            and mb.local_delivery_enabled;"""
-          new = """  from public.merchant_branches mb
-          join public.shops shop on shop.id = mb.shop_id
-          join public.merchant_profiles merchant on merchant.user_id = mb.merchant_id
-          join public.profiles merchant_profile on merchant_profile.id = mb.merchant_id
-          where mb.city_id = p_city_id
-            and mb.status in ('APPROVED', 'ACTIVE')
-            and mb.verification_status = 'VERIFIED'
-            and mb.geography_status = 'VERIFIED'
-            and mb.local_delivery_enabled
-            and shop.deleted_at is null
-            and shop.verification_status = 'VERIFIED'
-            and shop.operational_status not in ('PAUSED', 'SUSPENDED')
-            and merchant.kyc_status = 'VERIFIED'
-            and merchant.onboarding_status = 'ACTIVE'
-            and merchant_profile.status = 'ACTIVE';"""
-          if old not in source:
+          merchant_count_old = (
+              "  from public.merchant_branches mb\n"
+              "  where mb.city_id = p_city_id\n"
+              "    and mb.status = 'ACTIVE'\n"
+              "    and mb.verification_status = 'VERIFIED'\n"
+              "    and mb.geography_status = 'VERIFIED'\n"
+              "    and mb.local_delivery_enabled;"
+          )
+          merchant_count_new = (
+              "  from public.merchant_branches mb\n"
+              "  join public.shops shop on shop.id = mb.shop_id\n"
+              "  join public.merchant_profiles merchant on merchant.user_id = mb.merchant_id\n"
+              "  join public.profiles merchant_profile on merchant_profile.id = mb.merchant_id\n"
+              "  where mb.city_id = p_city_id\n"
+              "    and mb.status in ('APPROVED', 'ACTIVE')\n"
+              "    and mb.verification_status = 'VERIFIED'\n"
+              "    and mb.geography_status = 'VERIFIED'\n"
+              "    and mb.local_delivery_enabled\n"
+              "    and shop.deleted_at is null\n"
+              "    and shop.verification_status = 'VERIFIED'\n"
+              "    and shop.operational_status not in ('PAUSED', 'SUSPENDED')\n"
+              "    and merchant.kyc_status = 'VERIFIED'\n"
+              "    and merchant.onboarding_status = 'ACTIVE'\n"
+              "    and merchant_profile.status = 'ACTIVE';"
+          )
+          if merchant_count_old not in source:
               raise SystemExit('merchant readiness block not found')
-          source = source.replace(old, new)
+          source = source.replace(merchant_count_old, merchant_count_new)
 
-          old = """      from public.merchant_branches mb
-                left join public.branch_service_zones bsz
-                  on bsz.branch_id = mb.id
-                 and bsz.city_id = mb.city_id
-                 and bsz.is_active
-                where mb.city_id = p_city_id
-                  and mb.status = 'ACTIVE'
-                  and mb.verification_status = 'VERIFIED'
-                  and mb.geography_status = 'VERIFIED'
-                  and mb.local_delivery_enabled
-                  and ("""
-          new = """      from public.merchant_branches mb
-                join public.shops shop on shop.id = mb.shop_id
-                join public.merchant_profiles merchant on merchant.user_id = mb.merchant_id
-                join public.profiles merchant_profile on merchant_profile.id = mb.merchant_id
-                left join public.branch_service_zones bsz
-                  on bsz.branch_id = mb.id
-                 and bsz.city_id = mb.city_id
-                 and bsz.is_active
-                where mb.city_id = p_city_id
-                  and mb.status in ('APPROVED', 'ACTIVE')
-                  and mb.verification_status = 'VERIFIED'
-                  and mb.geography_status = 'VERIFIED'
-                  and mb.local_delivery_enabled
-                  and shop.deleted_at is null
-                  and shop.verification_status = 'VERIFIED'
-                  and shop.operational_status not in ('PAUSED', 'SUSPENDED')
-                  and merchant.kyc_status = 'VERIFIED'
-                  and merchant.onboarding_status = 'ACTIVE'
-                  and merchant_profile.status = 'ACTIVE'
-                  and ("""
-          if old not in source:
-              raise SystemExit('merchant coverage block not found')
-          source = source.replace(old, new)
-
-          needle = """  perform private.assert_phase_2e_admin(p_actor_id, p_city_id, false);
-            if jsonb_typeof(p_patch) <> 'object' then raise exception 'ADMIN_SERVICE_ZONE_INVALID'; end if;
-            v_resource_id := coalesce(p_zone_id, p_idempotency_key);"""
-          replacement = """  perform private.assert_phase_2e_admin(p_actor_id, p_city_id, false);
-            if jsonb_typeof(p_patch) <> 'object' then raise exception 'ADMIN_SERVICE_ZONE_INVALID'; end if;
-            if p_patch ->> 'status' = 'ACTIVE' then raise exception 'ADMIN_SERVICE_ZONE_ACTIVATION_REQUIRES_CITY_PREFLIGHT'; end if;
-            v_resource_id := coalesce(p_zone_id, p_idempotency_key);"""
-          if needle not in source:
-              raise SystemExit('zone activation guard block not found')
-          source = source.replace(needle, replacement)
-
-          source = source.replace(
-              "when invalid_text_representation or numeric_value_out_of_range then\n    raise exception 'ADMIN_CITY_CONFIGURATION_INVALID';",
-              "when invalid_text_representation or numeric_value_out_of_range or not_null_violation or check_violation then\n    raise exception 'ADMIN_CITY_CONFIGURATION_INVALID';",
+          coverage_old = (
+              "      from public.merchant_branches mb\n"
+              "      left join public.branch_service_zones bsz\n"
+              "        on bsz.branch_id = mb.id\n"
+              "       and bsz.city_id = mb.city_id\n"
+              "       and bsz.is_active\n"
+              "      where mb.city_id = p_city_id\n"
+              "        and mb.status = 'ACTIVE'\n"
+              "        and mb.verification_status = 'VERIFIED'\n"
+              "        and mb.geography_status = 'VERIFIED'\n"
+              "        and mb.local_delivery_enabled\n"
+              "        and ("
           )
+          coverage_new = (
+              "      from public.merchant_branches mb\n"
+              "      join public.shops shop on shop.id = mb.shop_id\n"
+              "      join public.merchant_profiles merchant on merchant.user_id = mb.merchant_id\n"
+              "      join public.profiles merchant_profile on merchant_profile.id = mb.merchant_id\n"
+              "      left join public.branch_service_zones bsz\n"
+              "        on bsz.branch_id = mb.id\n"
+              "       and bsz.city_id = mb.city_id\n"
+              "       and bsz.is_active\n"
+              "      where mb.city_id = p_city_id\n"
+              "        and mb.status in ('APPROVED', 'ACTIVE')\n"
+              "        and mb.verification_status = 'VERIFIED'\n"
+              "        and mb.geography_status = 'VERIFIED'\n"
+              "        and mb.local_delivery_enabled\n"
+              "        and shop.deleted_at is null\n"
+              "        and shop.verification_status = 'VERIFIED'\n"
+              "        and shop.operational_status not in ('PAUSED', 'SUSPENDED')\n"
+              "        and merchant.kyc_status = 'VERIFIED'\n"
+              "        and merchant.onboarding_status = 'ACTIVE'\n"
+              "        and merchant_profile.status = 'ACTIVE'\n"
+              "        and ("
+          )
+          if coverage_old not in source:
+              raise SystemExit('merchant coverage block not found')
+          source = source.replace(coverage_old, coverage_new)
 
-          needle = """    update public.service_zones
-              set status = 'ACTIVE', version = version + 1, updated_by = p_actor_id
-              where city_id = p_city_id
-                and status in ('READY_FOR_VALIDATION', 'PAUSED');
-            end if;"""
-          replacement = """    update public.service_zones
-              set status = 'ACTIVE', version = version + 1, updated_by = p_actor_id
-              where city_id = p_city_id
-                and status in ('READY_FOR_VALIDATION', 'PAUSED');
+          zone_guard_old = (
+              "  perform private.assert_phase_2e_admin(p_actor_id, p_city_id, false);\n"
+              "  if jsonb_typeof(p_patch) <> 'object' then raise exception 'ADMIN_SERVICE_ZONE_INVALID'; end if;\n"
+              "  v_resource_id := coalesce(p_zone_id, p_idempotency_key);"
+          )
+          zone_guard_new = (
+              "  perform private.assert_phase_2e_admin(p_actor_id, p_city_id, false);\n"
+              "  if jsonb_typeof(p_patch) <> 'object' then raise exception 'ADMIN_SERVICE_ZONE_INVALID'; end if;\n"
+              "  if p_patch ->> 'status' = 'ACTIVE' then raise exception 'ADMIN_SERVICE_ZONE_ACTIVATION_REQUIRES_CITY_PREFLIGHT'; end if;\n"
+              "  v_resource_id := coalesce(p_zone_id, p_idempotency_key);"
+          )
+          if zone_guard_old not in source:
+              raise SystemExit('zone activation guard block not found')
+          source = source.replace(zone_guard_old, zone_guard_new)
 
-              update public.merchant_branches mb
-              set status = 'ACTIVE', updated_by = p_actor_id
-              from public.shops shop, public.merchant_profiles merchant, public.profiles merchant_profile
-              where mb.city_id = p_city_id
-                and mb.status = 'APPROVED'
-                and mb.verification_status = 'VERIFIED'
-                and mb.geography_status = 'VERIFIED'
-                and mb.local_delivery_enabled
-                and shop.id = mb.shop_id
-                and shop.deleted_at is null
-                and shop.verification_status = 'VERIFIED'
-                and shop.operational_status not in ('PAUSED', 'SUSPENDED')
-                and merchant.user_id = mb.merchant_id
-                and merchant.kyc_status = 'VERIFIED'
-                and merchant.onboarding_status = 'ACTIVE'
-                and merchant_profile.id = mb.merchant_id
-                and merchant_profile.status = 'ACTIVE';
-            end if;"""
-          if needle not in source:
+          activation_old = (
+              "    update public.service_zones\n"
+              "    set status = 'ACTIVE', version = version + 1, updated_by = p_actor_id\n"
+              "    where city_id = p_city_id\n"
+              "      and status in ('READY_FOR_VALIDATION', 'PAUSED');\n"
+              "  end if;"
+          )
+          activation_new = (
+              "    update public.service_zones\n"
+              "    set status = 'ACTIVE', version = version + 1, updated_by = p_actor_id\n"
+              "    where city_id = p_city_id\n"
+              "      and status in ('READY_FOR_VALIDATION', 'PAUSED');\n\n"
+              "    update public.merchant_branches mb\n"
+              "    set status = 'ACTIVE', updated_by = p_actor_id\n"
+              "    from public.shops shop, public.merchant_profiles merchant, public.profiles merchant_profile\n"
+              "    where mb.city_id = p_city_id\n"
+              "      and mb.status = 'APPROVED'\n"
+              "      and mb.verification_status = 'VERIFIED'\n"
+              "      and mb.geography_status = 'VERIFIED'\n"
+              "      and mb.local_delivery_enabled\n"
+              "      and shop.id = mb.shop_id\n"
+              "      and shop.deleted_at is null\n"
+              "      and shop.verification_status = 'VERIFIED'\n"
+              "      and shop.operational_status not in ('PAUSED', 'SUSPENDED')\n"
+              "      and merchant.user_id = mb.merchant_id\n"
+              "      and merchant.kyc_status = 'VERIFIED'\n"
+              "      and merchant.onboarding_status = 'ACTIVE'\n"
+              "      and merchant_profile.id = mb.merchant_id\n"
+              "      and merchant_profile.status = 'ACTIVE';\n"
+              "  end if;"
+          )
+          if activation_old not in source:
               raise SystemExit('city activation block not found')
-          source = source.replace(needle, replacement)
+          source = source.replace(activation_old, activation_new)
 
           path.write_text(source)
           PY
