@@ -30,6 +30,102 @@ alter table private.admin_audit_log
     )
   );
 
+
+create or replace function public.record_admin_audit(
+  p_actor_id uuid,
+  p_action text,
+  p_resource_type text,
+  p_resource_id uuid,
+  p_reason_code text,
+  p_note text,
+  p_request_id text,
+  p_idempotency_key uuid,
+  p_before_state jsonb,
+  p_after_state jsonb
+) returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_fingerprint text;
+  v_receipt private.admin_command_receipts%rowtype;
+  v_audit private.admin_audit_log%rowtype;
+begin
+  if p_actor_id is null or p_resource_id is null or p_idempotency_key is null then
+    raise exception 'ADMIN_REQUEST_INVALID';
+  end if;
+
+  v_fingerprint := encode(
+    extensions.digest(
+      concat_ws(
+        '|',
+        p_resource_type,
+        p_resource_id::text,
+        p_reason_code,
+        coalesce(p_note, ''),
+        coalesce(p_before_state, 'null'::jsonb)::text,
+        coalesce(p_after_state, 'null'::jsonb)::text
+      ),
+      'sha256'
+    ),
+    'hex'
+  );
+
+  insert into private.admin_command_receipts(actor_id, action, idempotency_key, request_fingerprint)
+  values (p_actor_id, p_action, p_idempotency_key, v_fingerprint)
+  on conflict do nothing;
+
+  select * into v_receipt
+  from private.admin_command_receipts
+  where actor_id = p_actor_id
+    and action = p_action
+    and idempotency_key = p_idempotency_key
+  for update;
+
+  if v_receipt.request_fingerprint <> v_fingerprint then
+    raise exception 'ADMIN_IDEMPOTENCY_CONFLICT';
+  end if;
+
+  if v_receipt.audit_id is not null then
+    select * into v_audit from private.admin_audit_log where id = v_receipt.audit_id;
+    return to_jsonb(v_audit);
+  end if;
+
+  insert into private.admin_audit_log(
+    actor_id,
+    action,
+    resource_type,
+    resource_id,
+    reason_code,
+    note,
+    request_id,
+    idempotency_key,
+    before_state,
+    after_state
+  ) values (
+    p_actor_id,
+    p_action,
+    p_resource_type,
+    p_resource_id,
+    p_reason_code,
+    nullif(trim(p_note), ''),
+    nullif(trim(p_request_id), ''),
+    p_idempotency_key,
+    p_before_state,
+    p_after_state
+  ) returning * into v_audit;
+
+  update private.admin_command_receipts
+  set audit_id = v_audit.id
+  where actor_id = p_actor_id
+    and action = p_action
+    and idempotency_key = p_idempotency_key;
+
+  return to_jsonb(v_audit);
+end;
+$$;
+
 alter table public.service_zones
   add column if not exists version integer not null default 1;
 
@@ -93,12 +189,31 @@ create table private.city_activation_reports (
   checks jsonb not null,
   passed boolean not null,
   created_by uuid not null references public.profiles(id) on update cascade on delete restrict,
-  created_at timestamptz not null default now(),
+  created_at timestamptz not null default clock_timestamp(),
   constraint city_activation_reports_checks_object check (jsonb_typeof(checks) = 'object')
 );
 
 create index city_activation_reports_city_created_idx
-  on private.city_activation_reports(city_id, created_at desc);
+  on private.city_activation_reports(city_id, created_at desc, id desc);
+
+create table private.merchant_branch_activation_history (
+  id bigint generated always as identity primary key,
+  branch_id uuid not null references public.merchant_branches(id) on update cascade on delete restrict,
+  city_id uuid not null references public.cities(id) on update cascade on delete restrict,
+  from_status public.merchant_branch_status not null,
+  to_status public.merchant_branch_status not null,
+  actor_id uuid not null references public.profiles(id) on update cascade on delete restrict,
+  request_id text,
+  idempotency_key uuid not null,
+  activated_at timestamptz not null default clock_timestamp(),
+  constraint merchant_branch_activation_history_transition check (
+    from_status = 'APPROVED' and to_status = 'ACTIVE'
+  ),
+  constraint merchant_branch_activation_history_command_unique unique (branch_id, idempotency_key)
+);
+
+create index merchant_branch_activation_history_city_created_idx
+  on private.merchant_branch_activation_history(city_id, activated_at desc, id desc);
 
 alter table private.city_configuration_versions enable row level security;
 alter table private.city_configuration_versions force row level security;
@@ -106,13 +221,17 @@ alter table private.city_activation_readiness enable row level security;
 alter table private.city_activation_readiness force row level security;
 alter table private.city_activation_reports enable row level security;
 alter table private.city_activation_reports force row level security;
+alter table private.merchant_branch_activation_history enable row level security;
+alter table private.merchant_branch_activation_history force row level security;
 
 revoke all on private.city_configuration_versions from public, anon, authenticated;
 revoke all on private.city_activation_readiness from public, anon, authenticated;
 revoke all on private.city_activation_reports from public, anon, authenticated;
+revoke all on private.merchant_branch_activation_history from public, anon, authenticated;
 grant select, insert on private.city_configuration_versions to service_role;
 grant select, insert, update on private.city_activation_readiness to service_role;
 grant select, insert on private.city_activation_reports to service_role;
+grant select, insert on private.merchant_branch_activation_history to service_role;
 
 drop trigger if exists prevent_city_configuration_version_mutation
   on private.city_configuration_versions;
@@ -124,6 +243,12 @@ drop trigger if exists prevent_city_activation_report_mutation
   on private.city_activation_reports;
 create trigger prevent_city_activation_report_mutation
 before update or delete on private.city_activation_reports
+for each row execute function private.prevent_append_only_mutation();
+
+drop trigger if exists prevent_merchant_branch_activation_history_mutation
+  on private.merchant_branch_activation_history;
+create trigger prevent_merchant_branch_activation_history_mutation
+before update or delete on private.merchant_branch_activation_history
 for each row execute function private.prevent_append_only_mutation();
 
 drop trigger if exists city_activation_readiness_set_updated_at
@@ -539,7 +664,7 @@ as $$
       select to_jsonb(report)
       from private.city_activation_reports report
       where report.city_id = c.id
-      order by report.created_at desc
+      order by report.created_at desc, report.id desc
       limit 1
     )
   )
@@ -579,9 +704,10 @@ begin
      or exists (
        select 1
        from public.admin_city_assignments aca
-       where aca.admin_user_id = p_actor_id
-         and aca.city_id = c.id
-         and aca.revoked_at is null
+        where aca.admin_user_id = p_actor_id
+          and aca.city_id = c.id
+          and aca.role = 'CITY_ADMIN'
+          and aca.revoked_at is null
      )
   order by c.name;
 end;
@@ -1122,9 +1248,9 @@ begin
   begin
     v_target := p_target_status::public.market_lifecycle_status;
   exception when invalid_text_representation then
-    raise exception 'ADMIN_CITY_TRANSITION_INVALID';
+    raise exception 'ADMIN_CITY_TRANSITION_TARGET_INVALID';
   end;
-  if v_target not in ('ACTIVE', 'PAUSED') then raise exception 'ADMIN_CITY_TRANSITION_INVALID'; end if;
+  if v_target not in ('ACTIVE', 'PAUSED') then raise exception 'ADMIN_CITY_TRANSITION_TARGET_INVALID'; end if;
   v_action := case when v_target = 'ACTIVE' then 'admin.city.activate' else 'admin.city.pause' end;
   v_fingerprint := encode(
     extensions.digest(concat_ws('|', p_city_id::text, v_target::text, p_reason_code, coalesce(p_note, '')), 'sha256'),
@@ -1138,7 +1264,7 @@ begin
   select * into strict v_before from public.cities where id = p_city_id for update;
 
   if v_target = 'PAUSED' then
-    if v_before.status <> 'ACTIVE' then raise exception 'ADMIN_CITY_TRANSITION_INVALID'; end if;
+    if v_before.status <> 'ACTIVE' then raise exception 'ADMIN_CITY_TRANSITION_STATE_CONFLICT'; end if;
     update public.service_zones
     set status = 'PAUSED', version = version + 1, updated_by = p_actor_id
     where city_id = p_city_id and status = 'ACTIVE';
@@ -1148,14 +1274,14 @@ begin
     returning * into v_after;
   else
     if v_before.status not in ('READY_FOR_VALIDATION', 'PAUSED') then
-      raise exception 'ADMIN_CITY_TRANSITION_INVALID';
+      raise exception 'ADMIN_CITY_TRANSITION_STATE_CONFLICT';
     end if;
     select version into v_config_version from public.city_configurations where city_id = p_city_id;
     select version into v_readiness_version from private.city_activation_readiness where city_id = p_city_id;
     select * into v_report
     from private.city_activation_reports
     where city_id = p_city_id
-    order by created_at desc
+    order by created_at desc, id desc
     limit 1;
     if v_report.id is null
       or not v_report.passed
@@ -1175,23 +1301,46 @@ begin
     where city_id = p_city_id
       and status in ('READY_FOR_VALIDATION', 'PAUSED');
 
-    update public.merchant_branches mb
-    set status = 'ACTIVE', updated_by = p_actor_id
-    from public.shops shop, public.merchant_profiles merchant, public.profiles merchant_profile
-    where mb.city_id = p_city_id
-      and mb.status = 'APPROVED'
-      and mb.verification_status = 'VERIFIED'
-      and mb.geography_status = 'VERIFIED'
-      and mb.local_delivery_enabled
-      and shop.id = mb.shop_id
-      and shop.deleted_at is null
-      and shop.verification_status = 'VERIFIED'
-      and shop.operational_status not in ('PAUSED', 'SUSPENDED')
-      and merchant.user_id = mb.merchant_id
-      and merchant.kyc_status = 'VERIFIED'
-      and merchant.onboarding_status = 'ACTIVE'
-      and merchant_profile.id = mb.merchant_id
-      and merchant_profile.status = 'ACTIVE';
+    with activated_branches as (
+      update public.merchant_branches mb
+      set status = 'ACTIVE', updated_by = p_actor_id
+      from public.shops shop, public.merchant_profiles merchant, public.profiles merchant_profile
+      where mb.city_id = p_city_id
+        and mb.status = 'APPROVED'
+        and mb.verification_status = 'VERIFIED'
+        and mb.geography_status = 'VERIFIED'
+        and mb.local_delivery_enabled
+        and shop.id = mb.shop_id
+        and shop.deleted_at is null
+        and shop.verification_status = 'VERIFIED'
+        and shop.operational_status not in ('PAUSED', 'SUSPENDED')
+        and merchant.user_id = mb.merchant_id
+        and merchant.kyc_status = 'VERIFIED'
+        and merchant.onboarding_status = 'ACTIVE'
+        and merchant_profile.id = mb.merchant_id
+        and merchant_profile.status = 'ACTIVE'
+      returning mb.id, mb.city_id
+    )
+    insert into private.merchant_branch_activation_history(
+      branch_id,
+      city_id,
+      from_status,
+      to_status,
+      actor_id,
+      request_id,
+      idempotency_key,
+      activated_at
+    )
+    select
+      branch.id,
+      branch.city_id,
+      'APPROVED',
+      'ACTIVE',
+      p_actor_id,
+      nullif(btrim(p_request_id), ''),
+      p_idempotency_key,
+      clock_timestamp()
+    from activated_branches branch;
   end if;
 
   perform private.complete_phase_2e_command(

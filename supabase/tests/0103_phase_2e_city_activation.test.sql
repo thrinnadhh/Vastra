@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public;
 
-select plan(39);
+select plan(49);
 
 select ok(
   to_regclass('private.city_configuration_versions') is not null,
@@ -17,6 +17,10 @@ select ok(
   to_regclass('private.city_activation_reports') is not null,
   'immutable city activation reports exist'
 );
+select ok(
+  to_regclass('private.merchant_branch_activation_history') is not null,
+  'branch-level city activation history exists'
+);
 select is(
   (
     select count(*)::integer
@@ -26,11 +30,12 @@ select is(
       and c.relname in (
         'city_configuration_versions',
         'city_activation_readiness',
-        'city_activation_reports'
+        'city_activation_reports',
+        'merchant_branch_activation_history'
       )
       and c.relrowsecurity
   ),
-  3,
+  4,
   'every Phase 2E evidence table enables RLS'
 );
 select is(
@@ -42,11 +47,12 @@ select is(
       and c.relname in (
         'city_configuration_versions',
         'city_activation_readiness',
-        'city_activation_reports'
+        'city_activation_reports',
+        'merchant_branch_activation_history'
       )
       and c.relforcerowsecurity
   ),
-  3,
+  4,
   'every Phase 2E evidence table forces RLS'
 );
 select is(
@@ -67,6 +73,33 @@ select is(
   true,
   'the trusted backend may invoke city configuration commands'
 );
+
+set local role authenticated;
+select throws_ok(
+  $$ select count(*) from private.city_configuration_versions $$,
+  '42501',
+  null,
+  'authenticated clients cannot read city configuration evidence'
+);
+select throws_ok(
+  $$ select count(*) from private.city_activation_readiness $$,
+  '42501',
+  null,
+  'authenticated clients cannot read city readiness evidence'
+);
+select throws_ok(
+  $$ select count(*) from private.city_activation_reports $$,
+  '42501',
+  null,
+  'authenticated clients cannot read city activation reports'
+);
+select throws_ok(
+  $$ select count(*) from private.merchant_branch_activation_history $$,
+  '42501',
+  null,
+  'authenticated clients cannot read branch activation history'
+);
+reset role;
 
 insert into auth.users (
   id,
@@ -135,6 +168,27 @@ values
   ('e3000000-0000-4000-8000-000000000001', 'P2E-GLOBAL', 'PLATFORM', true, true),
   ('e3000000-0000-4000-8000-000000000002', 'P2E-CITY', 'OPERATIONS', true, false);
 
+insert into auth.users (
+  id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+) values
+  (
+    'e3000000-0000-4000-8000-000000000004', 'authenticated', 'authenticated',
+    'phase2e-support@example.test', crypt('local-test-only', gen_salt('bf')), now(),
+    '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now()
+  ),
+  (
+    'e3000000-0000-4000-8000-000000000005', 'authenticated', 'authenticated',
+    'phase2e-merchant@example.test', crypt('local-test-only', gen_salt('bf')), now(),
+    '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now()
+  );
+insert into public.profiles (id, account_type, full_name, status) values
+  ('e3000000-0000-4000-8000-000000000004', 'ADMIN', 'Phase 2E Support', 'ACTIVE'),
+  ('e3000000-0000-4000-8000-000000000005', 'MERCHANT', 'Phase 2E Merchant', 'ACTIVE');
+insert into public.admin_profiles (user_id, employee_code, department, two_factor_enabled, has_global_access)
+values ('e3000000-0000-4000-8000-000000000004', 'P2E-SUPPORT', 'SUPPORT', true, false);
+insert into public.merchant_profiles (user_id, legal_name, onboarding_status, kyc_status)
+values ('e3000000-0000-4000-8000-000000000005', 'Phase 2E Merchant Legal', 'ACTIVE', 'VERIFIED');
+
 insert into public.cities (id, code, slug, name, state_code, created_by, updated_by)
 values
   (
@@ -171,6 +225,16 @@ values (
   'CITY_ADMIN',
   'e3000000-0000-4000-8000-000000000001',
   'Phase 2E test assignment'
+);
+insert into public.admin_city_assignments (
+  id, admin_user_id, city_id, role, assigned_by, reason
+) values (
+  'e3200000-0000-4000-8000-000000000002',
+  'e3000000-0000-4000-8000-000000000004',
+  'e3100000-0000-4000-8000-000000000001',
+  'SUPPORT_AGENT',
+  'e3000000-0000-4000-8000-000000000001',
+  'Phase 2E support-only assignment'
 );
 
 select is(
@@ -339,6 +403,39 @@ update public.cities
 set status = 'READY_FOR_VALIDATION'
 where id = 'e3100000-0000-4000-8000-000000000001';
 
+select throws_ok(
+  $$
+    select public.admin_transition_city(
+      'e3000000-0000-4000-8000-000000000001',
+      'e3100000-0000-4000-8000-000000000001',
+      'DRAFT',
+      'OPERATIONAL_RECOVERY',
+      'Unsupported target',
+      'phase2e-request-target-invalid',
+      'e3800000-0000-4000-8000-000000000010'
+    )
+  $$,
+  'P0001',
+  'ADMIN_CITY_TRANSITION_TARGET_INVALID',
+  'unsupported transition targets are rejected as invalid input'
+);
+select throws_ok(
+  $$
+    select public.admin_transition_city(
+      'e3000000-0000-4000-8000-000000000001',
+      'e3100000-0000-4000-8000-000000000001',
+      'PAUSED',
+      'OPERATIONAL_RECOVERY',
+      'Illegal state transition',
+      'phase2e-request-state-conflict',
+      'e3800000-0000-4000-8000-000000000011'
+    )
+  $$,
+  'P0001',
+  'ADMIN_CITY_TRANSITION_STATE_CONFLICT',
+  'illegal lifecycle transitions are state conflicts'
+);
+
 select is(
   (
     public.admin_upsert_service_zone(
@@ -351,7 +448,7 @@ select is(
       'Create launch zone',
       'phase2e-request-zone-create',
       'e3400000-0000-4000-8000-000000000001'
-    ) -> 'controlPlane' -> 'zones' -> 0 ->> 'id'
+    ) -> 'controlPlane' -> 'zones' -> 0 -> 'zone' ->> 'id'
   )::uuid,
   'e3400000-0000-4000-8000-000000000001'::uuid,
   'new zones use the idempotency key as a deterministic identity'
@@ -444,6 +541,58 @@ select is(
   'e3500000-0000-4000-8000-000000000001'::uuid,
   'new pincode mappings use deterministic idempotent identities'
 );
+
+insert into public.addresses (
+  id, user_id, label, recipient_name, phone_number, line1, area, city, state, postal_code, country_code, location
+) values (
+  'e3c00000-0000-4000-8000-000000000001',
+  'e3000000-0000-4000-8000-000000000005',
+  'Phase 2E Branch', 'Phase 2E Merchant', '9000000005', '5 Test Road', 'Central',
+  'Tirupati', 'Andhra Pradesh', '517501', 'IN',
+  'SRID=4326;POINT(79.4192 13.6288)'::extensions.geography
+);
+insert into public.shops (
+  id, merchant_id, address_id, shop_code, name, slug, phone_number, location,
+  verification_status, operational_status, accepts_online_orders
+) values (
+  'e3d00000-0000-4000-8000-000000000001',
+  'e3000000-0000-4000-8000-000000000005',
+  'e3c00000-0000-4000-8000-000000000001',
+  'P2E-SHOP', 'Phase 2E Shop', 'phase-2e-shop', '9100000005',
+  'SRID=4326;POINT(79.4192 13.6288)'::extensions.geography,
+  'VERIFIED', 'OPEN', true
+);
+insert into public.merchant_branches (
+  id, shop_id, merchant_id, city_id, primary_service_zone_id, branch_code, name, branch_type,
+  address_id, return_address_id, pincode, location, local_delivery_enabled,
+  postal_delivery_enabled, all_india_postal_enabled, accepts_walk_in
+) values (
+  'e3e00000-0000-4000-8000-000000000001',
+  'e3d00000-0000-4000-8000-000000000001',
+  'e3000000-0000-4000-8000-000000000005',
+  'e3100000-0000-4000-8000-000000000001',
+  'e3400000-0000-4000-8000-000000000001',
+  'P2E-BRANCH', 'Phase 2E Branch', 'PHYSICAL_STORE',
+  'e3c00000-0000-4000-8000-000000000001',
+  'e3c00000-0000-4000-8000-000000000001',
+  '517501', 'SRID=4326;POINT(79.4192 13.6288)'::extensions.geography,
+  true, false, false, true
+);
+insert into public.branch_service_zones (branch_id, city_id, service_zone_id, is_primary, is_active)
+values (
+  'e3e00000-0000-4000-8000-000000000001',
+  'e3100000-0000-4000-8000-000000000001',
+  'e3400000-0000-4000-8000-000000000001',
+  true,
+  true
+);
+update public.merchant_branches
+set verification_status = 'VERIFIED', geography_status = 'VERIFIED', status = 'VERIFICATION_PENDING'
+where id = 'e3e00000-0000-4000-8000-000000000001';
+update public.merchant_branches
+set status = 'APPROVED'
+where id = 'e3e00000-0000-4000-8000-000000000001';
+
 select throws_ok(
   $$
     select public.admin_update_city_activation_readiness(
@@ -573,6 +722,28 @@ select is(
   ),
   'ACTIVE',
   'city activation activates validation-ready service zones atomically'
+);
+select is(
+  (
+    select count(*)::integer
+    from private.merchant_branch_activation_history
+    where branch_id = 'e3e00000-0000-4000-8000-000000000001'
+      and idempotency_key = 'e3800000-0000-4000-8000-000000000002'
+  ),
+  1,
+  'city activation records one immutable history row per activated branch'
+);
+select ok(
+  exists (
+    select 1
+    from private.merchant_branch_activation_history
+    where branch_id = 'e3e00000-0000-4000-8000-000000000001'
+      and from_status = 'APPROVED'
+      and to_status = 'ACTIVE'
+      and actor_id = 'e3000000-0000-4000-8000-000000000001'
+      and activated_at is not null
+  ),
+  'branch activation history retains transition, actor and timestamp'
 );
 select is(
   (
@@ -728,6 +899,14 @@ select is(
   ),
   1,
   'a scoped administrator lists only the assigned city'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.list_admin_cities('e3000000-0000-4000-8000-000000000004')
+  ),
+  0,
+  'support-only assignments cannot read the city activation control plane'
 );
 select throws_ok(
   $$

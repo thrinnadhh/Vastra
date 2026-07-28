@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '../auth/supabase-client.type';
 import {
   AdminCityGatewayUnavailableError,
+  AdminCityStateConflictError,
   AdminCityVersionConflictError,
   SupabaseAdminCityGateway,
 } from './admin-city.gateway';
@@ -76,6 +77,25 @@ describe('SupabaseAdminCityGateway', () => {
     await expect(gateway.get(ACTOR_ID, CITY_ID)).rejects.toBeInstanceOf(
       AdminCityGatewayUnavailableError,
     );
+  });
+
+  it('maps illegal lifecycle transitions to a state conflict', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: 'ADMIN_CITY_TRANSITION_STATE_CONFLICT' },
+    });
+    const gateway = new SupabaseAdminCityGateway({ rpc } as unknown as SupabaseClient);
+    await expect(
+      gateway.transition({
+        actorId: ACTOR_ID,
+        cityId: CITY_ID,
+        targetStatus: 'PAUSED',
+        reasonCode: 'OPERATIONAL_RECOVERY',
+        note: null,
+        requestId: null,
+        idempotencyKey: '30000000-0000-4000-8000-000000000002',
+      }),
+    ).rejects.toBeInstanceOf(AdminCityStateConflictError);
   });
 
   it('maps database version conflicts without losing the authoritative error', async () => {

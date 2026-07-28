@@ -4062,7 +4062,7 @@ components:
         patch: {type: object, minProperties: 1}
         reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
         note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
-    AdminServiceZoneUpdateRequest:
+    AdminServiceZoneCreateRequest:
       type: object
       additionalProperties: false
       required: [patch, reasonCode]
@@ -4071,12 +4071,33 @@ components:
         patch: {type: object, minProperties: 1}
         reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
         note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
-    AdminServiceZonePincodeUpdateRequest:
+    AdminServiceZoneUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, patch, reasonCode]
+      properties:
+        expectedVersion: {type: integer, minimum: 1}
+        patch: {type: object, minProperties: 1}
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminServiceZonePincodeCreateRequest:
       type: object
       additionalProperties: false
       required: [pincode, priority, isPrimary, isActive, reasonCode]
       properties:
         expectedVersion: {type: ['integer', 'null'], minimum: 1}
+        pincode: {type: string, pattern: '^[1-9][0-9]{5}$'}
+        priority: {type: integer, minimum: 1}
+        isPrimary: {type: boolean}
+        isActive: {type: boolean}
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminServiceZonePincodeUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, pincode, priority, isPrimary, isActive, reasonCode]
+      properties:
+        expectedVersion: {type: integer, minimum: 1}
         pincode: {type: string, pattern: '^[1-9][0-9]{5}$'}
         priority: {type: integer, minimum: 1}
         isPrimary: {type: boolean}
@@ -8381,12 +8402,13 @@ paths:
       - $ref: '#/components/parameters/RequestId'
       requestBody:
         required: true
-        content: {application/json: {schema: {$ref: '#/components/schemas/AdminServiceZoneUpdateRequest'}}}
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminServiceZoneCreateRequest'}}}
       responses:
         '200': {description: Zone created or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/cities/{cityId}/zones/{zoneId}:
@@ -8436,12 +8458,13 @@ paths:
       - $ref: '#/components/parameters/RequestId'
       requestBody:
         required: true
-        content: {application/json: {schema: {$ref: '#/components/schemas/AdminServiceZonePincodeUpdateRequest'}}}
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminServiceZonePincodeCreateRequest'}}}
       responses:
         '200': {description: Pincode route created or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '503': {$ref: '#/components/responses/ServiceUnavailable'}
   /admin/cities/{cityId}/zones/{zoneId}/pincodes/{mappingId}:

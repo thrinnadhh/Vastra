@@ -211,11 +211,15 @@ function mapRpcError(message: string): never {
   if (message.includes('ACCESS_DENIED') || message.includes('GLOBAL_ACCESS_REQUIRED')) {
     throw new AdminCityAccessDeniedError();
   }
-  if (message.includes('INVALID') || message.includes('ACTIVATION_REQUIRES')) {
-    throw new AdminCityInputRejectedError();
-  }
-  if (message.includes('TRANSITION') || message.includes('STATE')) {
+  if (message.includes('ADMIN_CITY_TRANSITION_STATE_CONFLICT')) {
     throw new AdminCityStateConflictError();
+  }
+  if (
+    message.includes('ADMIN_CITY_TRANSITION_TARGET_INVALID') ||
+    message.includes('INVALID') ||
+    message.includes('ACTIVATION_REQUIRES')
+  ) {
+    throw new AdminCityInputRejectedError();
   }
   throw new AdminCityGatewayUnavailableError();
 }

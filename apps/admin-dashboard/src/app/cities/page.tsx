@@ -100,15 +100,35 @@ function CityCommandDialog<T>({
   const [failure, setFailure] = useState<AdminFailure | null>(null);
   const idempotencyKey = useRef(createIdempotencyKey());
   const dialog = useRef<HTMLDialogElement>(null);
+  const busyRef = useRef(busy);
+  const onCloseRef = useRef(onClose);
+  busyRef.current = busy;
+  onCloseRef.current = onClose;
 
   useEffect(() => {
-    dialog.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !busy) onClose();
+    const element = dialog.current;
+    if (element === null) return;
+    if (!element.open) element.showModal();
+
+    const cancel = (event: Event) => {
+      event.preventDefault();
+      if (busyRef.current) return;
+      element.close();
+      onCloseRef.current();
     };
-    globalThis.addEventListener('keydown', closeOnEscape);
-    return () => globalThis.removeEventListener('keydown', closeOnEscape);
-  }, [busy, onClose]);
+
+    element.addEventListener('cancel', cancel);
+    return () => {
+      element.removeEventListener('cancel', cancel);
+      if (element.open) element.close();
+    };
+  }, []);
+
+  const requestClose = () => {
+    if (busyRef.current) return;
+    if (dialog.current?.open) dialog.current.close();
+    onCloseRef.current();
+  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -144,18 +164,13 @@ function CityCommandDialog<T>({
       if (result.failure.kind === 'VALIDATION') idempotencyKey.current = createIdempotencyKey();
       return;
     }
+    if (dialog.current?.open) dialog.current.close();
     onCompleted(result.data);
   };
 
   return (
     <div className="dialog-backdrop">
-      <dialog
-        aria-labelledby="city-command-dialog-title"
-        className="operation-dialog"
-        open
-        ref={dialog}
-        tabIndex={-1}
-      >
+      <dialog aria-labelledby="city-command-dialog-title" className="operation-dialog" ref={dialog}>
         <form onSubmit={submit}>
           <p className="eyebrow">Audited city command</p>
           <h2 id="city-command-dialog-title">{title}</h2>
@@ -205,7 +220,12 @@ function CityCommandDialog<T>({
             One idempotency identity is retained while the outcome is uncertain.
           </p>
           <div className="dialog-actions">
-            <button className="secondary-action" disabled={busy} onClick={onClose} type="button">
+            <button
+              className="secondary-action"
+              disabled={busy}
+              onClick={requestClose}
+              type="button"
+            >
               Cancel
             </button>
             <button className="primary-action" disabled={busy} type="submit">
