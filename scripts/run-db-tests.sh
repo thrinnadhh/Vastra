@@ -8,14 +8,17 @@ if ! command -v supabase >/dev/null 2>&1; then
 fi
 
 started_stack=0
+tmp_dir="$(mktemp -d)"
 
 cleanup() {
   local exit_code=$?
 
   trap - EXIT
 
+  rm -rf "$tmp_dir"
+
   if [[ "$started_stack" -eq 1 ]]; then
-    if ! supabase stop; then
+    if ! supabase stop >/dev/null 2>&1; then
       if [[ "$exit_code" -eq 0 ]]; then
         exit_code=1
       fi
@@ -27,17 +30,38 @@ cleanup() {
 
 trap cleanup EXIT
 
+run_logged() {
+  local label="$1"
+  shift
+
+  local log_file="$tmp_dir/${label//[^a-zA-Z0-9_-]/_}.log"
+
+  printf '\n--- %s ---\n' "$label"
+
+  if "$@" >"$log_file" 2>&1; then
+    echo "PASS: $label"
+    return 0
+  fi
+
+  echo "ERROR: $label failed" >&2
+  echo "--- bounded failure output (last 240 lines) ---" >&2
+  tail -n 240 "$log_file" >&2
+  return 1
+}
+
 if ! supabase status --output json >/dev/null 2>&1; then
   # Database tests require only PostgreSQL. Avoid starting unrelated
   # services such as Mailpit/Inbucket, which can cause CI port collisions.
-  supabase db start
+  run_logged "start database" supabase db start
   started_stack=1
 fi
 
-supabase db reset --local
-supabase migration list --local
-supabase test db --local
-bash scripts/run-db-concurrency-tests.sh
-bash scripts/run-branch-inventory-concurrency-tests.sh
-bash scripts/run-phase-2d-checkout-concurrency-tests.sh
-supabase db advisors --local
+run_logged "reset database" supabase db reset --local
+run_logged "list migrations" supabase migration list --local
+run_logged "pgTAP suite" supabase test db --local
+run_logged "legacy concurrency" bash scripts/run-db-concurrency-tests.sh
+run_logged "branch inventory concurrency" \
+  bash scripts/run-branch-inventory-concurrency-tests.sh
+run_logged "Phase 2D checkout concurrency" \
+  bash scripts/run-phase-2d-checkout-concurrency-tests.sh
+run_logged "database advisers" supabase db advisors --local
