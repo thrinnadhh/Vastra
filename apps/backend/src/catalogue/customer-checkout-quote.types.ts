@@ -24,9 +24,43 @@ export interface CustomerCheckoutQuoteShopSnapshot {
   readonly name: string;
   readonly slug: string;
   readonly minimumOrderPaise: number;
-  readonly averagePreparationMinutes: number;
+}
+
+export type CustomerCheckoutBranchType = 'PHYSICAL_STORE' | 'CLOUD_SHOP';
+
+export interface CustomerCheckoutQuoteBranchSnapshot {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly type: CustomerCheckoutBranchType;
+  readonly addressId: string;
+  readonly returnAddressId: string;
+  readonly pincode: string | null;
+  readonly latitude: number;
+  readonly longitude: number;
+}
+
+export interface CustomerCheckoutQuoteGeographySnapshot {
+  readonly cityId: string;
+  readonly cityCode: string;
+  readonly cityName: string;
+  readonly serviceZoneId: string;
+  readonly serviceZoneCode: string;
+  readonly serviceZoneName: string;
+  readonly customerPincode: string;
+  readonly fulfilmentMode: 'LOCAL_DELIVERY';
   readonly distanceMeters: number;
-  readonly serviceRadiusMeters: number;
+  readonly deliveryRadiusMeters: number;
+}
+
+export interface CustomerCheckoutQuoteCommercialSnapshot {
+  readonly deliveryFeePaise: number;
+  readonly codEligible: boolean;
+  readonly codLimitPaise: number;
+  readonly merchantCommissionBps: number;
+  readonly cityConfigurationVersion: number;
+  readonly cancellationPolicy: Readonly<Record<string, unknown>>;
+  readonly refundPolicy: Readonly<Record<string, unknown>>;
 }
 
 export interface CustomerCheckoutQuoteItemSnapshot {
@@ -42,7 +76,7 @@ export interface CustomerCheckoutQuoteItemSnapshot {
   readonly unitPricePaise: number;
   readonly priceChanged: boolean;
   readonly availableQuantity: number;
-  readonly inventoryVersion: number;
+  readonly branchInventoryVersion: number;
   readonly lineTotalPaise: number;
 }
 
@@ -58,14 +92,21 @@ export interface CustomerCheckoutQuoteTotalsSnapshot {
 
 export interface CustomerCheckoutQuoteSnapshot {
   readonly id: string;
+  readonly contractVersion: 2;
   readonly cartId: string;
   readonly address: CustomerCheckoutQuoteAddressSnapshot;
   readonly shop: CustomerCheckoutQuoteShopSnapshot;
+  readonly branch: CustomerCheckoutQuoteBranchSnapshot;
+  readonly geography: CustomerCheckoutQuoteGeographySnapshot;
   readonly items: readonly CustomerCheckoutQuoteItemSnapshot[];
   readonly totals: CustomerCheckoutQuoteTotalsSnapshot;
+  readonly fulfilmentMode: 'LOCAL_DELIVERY';
+  readonly codEligible: boolean;
+  readonly codLimitPaise: number;
   readonly estimatedPreparationMinutes: number;
   readonly estimatedTravelMinutes: number;
   readonly estimatedDeliveryAt: string;
+  readonly cityConfigurationVersion: number;
   readonly expiresAt: string;
   readonly createdAt: string;
 }

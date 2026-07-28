@@ -102,6 +102,10 @@ function failureMessage(kind: CustomerCheckoutQuoteFailureKind): string {
       return 'A cart price changed. Refresh your cart before continuing.';
     case 'UNSERVICEABLE_ADDRESS':
       return 'This shop cannot deliver to the selected address.';
+    case 'NO_FULFILMENT_BRANCH':
+      return 'This shop has no local fulfilment branch available for the selected address.';
+    case 'POSTAL_PRICING_REQUIRED':
+      return 'This address requires postal delivery pricing, which is not available in this checkout flow.';
     case 'STALE_QUOTE':
       return 'This checkout quote is no longer current. Request a fresh quote.';
     case 'SHOP_UNAVAILABLE':

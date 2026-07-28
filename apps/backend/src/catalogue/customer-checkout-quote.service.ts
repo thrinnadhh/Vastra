@@ -20,7 +20,9 @@ import {
   CustomerCheckoutQuoteGatewayUnavailableError,
   CustomerCheckoutQuoteInsufficientInventoryError,
   CustomerCheckoutQuoteMinimumOrderError,
+  CustomerCheckoutQuoteNoFulfilmentBranchError,
   CustomerCheckoutQuoteOutsideServiceAreaError,
+  CustomerCheckoutQuotePostalPricingRequiredError,
   CustomerCheckoutQuoteShopUnavailableError,
 } from './customer-checkout-quote.gateway';
 import { CUSTOMER_CHECKOUT_QUOTE_GATEWAY } from './customer-checkout-quote.tokens';
@@ -29,6 +31,10 @@ import {
   CustomerCheckoutQuoteValidationError,
   parseCreateCustomerCheckoutQuoteInput,
 } from './customer-checkout-quote.validation';
+import {
+  createNoFulfilmentBranchException,
+  createPostalPricingRequiredException,
+} from './phase-2d-checkout-http-error';
 
 @Injectable()
 export class CustomerCheckoutQuoteService {
@@ -44,7 +50,6 @@ export class CustomerCheckoutQuoteService {
     try {
       const input = parseCreateCustomerCheckoutQuoteInput(body);
       const quote = await this.gateway.createQuote(context.actor.id, input);
-
       return {
         success: true,
         data: { quote },
@@ -59,39 +64,36 @@ export class CustomerCheckoutQuoteService {
     if (error instanceof CustomerCheckoutQuoteValidationError) {
       throw createInvalidCheckoutQuoteRequestException();
     }
-
     if (error instanceof CustomerCheckoutQuoteCartNotFoundError) {
       throw createCartNotFoundException();
     }
-
     if (error instanceof CustomerCheckoutQuoteAddressNotFoundError) {
       throw createCheckoutAddressNotFoundException();
     }
-
     if (error instanceof CustomerCheckoutQuoteShopUnavailableError) {
       throw createCheckoutShopUnavailableException();
     }
-
     if (error instanceof CustomerCheckoutQuoteOutsideServiceAreaError) {
       throw createCheckoutOutsideServiceAreaException();
     }
-
     if (error instanceof CustomerCheckoutQuoteMinimumOrderError) {
       throw createCheckoutMinimumOrderNotMetException();
     }
-
     if (error instanceof CustomerCheckoutQuoteInsufficientInventoryError) {
       throw createInsufficientInventoryException();
     }
-
+    if (error instanceof CustomerCheckoutQuoteNoFulfilmentBranchError) {
+      throw createNoFulfilmentBranchException();
+    }
+    if (error instanceof CustomerCheckoutQuotePostalPricingRequiredError) {
+      throw createPostalPricingRequiredException();
+    }
     if (error instanceof CustomerCheckoutQuoteGatewayUnavailableError) {
       throw createCatalogueProviderUnavailableException();
     }
-
     if (error instanceof CustomerCheckoutQuoteDataInvalidError) {
       throw createCatalogueStateInvalidException();
     }
-
     throw error;
   }
 }

@@ -8,6 +8,7 @@ const SUCCESS_ENVELOPE = {
   data: {
     quote: {
       id: '40000000-0000-4000-8000-000000000001',
+      contractVersion: 2,
       cartId: '30000000-0000-4000-8000-000000000001',
       address: {
         id: ADDRESS_ID,
@@ -30,9 +31,29 @@ const SUCCESS_ENVELOPE = {
         name: 'Quote Shop',
         slug: 'quote-shop',
         minimumOrderPaise: 0,
-        averagePreparationMinutes: 20,
+      },
+      branch: {
+        id: '90000000-0000-4000-8000-000000000001',
+        code: 'TIR-QUOTE-01',
+        name: 'Quote Shop Tirupati',
+        type: 'PHYSICAL_STORE',
+        addressId: 'a0000000-0000-4000-8000-000000000001',
+        returnAddressId: 'b0000000-0000-4000-8000-000000000001',
+        pincode: '517501',
+        latitude: 13.6288,
+        longitude: 79.4192,
+      },
+      geography: {
+        cityId: 'c0000000-0000-4000-8000-000000000001',
+        cityCode: 'TIRUPATI',
+        cityName: 'Tirupati',
+        serviceZoneId: 'd0000000-0000-4000-8000-000000000001',
+        serviceZoneCode: 'TIR-CENTRAL',
+        serviceZoneName: 'Tirupati Central',
+        customerPincode: '517501',
+        fulfilmentMode: 'LOCAL_DELIVERY',
         distanceMeters: 500,
-        serviceRadiusMeters: 5000,
+        deliveryRadiusMeters: 5000,
       },
       items: [
         {
@@ -48,22 +69,26 @@ const SUCCESS_ENVELOPE = {
           unitPricePaise: 25_000,
           priceChanged: true,
           availableQuantity: 3,
-          inventoryVersion: 1,
+          branchInventoryVersion: 1,
           lineTotalPaise: 50_000,
         },
       ],
       totals: {
-        subtotalPaise: 52_000,
+        subtotalPaise: 50_000,
         productDiscountPaise: 2_000,
         couponDiscountPaise: 1_000,
         deliveryFeePaise: 4_000,
         platformFeePaise: 500,
         taxPaise: 0,
-        totalPaise: 53_500,
+        totalPaise: 51_500,
       },
+      fulfilmentMode: 'LOCAL_DELIVERY',
+      codEligible: true,
+      codLimitPaise: 100_000,
       estimatedPreparationMinutes: 20,
       estimatedTravelMinutes: 15,
       estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',
+      cityConfigurationVersion: 1,
       expiresAt: '2026-07-16T10:05:00.000Z',
       createdAt: '2026-07-16T10:00:00.000Z',
     },
@@ -118,10 +143,10 @@ describe('HttpCustomerCheckoutQuoteClient', () => {
       unitPricePaise: 25_000,
       priceChanged: true,
       availableQuantity: 3,
-      inventoryVersion: 1,
+      branchInventoryVersion: 1,
       lineTotalPaise: 50_000,
     });
-    expect(quote.totals.totalPaise).toBe(53_500);
+    expect(quote.totals.totalPaise).toBe(51_500);
     expect(fetchFunction).toHaveBeenCalledWith('https://api.vastra.test/v1/checkout/quote', {
       method: 'POST',
       headers: {
