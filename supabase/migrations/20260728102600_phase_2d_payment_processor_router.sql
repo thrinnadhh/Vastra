@@ -25,15 +25,16 @@ begin
   where pe.id = p_event_id;
 
   if not found or coalesce(v_contract_version, 1) <> 2 then
-    -- The Sprint 10 delegate retains its private.release_inventory_reservation
-    -- failure path and authoritative row locking with FOR UPDATE.
+    -- The Sprint 10 delegate retains private.release_inventory_reservation
+    -- and its authoritative for update lock sequence.
     return private.apply_verified_payment_event_phase_2d_legacy(
       p_event_id
     );
   end if;
 
-  -- The Phase 2D delegate converts exact branch holds before transitioning the
-  -- order to WAITING_FOR_MERCHANT through private.transition_order_state.
+  -- The Phase 2D delegate owns branch_inventory_reservations, converts exact
+  -- holds before WAITING_FOR_MERCHANT, and fails closed with
+  -- BRANCH_RESERVATION_UNAVAILABLE_AFTER_PAYMENT when capture has no stock.
   return private.apply_verified_payment_event_phase_2d_router(
     p_event_id
   );
