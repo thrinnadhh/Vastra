@@ -1,9 +1,11 @@
 name: Phase 2E modal lint repair
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/phase-2e-city-activation
+      - main
+    paths:
+      - .github/workflows/phase2e-lint-fix.yml
 
 permissions:
   contents: write
