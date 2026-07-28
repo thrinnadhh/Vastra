@@ -15,7 +15,10 @@ import type {
 } from './customer-order.types';
 
 export interface CustomerOrderGateway {
-  placeCodOrder(actorId: string, input: PlaceCustomerCodOrderInput): Promise<CustomerCodOrderSnapshot>;
+  placeCodOrder(
+    actorId: string,
+    input: PlaceCustomerCodOrderInput,
+  ): Promise<CustomerCodOrderSnapshot>;
 }
 
 export class CustomerOrderGatewayUnavailableError extends Error {}
@@ -219,8 +222,12 @@ function parseTotals(value: unknown): CustomerOrderTotalsSnapshot {
   if (
     totals.productDiscountPaise + totals.couponDiscountPaise > totals.subtotalPaise ||
     totals.totalPaise !==
-      totals.subtotalPaise - totals.productDiscountPaise - totals.couponDiscountPaise +
-      totals.deliveryFeePaise + totals.platformFeePaise + totals.taxPaise
+      totals.subtotalPaise -
+        totals.productDiscountPaise -
+        totals.couponDiscountPaise +
+        totals.deliveryFeePaise +
+        totals.platformFeePaise +
+        totals.taxPaise
   ) {
     throw new CustomerOrderDataInvalidError();
   }
@@ -254,7 +261,8 @@ function parseOrder(value: unknown): CustomerCodOrderSnapshot {
   }
   const placedAt = timestamp(record, 'placedAt');
   const estimatedDeliveryAt = timestamp(record, 'estimatedDeliveryAt');
-  if (Date.parse(estimatedDeliveryAt) < Date.parse(placedAt)) throw new CustomerOrderDataInvalidError();
+  if (Date.parse(estimatedDeliveryAt) < Date.parse(placedAt))
+    throw new CustomerOrderDataInvalidError();
   const replayed = record['replayed'];
   if (typeof replayed !== 'boolean') throw new CustomerOrderDataInvalidError();
   return {
@@ -284,20 +292,34 @@ function parseOrder(value: unknown): CustomerCodOrderSnapshot {
 
 function mapRpcError(error: { readonly code?: string }): Error {
   switch (error.code) {
-    case 'P0001': return new CustomerOrderInsufficientStockError();
-    case 'P0002': return new CustomerOrderCartNotFoundError();
-    case 'P0007': return new CustomerOrderShopUnavailableError();
-    case 'P0008': return new CustomerOrderAddressNotServiceableError();
-    case 'P0010': return new CustomerOrderIdempotencyConflictError();
-    case 'P0011': return new CustomerOrderQuoteNotFoundError();
-    case 'P0012': return new CustomerOrderQuoteExpiredError();
-    case 'P0013': return new CustomerOrderQuoteStaleError();
-    case 'P0020': return new CustomerOrderQuoteVersionUnsupportedError();
-    case 'P0021': return new CustomerOrderNoFulfilmentBranchError();
-    case 'P0022': return new CustomerOrderPostalPricingRequiredError();
-    case 'P0023': return new CustomerOrderBranchUnavailableError();
-    case 'P0024': return new CustomerOrderCodNotEligibleError();
-    default: return new CustomerOrderGatewayUnavailableError();
+    case 'P0001':
+      return new CustomerOrderInsufficientStockError();
+    case 'P0002':
+      return new CustomerOrderCartNotFoundError();
+    case 'P0007':
+      return new CustomerOrderShopUnavailableError();
+    case 'P0008':
+      return new CustomerOrderAddressNotServiceableError();
+    case 'P0010':
+      return new CustomerOrderIdempotencyConflictError();
+    case 'P0011':
+      return new CustomerOrderQuoteNotFoundError();
+    case 'P0012':
+      return new CustomerOrderQuoteExpiredError();
+    case 'P0013':
+      return new CustomerOrderQuoteStaleError();
+    case 'P0020':
+      return new CustomerOrderQuoteVersionUnsupportedError();
+    case 'P0021':
+      return new CustomerOrderNoFulfilmentBranchError();
+    case 'P0022':
+      return new CustomerOrderPostalPricingRequiredError();
+    case 'P0023':
+      return new CustomerOrderBranchUnavailableError();
+    case 'P0024':
+      return new CustomerOrderCodNotEligibleError();
+    default:
+      return new CustomerOrderGatewayUnavailableError();
   }
 }
 

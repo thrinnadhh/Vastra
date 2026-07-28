@@ -128,7 +128,10 @@ export class SupabaseCustomerPaymentGateway implements CustomerPaymentGateway {
     if (message.includes('FINANCE_PAYMENT_NOT_FOUND')) {
       throw new CustomerPaymentNotFoundError();
     }
-    if (message.includes('FINANCE_QUOTE_INVALID') || ['P0012', 'P0013', 'P0020'].includes(code ?? '')) {
+    if (
+      message.includes('FINANCE_QUOTE_INVALID') ||
+      ['P0012', 'P0013', 'P0020'].includes(code ?? '')
+    ) {
       throw new CustomerPaymentQuoteInvalidError();
     }
     if (message.includes('PAYMENT_RESERVATION_EXPIRED') || code === 'P0025') {

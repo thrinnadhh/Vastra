@@ -66,15 +66,30 @@ function integer(
   maximum = Number.MAX_SAFE_INTEGER,
 ): number {
   const result = value[key];
-  if (typeof result !== 'number' || !Number.isSafeInteger(result) || result < minimum || result > maximum) {
+  if (
+    typeof result !== 'number' ||
+    !Number.isSafeInteger(result) ||
+    result < minimum ||
+    result > maximum
+  ) {
     throw new TypeError('Invalid checkout quote response');
   }
   return result;
 }
 
-function coordinate(value: Record<string, unknown>, key: string, minimum: number, maximum: number): number {
+function coordinate(
+  value: Record<string, unknown>,
+  key: string,
+  minimum: number,
+  maximum: number,
+): number {
   const result = value[key];
-  if (typeof result !== 'number' || !Number.isFinite(result) || result < minimum || result > maximum) {
+  if (
+    typeof result !== 'number' ||
+    !Number.isFinite(result) ||
+    result < minimum ||
+    result > maximum
+  ) {
     throw new TypeError('Invalid checkout quote response');
   }
   return result;
@@ -204,8 +219,12 @@ function parseTotals(value: unknown): CustomerCheckoutQuoteTotals {
   if (
     result.productDiscountPaise + result.couponDiscountPaise > result.subtotalPaise ||
     result.totalPaise !==
-      result.subtotalPaise - result.productDiscountPaise - result.couponDiscountPaise +
-      result.deliveryFeePaise + result.platformFeePaise + result.taxPaise
+      result.subtotalPaise -
+        result.productDiscountPaise -
+        result.couponDiscountPaise +
+        result.deliveryFeePaise +
+        result.platformFeePaise +
+        result.taxPaise
   ) {
     throw new TypeError('Invalid checkout quote response');
   }
@@ -236,14 +255,17 @@ export function parseCustomerCheckoutQuoteEnvelope(value: unknown): CustomerChec
   const codLimitPaise = integer(quote, 'codLimitPaise');
   if (
     totals.subtotalPaise !== items.reduce((sum, item) => sum + item.lineTotalPaise, 0) ||
-    codEligible !== (totals.totalPaise <= codLimitPaise)
+    codEligible !== totals.totalPaise <= codLimitPaise
   ) {
     throw new TypeError('Invalid checkout quote response');
   }
   const createdAt = dateTime(quote, 'createdAt');
   const expiresAt = dateTime(quote, 'expiresAt');
   const estimatedDeliveryAt = dateTime(quote, 'estimatedDeliveryAt');
-  if (Date.parse(expiresAt) <= Date.parse(createdAt) || Date.parse(estimatedDeliveryAt) < Date.parse(createdAt)) {
+  if (
+    Date.parse(expiresAt) <= Date.parse(createdAt) ||
+    Date.parse(estimatedDeliveryAt) < Date.parse(createdAt)
+  ) {
     throw new TypeError('Invalid checkout quote response');
   }
   return {
@@ -277,16 +299,35 @@ function parseApiError(value: unknown): { code: string; retryable: boolean } | n
 }
 
 function mapErrorKind(code: string, status: number): CustomerCheckoutQuoteFailureKind {
-  if (code === 'AUTH_REQUIRED' || code === 'AUTH_TOKEN_EXPIRED' || status === 401) return 'AUTHENTICATION';
+  if (code === 'AUTH_REQUIRED' || code === 'AUTH_TOKEN_EXPIRED' || status === 401)
+    return 'AUTHENTICATION';
   if (code === 'CART_NOT_FOUND') return 'EMPTY_CART';
   if (code === 'VALIDATION_ERROR' || code === 'ADDRESS_NOT_FOUND') return 'VALIDATION';
-  if (['CART_ITEM_UNAVAILABLE', 'INSUFFICIENT_STOCK', 'INSUFFICIENT_INVENTORY', 'PRODUCT_INACTIVE', 'VARIANT_INACTIVE'].includes(code)) return 'UNAVAILABLE_ITEM';
+  if (
+    [
+      'CART_ITEM_UNAVAILABLE',
+      'INSUFFICIENT_STOCK',
+      'INSUFFICIENT_INVENTORY',
+      'PRODUCT_INACTIVE',
+      'VARIANT_INACTIVE',
+    ].includes(code)
+  )
+    return 'UNAVAILABLE_ITEM';
   if (code === 'CART_PRICE_CHANGED') return 'CHANGED_PRICE';
   if (code === 'NO_FULFILMENT_BRANCH') return 'NO_FULFILMENT_BRANCH';
   if (code === 'POSTAL_PRICING_REQUIRED') return 'POSTAL_PRICING_REQUIRED';
-  if (code === 'ADDRESS_NOT_SERVICEABLE' || code === 'OUTSIDE_SERVICE_AREA') return 'UNSERVICEABLE_ADDRESS';
-  if (['CHECKOUT_QUOTE_EXPIRED', 'CHECKOUT_QUOTE_NOT_FOUND', 'CHECKOUT_QUOTE_VERSION_UNSUPPORTED'].includes(code)) return 'STALE_QUOTE';
-  if (code === 'SHOP_NOT_ACCEPTING_ORDERS' || code === 'SHOP_UNAVAILABLE') return 'SHOP_UNAVAILABLE';
+  if (code === 'ADDRESS_NOT_SERVICEABLE' || code === 'OUTSIDE_SERVICE_AREA')
+    return 'UNSERVICEABLE_ADDRESS';
+  if (
+    [
+      'CHECKOUT_QUOTE_EXPIRED',
+      'CHECKOUT_QUOTE_NOT_FOUND',
+      'CHECKOUT_QUOTE_VERSION_UNSUPPORTED',
+    ].includes(code)
+  )
+    return 'STALE_QUOTE';
+  if (code === 'SHOP_NOT_ACCEPTING_ORDERS' || code === 'SHOP_UNAVAILABLE')
+    return 'SHOP_UNAVAILABLE';
   if (code === 'EXTERNAL_SERVICE_UNAVAILABLE' || status === 503) return 'TEMPORARILY_UNAVAILABLE';
   if (status === 400) return 'VALIDATION';
   if (status === 409) return 'CONFLICT';
@@ -300,7 +341,9 @@ export class HttpCustomerCheckoutQuoteClient implements CustomerCheckoutQuotePor
     private readonly fetchFunction: FetchFunction = fetch,
   ) {}
 
-  public async createQuote(input: CreateCustomerCheckoutQuoteInput): Promise<CustomerCheckoutQuote> {
+  public async createQuote(
+    input: CreateCustomerCheckoutQuoteInput,
+  ): Promise<CustomerCheckoutQuote> {
     if (!UUID_PATTERN.test(input.addressId)) {
       throw new CustomerCheckoutQuoteError('VALIDATION', 'VALIDATION_ERROR', false);
     }
