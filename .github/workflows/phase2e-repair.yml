@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0
 
       - name: Apply reviewed root-cause fixes
-        run: python3 .github/scripts/phase2e_repair.py
+        run: python3 .github/scripts/phase2e_repair.py 2>&1 | tee /tmp/phase2e-apply.log
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
@@ -73,7 +73,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/phase2e-repair.yml .github/scripts/phase2e_repair.py
+          git rm -f \
+            .github/workflows/phase2e-repair.yml \
+            .github/scripts/phase2e_repair.py \
+            .github/phase2e-repair-failure.md
           git add \
             apps/admin-dashboard/src/app/cities/page.tsx \
             apps/backend/src/admin/admin-city.gateway.ts \
@@ -96,7 +99,7 @@ jobs:
             echo "Run: $GITHUB_RUN_ID"
             echo "Head: $(git rev-parse HEAD)"
             echo
-            for file in /tmp/phase2e-backend.log /tmp/phase2e-db.log /tmp/phase2e-openapi.log /tmp/phase2e-contract.log; do
+            for file in /tmp/phase2e-apply.log /tmp/phase2e-backend.log /tmp/phase2e-db.log /tmp/phase2e-openapi.log /tmp/phase2e-contract.log; do
               if test -f "$file"; then
                 echo "## $(basename "$file")"
                 echo '```text'
