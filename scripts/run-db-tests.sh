@@ -39,4 +39,5 @@ supabase migration list --local
 supabase test db --local
 bash scripts/run-db-concurrency-tests.sh
 bash scripts/run-branch-inventory-concurrency-tests.sh
+bash scripts/run-phase-2d-checkout-concurrency-tests.sh
 supabase db advisors --local
