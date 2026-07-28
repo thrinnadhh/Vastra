@@ -6,7 +6,6 @@ import type {
   CreateCustomerCheckoutQuoteInput,
   CustomerCheckoutQuoteAddressSnapshot,
   CustomerCheckoutQuoteBranchSnapshot,
-  CustomerCheckoutQuoteCommercialSnapshot,
   CustomerCheckoutQuoteGeographySnapshot,
   CustomerCheckoutQuoteItemSnapshot,
   CustomerCheckoutQuoteShopSnapshot,
@@ -49,7 +48,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function requireRecord(value: unknown): Record<string, unknown> {
-  if (!isRecord(value)) throw new CustomerCheckoutQuoteDataInvalidError();
+  if (!isRecord(value)) {
+    throw new CustomerCheckoutQuoteDataInvalidError();
+  }
   return value;
 }
 
@@ -61,16 +62,27 @@ function requireString(record: Record<string, unknown>, key: string): string {
   return value;
 }
 
-function requireNullableString(record: Record<string, unknown>, key: string): string | null {
+function requireNullableString(
+  record: Record<string, unknown>,
+  key: string,
+): string | null {
   const value = record[key];
-  if (value === null) return null;
-  if (typeof value !== 'string') throw new CustomerCheckoutQuoteDataInvalidError();
+  if (value === null) {
+    return null;
+  }
+  if (typeof value !== 'string') {
+    throw new CustomerCheckoutQuoteDataInvalidError();
+  }
   return value;
 }
 
 function parseNumeric(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string' && value.trim().length > 0) return Number(value);
+  if (typeof value === 'number') {
+    return value;
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return Number(value);
+  }
   return Number.NaN;
 }
 
@@ -86,33 +98,51 @@ function requireInteger(
   return value;
 }
 
-function requireNumber(record: Record<string, unknown>, key: string): number {
+function requireNumber(
+  record: Record<string, unknown>,
+  key: string,
+): number {
   const value = parseNumeric(record[key]);
-  if (!Number.isFinite(value)) throw new CustomerCheckoutQuoteDataInvalidError();
+  if (!Number.isFinite(value)) {
+    throw new CustomerCheckoutQuoteDataInvalidError();
+  }
   return value;
 }
 
-function requireBoolean(record: Record<string, unknown>, key: string): boolean {
+function requireBoolean(
+  record: Record<string, unknown>,
+  key: string,
+): boolean {
   const value = record[key];
-  if (typeof value !== 'boolean') throw new CustomerCheckoutQuoteDataInvalidError();
+  if (typeof value !== 'boolean') {
+    throw new CustomerCheckoutQuoteDataInvalidError();
+  }
   return value;
 }
 
-function requireTimestamp(record: Record<string, unknown>, key: string): string {
+function requireTimestamp(
+  record: Record<string, unknown>,
+  key: string,
+): string {
   const value = requireString(record, key);
-  if (Number.isNaN(Date.parse(value))) throw new CustomerCheckoutQuoteDataInvalidError();
+  if (Number.isNaN(Date.parse(value))) {
+    throw new CustomerCheckoutQuoteDataInvalidError();
+  }
   return value;
 }
 
-function requirePolicy(record: Record<string, unknown>, key: string): Readonly<Record<string, unknown>> {
-  return requireRecord(record[key]);
-}
-
-function parseAddress(value: unknown): CustomerCheckoutQuoteAddressSnapshot {
+function parseAddress(
+  value: unknown,
+): CustomerCheckoutQuoteAddressSnapshot {
   const record = requireRecord(value);
   const latitude = requireNumber(record, 'latitude');
   const longitude = requireNumber(record, 'longitude');
-  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+  if (
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
     throw new CustomerCheckoutQuoteDataInvalidError();
   }
   return {
@@ -143,7 +173,9 @@ function parseShop(value: unknown): CustomerCheckoutQuoteShopSnapshot {
   };
 }
 
-function parseBranch(value: unknown): CustomerCheckoutQuoteBranchSnapshot {
+function parseBranch(
+  value: unknown,
+): CustomerCheckoutQuoteBranchSnapshot {
   const record = requireRecord(value);
   const type = record['type'];
   if (type !== 'PHYSICAL_STORE' && type !== 'CLOUD_SHOP') {
@@ -151,7 +183,12 @@ function parseBranch(value: unknown): CustomerCheckoutQuoteBranchSnapshot {
   }
   const latitude = requireNumber(record, 'latitude');
   const longitude = requireNumber(record, 'longitude');
-  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+  if (
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
     throw new CustomerCheckoutQuoteDataInvalidError();
   }
   return {
@@ -167,13 +204,19 @@ function parseBranch(value: unknown): CustomerCheckoutQuoteBranchSnapshot {
   };
 }
 
-function parseGeography(value: unknown): CustomerCheckoutQuoteGeographySnapshot {
+function parseGeography(
+  value: unknown,
+): CustomerCheckoutQuoteGeographySnapshot {
   const record = requireRecord(value);
   if (record['fulfilmentMode'] !== 'LOCAL_DELIVERY') {
     throw new CustomerCheckoutQuoteDataInvalidError();
   }
   const distanceMeters = requireInteger(record, 'distanceMeters');
-  const deliveryRadiusMeters = requireInteger(record, 'deliveryRadiusMeters', 1);
+  const deliveryRadiusMeters = requireInteger(
+    record,
+    'deliveryRadiusMeters',
+    1,
+  );
   if (distanceMeters > deliveryRadiusMeters) {
     throw new CustomerCheckoutQuoteDataInvalidError();
   }
@@ -191,23 +234,15 @@ function parseGeography(value: unknown): CustomerCheckoutQuoteGeographySnapshot 
   };
 }
 
-function parseCommercial(value: unknown): CustomerCheckoutQuoteCommercialSnapshot {
-  const record = requireRecord(value);
-  return {
-    deliveryFeePaise: requireInteger(record, 'deliveryFeePaise'),
-    codEligible: requireBoolean(record, 'codEligible'),
-    codLimitPaise: requireInteger(record, 'codLimitPaise'),
-    merchantCommissionBps: requireInteger(record, 'merchantCommissionBps'),
-    cityConfigurationVersion: requireInteger(record, 'cityConfigurationVersion', 1),
-    cancellationPolicy: requirePolicy(record, 'cancellationPolicy'),
-    refundPolicy: requirePolicy(record, 'refundPolicy'),
-  };
-}
-
-function parseItem(value: unknown): CustomerCheckoutQuoteItemSnapshot {
+function parseItem(
+  value: unknown,
+): CustomerCheckoutQuoteItemSnapshot {
   const record = requireRecord(value);
   const quantity = requireInteger(record, 'quantity', 1);
-  const previousUnitPricePaise = requireInteger(record, 'previousUnitPricePaise');
+  const previousUnitPricePaise = requireInteger(
+    record,
+    'previousUnitPricePaise',
+  );
   const unitPricePaise = requireInteger(record, 'unitPricePaise');
   const availableQuantity = requireInteger(record, 'availableQuantity');
   const lineTotalPaise = requireInteger(record, 'lineTotalPaise');
@@ -232,24 +267,37 @@ function parseItem(value: unknown): CustomerCheckoutQuoteItemSnapshot {
     unitPricePaise,
     priceChanged,
     availableQuantity,
-    branchInventoryVersion: requireInteger(record, 'branchInventoryVersion', 1),
+    branchInventoryVersion: requireInteger(
+      record,
+      'branchInventoryVersion',
+      1,
+    ),
     lineTotalPaise,
   };
 }
 
-function parseTotals(value: unknown): CustomerCheckoutQuoteTotalsSnapshot {
+function parseTotals(
+  value: unknown,
+): CustomerCheckoutQuoteTotalsSnapshot {
   const record = requireRecord(value);
   const totals = {
     subtotalPaise: requireInteger(record, 'subtotalPaise'),
-    productDiscountPaise: requireInteger(record, 'productDiscountPaise'),
-    couponDiscountPaise: requireInteger(record, 'couponDiscountPaise'),
+    productDiscountPaise: requireInteger(
+      record,
+      'productDiscountPaise',
+    ),
+    couponDiscountPaise: requireInteger(
+      record,
+      'couponDiscountPaise',
+    ),
     deliveryFeePaise: requireInteger(record, 'deliveryFeePaise'),
     platformFeePaise: requireInteger(record, 'platformFeePaise'),
     taxPaise: requireInteger(record, 'taxPaise'),
     totalPaise: requireInteger(record, 'totalPaise'),
   };
   if (
-    totals.productDiscountPaise + totals.couponDiscountPaise > totals.subtotalPaise ||
+    totals.productDiscountPaise + totals.couponDiscountPaise >
+      totals.subtotalPaise ||
     totals.totalPaise !==
       totals.subtotalPaise -
         totals.productDiscountPaise -
@@ -265,7 +313,10 @@ function parseTotals(value: unknown): CustomerCheckoutQuoteTotalsSnapshot {
 
 function parseQuote(value: unknown): CustomerCheckoutQuoteSnapshot {
   const record = requireRecord(value);
-  if (record['contractVersion'] !== 2 || record['fulfilmentMode'] !== 'LOCAL_DELIVERY') {
+  if (
+    record['contractVersion'] !== 2 ||
+    record['fulfilmentMode'] !== 'LOCAL_DELIVERY'
+  ) {
     throw new CustomerCheckoutQuoteDataInvalidError();
   }
   const rawItems = record['items'];
@@ -278,19 +329,28 @@ function parseQuote(value: unknown): CustomerCheckoutQuoteSnapshot {
   const geography = parseGeography(record['geography']);
   const codEligible = requireBoolean(record, 'codEligible');
   const codLimitPaise = requireInteger(record, 'codLimitPaise');
-  const cityConfigurationVersion = requireInteger(record, 'cityConfigurationVersion', 1);
+  const cityConfigurationVersion = requireInteger(
+    record,
+    'cityConfigurationVersion',
+    1,
+  );
   if (
-    totals.subtotalPaise !== items.reduce((sum, item) => sum + item.lineTotalPaise, 0) ||
-    branch.id.length === 0 ||
-    geography.fulfilmentMode !== 'LOCAL_DELIVERY' ||
+    totals.subtotalPaise !==
+      items.reduce((sum, item) => sum + item.lineTotalPaise, 0) ||
     codEligible !== (totals.totalPaise <= codLimitPaise)
   ) {
     throw new CustomerCheckoutQuoteDataInvalidError();
   }
   const createdAt = requireTimestamp(record, 'createdAt');
   const expiresAt = requireTimestamp(record, 'expiresAt');
-  const estimatedDeliveryAt = requireTimestamp(record, 'estimatedDeliveryAt');
-  if (Date.parse(expiresAt) <= Date.parse(createdAt) || Date.parse(estimatedDeliveryAt) < Date.parse(createdAt)) {
+  const estimatedDeliveryAt = requireTimestamp(
+    record,
+    'estimatedDeliveryAt',
+  );
+  if (
+    Date.parse(expiresAt) <= Date.parse(createdAt) ||
+    Date.parse(estimatedDeliveryAt) < Date.parse(createdAt)
+  ) {
     throw new CustomerCheckoutQuoteDataInvalidError();
   }
   return {
@@ -306,8 +366,14 @@ function parseQuote(value: unknown): CustomerCheckoutQuoteSnapshot {
     fulfilmentMode: 'LOCAL_DELIVERY',
     codEligible,
     codLimitPaise,
-    estimatedPreparationMinutes: requireInteger(record, 'estimatedPreparationMinutes'),
-    estimatedTravelMinutes: requireInteger(record, 'estimatedTravelMinutes'),
+    estimatedPreparationMinutes: requireInteger(
+      record,
+      'estimatedPreparationMinutes',
+    ),
+    estimatedTravelMinutes: requireInteger(
+      record,
+      'estimatedTravelMinutes',
+    ),
     estimatedDeliveryAt,
     cityConfigurationVersion,
     expiresAt,
@@ -339,7 +405,9 @@ function mapRpcError(error: { readonly code?: string }): Error {
 }
 
 @Injectable()
-export class SupabaseCustomerCheckoutQuoteGateway implements CustomerCheckoutQuoteGateway {
+export class SupabaseCustomerCheckoutQuoteGateway
+  implements CustomerCheckoutQuoteGateway
+{
   public constructor(
     @Inject(SUPABASE_SERVICE_CLIENT)
     private readonly trustedClient: SupabaseClient,
@@ -350,14 +418,21 @@ export class SupabaseCustomerCheckoutQuoteGateway implements CustomerCheckoutQuo
     input: CreateCustomerCheckoutQuoteInput,
   ): Promise<CustomerCheckoutQuoteSnapshot> {
     try {
-      const response = await this.trustedClient.rpc('create_customer_branch_checkout_quote', {
-        p_actor: actorId,
-        p_address_id: input.addressId,
-      });
-      if (response.error !== null) throw mapRpcError(response.error);
+      const response = await this.trustedClient.rpc(
+        'create_customer_branch_checkout_quote',
+        {
+          p_actor: actorId,
+          p_address_id: input.addressId,
+        },
+      );
+      if (response.error !== null) {
+        throw mapRpcError(response.error);
+      }
       return parseQuote(response.data);
     } catch (error: unknown) {
-      if (error instanceof Error) throw error;
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new CustomerCheckoutQuoteGatewayUnavailableError();
     }
   }
