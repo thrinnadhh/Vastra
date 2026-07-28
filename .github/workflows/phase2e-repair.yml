@@ -26,7 +26,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply reviewed root-cause fixes
-        run: python3 .github/scripts/phase2e_repair.py 2>&1 | tee /tmp/phase2e-apply.log
+        run: |
+          python3 .github/scripts/phase2e_repair_bootstrap.py
+          python3 .github/scripts/phase2e_repair.py 2>&1 | tee /tmp/phase2e-apply.log
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
@@ -76,6 +78,7 @@ jobs:
           git rm -f \
             .github/workflows/phase2e-repair.yml \
             .github/scripts/phase2e_repair.py \
+            .github/scripts/phase2e_repair_bootstrap.py \
             .github/phase2e-repair-failure.md
           git add \
             apps/admin-dashboard/src/app/cities/page.tsx \
