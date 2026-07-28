@@ -2,6 +2,7 @@ import {
   BadGatewayException,
   BadRequestException,
   ConflictException,
+  GoneException,
   Inject,
   Injectable,
   NotFoundException,
@@ -17,6 +18,7 @@ import {
   CustomerPaymentNotFoundError,
   CustomerPaymentOrderNotPayableError,
   CustomerPaymentQuoteInvalidError,
+  CustomerPaymentReservationExpiredError,
 } from './customer-payment.gateway';
 import type { CustomerPaymentCheckout, CustomerPaymentResponse } from './customer-payment.types';
 import {
@@ -110,7 +112,10 @@ export class CustomerPaymentService {
       throw new ConflictException('Customer payment state conflicts with the request');
     }
     if (error instanceof CustomerPaymentQuoteInvalidError) {
-      throw new BadRequestException('Checkout quote is invalid or stale');
+      throw new ConflictException('Checkout quote is invalid or stale');
+    }
+    if (error instanceof CustomerPaymentReservationExpiredError) {
+      throw new GoneException('The payment inventory hold expired. Request a fresh checkout quote.');
     }
     if (error instanceof CustomerPaymentNotFoundError) {
       throw new NotFoundException('Customer payment was not found');
