@@ -26,131 +26,207 @@ jobs:
 
       - name: Upgrade Phase 2D test fixtures
         run: |
-          python - <<'PY'
+          cat > /tmp/upgrade_fixtures.py <<'PY'
           from pathlib import Path
 
-          branch = """      branch: {
-                id: '90000000-0000-4000-8000-000000000001',
-                code: 'TIR-01',
-                name: 'Tirupati Branch',
-                type: 'PHYSICAL_STORE',
-                addressId: 'a0000000-0000-4000-8000-000000000001',
-                returnAddressId: 'b0000000-0000-4000-8000-000000000001',
-                pincode: '517501',
-                latitude: 13.6288,
-                longitude: 79.4192,
-              },
-              geography: {
-                cityId: 'c0000000-0000-4000-8000-000000000001',
-                cityCode: 'TIRUPATI',
-                cityName: 'Tirupati',
-                serviceZoneId: 'd0000000-0000-4000-8000-000000000001',
-                serviceZoneCode: 'TIR-CENTRAL',
-                serviceZoneName: 'Tirupati Central',
-                customerPincode: '517501',
-                fulfilmentMode: 'LOCAL_DELIVERY',
-                distanceMeters: 500,
-                deliveryRadiusMeters: 5000,
-              },
-          """
-
-          quote_files = [
-              Path('apps/backend/src/catalogue/customer-checkout-quote.integration.test.ts'),
-              Path('apps/backend/src/catalogue/customer-checkout-quote.service.test.ts'),
-          ]
-          for path in quote_files:
+          def replace_once(path: Path, old: str, new: str) -> None:
               text = path.read_text()
-              text = text.replace("      id: QUOTE_ID,\n      cartId:", "      id: QUOTE_ID,\n      contractVersion: 2,\n      cartId:", 1)
-              old_shop_start = "      shop: {\n"
-              shop_start = text.index(old_shop_start)
-              items_start = text.index("      items: [", shop_start)
-              shop_block = text[shop_start:items_start]
-              minimum = "50000" if "minimumOrderPaise: 50000" in shop_block else "0"
-              replacement = f"""      shop: {{
-                id: SHOP_ID,
-                name: 'Quote Shop',
-                slug: 'quote-shop',
-                minimumOrderPaise: {minimum},
-              }},
-          """ if path.name.endswith('service.test.ts') else f"""      shop: {{
-                id: '50000000-0000-4000-8000-000000000001',
-                name: 'Quote Shop',
-                slug: 'quote-shop',
-                minimumOrderPaise: {minimum},
-              }},
-          """
-              text = text[:shop_start] + replacement + branch + text[items_start:]
-              text = text.replace('inventoryVersion:', 'branchInventoryVersion:', 1)
-              text = text.replace(
-                  "      estimatedPreparationMinutes: 20,",
-                  "      fulfilmentMode: 'LOCAL_DELIVERY',\n      codEligible: true,\n      codLimitPaise: 100000,\n      estimatedPreparationMinutes: 20,",
-                  1,
-              )
-              text = text.replace(
-                  "      estimatedDeliveryAt: '2026-07-15T21:35:00.000Z',",
-                  "      estimatedDeliveryAt: '2026-07-15T21:35:00.000Z',\n      cityConfigurationVersion: 1,",
-                  1,
-              )
-              path.write_text(text)
+              if text.count(old) != 1:
+                  raise RuntimeError(f'{path}: expected exactly one match, found {text.count(old)}')
+              path.write_text(text.replace(old, new, 1))
 
-          order_branch = """      branch: {
-                id: 'b0000000-0000-4000-8000-000000000001',
-                code: 'TIR-01',
-                name: 'Tirupati Branch',
-                type: 'PHYSICAL_STORE',
-                addressId: 'c0000000-0000-4000-8000-000000000001',
-                returnAddressId: 'd0000000-0000-4000-8000-000000000001',
-                pincode: '517501',
-                latitude: 13.6288,
-                longitude: 79.4192,
-              },
-              geography: {
-                cityId: 'e0000000-0000-4000-8000-000000000001',
-                cityCode: 'TIRUPATI',
-                cityName: 'Tirupati',
-                serviceZoneId: 'f0000000-0000-4000-8000-000000000001',
-                serviceZoneCode: 'TIR-CENTRAL',
-                serviceZoneName: 'Tirupati Central',
-                customerPincode: '517501',
-                fulfilmentMode: 'LOCAL_DELIVERY',
-                distanceMeters: 500,
-                deliveryRadiusMeters: 5000,
-              },
-              commercial: {
-                deliveryFeePaise: 0,
-                codEligible: true,
-                codLimitPaise: 100000,
-                merchantCommissionBps: 1000,
-                cityConfigurationVersion: 1,
-                cancellationPolicy: {},
-                refundPolicy: {},
-              },
-          """
+          quote_branch = (
+              "      branch: {\n"
+              "        id: '90000000-0000-4000-8000-000000000001',\n"
+              "        code: 'TIR-01',\n"
+              "        name: 'Tirupati Branch',\n"
+              "        type: 'PHYSICAL_STORE',\n"
+              "        addressId: 'a0000000-0000-4000-8000-000000000001',\n"
+              "        returnAddressId: 'b0000000-0000-4000-8000-000000000001',\n"
+              "        pincode: '517501',\n"
+              "        latitude: 13.6288,\n"
+              "        longitude: 79.4192,\n"
+              "      },\n"
+              "      geography: {\n"
+              "        cityId: 'c0000000-0000-4000-8000-000000000001',\n"
+              "        cityCode: 'TIRUPATI',\n"
+              "        cityName: 'Tirupati',\n"
+              "        serviceZoneId: 'd0000000-0000-4000-8000-000000000001',\n"
+              "        serviceZoneCode: 'TIR-CENTRAL',\n"
+              "        serviceZoneName: 'Tirupati Central',\n"
+              "        customerPincode: '517501',\n"
+              "        fulfilmentMode: 'LOCAL_DELIVERY',\n"
+              "        distanceMeters: 500,\n"
+              "        deliveryRadiusMeters: 5000,\n"
+              "      },\n"
+          )
 
-          order_files = [
-              Path('apps/backend/src/orders/customer-order.integration.test.ts'),
-              Path('apps/backend/src/orders/customer-order.service.test.ts'),
-          ]
-          for path in order_files:
-              text = path.read_text()
-              text = text.replace("      quoteId: input.quoteId,", "      quoteId: input.quoteId,\n      contractVersion: 2,", 1)
-              text = text.replace("    quoteId: QUOTE_ID,", "    quoteId: QUOTE_ID,\n    contractVersion: 2,", 1)
-              shop_start = text.index("      shop: {") if path.name.endswith('integration.test.ts') else text.index("    shop: {")
-              address_marker = "      address: {" if path.name.endswith('integration.test.ts') else "    address: {"
-              address_start = text.index(address_marker, shop_start)
-              text = text[:address_start] + order_branch + text[address_start:]
-              text = text.replace(
-                  "      fulfilmentType: 'DELIVERY',",
-                  "      fulfilmentType: 'DELIVERY',\n      fulfilmentMode: 'LOCAL_DELIVERY',",
-                  1,
-              )
-              text = text.replace(
-                  "    fulfilmentType: 'DELIVERY',",
-                  "    fulfilmentType: 'DELIVERY',\n    fulfilmentMode: 'LOCAL_DELIVERY',",
-                  1,
-              )
-              path.write_text(text)
+          quote_integration = Path('apps/backend/src/catalogue/customer-checkout-quote.integration.test.ts')
+          replace_once(
+              quote_integration,
+              "      id: QUOTE_ID,\n      cartId: CART_ID,",
+              "      id: QUOTE_ID,\n      contractVersion: 2,\n      cartId: CART_ID,",
+          )
+          replace_once(
+              quote_integration,
+              "      shop: {\n"
+              "        id: '50000000-0000-4000-8000-000000000001',\n"
+              "        name: 'Quote Shop',\n"
+              "        slug: 'quote-shop',\n"
+              "        minimumOrderPaise: 0,\n"
+              "        averagePreparationMinutes: 20,\n"
+              "        distanceMeters: 500,\n"
+              "        serviceRadiusMeters: 5000,\n"
+              "      },\n",
+              "      shop: {\n"
+              "        id: '50000000-0000-4000-8000-000000000001',\n"
+              "        name: 'Quote Shop',\n"
+              "        slug: 'quote-shop',\n"
+              "        minimumOrderPaise: 0,\n"
+              "      },\n" + quote_branch,
+          )
+          replace_once(quote_integration, '          inventoryVersion: 1,', '          branchInventoryVersion: 1,')
+          replace_once(
+              quote_integration,
+              "      estimatedPreparationMinutes: 20,",
+              "      fulfilmentMode: 'LOCAL_DELIVERY',\n"
+              "      codEligible: true,\n"
+              "      codLimitPaise: 100000,\n"
+              "      estimatedPreparationMinutes: 20,",
+          )
+          replace_once(
+              quote_integration,
+              "      estimatedDeliveryAt: '2026-07-15T21:35:00.000Z',",
+              "      estimatedDeliveryAt: '2026-07-15T21:35:00.000Z',\n"
+              "      cityConfigurationVersion: 1,",
+          )
+
+          quote_service = Path('apps/backend/src/catalogue/customer-checkout-quote.service.test.ts')
+          replace_once(
+              quote_service,
+              "    id: QUOTE_ID,\n    cartId: CART_ID,",
+              "    id: QUOTE_ID,\n    contractVersion: 2,\n    cartId: CART_ID,",
+          )
+          replace_once(
+              quote_service,
+              "    shop: {\n"
+              "      id: SHOP_ID,\n"
+              "      name: 'Quote Shop',\n"
+              "      slug: 'quote-shop',\n"
+              "      minimumOrderPaise: 50000,\n"
+              "      averagePreparationMinutes: 20,\n"
+              "      distanceMeters: 500,\n"
+              "      serviceRadiusMeters: 5000,\n"
+              "    },\n",
+              "    shop: {\n"
+              "      id: SHOP_ID,\n"
+              "      name: 'Quote Shop',\n"
+              "      slug: 'quote-shop',\n"
+              "      minimumOrderPaise: 50000,\n"
+              "    },\n" + quote_branch.replace('      ', '    ', 1),
+          )
+          replace_once(quote_service, '        inventoryVersion: 2,', '        branchInventoryVersion: 2,')
+          replace_once(
+              quote_service,
+              "    estimatedPreparationMinutes: 20,",
+              "    fulfilmentMode: 'LOCAL_DELIVERY',\n"
+              "    codEligible: true,\n"
+              "    codLimitPaise: 100000,\n"
+              "    estimatedPreparationMinutes: 20,",
+          )
+          replace_once(
+              quote_service,
+              "    estimatedDeliveryAt: '2026-07-15T21:35:00.000Z',",
+              "    estimatedDeliveryAt: '2026-07-15T21:35:00.000Z',\n"
+              "    cityConfigurationVersion: 1,",
+          )
+
+          order_contract = (
+              "      branch: {\n"
+              "        id: 'b0000000-0000-4000-8000-000000000001',\n"
+              "        code: 'TIR-01',\n"
+              "        name: 'Tirupati Branch',\n"
+              "        type: 'PHYSICAL_STORE',\n"
+              "        addressId: 'c0000000-0000-4000-8000-000000000001',\n"
+              "        returnAddressId: 'd0000000-0000-4000-8000-000000000001',\n"
+              "        pincode: '517501',\n"
+              "        latitude: 13.6288,\n"
+              "        longitude: 79.4192,\n"
+              "      },\n"
+              "      geography: {\n"
+              "        cityId: 'e0000000-0000-4000-8000-000000000001',\n"
+              "        cityCode: 'TIRUPATI',\n"
+              "        cityName: 'Tirupati',\n"
+              "        serviceZoneId: 'f0000000-0000-4000-8000-000000000001',\n"
+              "        serviceZoneCode: 'TIR-CENTRAL',\n"
+              "        serviceZoneName: 'Tirupati Central',\n"
+              "        customerPincode: '517501',\n"
+              "        fulfilmentMode: 'LOCAL_DELIVERY',\n"
+              "        distanceMeters: 500,\n"
+              "        deliveryRadiusMeters: 5000,\n"
+              "      },\n"
+              "      commercial: {\n"
+              "        deliveryFeePaise: 0,\n"
+              "        codEligible: true,\n"
+              "        codLimitPaise: 100000,\n"
+              "        merchantCommissionBps: 1000,\n"
+              "        cityConfigurationVersion: 1,\n"
+              "        cancellationPolicy: {},\n"
+              "        refundPolicy: {},\n"
+              "      },\n"
+          )
+
+          order_integration = Path('apps/backend/src/orders/customer-order.integration.test.ts')
+          replace_once(
+              order_integration,
+              "      quoteId: input.quoteId,",
+              "      quoteId: input.quoteId,\n      contractVersion: 2,",
+          )
+          replace_once(
+              order_integration,
+              "      shop: {\n"
+              "        id: '70000000-0000-4000-8000-000000000001',\n"
+              "        name: 'Order Shop',\n"
+              "        slug: 'order-shop',\n"
+              "      },\n",
+              "      shop: {\n"
+              "        id: '70000000-0000-4000-8000-000000000001',\n"
+              "        name: 'Order Shop',\n"
+              "        slug: 'order-shop',\n"
+              "      },\n" + order_contract,
+          )
+          replace_once(
+              order_integration,
+              "      fulfilmentType: 'DELIVERY',",
+              "      fulfilmentType: 'DELIVERY',\n      fulfilmentMode: 'LOCAL_DELIVERY',",
+          )
+
+          order_service = Path('apps/backend/src/orders/customer-order.service.test.ts')
+          replace_once(
+              order_service,
+              "    quoteId: QUOTE_ID,",
+              "    quoteId: QUOTE_ID,\n    contractVersion: 2,",
+          )
+          replace_once(
+              order_service,
+              "    shop: {\n"
+              "      id: '70000000-0000-4000-8000-000000000001',\n"
+              "      name: 'Order Shop',\n"
+              "      slug: 'order-shop',\n"
+              "    },\n",
+              "    shop: {\n"
+              "      id: '70000000-0000-4000-8000-000000000001',\n"
+              "      name: 'Order Shop',\n"
+              "      slug: 'order-shop',\n"
+              "    },\n" + order_contract.replace('      ', '    ', 1),
+          )
+          replace_once(
+              order_service,
+              "    fulfilmentType: 'DELIVERY',",
+              "    fulfilmentType: 'DELIVERY',\n    fulfilmentMode: 'LOCAL_DELIVERY',",
+          )
           PY
+          python /tmp/upgrade_fixtures.py
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
