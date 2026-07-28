@@ -25,6 +25,7 @@ export class CustomerPaymentOrderNotPayableError extends Error {}
 export class CustomerPaymentQuoteInvalidError extends Error {}
 export class CustomerPaymentAmountMismatchError extends Error {}
 export class CustomerPaymentNotFoundError extends Error {}
+export class CustomerPaymentReservationExpiredError extends Error {}
 
 function requireRecord(value: unknown): Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -114,7 +115,7 @@ export class SupabaseCustomerPaymentGateway implements CustomerPaymentGateway {
     private readonly client: SupabaseClient,
   ) {}
 
-  private mapError(message: string): never {
+  private mapError(message: string, code?: string): never {
     if (message.includes('FINANCE_IDEMPOTENCY_CONFLICT')) {
       throw new CustomerPaymentIdempotencyConflictError();
     }
@@ -127,8 +128,14 @@ export class SupabaseCustomerPaymentGateway implements CustomerPaymentGateway {
     if (message.includes('FINANCE_PAYMENT_NOT_FOUND')) {
       throw new CustomerPaymentNotFoundError();
     }
-    if (message.includes('FINANCE_QUOTE_INVALID')) {
+    if (
+      message.includes('FINANCE_QUOTE_INVALID') ||
+      ['P0012', 'P0013', 'P0020'].includes(code ?? '')
+    ) {
       throw new CustomerPaymentQuoteInvalidError();
+    }
+    if (message.includes('PAYMENT_RESERVATION_EXPIRED') || code === 'P0025') {
+      throw new CustomerPaymentReservationExpiredError();
     }
     throw new CustomerPaymentGatewayUnavailableError();
   }
@@ -137,7 +144,7 @@ export class SupabaseCustomerPaymentGateway implements CustomerPaymentGateway {
     actorId: string,
     input: PlaceCustomerOnlineOrderInput,
   ): Promise<PreparedCustomerPayment> {
-    const { data, error } = await this.client.rpc('prepare_customer_online_payment', {
+    const { data, error } = await this.client.rpc('prepare_customer_branch_online_payment', {
       p_actor_id: actorId,
       p_cart_id: input.cartId,
       p_quote_id: input.quoteId,
@@ -145,7 +152,7 @@ export class SupabaseCustomerPaymentGateway implements CustomerPaymentGateway {
       p_customer_note: input.customerNote,
       p_idempotency_key: input.idempotencyKey,
     });
-    if (error !== null) this.mapError(error.message);
+    if (error !== null) this.mapError(error.message, error.code);
     return parsePrepared(data);
   }
 
@@ -154,7 +161,7 @@ export class SupabaseCustomerPaymentGateway implements CustomerPaymentGateway {
     paymentId: string,
     session: ProviderCheckoutSession,
   ): Promise<CustomerPaymentCheckout> {
-    const { data, error } = await this.client.rpc('attach_customer_payment_session', {
+    const { data, error } = await this.client.rpc('attach_customer_branch_payment_session', {
       p_actor_id: actorId,
       p_payment_id: paymentId,
       p_provider_order_id: session.providerOrderId,
@@ -164,7 +171,7 @@ export class SupabaseCustomerPaymentGateway implements CustomerPaymentGateway {
       p_currency: session.currency,
       p_expires_at: session.expiresAt,
     });
-    if (error !== null) this.mapError(error.message);
+    if (error !== null) this.mapError(error.message, error.code);
     return parseCheckout(data);
   }
 
@@ -176,7 +183,7 @@ export class SupabaseCustomerPaymentGateway implements CustomerPaymentGateway {
       p_actor_id: actorId,
       p_order_id: orderId,
     });
-    if (error !== null) this.mapError(error.message);
+    if (error !== null) this.mapError(error.message, error.code);
     if (data === null) return null;
     return parseCheckout(data);
   }

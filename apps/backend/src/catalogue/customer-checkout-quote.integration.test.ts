@@ -46,6 +46,7 @@ class IntegrationGateway implements CustomerCheckoutQuoteGateway {
 
     return Promise.resolve({
       id: QUOTE_ID,
+      contractVersion: 2,
       cartId: CART_ID,
       address: {
         id: input.addressId,
@@ -68,9 +69,29 @@ class IntegrationGateway implements CustomerCheckoutQuoteGateway {
         name: 'Quote Shop',
         slug: 'quote-shop',
         minimumOrderPaise: 0,
-        averagePreparationMinutes: 20,
+      },
+      branch: {
+        id: '90000000-0000-4000-8000-000000000001',
+        code: 'TIR-01',
+        name: 'Tirupati Branch',
+        type: 'PHYSICAL_STORE',
+        addressId: 'a0000000-0000-4000-8000-000000000001',
+        returnAddressId: 'b0000000-0000-4000-8000-000000000001',
+        pincode: '517501',
+        latitude: 13.6288,
+        longitude: 79.4192,
+      },
+      geography: {
+        cityId: 'c0000000-0000-4000-8000-000000000001',
+        cityCode: 'TIRUPATI',
+        cityName: 'Tirupati',
+        serviceZoneId: 'd0000000-0000-4000-8000-000000000001',
+        serviceZoneCode: 'TIR-CENTRAL',
+        serviceZoneName: 'Tirupati Central',
+        customerPincode: '517501',
+        fulfilmentMode: 'LOCAL_DELIVERY',
         distanceMeters: 500,
-        serviceRadiusMeters: 5000,
+        deliveryRadiusMeters: 5000,
       },
       items: [
         {
@@ -86,7 +107,7 @@ class IntegrationGateway implements CustomerCheckoutQuoteGateway {
           unitPricePaise: 50000,
           priceChanged: false,
           availableQuantity: 3,
-          inventoryVersion: 1,
+          branchInventoryVersion: 1,
           lineTotalPaise: 50000,
         },
       ],
@@ -99,9 +120,13 @@ class IntegrationGateway implements CustomerCheckoutQuoteGateway {
         taxPaise: 0,
         totalPaise: 50000,
       },
+      fulfilmentMode: 'LOCAL_DELIVERY',
+      codEligible: true,
+      codLimitPaise: 100000,
       estimatedPreparationMinutes: 20,
       estimatedTravelMinutes: 15,
       estimatedDeliveryAt: '2026-07-15T21:35:00.000Z',
+      cityConfigurationVersion: 1,
       expiresAt: '2026-07-15T21:05:00.000Z',
       createdAt: '2026-07-15T21:00:00.000Z',
     });

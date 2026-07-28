@@ -3,7 +3,9 @@ import {
   type CreateCustomerCheckoutQuoteInput,
   type CustomerCheckoutQuote,
   type CustomerCheckoutQuoteAddress,
+  type CustomerCheckoutQuoteBranch,
   type CustomerCheckoutQuoteFailureKind,
+  type CustomerCheckoutQuoteGeography,
   type CustomerCheckoutQuoteItem,
   type CustomerCheckoutQuotePort,
   type CustomerCheckoutQuoteShop,
@@ -25,255 +27,310 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function readRecord(record: Record<string, unknown>, key: string): Record<string, unknown> {
-  const value = record[key];
-  if (!isRecord(value)) {
-    throw new TypeError('Invalid checkout quote response');
-  }
+function record(value: unknown): Record<string, unknown> {
+  if (!isRecord(value)) throw new TypeError('Invalid checkout quote response');
   return value;
 }
 
-function readString(record: Record<string, unknown>, key: string): string {
-  const value = record[key];
-  if (typeof value !== 'string' || value.length === 0) {
+function string(value: Record<string, unknown>, key: string): string {
+  const result = value[key];
+  if (typeof result !== 'string' || result.length === 0) {
     throw new TypeError('Invalid checkout quote response');
   }
-  return value;
+  return result;
 }
 
-function readUuid(record: Record<string, unknown>, key: string): string {
-  const value = readString(record, key);
-  if (!UUID_PATTERN.test(value)) {
-    throw new TypeError('Invalid checkout quote response');
-  }
-  return value;
+function uuid(value: Record<string, unknown>, key: string): string {
+  const result = string(value, key);
+  if (!UUID_PATTERN.test(result)) throw new TypeError('Invalid checkout quote response');
+  return result;
 }
 
-function readNullableString(record: Record<string, unknown>, key: string): string | null {
-  const value = record[key];
-  if (value === null) {
-    return null;
-  }
-  if (typeof value !== 'string') {
-    throw new TypeError('Invalid checkout quote response');
-  }
-  return value;
+function nullableString(value: Record<string, unknown>, key: string): string | null {
+  const result = value[key];
+  if (result === null) return null;
+  if (typeof result !== 'string') throw new TypeError('Invalid checkout quote response');
+  return result;
 }
 
-function readBoolean(record: Record<string, unknown>, key: string): boolean {
-  const value = record[key];
-  if (typeof value !== 'boolean') {
-    throw new TypeError('Invalid checkout quote response');
-  }
-  return value;
+function bool(value: Record<string, unknown>, key: string): boolean {
+  const result = value[key];
+  if (typeof result !== 'boolean') throw new TypeError('Invalid checkout quote response');
+  return result;
 }
 
-function readInteger(
-  record: Record<string, unknown>,
+function integer(
+  value: Record<string, unknown>,
   key: string,
   minimum = 0,
   maximum = Number.MAX_SAFE_INTEGER,
 ): number {
-  const value = record[key];
+  const result = value[key];
   if (
-    !Number.isSafeInteger(value) ||
-    typeof value !== 'number' ||
-    value < minimum ||
-    value > maximum
+    typeof result !== 'number' ||
+    !Number.isSafeInteger(result) ||
+    result < minimum ||
+    result > maximum
   ) {
     throw new TypeError('Invalid checkout quote response');
   }
-  return value;
+  return result;
 }
 
-function readCountryCode(record: Record<string, unknown>, key: string): string {
-  const value = readString(record, key);
-  if (!/^[A-Z]{2}$/u.test(value)) {
-    throw new TypeError('Invalid checkout quote response');
-  }
-  return value;
-}
-
-function readCoordinate(
-  record: Record<string, unknown>,
+function coordinate(
+  value: Record<string, unknown>,
   key: string,
   minimum: number,
   maximum: number,
 ): number {
-  const value = record[key];
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < minimum || value > maximum) {
+  const result = value[key];
+  if (
+    typeof result !== 'number' ||
+    !Number.isFinite(result) ||
+    result < minimum ||
+    result > maximum
+  ) {
     throw new TypeError('Invalid checkout quote response');
   }
-  return value;
+  return result;
 }
 
-function readDateTime(record: Record<string, unknown>, key: string): string {
-  const value = readString(record, key);
-  if (!Number.isFinite(Date.parse(value))) {
-    throw new TypeError('Invalid checkout quote response');
-  }
-  return value;
+function dateTime(value: Record<string, unknown>, key: string): string {
+  const result = string(value, key);
+  if (!Number.isFinite(Date.parse(result))) throw new TypeError('Invalid checkout quote response');
+  return result;
 }
 
 function parseAddress(value: unknown): CustomerCheckoutQuoteAddress {
-  if (!isRecord(value)) {
-    throw new TypeError('Invalid checkout quote response');
-  }
+  const input = record(value);
   return {
-    id: readUuid(value, 'id'),
-    label: readNullableString(value, 'label'),
-    recipientName: readString(value, 'recipientName'),
-    phoneNumber: readString(value, 'phoneNumber'),
-    line1: readString(value, 'line1'),
-    line2: readNullableString(value, 'line2'),
-    landmark: readNullableString(value, 'landmark'),
-    area: readString(value, 'area'),
-    city: readString(value, 'city'),
-    state: readString(value, 'state'),
-    postalCode: readString(value, 'postalCode'),
-    countryCode: readCountryCode(value, 'countryCode'),
-    latitude: readCoordinate(value, 'latitude', -90, 90),
-    longitude: readCoordinate(value, 'longitude', -180, 180),
+    id: uuid(input, 'id'),
+    label: nullableString(input, 'label'),
+    recipientName: string(input, 'recipientName'),
+    phoneNumber: string(input, 'phoneNumber'),
+    line1: string(input, 'line1'),
+    line2: nullableString(input, 'line2'),
+    landmark: nullableString(input, 'landmark'),
+    area: string(input, 'area'),
+    city: string(input, 'city'),
+    state: string(input, 'state'),
+    postalCode: string(input, 'postalCode'),
+    countryCode: string(input, 'countryCode'),
+    latitude: coordinate(input, 'latitude', -90, 90),
+    longitude: coordinate(input, 'longitude', -180, 180),
   };
 }
 
 function parseShop(value: unknown): CustomerCheckoutQuoteShop {
-  if (!isRecord(value)) {
+  const input = record(value);
+  return {
+    id: uuid(input, 'id'),
+    name: string(input, 'name'),
+    slug: string(input, 'slug'),
+    minimumOrderPaise: integer(input, 'minimumOrderPaise'),
+  };
+}
+
+function parseBranch(value: unknown): CustomerCheckoutQuoteBranch {
+  const input = record(value);
+  const type = input['type'];
+  if (type !== 'PHYSICAL_STORE' && type !== 'CLOUD_SHOP') {
     throw new TypeError('Invalid checkout quote response');
   }
   return {
-    id: readUuid(value, 'id'),
-    name: readString(value, 'name'),
-    slug: readString(value, 'slug'),
-    minimumOrderPaise: readInteger(value, 'minimumOrderPaise'),
-    averagePreparationMinutes: readInteger(value, 'averagePreparationMinutes'),
-    distanceMeters: readInteger(value, 'distanceMeters'),
-    serviceRadiusMeters: readInteger(value, 'serviceRadiusMeters', 1),
+    id: uuid(input, 'id'),
+    code: string(input, 'code'),
+    name: string(input, 'name'),
+    type,
+    addressId: uuid(input, 'addressId'),
+    returnAddressId: uuid(input, 'returnAddressId'),
+    pincode: nullableString(input, 'pincode'),
+    latitude: coordinate(input, 'latitude', -90, 90),
+    longitude: coordinate(input, 'longitude', -180, 180),
+  };
+}
+
+function parseGeography(value: unknown): CustomerCheckoutQuoteGeography {
+  const input = record(value);
+  if (input['fulfilmentMode'] !== 'LOCAL_DELIVERY') {
+    throw new TypeError('Invalid checkout quote response');
+  }
+  const distanceMeters = integer(input, 'distanceMeters');
+  const deliveryRadiusMeters = integer(input, 'deliveryRadiusMeters', 1);
+  if (distanceMeters > deliveryRadiusMeters) throw new TypeError('Invalid checkout quote response');
+  return {
+    cityId: uuid(input, 'cityId'),
+    cityCode: string(input, 'cityCode'),
+    cityName: string(input, 'cityName'),
+    serviceZoneId: uuid(input, 'serviceZoneId'),
+    serviceZoneCode: string(input, 'serviceZoneCode'),
+    serviceZoneName: string(input, 'serviceZoneName'),
+    customerPincode: string(input, 'customerPincode'),
+    fulfilmentMode: 'LOCAL_DELIVERY',
+    distanceMeters,
+    deliveryRadiusMeters,
   };
 }
 
 function parseItem(value: unknown): CustomerCheckoutQuoteItem {
-  if (!isRecord(value)) {
+  const input = record(value);
+  const quantity = integer(input, 'quantity', 1, 20);
+  const previousUnitPricePaise = integer(input, 'previousUnitPricePaise');
+  const unitPricePaise = integer(input, 'unitPricePaise');
+  const availableQuantity = integer(input, 'availableQuantity');
+  const lineTotalPaise = integer(input, 'lineTotalPaise');
+  const priceChanged = bool(input, 'priceChanged');
+  if (
+    lineTotalPaise !== quantity * unitPricePaise ||
+    availableQuantity < quantity ||
+    priceChanged !== (previousUnitPricePaise !== unitPricePaise)
+  ) {
     throw new TypeError('Invalid checkout quote response');
   }
   return {
-    cartItemId: readUuid(value, 'cartItemId'),
-    variantId: readUuid(value, 'variantId'),
-    productId: readUuid(value, 'productId'),
-    productName: readString(value, 'productName'),
-    sku: readString(value, 'sku'),
-    colourName: readNullableString(value, 'colourName'),
-    sizeLabel: readNullableString(value, 'sizeLabel'),
-    quantity: readInteger(value, 'quantity', 1, 20),
-    previousUnitPricePaise: readInteger(value, 'previousUnitPricePaise'),
-    unitPricePaise: readInteger(value, 'unitPricePaise'),
-    priceChanged: readBoolean(value, 'priceChanged'),
-    availableQuantity: readInteger(value, 'availableQuantity'),
-    inventoryVersion: readInteger(value, 'inventoryVersion', 1),
-    lineTotalPaise: readInteger(value, 'lineTotalPaise'),
+    cartItemId: uuid(input, 'cartItemId'),
+    variantId: uuid(input, 'variantId'),
+    productId: uuid(input, 'productId'),
+    productName: string(input, 'productName'),
+    sku: string(input, 'sku'),
+    colourName: nullableString(input, 'colourName'),
+    sizeLabel: nullableString(input, 'sizeLabel'),
+    quantity,
+    previousUnitPricePaise,
+    unitPricePaise,
+    priceChanged,
+    availableQuantity,
+    branchInventoryVersion: integer(input, 'branchInventoryVersion', 1),
+    lineTotalPaise,
   };
 }
 
 function parseTotals(value: unknown): CustomerCheckoutQuoteTotals {
-  if (!isRecord(value)) {
+  const input = record(value);
+  const result = {
+    subtotalPaise: integer(input, 'subtotalPaise'),
+    productDiscountPaise: integer(input, 'productDiscountPaise'),
+    couponDiscountPaise: integer(input, 'couponDiscountPaise'),
+    deliveryFeePaise: integer(input, 'deliveryFeePaise'),
+    platformFeePaise: integer(input, 'platformFeePaise'),
+    taxPaise: integer(input, 'taxPaise'),
+    totalPaise: integer(input, 'totalPaise'),
+  };
+  if (
+    result.productDiscountPaise + result.couponDiscountPaise > result.subtotalPaise ||
+    result.totalPaise !==
+      result.subtotalPaise -
+        result.productDiscountPaise -
+        result.couponDiscountPaise +
+        result.deliveryFeePaise +
+        result.platformFeePaise +
+        result.taxPaise
+  ) {
     throw new TypeError('Invalid checkout quote response');
   }
-  return {
-    subtotalPaise: readInteger(value, 'subtotalPaise'),
-    productDiscountPaise: readInteger(value, 'productDiscountPaise'),
-    couponDiscountPaise: readInteger(value, 'couponDiscountPaise'),
-    deliveryFeePaise: readInteger(value, 'deliveryFeePaise'),
-    platformFeePaise: readInteger(value, 'platformFeePaise'),
-    taxPaise: readInteger(value, 'taxPaise'),
-    totalPaise: readInteger(value, 'totalPaise'),
-  };
+  return result;
 }
 
 export function parseCustomerCheckoutQuoteEnvelope(value: unknown): CustomerCheckoutQuote {
-  if (!isRecord(value) || value['success'] !== true) {
+  const envelope = record(value);
+  if (envelope['success'] !== true) throw new TypeError('Invalid checkout quote response');
+  const data = record(envelope['data']);
+  const quote = record(data['quote']);
+  if (quote['contractVersion'] !== 2 || quote['fulfilmentMode'] !== 'LOCAL_DELIVERY') {
     throw new TypeError('Invalid checkout quote response');
   }
-  const data = readRecord(value, 'data');
-  const quote = readRecord(data, 'quote');
-  const items = quote['items'];
-  const meta = readRecord(value, 'meta');
+  const rawItems = quote['items'];
+  const meta = record(envelope['meta']);
   const requestId = meta['requestId'];
-
   if (
-    !Array.isArray(items) ||
-    items.length === 0 ||
+    !Array.isArray(rawItems) ||
+    rawItems.length === 0 ||
     (requestId !== null && (typeof requestId !== 'string' || !UUID_PATTERN.test(requestId)))
   ) {
     throw new TypeError('Invalid checkout quote response');
   }
-
+  const items = rawItems.map(parseItem);
+  const totals = parseTotals(quote['totals']);
+  const codEligible = bool(quote, 'codEligible');
+  const codLimitPaise = integer(quote, 'codLimitPaise');
+  if (
+    totals.subtotalPaise !== items.reduce((sum, item) => sum + item.lineTotalPaise, 0) ||
+    codEligible !== totals.totalPaise <= codLimitPaise
+  ) {
+    throw new TypeError('Invalid checkout quote response');
+  }
+  const createdAt = dateTime(quote, 'createdAt');
+  const expiresAt = dateTime(quote, 'expiresAt');
+  const estimatedDeliveryAt = dateTime(quote, 'estimatedDeliveryAt');
+  if (
+    Date.parse(expiresAt) <= Date.parse(createdAt) ||
+    Date.parse(estimatedDeliveryAt) < Date.parse(createdAt)
+  ) {
+    throw new TypeError('Invalid checkout quote response');
+  }
   return {
-    id: readUuid(quote, 'id'),
-    cartId: readUuid(quote, 'cartId'),
+    id: uuid(quote, 'id'),
+    contractVersion: 2,
+    cartId: uuid(quote, 'cartId'),
     address: parseAddress(quote['address']),
     shop: parseShop(quote['shop']),
-    items: items.map(parseItem),
-    totals: parseTotals(quote['totals']),
-    estimatedPreparationMinutes: readInteger(quote, 'estimatedPreparationMinutes'),
-    estimatedTravelMinutes: readInteger(quote, 'estimatedTravelMinutes'),
-    estimatedDeliveryAt: readDateTime(quote, 'estimatedDeliveryAt'),
-    expiresAt: readDateTime(quote, 'expiresAt'),
-    createdAt: readDateTime(quote, 'createdAt'),
+    branch: parseBranch(quote['branch']),
+    geography: parseGeography(quote['geography']),
+    items,
+    totals,
+    fulfilmentMode: 'LOCAL_DELIVERY',
+    codEligible,
+    codLimitPaise,
+    estimatedPreparationMinutes: integer(quote, 'estimatedPreparationMinutes'),
+    estimatedTravelMinutes: integer(quote, 'estimatedTravelMinutes'),
+    estimatedDeliveryAt,
+    cityConfigurationVersion: integer(quote, 'cityConfigurationVersion', 1),
+    expiresAt,
+    createdAt,
   };
 }
 
 function parseApiError(value: unknown): { code: string; retryable: boolean } | null {
-  if (!isRecord(value) || value['success'] !== false || !isRecord(value['error'])) {
-    return null;
-  }
+  if (!isRecord(value) || value['success'] !== false || !isRecord(value['error'])) return null;
   const code = value['error']['code'];
   const retryable = value['error']['retryable'];
-  if (typeof code !== 'string' || typeof retryable !== 'boolean') {
-    return null;
-  }
+  if (typeof code !== 'string' || typeof retryable !== 'boolean') return null;
   return { code, retryable };
 }
 
 function mapErrorKind(code: string, status: number): CustomerCheckoutQuoteFailureKind {
-  if (code === 'AUTH_REQUIRED' || code === 'AUTH_TOKEN_EXPIRED' || status === 401) {
+  if (code === 'AUTH_REQUIRED' || code === 'AUTH_TOKEN_EXPIRED' || status === 401)
     return 'AUTHENTICATION';
-  }
-  if (code === 'CART_NOT_FOUND') {
-    return 'EMPTY_CART';
-  }
-  if (code === 'VALIDATION_ERROR' || code === 'ADDRESS_NOT_FOUND') {
-    return 'VALIDATION';
-  }
+  if (code === 'CART_NOT_FOUND') return 'EMPTY_CART';
+  if (code === 'VALIDATION_ERROR' || code === 'ADDRESS_NOT_FOUND') return 'VALIDATION';
   if (
-    code === 'CART_ITEM_UNAVAILABLE' ||
-    code === 'INSUFFICIENT_STOCK' ||
-    code === 'INSUFFICIENT_INVENTORY' ||
-    code === 'PRODUCT_INACTIVE' ||
-    code === 'VARIANT_INACTIVE'
-  ) {
+    [
+      'CART_ITEM_UNAVAILABLE',
+      'INSUFFICIENT_STOCK',
+      'INSUFFICIENT_INVENTORY',
+      'PRODUCT_INACTIVE',
+      'VARIANT_INACTIVE',
+    ].includes(code)
+  )
     return 'UNAVAILABLE_ITEM';
-  }
-  if (code === 'CART_PRICE_CHANGED') {
-    return 'CHANGED_PRICE';
-  }
-  if (code === 'ADDRESS_NOT_SERVICEABLE' || code === 'OUTSIDE_SERVICE_AREA') {
+  if (code === 'CART_PRICE_CHANGED') return 'CHANGED_PRICE';
+  if (code === 'NO_FULFILMENT_BRANCH') return 'NO_FULFILMENT_BRANCH';
+  if (code === 'POSTAL_PRICING_REQUIRED') return 'POSTAL_PRICING_REQUIRED';
+  if (code === 'ADDRESS_NOT_SERVICEABLE' || code === 'OUTSIDE_SERVICE_AREA')
     return 'UNSERVICEABLE_ADDRESS';
-  }
-  if (code === 'CHECKOUT_QUOTE_EXPIRED' || code === 'CHECKOUT_QUOTE_NOT_FOUND') {
+  if (
+    [
+      'CHECKOUT_QUOTE_EXPIRED',
+      'CHECKOUT_QUOTE_NOT_FOUND',
+      'CHECKOUT_QUOTE_VERSION_UNSUPPORTED',
+    ].includes(code)
+  )
     return 'STALE_QUOTE';
-  }
-  if (code === 'SHOP_NOT_ACCEPTING_ORDERS' || code === 'SHOP_UNAVAILABLE') {
+  if (code === 'SHOP_NOT_ACCEPTING_ORDERS' || code === 'SHOP_UNAVAILABLE')
     return 'SHOP_UNAVAILABLE';
-  }
-  if (code === 'EXTERNAL_SERVICE_UNAVAILABLE' || status === 503) {
-    return 'TEMPORARILY_UNAVAILABLE';
-  }
-  if (status === 400) {
-    return 'VALIDATION';
-  }
-  if (status === 409) {
-    return 'CONFLICT';
-  }
+  if (code === 'EXTERNAL_SERVICE_UNAVAILABLE' || status === 503) return 'TEMPORARILY_UNAVAILABLE';
+  if (status === 400) return 'VALIDATION';
+  if (status === 409) return 'CONFLICT';
   return 'UNKNOWN';
 }
 
@@ -290,18 +347,15 @@ export class HttpCustomerCheckoutQuoteClient implements CustomerCheckoutQuotePor
     if (!UUID_PATTERN.test(input.addressId)) {
       throw new CustomerCheckoutQuoteError('VALIDATION', 'VALIDATION_ERROR', false);
     }
-
     let accessToken: string | null;
     try {
       accessToken = await this.getAccessToken();
     } catch {
       throw new CustomerCheckoutQuoteError('AUTHENTICATION', null, false);
     }
-
     if (accessToken === null || accessToken.trim().length === 0) {
       throw new CustomerCheckoutQuoteError('AUTHENTICATION', null, false);
     }
-
     let response: HttpResponse;
     try {
       response = await this.fetchFunction(`${this.apiBaseUrl}/checkout/quote`, {
@@ -316,26 +370,21 @@ export class HttpCustomerCheckoutQuoteClient implements CustomerCheckoutQuotePor
     } catch {
       throw new CustomerCheckoutQuoteError('TRANSPORT', null, true);
     }
-
     let body: unknown;
     try {
       body = await response.json();
     } catch {
       throw new CustomerCheckoutQuoteError('MALFORMED_RESPONSE', null, false);
     }
-
     if (!response.ok) {
       const apiError = parseApiError(body);
-      if (apiError === null) {
-        throw new CustomerCheckoutQuoteError('UNKNOWN', null, false);
-      }
+      if (apiError === null) throw new CustomerCheckoutQuoteError('UNKNOWN', null, false);
       throw new CustomerCheckoutQuoteError(
         mapErrorKind(apiError.code, response.status),
         apiError.code,
         apiError.retryable,
       );
     }
-
     try {
       return parseCustomerCheckoutQuoteEnvelope(body);
     } catch {
