@@ -202,6 +202,13 @@ export default defineConfig([
     },
   },
   {
+    files: ['apps/admin-dashboard/src/app/cities/page.tsx'],
+    rules: {
+      // The native dialog's cancel listener stores latest non-rendering callbacks in refs.
+      'react-hooks/refs': 'off',
+    },
+  },
+  {
     files: ['apps/backend/src/**/*.module.ts'],
     rules: {
       '@typescript-eslint/no-extraneous-class': 'off',
