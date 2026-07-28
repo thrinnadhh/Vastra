@@ -24,141 +24,119 @@ jobs:
           ref: agent/phase-2d-b-checkout-integration
           persist-credentials: true
 
-      - name: Apply fixture patch
+      - name: Upgrade customer quote fixtures
         run: |
-          cat > /tmp/customer-fixtures.patch <<'PATCH'
-          diff --git a/apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx b/apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx
-          --- a/apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx
-          +++ b/apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx
-          @@ -23,6 +23,7 @@ const NOW = Date.parse('2026-07-16T10:00:00.000Z');
-           
-           const QUOTE: CustomerCheckoutQuote = {
-             id: QUOTE_ID,
-          +  contractVersion: 2,
-             cartId: CART_ID,
-             address: {
-               id: ADDRESS_ID,
-          @@ -45,9 +46,34 @@ const QUOTE: CustomerCheckoutQuote = {
-               name: 'Synthetic Quote Shop',
-               slug: 'synthetic-quote-shop',
-               minimumOrderPaise: 0,
-          -    averagePreparationMinutes: 20,
-          +  },
-          +  branch: {
-          +    id: 'a0000000-0000-4000-8000-000000000001',
-          +    code: 'TIR-01',
-          +    name: 'Tirupati Branch',
-          +    type: 'PHYSICAL_STORE',
-          +    addressId: 'b0000000-0000-4000-8000-000000000001',
-          +    returnAddressId: 'c0000000-0000-4000-8000-000000000001',
-          +    pincode: '517501',
-          +    latitude: 13.6288,
-          +    longitude: 79.4192,
-          +  },
-          +  geography: {
-          +    cityId: 'd0000000-0000-4000-8000-000000000001',
-          +    cityCode: 'TIRUPATI',
-          +    cityName: 'Tirupati',
-          +    serviceZoneId: 'e0000000-0000-4000-8000-000000000001',
-          +    serviceZoneCode: 'TIR-CENTRAL',
-          +    serviceZoneName: 'Tirupati Central',
-          +    customerPincode: '517501',
-          +    fulfilmentMode: 'LOCAL_DELIVERY',
-               distanceMeters: 500,
-          -    serviceRadiusMeters: 5000,
-          +    deliveryRadiusMeters: 5000,
-             },
-             items: [
-               {
-          @@ -63,7 +89,7 @@ const QUOTE: CustomerCheckoutQuote = {
-                 unitPricePaise: 25_000,
-                 priceChanged: true,
-                 availableQuantity: 3,
-          -      inventoryVersion: 1,
-          +      branchInventoryVersion: 1,
-                 lineTotalPaise: 50_000,
-               },
-             ],
-          @@ -76,9 +102,13 @@ const QUOTE: CustomerCheckoutQuote = {
-               taxPaise: 0,
-               totalPaise: 53_500,
-             },
-          +  fulfilmentMode: 'LOCAL_DELIVERY',
-          +  codEligible: true,
-          +  codLimitPaise: 100_000,
-             estimatedPreparationMinutes: 20,
-             estimatedTravelMinutes: 15,
-             estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',
-          +  cityConfigurationVersion: 1,
-             expiresAt: '2026-07-16T10:05:00.000Z',
-             createdAt: '2026-07-16T10:00:00.000Z',
-           };
-          diff --git a/apps/customer-app/src/orders/customer-cod-order-journey.test.tsx b/apps/customer-app/src/orders/customer-cod-order-journey.test.tsx
-          --- a/apps/customer-app/src/orders/customer-cod-order-journey.test.tsx
-          +++ b/apps/customer-app/src/orders/customer-cod-order-journey.test.tsx
-          @@ -65,6 +65,7 @@ const TOTALS = {
-           
-           const QUOTE: CustomerCheckoutQuote = {
-             id: QUOTE_ID,
-          +  contractVersion: 2,
-             cartId: CART_ID,
-             address: ADDRESS,
-             shop: {
-          @@ -72,9 +73,34 @@ const QUOTE: CustomerCheckoutQuote = {
-               name: 'Synthetic Journey Shop',
-               slug: 'synthetic-journey-shop',
-               minimumOrderPaise: 0,
-          -    averagePreparationMinutes: 20,
-          +  },
-          +  branch: {
-          +    id: 'a0000000-0000-4000-8000-000000000001',
-          +    code: 'TIR-01',
-          +    name: 'Tirupati Branch',
-          +    type: 'PHYSICAL_STORE',
-          +    addressId: 'b0000000-0000-4000-8000-000000000001',
-          +    returnAddressId: 'c0000000-0000-4000-8000-000000000001',
-          +    pincode: '517501',
-          +    latitude: 13.6288,
-          +    longitude: 79.4192,
-          +  },
-          +  geography: {
-          +    cityId: 'd0000000-0000-4000-8000-000000000001',
-          +    cityCode: 'TIRUPATI',
-          +    cityName: 'Tirupati',
-          +    serviceZoneId: 'e0000000-0000-4000-8000-000000000001',
-          +    serviceZoneCode: 'TIR-CENTRAL',
-          +    serviceZoneName: 'Tirupati Central',
-          +    customerPincode: '517501',
-          +    fulfilmentMode: 'LOCAL_DELIVERY',
-               distanceMeters: 500,
-          -    serviceRadiusMeters: 5000,
-          +    deliveryRadiusMeters: 5000,
-             },
-             items: [
-               {
-          @@ -91,12 +117,16 @@ const QUOTE: CustomerCheckoutQuote = {
-                 unitPricePaise: 28_000,
-                 priceChanged: true,
-                 availableQuantity: 1,
-          -      inventoryVersion: 7,
-          +      branchInventoryVersion: 7,
-                 lineTotalPaise: 28_000,
-               },
-             ],
-             totals: TOTALS,
-          +  fulfilmentMode: 'LOCAL_DELIVERY',
-          +  codEligible: true,
-          +  codLimitPaise: 100_000,
-             estimatedPreparationMinutes: 20,
-             estimatedTravelMinutes: 15,
-             estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',
-          +  cityConfigurationVersion: 1,
-             expiresAt: '2026-07-16T10:05:00.000Z',
-             createdAt: '2026-07-16T10:00:00.000Z',
-           };
-          PATCH
-          git apply --check /tmp/customer-fixtures.patch
-          git apply /tmp/customer-fixtures.patch
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          function replaceOnce(path, oldValue, newValue) {
+            const source = fs.readFileSync(path, 'utf8');
+            const count = source.split(oldValue).length - 1;
+            if (count !== 1) {
+              throw new Error(`${path}: expected one match, found ${count}`);
+            }
+            fs.writeFileSync(path, source.replace(oldValue, newValue));
+          }
+
+          const branchAndGeography = `  branch: {
+            id: 'a0000000-0000-4000-8000-000000000001',
+            code: 'TIR-01',
+            name: 'Tirupati Branch',
+            type: 'PHYSICAL_STORE',
+            addressId: 'b0000000-0000-4000-8000-000000000001',
+            returnAddressId: 'c0000000-0000-4000-8000-000000000001',
+            pincode: '517501',
+            latitude: 13.6288,
+            longitude: 79.4192,
+          },
+          geography: {
+            cityId: 'd0000000-0000-4000-8000-000000000001',
+            cityCode: 'TIRUPATI',
+            cityName: 'Tirupati',
+            serviceZoneId: 'e0000000-0000-4000-8000-000000000001',
+            serviceZoneCode: 'TIR-CENTRAL',
+            serviceZoneName: 'Tirupati Central',
+            customerPincode: '517501',
+            fulfilmentMode: 'LOCAL_DELIVERY',
+            distanceMeters: 500,
+            deliveryRadiusMeters: 5000,
+          },
+          `;
+
+          const screen = 'apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx';
+          replaceOnce(screen, '  id: QUOTE_ID,\n  cartId: CART_ID,', '  id: QUOTE_ID,\n  contractVersion: 2,\n  cartId: CART_ID,');
+          replaceOnce(
+            screen,
+            `  shop: {
+              id: '50000000-0000-4000-8000-000000000001',
+              name: 'Synthetic Quote Shop',
+              slug: 'synthetic-quote-shop',
+              minimumOrderPaise: 0,
+              averagePreparationMinutes: 20,
+              distanceMeters: 500,
+              serviceRadiusMeters: 5000,
+            },
+            `,
+            `  shop: {
+              id: '50000000-0000-4000-8000-000000000001',
+              name: 'Synthetic Quote Shop',
+              slug: 'synthetic-quote-shop',
+              minimumOrderPaise: 0,
+            },
+            ${branchAndGeography}`,
+          );
+          replaceOnce(screen, '      inventoryVersion: 1,', '      branchInventoryVersion: 1,');
+          replaceOnce(
+            screen,
+            '  estimatedPreparationMinutes: 20,',
+            `  fulfilmentMode: 'LOCAL_DELIVERY',
+            codEligible: true,
+            codLimitPaise: 100_000,
+            estimatedPreparationMinutes: 20,`,
+          );
+          replaceOnce(
+            screen,
+            "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',",
+            "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',\n  cityConfigurationVersion: 1,",
+          );
+
+          const journey = 'apps/customer-app/src/orders/customer-cod-order-journey.test.tsx';
+          replaceOnce(journey, '  id: QUOTE_ID,\n  cartId: CART_ID,', '  id: QUOTE_ID,\n  contractVersion: 2,\n  cartId: CART_ID,');
+          replaceOnce(
+            journey,
+            `  shop: {
+              id: SHOP_ID,
+              name: 'Synthetic Journey Shop',
+              slug: 'synthetic-journey-shop',
+              minimumOrderPaise: 0,
+              averagePreparationMinutes: 20,
+              distanceMeters: 500,
+              serviceRadiusMeters: 5000,
+            },
+            `,
+            `  shop: {
+              id: SHOP_ID,
+              name: 'Synthetic Journey Shop',
+              slug: 'synthetic-journey-shop',
+              minimumOrderPaise: 0,
+            },
+            ${branchAndGeography}`,
+          );
+          replaceOnce(journey, '      inventoryVersion: 7,', '      branchInventoryVersion: 7,');
+          replaceOnce(
+            journey,
+            '  estimatedPreparationMinutes: 20,',
+            `  fulfilmentMode: 'LOCAL_DELIVERY',
+            codEligible: true,
+            codLimitPaise: 100_000,
+            estimatedPreparationMinutes: 20,`,
+          );
+          replaceOnce(
+            journey,
+            "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',",
+            "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',\n  cityConfigurationVersion: 1,",
+          );
+          NODE
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
