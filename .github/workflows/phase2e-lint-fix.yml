@@ -1,11 +1,9 @@
 name: Phase 2E modal lint repair
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
-    paths:
-      - .github/workflows/phase2e-lint-fix.yml
+      - agent/phase-2e-city-activation
 
 permissions:
   contents: write
@@ -28,8 +26,10 @@ jobs:
           fetch-depth: 0
 
       - name: Patch modal effects
+        shell: bash
         run: |
-          python3 - <<'PY'
+          set -o pipefail
+          python3 - <<'PY' 2>&1 | tee /tmp/phase2e-modal-patch.log
           from pathlib import Path
 
           path = Path('apps/admin-dashboard/src/app/cities/page.tsx')
@@ -120,16 +120,51 @@ jobs:
         run: pnpm exec prettier --write apps/admin-dashboard/src/app/cities/page.tsx
 
       - name: Run lint
-        run: pnpm lint
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm lint 2>&1 | tee /tmp/phase2e-modal-lint.log
 
       - name: Run typecheck
-        run: pnpm typecheck
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm typecheck 2>&1 | tee /tmp/phase2e-modal-typecheck.log
 
       - name: Commit verified lint repair
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/phase2e-lint-fix.yml
+          git rm -f .github/workflows/phase2e-lint-fix.yml .github/phase2e-modal-lint-failure.md
           git add apps/admin-dashboard/src/app/cities/page.tsx
           git commit -m "fix: satisfy modal lifecycle lint"
           git push origin HEAD:agent/phase-2e-city-activation
+
+      - name: Persist diagnostics
+        if: failure()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          {
+            echo "# Phase 2E modal lint repair failure"
+            echo
+            echo "Run: $GITHUB_RUN_ID"
+            echo "Head: $(git rev-parse HEAD)"
+            for file in /tmp/phase2e-modal-patch.log /tmp/phase2e-modal-lint.log /tmp/phase2e-modal-typecheck.log; do
+              if test -f "$file"; then
+                echo
+                echo "## $(basename "$file")"
+                echo '```text'
+                tail -n 250 "$file"
+                echo '```'
+              fi
+            done
+            echo
+            echo "## Working tree"
+            echo '```text'
+            git status --short
+            echo '```'
+          } > .github/phase2e-modal-lint-failure.md
+          git add .github/phase2e-modal-lint-failure.md
+          git commit -m "chore: record modal lint repair diagnostics" || true
+          git push origin HEAD:agent/phase-2e-city-activation || true
