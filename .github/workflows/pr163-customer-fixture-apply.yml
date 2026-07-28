@@ -41,13 +41,17 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require('node:fs');
+
           function replaceOnce(path, oldValue, newValue) {
             const source = fs.readFileSync(path, 'utf8');
             const count = source.split(oldValue).length - 1;
-            if (count !== 1) throw new Error(`${path}: expected one match, found ${count}`);
+            if (count !== 1) {
+              throw new Error(`${path}: expected one match, found ${count}`);
+            }
             fs.writeFileSync(path, source.replace(oldValue, newValue));
           }
-          const contract = `  branch: {
+
+          const branchAndGeography = `  branch: {
             id: 'a0000000-0000-4000-8000-000000000001',
             code: 'TIR-01',
             name: 'Tirupati Branch',
@@ -71,55 +75,84 @@ jobs:
             deliveryRadiusMeters: 5000,
           },
           `;
+
           const screen = 'apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx';
           replaceOnce(screen, '  id: QUOTE_ID,\n  cartId: CART_ID,', '  id: QUOTE_ID,\n  contractVersion: 2,\n  cartId: CART_ID,');
-          replaceOnce(screen, `  shop: {
-            id: '50000000-0000-4000-8000-000000000001',
-            name: 'Synthetic Quote Shop',
-            slug: 'synthetic-quote-shop',
-            minimumOrderPaise: 0,
-            averagePreparationMinutes: 20,
-            distanceMeters: 500,
-            serviceRadiusMeters: 5000,
-          },
-          `, `  shop: {
-            id: '50000000-0000-4000-8000-000000000001',
-            name: 'Synthetic Quote Shop',
-            slug: 'synthetic-quote-shop',
-            minimumOrderPaise: 0,
-          },
-          ${contract}`);
+          replaceOnce(
+            screen,
+            `  shop: {
+              id: '50000000-0000-4000-8000-000000000001',
+              name: 'Synthetic Quote Shop',
+              slug: 'synthetic-quote-shop',
+              minimumOrderPaise: 0,
+              averagePreparationMinutes: 20,
+              distanceMeters: 500,
+              serviceRadiusMeters: 5000,
+            },
+            `,
+            `  shop: {
+              id: '50000000-0000-4000-8000-000000000001',
+              name: 'Synthetic Quote Shop',
+              slug: 'synthetic-quote-shop',
+              minimumOrderPaise: 0,
+            },
+            ${branchAndGeography}`,
+          );
           replaceOnce(screen, '      inventoryVersion: 1,', '      branchInventoryVersion: 1,');
-          replaceOnce(screen, '  estimatedPreparationMinutes: 20,', `  fulfilmentMode: 'LOCAL_DELIVERY',
-          codEligible: true,
-          codLimitPaise: 100_000,
-          estimatedPreparationMinutes: 20,`);
-          replaceOnce(screen, "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',", "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',\n  cityConfigurationVersion: 1,");
+          replaceOnce(
+            screen,
+            '  estimatedPreparationMinutes: 20,',
+            `  fulfilmentMode: 'LOCAL_DELIVERY',
+            codEligible: true,
+            codLimitPaise: 100_000,
+            estimatedPreparationMinutes: 20,`,
+          );
+          replaceOnce(
+            screen,
+            "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',",
+            "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',\n  cityConfigurationVersion: 1,",
+          );
+
           const journey = 'apps/customer-app/src/orders/customer-cod-order-journey.test.tsx';
           replaceOnce(journey, '  id: QUOTE_ID,\n  cartId: CART_ID,', '  id: QUOTE_ID,\n  contractVersion: 2,\n  cartId: CART_ID,');
-          replaceOnce(journey, `  shop: {
-            id: SHOP_ID,
-            name: 'Synthetic Journey Shop',
-            slug: 'synthetic-journey-shop',
-            minimumOrderPaise: 0,
-            averagePreparationMinutes: 20,
-            distanceMeters: 500,
-            serviceRadiusMeters: 5000,
-          },
-          `, `  shop: {
-            id: SHOP_ID,
-            name: 'Synthetic Journey Shop',
-            slug: 'synthetic-journey-shop',
-            minimumOrderPaise: 0,
-          },
-          ${contract}`);
+          replaceOnce(
+            journey,
+            `  shop: {
+              id: SHOP_ID,
+              name: 'Synthetic Journey Shop',
+              slug: 'synthetic-journey-shop',
+              minimumOrderPaise: 0,
+              averagePreparationMinutes: 20,
+              distanceMeters: 500,
+              serviceRadiusMeters: 5000,
+            },
+            `,
+            `  shop: {
+              id: SHOP_ID,
+              name: 'Synthetic Journey Shop',
+              slug: 'synthetic-journey-shop',
+              minimumOrderPaise: 0,
+            },
+            ${branchAndGeography}`,
+          );
           replaceOnce(journey, '      inventoryVersion: 7,', '      branchInventoryVersion: 7,');
-          replaceOnce(journey, '  estimatedPreparationMinutes: 20,', `  fulfilmentMode: 'LOCAL_DELIVERY',
-          codEligible: true,
-          codLimitPaise: 100_000,
-          estimatedPreparationMinutes: 20,`);
-          replaceOnce(journey, "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',", "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',\n  cityConfigurationVersion: 1,");
+          replaceOnce(
+            journey,
+            '  estimatedPreparationMinutes: 20,',
+            `  fulfilmentMode: 'LOCAL_DELIVERY',
+            codEligible: true,
+            codLimitPaise: 100_000,
+            estimatedPreparationMinutes: 20,`,
+          );
+          replaceOnce(
+            journey,
+            "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',",
+            "  estimatedDeliveryAt: '2026-07-16T10:35:00.000Z',\n  cityConfigurationVersion: 1,",
+          );
           NODE
+
+      - name: Format customer fixtures
+        run: |
           pnpm exec prettier --write \
             apps/customer-app/src/checkout/customer-checkout-quote.screen.test.tsx \
             apps/customer-app/src/orders/customer-cod-order-journey.test.tsx
@@ -129,11 +162,9 @@ jobs:
         run: |
           set +e
           pnpm --filter @vastra/customer-app typecheck > /tmp/customer-typecheck.log 2>&1
-          typecheck_status=$?
+          echo "$?" > /tmp/typecheck-status.txt
           pnpm --filter @vastra/customer-app test > /tmp/customer-test.log 2>&1
-          test_status=$?
-          echo "$typecheck_status" > /tmp/typecheck-status.txt
-          echo "$test_status" > /tmp/test-status.txt
+          echo "$?" > /tmp/test-status.txt
           exit 0
 
       - name: Upload customer diagnostics
