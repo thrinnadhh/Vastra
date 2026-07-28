@@ -9,6 +9,10 @@ fi
 
 started_stack=0
 tmp_dir="$(mktemp -d)"
+diagnostics_dir="${DB_TEST_DIAGNOSTICS_DIR:-/tmp/vastra-db-test-diagnostics}"
+
+rm -rf "$diagnostics_dir"
+mkdir -p "$diagnostics_dir"
 
 cleanup() {
   local exit_code=$?
@@ -34,7 +38,8 @@ run_logged() {
   local label="$1"
   shift
 
-  local log_file="$tmp_dir/${label//[^a-zA-Z0-9_-]/_}.log"
+  local safe_label="${label//[^a-zA-Z0-9_-]/_}"
+  local log_file="$tmp_dir/${safe_label}.log"
 
   printf '\n--- %s ---\n' "$label"
 
@@ -43,9 +48,13 @@ run_logged() {
     return 0
   fi
 
+  cp "$log_file" "$diagnostics_dir/${safe_label}.log"
+  tail -n 240 "$log_file" >"$diagnostics_dir/${safe_label}-tail.log"
+  printf 'Failed step: %s\n' "$label" >"$diagnostics_dir/summary.txt"
+
   echo "ERROR: $label failed" >&2
   echo "--- bounded failure output (last 240 lines) ---" >&2
-  tail -n 240 "$log_file" >&2
+  cat "$diagnostics_dir/${safe_label}-tail.log" >&2
   return 1
 }
 
