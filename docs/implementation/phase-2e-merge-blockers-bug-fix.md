@@ -35,7 +35,7 @@ Database tests execute every planned assertion deterministically. Invalid target
 
 ## Verification
 
-Before the permanent repair commit was pushed, the guarded repair workflow passed the focused backend gateway suite, all 49 Phase 2E pgTAP assertions, OpenAPI validation, and generated-client contract parity. The repository-wide exact-head CI remains the final merge gate.
+Before the permanent repair commit was pushed, the guarded repair workflow passed the focused backend gateway suite, all 49 Phase 2E pgTAP assertions, OpenAPI validation, and generated-client contract parity. The modal source repair subsequently passed Prettier 3.9.5, repository-wide lint, and repository-wide typecheck with the file-specific `react-hooks/refs` suppression removed. The repository-wide exact-head CI remains the final merge gate.
 
 ## Data repair
 
