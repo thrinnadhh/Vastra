@@ -30,64 +30,7 @@ jobs:
 
       - name: Replace render-time ref mutation and remove suppression
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          from textwrap import dedent
-
-          page = Path('apps/admin-dashboard/src/app/cities/page.tsx')
-          text = page.read_text()
-          start_marker = '  const dialog = useRef<HTMLDialogElement>(null);'
-          end_marker = '\n\n  const submit = async'
-          start = text.find(start_marker)
-          end = text.find(end_marker, start)
-          if start < 0 or end < 0:
-            raise SystemExit(f'modal markers missing: start={start}, end={end}')
-          replacement = dedent('''\
-            const dialog = useRef<HTMLDialogElement>(null);
-
-            useEffect(() => {
-              const element = dialog.current;
-              if (element === null) return;
-              if (!element.open) element.showModal();
-
-              return () => {
-                if (element.open) element.close();
-              };
-            }, []);
-
-            useEffect(() => {
-              const element = dialog.current;
-              if (element === null) return;
-
-              const cancel = (event: Event) => {
-                event.preventDefault();
-                if (busy) return;
-                element.close();
-                onClose();
-              };
-
-              element.addEventListener('cancel', cancel);
-              return () => element.removeEventListener('cancel', cancel);
-            }, [busy, onClose]);
-
-            const requestClose = () => {
-              if (busy) return;
-              if (dialog.current?.open) dialog.current.close();
-              onClose();
-            };
-          ''')
-          replacement = '\n'.join(f'  {line}' if line else '' for line in replacement.splitlines())
-          page.write_text(text[:start] + replacement + text[end:])
-
-          config = Path('eslint.config.mjs')
-          config_text = config.read_text()
-          override_start = config_text.find("  {\n    files: ['apps/admin-dashboard/src/app/cities/page.tsx']")
-          if override_start >= 0:
-            override_end = config_text.find("  {\n    files: ['apps/backend/src/**/*.module.ts']", override_start)
-            if override_end < 0:
-              raise SystemExit('modal lint override end marker missing')
-            config.write_text(config_text[:override_start] + config_text[override_end:])
-          PY
+          python3 .github/phase2e_modal_source_fix.py
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
@@ -108,14 +51,19 @@ jobs:
           pnpm lint
           pnpm typecheck
 
-      - name: Restore CI and push verified source fix
+      - name: Restore repository infrastructure and push source fix
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main --depth=1
           git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
-          git rm -f .github/workflows/phase2e-lint-fix.yml .github/phase2e-modal-lint-failure.md
-          git add apps/admin-dashboard/src/app/cities/page.tsx eslint.config.mjs .github/workflows/ci.yml
+          git show origin/main:package.json > package.json
+          git show origin/main:eslint.config.mjs > eslint.config.mjs
+          rm -f \
+            .github/workflows/phase2e-lint-fix.yml \
+            .github/phase2e-modal-lint-failure.md \
+            .github/phase2e_modal_source_fix.py
+          git add -A
           git commit -m "fix: satisfy modal lifecycle lint"
           git push origin HEAD:agent/phase-2e-city-activation
 
