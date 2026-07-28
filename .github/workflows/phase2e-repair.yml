@@ -26,8 +26,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply reviewed root-cause fixes
+        shell: bash
         run: |
-          python3 .github/scripts/phase2e_repair_bootstrap.py
+          set -o pipefail
           python3 .github/scripts/phase2e_repair.py 2>&1 | tee /tmp/phase2e-apply.log
 
       - name: Install pnpm
@@ -53,7 +54,10 @@ jobs:
           docs/implementation/phase-2e-merge-blockers-bug-fix.md
 
       - name: Run focused backend regression
-        run: pnpm --filter @vastra/backend test -- admin-city.gateway.test.ts 2>&1 | tee /tmp/phase2e-backend.log
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter @vastra/backend test -- admin-city.gateway.test.ts 2>&1 | tee /tmp/phase2e-backend.log
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
@@ -61,15 +65,24 @@ jobs:
           version: 2.109.1
 
       - name: Run full database workflow
+        shell: bash
         env:
           DB_TEST_DIAGNOSTICS_DIR: /tmp/vastra-db-test-diagnostics
-        run: pnpm db:test 2>&1 | tee /tmp/phase2e-db.log
+        run: |
+          set -o pipefail
+          pnpm db:test 2>&1 | tee /tmp/phase2e-db.log
 
       - name: Validate OpenAPI
-        run: pnpm openapi:check 2>&1 | tee /tmp/phase2e-openapi.log
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm openapi:check 2>&1 | tee /tmp/phase2e-openapi.log
 
       - name: Verify generated client
-        run: pnpm --filter @vastra/api-client contract:check 2>&1 | tee /tmp/phase2e-contract.log
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter @vastra/api-client contract:check 2>&1 | tee /tmp/phase2e-contract.log
 
       - name: Commit verified repair
         run: |
