@@ -1,0 +1,80 @@
+name: PR 163 Format Capture
+
+on:
+  push:
+    branches:
+      - agent/phase-2d-b-checkout-integration
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr163-format-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Format PR 163 files
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format PR files
+        run: |
+          pnpm exec prettier --write \
+            apps/backend/src/catalogue/customer-checkout-quote.gateway.ts \
+            apps/backend/src/catalogue/customer-checkout-quote.service.ts \
+            apps/backend/src/catalogue/customer-checkout-quote.types.ts \
+            apps/backend/src/catalogue/phase-2d-checkout-http-error.ts \
+            apps/backend/src/finance/customer-payment.gateway.ts \
+            apps/backend/src/finance/customer-payment.service.ts \
+            apps/backend/src/orders/customer-order.gateway.ts \
+            apps/backend/src/orders/customer-order.service.ts \
+            apps/backend/src/orders/customer-order.types.ts \
+            apps/backend/src/orders/phase-2d-order-http-error.ts \
+            apps/customer-app/src/checkout/customer-checkout-quote.client.ts \
+            apps/customer-app/src/checkout/customer-checkout-quote.client.test.ts \
+            apps/customer-app/src/checkout/customer-checkout-quote.types.ts
+
+      - name: Archive formatted files
+        run: |
+          tar -czf /tmp/pr163-formatted.tar.gz \
+            apps/backend/src/catalogue/customer-checkout-quote.gateway.ts \
+            apps/backend/src/catalogue/customer-checkout-quote.service.ts \
+            apps/backend/src/catalogue/customer-checkout-quote.types.ts \
+            apps/backend/src/catalogue/phase-2d-checkout-http-error.ts \
+            apps/backend/src/finance/customer-payment.gateway.ts \
+            apps/backend/src/finance/customer-payment.service.ts \
+            apps/backend/src/orders/customer-order.gateway.ts \
+            apps/backend/src/orders/customer-order.service.ts \
+            apps/backend/src/orders/customer-order.types.ts \
+            apps/backend/src/orders/phase-2d-order-http-error.ts \
+            apps/customer-app/src/checkout/customer-checkout-quote.client.ts \
+            apps/customer-app/src/checkout/customer-checkout-quote.client.test.ts \
+            apps/customer-app/src/checkout/customer-checkout-quote.types.ts
+
+      - name: Upload formatted files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr163-formatted-files
+          path: /tmp/pr163-formatted.tar.gz
+          retention-days: 1
