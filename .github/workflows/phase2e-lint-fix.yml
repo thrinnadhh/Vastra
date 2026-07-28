@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: phase2e-modal-lint-repair
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   repair:
@@ -25,15 +25,15 @@ jobs:
           ref: agent/phase-2e-city-activation
           fetch-depth: 0
 
-      - name: Patch modal effects
+      - name: Patch modal effects and remove lint suppression
         shell: bash
         run: |
           set -o pipefail
           python3 - <<'PY' 2>&1 | tee /tmp/phase2e-modal-patch.log
           from pathlib import Path
 
-          path = Path('apps/admin-dashboard/src/app/cities/page.tsx')
-          text = path.read_text()
+          page = Path('apps/admin-dashboard/src/app/cities/page.tsx')
+          text = page.read_text()
           old = """  const dialog = useRef<HTMLDialogElement>(null);
   const busyRef = useRef(busy);
   const onCloseRef = useRef(onClose);
@@ -100,7 +100,21 @@ jobs:
 """
           if text.count(old) != 1:
               raise SystemExit(f'expected one modal block, found {text.count(old)}')
-          path.write_text(text.replace(old, new, 1))
+          page.write_text(text.replace(old, new, 1))
+
+          config = Path('eslint.config.mjs')
+          config_text = config.read_text()
+          override = """  {
+    files: ['apps/admin-dashboard/src/app/cities/page.tsx'],
+    rules: {
+      // The native dialog's cancel listener stores latest non-rendering callbacks in refs.
+      'react-hooks/refs': 'off',
+    },
+  },
+"""
+          if config_text.count(override) != 1:
+              raise SystemExit(f'expected one modal lint override, found {config_text.count(override)}')
+          config.write_text(config_text.replace(override, '', 1))
           PY
 
       - name: Install pnpm
@@ -116,8 +130,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Format modal file
-        run: pnpm exec prettier --write apps/admin-dashboard/src/app/cities/page.tsx
+      - name: Format changed files
+        run: pnpm exec prettier --write apps/admin-dashboard/src/app/cities/page.tsx eslint.config.mjs
 
       - name: Run lint
         shell: bash
@@ -136,7 +150,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm -f .github/workflows/phase2e-lint-fix.yml .github/phase2e-modal-lint-failure.md
-          git add apps/admin-dashboard/src/app/cities/page.tsx
+          git add apps/admin-dashboard/src/app/cities/page.tsx eslint.config.mjs
           git commit -m "fix: satisfy modal lifecycle lint"
           git push origin HEAD:agent/phase-2e-city-activation
 
