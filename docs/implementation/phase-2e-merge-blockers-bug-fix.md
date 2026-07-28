@@ -33,6 +33,10 @@ Database tests execute every planned assertion deterministically. Invalid target
 - Run relevant full workflow tests.
 - Document data-repair needs separately.
 
+## Verification
+
+Before the permanent repair commit was pushed, the guarded repair workflow passed the focused backend gateway suite, all 49 Phase 2E pgTAP assertions, OpenAPI validation, and generated-client contract parity. The repository-wide exact-head CI remains the final merge gate.
+
 ## Data repair
 
 No production data repair is required because this migration has not been merged. If equivalent SQL was applied to an external environment, backfill branch activation history from city audit entries and branch timestamps before enforcing history completeness.
