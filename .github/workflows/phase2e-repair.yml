@@ -29,6 +29,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
+          python3 .github/scripts/phase2e_repair_bootstrap.py
           python3 .github/scripts/phase2e_repair.py 2>&1 | tee /tmp/phase2e-apply.log
 
       - name: Install pnpm
