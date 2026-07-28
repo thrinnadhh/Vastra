@@ -44,6 +44,7 @@ const context: AuthenticatedRequestContext = {
 function createQuote(): CustomerCheckoutQuoteSnapshot {
   return {
     id: QUOTE_ID,
+    contractVersion: 2,
     cartId: CART_ID,
     address: {
       id: ADDRESS_ID,
@@ -66,9 +67,29 @@ function createQuote(): CustomerCheckoutQuoteSnapshot {
       name: 'Quote Shop',
       slug: 'quote-shop',
       minimumOrderPaise: 50000,
-      averagePreparationMinutes: 20,
+    },
+    branch: {
+      id: '90000000-0000-4000-8000-000000000001',
+      code: 'TIR-01',
+      name: 'Tirupati Branch',
+      type: 'PHYSICAL_STORE',
+      addressId: 'a0000000-0000-4000-8000-000000000001',
+      returnAddressId: 'b0000000-0000-4000-8000-000000000001',
+      pincode: '517501',
+      latitude: 13.6288,
+      longitude: 79.4192,
+    },
+    geography: {
+      cityId: 'c0000000-0000-4000-8000-000000000001',
+      cityCode: 'TIRUPATI',
+      cityName: 'Tirupati',
+      serviceZoneId: 'd0000000-0000-4000-8000-000000000001',
+      serviceZoneCode: 'TIR-CENTRAL',
+      serviceZoneName: 'Tirupati Central',
+      customerPincode: '517501',
+      fulfilmentMode: 'LOCAL_DELIVERY',
       distanceMeters: 500,
-      serviceRadiusMeters: 5000,
+      deliveryRadiusMeters: 5000,
     },
     items: [
       {
@@ -84,7 +105,7 @@ function createQuote(): CustomerCheckoutQuoteSnapshot {
         unitPricePaise: 60000,
         priceChanged: true,
         availableQuantity: 5,
-        inventoryVersion: 2,
+        branchInventoryVersion: 2,
         lineTotalPaise: 120000,
       },
     ],
@@ -97,9 +118,13 @@ function createQuote(): CustomerCheckoutQuoteSnapshot {
       taxPaise: 0,
       totalPaise: 120000,
     },
+    fulfilmentMode: 'LOCAL_DELIVERY',
+    codEligible: true,
+    codLimitPaise: 200000,
     estimatedPreparationMinutes: 20,
     estimatedTravelMinutes: 15,
     estimatedDeliveryAt: '2026-07-15T21:35:00.000Z',
+    cityConfigurationVersion: 1,
     expiresAt: '2026-07-15T21:05:00.000Z',
     createdAt: '2026-07-15T21:00:00.000Z',
   };
