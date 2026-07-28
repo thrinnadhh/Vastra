@@ -2,6 +2,10 @@ import { ADMIN_PERMISSIONS, type AdminPermission } from './admin-types';
 import type {
   AdminAuditEntry,
   AdminCapabilities,
+  AdminCityControlPlane,
+  AdminCityMutationResult,
+  AdminCityPreflightReport,
+  AdminMarketLifecycleStatus,
   AdminCaptainListItem,
   AdminCaptainPage,
   AdminCaptainSnapshot,
@@ -484,4 +488,148 @@ export function parseOperationOutcome(value: unknown): AdminOperationOutcome {
     }
   }
   return { replayed: data['replayed'] === true, summary };
+}
+
+const ADMIN_MARKET_STATUSES = [
+  'DRAFT',
+  'CONFIGURING',
+  'READY_FOR_VALIDATION',
+  'ACTIVE',
+  'PAUSED',
+  'CLOSED',
+] as const;
+
+function marketStatus(value: unknown): AdminMarketLifecycleStatus {
+  const parsed = string(value, 'market lifecycle status');
+  if (!ADMIN_MARKET_STATUSES.includes(parsed as AdminMarketLifecycleStatus)) {
+    throw new AdminContractError('Unknown market lifecycle status');
+  }
+  return parsed as AdminMarketLifecycleStatus;
+}
+
+function objectMap(value: unknown, label: string): Readonly<Record<string, unknown>> {
+  return record(value, label);
+}
+
+export function parseCityPreflightReport(value: unknown): AdminCityPreflightReport {
+  const item = directOrEnvelope(value);
+  const rawChecks = record(item['checks'], 'preflight checks');
+  const checks: Record<string, Readonly<Record<string, unknown>>> = {};
+  for (const [key, check] of Object.entries(rawChecks)) checks[key] = record(check, key);
+  return {
+    id: string(item['id']),
+    cityId: string(item['cityId']),
+    cityConfigurationVersion: integer(item['cityConfigurationVersion']),
+    readinessVersion: integer(item['readinessVersion']),
+    cityStatus: marketStatus(item['cityStatus']),
+    checks,
+    passed: boolean(item['passed']),
+    createdAt: string(item['createdAt']),
+  };
+}
+
+export function parseCityControlPlane(value: unknown): AdminCityControlPlane {
+  const data = directOrEnvelope(value);
+  const city = record(data['city'], 'city');
+  const configuration = record(data['configuration'], 'city configuration');
+  const readiness = record(data['readiness'], 'city readiness');
+  const latest = data['latestPreflight'];
+  return {
+    city: {
+      id: string(city['id']),
+      code: string(city['code']),
+      slug: string(city['slug']),
+      name: string(city['name']),
+      stateCode: string(city['stateCode']),
+      countryCode: string(city['countryCode']),
+      status: marketStatus(city['status']),
+      activatedAt: nullableString(city['activatedAt']),
+      pausedAt: nullableString(city['pausedAt']),
+      closedAt: nullableString(city['closedAt']),
+      updatedAt: string(city['updatedAt']),
+    },
+    configuration: {
+      cityId: string(configuration['cityId']),
+      timezone: string(configuration['timezone']),
+      defaultCodLimitPaise: integer(configuration['defaultCodLimitPaise']),
+      defaultDeliveryRadiusMeters: integer(configuration['defaultDeliveryRadiusMeters']),
+      maximumDeliveryRadiusMeters: integer(configuration['maximumDeliveryRadiusMeters']),
+      baseDeliveryFeePaise: integer(configuration['baseDeliveryFeePaise']),
+      perKmDeliveryFeePaise: integer(configuration['perKmDeliveryFeePaise']),
+      merchantCommissionBps: integer(configuration['merchantCommissionBps']),
+      localDeliveryEnabled: boolean(configuration['localDeliveryEnabled']),
+      postalDeliveryEnabled: boolean(configuration['postalDeliveryEnabled']),
+      operatingHours: objectMap(configuration['operatingHours'], 'operating hours'),
+      holidayDates: array(configuration['holidayDates'], 'holiday dates').map((item) =>
+        string(item, 'holiday date'),
+      ),
+      cancellationPolicy: objectMap(configuration['cancellationPolicy'], 'cancellation policy'),
+      refundPolicy: objectMap(configuration['refundPolicy'], 'refund policy'),
+      version: integer(configuration['version']),
+      updatedAt: string(configuration['updatedAt']),
+    },
+    readiness: {
+      cityId: string(readiness['cityId']),
+      activeCaptainCount: integer(readiness['activeCaptainCount']),
+      standbyCaptainCount: integer(readiness['standbyCaptainCount']),
+      paymentProviderHealthy: boolean(readiness['paymentProviderHealthy']),
+      smsOtpProviderHealthy: boolean(readiness['smsOtpProviderHealthy']),
+      fcmProviderHealthy: boolean(readiness['fcmProviderHealthy']),
+      observabilityHealthy: boolean(readiness['observabilityHealthy']),
+      validationOrderId: nullableString(readiness['validationOrderId']),
+      unresolvedHighBlockers: integer(readiness['unresolvedHighBlockers']),
+      version: integer(readiness['version']),
+      updatedAt: string(readiness['updatedAt']),
+    },
+    zones: array(data['zones'], 'service zones').map((zoneValue) => {
+      const zone = record(zoneValue, 'service zone');
+      const radius = zone['defaultDeliveryRadiusMeters'];
+      return {
+        id: string(zone['id']),
+        cityId: string(zone['cityId']),
+        code: string(zone['code']),
+        slug: string(zone['slug']),
+        name: string(zone['name']),
+        status: marketStatus(zone['status']),
+        defaultDeliveryRadiusMeters: radius === null ? null : integer(radius),
+        version: integer(zone['version']),
+        updatedAt: string(zone['updatedAt']),
+        pincodes: array(zone['pincodes'], 'zone pincodes').map((pincodeValue) => {
+          const pincode = record(pincodeValue, 'zone pincode');
+          return {
+            id: string(pincode['id']),
+            pincode: string(pincode['pincode']),
+            priority: integer(pincode['priority']),
+            isPrimary: boolean(pincode['isPrimary']),
+            isActive: boolean(pincode['isActive']),
+            version: integer(pincode['version']),
+          };
+        }),
+      };
+    }),
+    latestPreflight: latest === null ? null : parseCityPreflightReport(latest),
+  };
+}
+
+export function parseCityList(value: unknown): readonly AdminCityControlPlane[] {
+  const raw = Array.isArray(value)
+    ? value
+    : (() => {
+        const data = directOrEnvelope(value);
+        return data['items'] ?? data['cities'];
+      })();
+  return array(raw, 'city control planes').map(parseCityControlPlane);
+}
+
+export function parseCityMutationResult(value: unknown): AdminCityMutationResult {
+  const data = directOrEnvelope(value);
+  return {
+    replayed: data['replayed'] === true,
+    controlPlane: parseCityControlPlane(data['controlPlane']),
+  };
+}
+
+export function parseCityPreflightResult(value: unknown): AdminCityPreflightReport {
+  const data = directOrEnvelope(value);
+  return parseCityPreflightReport(data['report']);
 }

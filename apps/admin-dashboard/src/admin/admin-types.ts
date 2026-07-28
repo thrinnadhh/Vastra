@@ -164,6 +164,17 @@ export const ADMIN_AUDIT_RESOURCE_TYPES = [
   'CAPTAIN',
   'CASE',
   'CONFIGURATION',
+  'PAYMENT',
+  'PAYMENT_EVENT',
+  'RETURN_REQUEST',
+  'REFUND',
+  'MERCHANT_SETTLEMENT',
+  'CAPTAIN_EARNING',
+  'CAPTAIN_PAYOUT',
+  'COD_RECONCILIATION',
+  'CITY',
+  'SERVICE_ZONE',
+  'CITY_ACTIVATION',
 ] as const;
 
 export type AdminAuditResourceType = (typeof ADMIN_AUDIT_RESOURCE_TYPES)[number];
@@ -354,6 +365,92 @@ export interface AdminOperationOutcome {
   readonly summary: Readonly<Record<string, string | number | boolean | null>>;
 }
 
+export type AdminMarketLifecycleStatus =
+  'DRAFT' | 'CONFIGURING' | 'READY_FOR_VALIDATION' | 'ACTIVE' | 'PAUSED' | 'CLOSED';
+
+export interface AdminCityPreflightReport {
+  readonly id: string;
+  readonly cityId: string;
+  readonly cityConfigurationVersion: number;
+  readonly readinessVersion: number;
+  readonly cityStatus: AdminMarketLifecycleStatus;
+  readonly checks: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+  readonly passed: boolean;
+  readonly createdAt: string;
+}
+
+export interface AdminCityControlPlane {
+  readonly city: {
+    readonly id: string;
+    readonly code: string;
+    readonly slug: string;
+    readonly name: string;
+    readonly stateCode: string;
+    readonly countryCode: string;
+    readonly status: AdminMarketLifecycleStatus;
+    readonly activatedAt: string | null;
+    readonly pausedAt: string | null;
+    readonly closedAt: string | null;
+    readonly updatedAt: string;
+  };
+  readonly configuration: {
+    readonly cityId: string;
+    readonly timezone: string;
+    readonly defaultCodLimitPaise: number;
+    readonly defaultDeliveryRadiusMeters: number;
+    readonly maximumDeliveryRadiusMeters: number;
+    readonly baseDeliveryFeePaise: number;
+    readonly perKmDeliveryFeePaise: number;
+    readonly merchantCommissionBps: number;
+    readonly localDeliveryEnabled: boolean;
+    readonly postalDeliveryEnabled: boolean;
+    readonly operatingHours: Readonly<Record<string, unknown>>;
+    readonly holidayDates: readonly string[];
+    readonly cancellationPolicy: Readonly<Record<string, unknown>>;
+    readonly refundPolicy: Readonly<Record<string, unknown>>;
+    readonly version: number;
+    readonly updatedAt: string;
+  };
+  readonly readiness: {
+    readonly cityId: string;
+    readonly activeCaptainCount: number;
+    readonly standbyCaptainCount: number;
+    readonly paymentProviderHealthy: boolean;
+    readonly smsOtpProviderHealthy: boolean;
+    readonly fcmProviderHealthy: boolean;
+    readonly observabilityHealthy: boolean;
+    readonly validationOrderId: string | null;
+    readonly unresolvedHighBlockers: number;
+    readonly version: number;
+    readonly updatedAt: string;
+  };
+  readonly zones: readonly {
+    readonly id: string;
+    readonly cityId: string;
+    readonly code: string;
+    readonly slug: string;
+    readonly name: string;
+    readonly status: AdminMarketLifecycleStatus;
+    readonly defaultDeliveryRadiusMeters: number | null;
+    readonly version: number;
+    readonly updatedAt: string;
+    readonly pincodes: readonly {
+      readonly id: string;
+      readonly pincode: string;
+      readonly priority: number;
+      readonly isPrimary: boolean;
+      readonly isActive: boolean;
+      readonly version: number;
+    }[];
+  }[];
+  readonly latestPreflight: AdminCityPreflightReport | null;
+}
+
+export interface AdminCityMutationResult {
+  readonly replayed: boolean;
+  readonly controlPlane: AdminCityControlPlane;
+}
+
 export interface AdminPort {
   capabilities(): Promise<AdminResult<AdminCapabilities>>;
   dashboard(): Promise<AdminResult<AdminDashboardSummary>>;
@@ -390,6 +487,25 @@ export interface AdminPort {
     readonly actorId?: string;
     readonly limit?: number;
   }): Promise<AdminResult<readonly AdminAuditEntry[]>>;
+  cities(): Promise<AdminResult<readonly AdminCityControlPlane[]>>;
+  updateCityConfiguration(
+    cityId: string,
+    expectedVersion: number,
+    patch: Readonly<Record<string, unknown>>,
+    input: AdminMutationInput,
+  ): Promise<AdminResult<AdminCityMutationResult>>;
+  runCityPreflight(
+    cityId: string,
+    input: AdminMutationInput,
+  ): Promise<AdminResult<AdminCityPreflightReport>>;
+  activateCity(
+    cityId: string,
+    input: AdminMutationInput,
+  ): Promise<AdminResult<AdminCityMutationResult>>;
+  pauseCity(
+    cityId: string,
+    input: AdminMutationInput,
+  ): Promise<AdminResult<AdminCityMutationResult>>;
   cancelOrder(
     orderId: string,
     input: AdminMutationInput,

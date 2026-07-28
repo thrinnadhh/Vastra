@@ -16,6 +16,7 @@ const NAVIGATION: readonly {
   { href: '/orders', label: 'Orders', permission: 'admin.orders.read' },
   { href: '/merchants', label: 'Merchants', permission: 'admin.merchants.read' },
   { href: '/captains', label: 'Captains', permission: 'admin.captains.read' },
+  { href: '/cities', label: 'Cities', permission: 'admin.configuration.read' },
   { href: '/audit', label: 'Audit', permission: 'admin.audit.read' },
 ];
 

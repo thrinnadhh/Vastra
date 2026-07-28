@@ -16,6 +16,14 @@ alter table private.admin_audit_log
       'CAPTAIN',
       'CASE',
       'CONFIGURATION',
+      'PAYMENT',
+      'PAYMENT_EVENT',
+      'RETURN_REQUEST',
+      'REFUND',
+      'MERCHANT_SETTLEMENT',
+      'CAPTAIN_EARNING',
+      'CAPTAIN_PAYOUT',
+      'COD_RECONCILIATION',
       'CITY',
       'SERVICE_ZONE',
       'CITY_ACTIVATION'
@@ -329,13 +337,13 @@ begin
   into v_candidate_zones
   from public.service_zones z
   where z.city_id = p_city_id
-    and z.status in ('READY_FOR_VALIDATION', 'ACTIVE');
+    and z.status in ('READY_FOR_VALIDATION', 'ACTIVE', 'PAUSED');
 
   select count(*)::integer
   into v_zones_with_pincodes
   from public.service_zones z
   where z.city_id = p_city_id
-    and z.status in ('READY_FOR_VALIDATION', 'ACTIVE')
+    and z.status in ('READY_FOR_VALIDATION', 'ACTIVE', 'PAUSED')
     and exists (
       select 1
       from public.service_zone_pincodes szp
@@ -347,29 +355,47 @@ begin
   select count(distinct mb.merchant_id)::integer
   into v_active_merchants
   from public.merchant_branches mb
+  join public.shops shop on shop.id = mb.shop_id
+  join public.merchant_profiles merchant on merchant.user_id = mb.merchant_id
+  join public.profiles merchant_profile on merchant_profile.id = mb.merchant_id
   where mb.city_id = p_city_id
-    and mb.status = 'ACTIVE'
+    and mb.status in ('APPROVED', 'ACTIVE')
     and mb.verification_status = 'VERIFIED'
     and mb.geography_status = 'VERIFIED'
-    and mb.local_delivery_enabled;
+    and mb.local_delivery_enabled
+    and shop.deleted_at is null
+    and shop.verification_status = 'VERIFIED'
+    and shop.operational_status not in ('PAUSED', 'SUSPENDED')
+    and merchant.kyc_status = 'VERIFIED'
+    and merchant.onboarding_status = 'ACTIVE'
+    and merchant_profile.status = 'ACTIVE';
 
   select count(*)::integer
   into v_zones_with_merchants
   from public.service_zones z
   where z.city_id = p_city_id
-    and z.status in ('READY_FOR_VALIDATION', 'ACTIVE')
+    and z.status in ('READY_FOR_VALIDATION', 'ACTIVE', 'PAUSED')
     and exists (
       select 1
       from public.merchant_branches mb
+      join public.shops shop on shop.id = mb.shop_id
+      join public.merchant_profiles merchant on merchant.user_id = mb.merchant_id
+      join public.profiles merchant_profile on merchant_profile.id = mb.merchant_id
       left join public.branch_service_zones bsz
         on bsz.branch_id = mb.id
        and bsz.city_id = mb.city_id
        and bsz.is_active
       where mb.city_id = p_city_id
-        and mb.status = 'ACTIVE'
+        and mb.status in ('APPROVED', 'ACTIVE')
         and mb.verification_status = 'VERIFIED'
         and mb.geography_status = 'VERIFIED'
         and mb.local_delivery_enabled
+        and shop.deleted_at is null
+        and shop.verification_status = 'VERIFIED'
+        and shop.operational_status not in ('PAUSED', 'SUSPENDED')
+        and merchant.kyc_status = 'VERIFIED'
+        and merchant.onboarding_status = 'ACTIVE'
+        and merchant_profile.status = 'ACTIVE'
         and (
           mb.primary_service_zone_id = z.id
           or bsz.service_zone_id = z.id
@@ -610,7 +636,7 @@ begin
   if jsonb_typeof(p_patch) <> 'object' then raise exception 'ADMIN_CITY_CONFIGURATION_INVALID'; end if;
 
   select key into v_unknown_key
-  from jsonb_object_keys(p_patch) as key
+  from jsonb_object_keys(p_patch) as patch_key(key)
   where key not in (
     'timezone',
     'defaultCodLimitPaise',
@@ -705,7 +731,7 @@ begin
 
   return jsonb_build_object('replayed', false, 'controlPlane', private.build_admin_city_control_plane(p_city_id));
 exception
-  when invalid_text_representation or numeric_value_out_of_range then
+  when invalid_text_representation or numeric_value_out_of_range or not_null_violation or check_violation then
     raise exception 'ADMIN_CITY_CONFIGURATION_INVALID';
 end;
 $$;
@@ -736,7 +762,8 @@ declare
 begin
   perform private.assert_phase_2e_admin(p_actor_id, p_city_id, false);
   if jsonb_typeof(p_patch) <> 'object' then raise exception 'ADMIN_SERVICE_ZONE_INVALID'; end if;
-  v_resource_id := coalesce(p_zone_id, gen_random_uuid());
+  if p_patch ->> 'status' = 'ACTIVE' then raise exception 'ADMIN_SERVICE_ZONE_ACTIVATION_REQUIRES_CITY_PREFLIGHT'; end if;
+  v_resource_id := coalesce(p_zone_id, p_idempotency_key);
   v_fingerprint := encode(
     extensions.digest(
       concat_ws('|', p_city_id::text, v_resource_id::text, coalesce(p_expected_version::text, ''), p_patch::text, p_reason_code, coalesce(p_note, '')),
@@ -834,7 +861,7 @@ set search_path = ''
 as $$
 declare
   v_action text := case when p_mapping_id is null then 'admin.city.pincode.create' else 'admin.city.pincode.update' end;
-  v_resource_id uuid := coalesce(p_mapping_id, gen_random_uuid());
+  v_resource_id uuid := coalesce(p_mapping_id, p_idempotency_key);
   v_fingerprint text;
   v_replay_audit_id uuid;
   v_before public.service_zone_pincodes%rowtype;
@@ -1147,6 +1174,24 @@ begin
     set status = 'ACTIVE', version = version + 1, updated_by = p_actor_id
     where city_id = p_city_id
       and status in ('READY_FOR_VALIDATION', 'PAUSED');
+
+    update public.merchant_branches mb
+    set status = 'ACTIVE', updated_by = p_actor_id
+    from public.shops shop, public.merchant_profiles merchant, public.profiles merchant_profile
+    where mb.city_id = p_city_id
+      and mb.status = 'APPROVED'
+      and mb.verification_status = 'VERIFIED'
+      and mb.geography_status = 'VERIFIED'
+      and mb.local_delivery_enabled
+      and shop.id = mb.shop_id
+      and shop.deleted_at is null
+      and shop.verification_status = 'VERIFIED'
+      and shop.operational_status not in ('PAUSED', 'SUSPENDED')
+      and merchant.user_id = mb.merchant_id
+      and merchant.kyc_status = 'VERIFIED'
+      and merchant.onboarding_status = 'ACTIVE'
+      and merchant_profile.id = mb.merchant_id
+      and merchant_profile.status = 'ACTIVE';
   end if;
 
   perform private.complete_phase_2e_command(

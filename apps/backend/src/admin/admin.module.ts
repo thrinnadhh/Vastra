@@ -6,6 +6,9 @@ import { AdminAuditService } from './admin-audit.service';
 import { AdminCapabilitiesController } from './admin-capabilities.controller';
 import { SupabaseAdminCapabilitiesGateway } from './admin-capabilities.gateway';
 import { AdminCapabilitiesService } from './admin-capabilities.service';
+import { AdminCityController } from './admin-city.controller';
+import { SupabaseAdminCityGateway } from './admin-city.gateway';
+import { AdminCityService } from './admin-city.service';
 import { AdminCaptainController } from './admin-captain.controller';
 import { SupabaseAdminCaptainGateway } from './admin-captain.gateway';
 import { AdminCaptainService } from './admin-captain.service';
@@ -34,6 +37,7 @@ import {
   ADMIN_AUDIT_GATEWAY,
   ADMIN_CAPABILITIES_GATEWAY,
   ADMIN_CAPTAIN_GATEWAY,
+  ADMIN_CITY_GATEWAY,
   ADMIN_CASE_GATEWAY,
   ADMIN_CONFIGURATION_GATEWAY,
   ADMIN_DASHBOARD_GATEWAY,
@@ -53,6 +57,7 @@ import {
     AdminOrderOperationsController,
     AdminMerchantController,
     AdminCaptainController,
+    AdminCityController,
     AdminConfigurationController,
     AdminCaseController,
   ],
@@ -90,6 +95,10 @@ import {
       useClass: SupabaseAdminCaptainGateway,
     },
     {
+      provide: ADMIN_CITY_GATEWAY,
+      useClass: SupabaseAdminCityGateway,
+    },
+    {
       provide: ADMIN_CONFIGURATION_GATEWAY,
       useClass: SupabaseAdminConfigurationGateway,
     },
@@ -105,6 +114,7 @@ import {
     AdminOrderOperationsService,
     AdminMerchantService,
     AdminCaptainService,
+    AdminCityService,
     AdminConfigurationService,
     AdminCaseService,
   ],
@@ -117,6 +127,7 @@ import {
     ADMIN_ORDER_OPERATIONS_GATEWAY,
     ADMIN_MERCHANT_GATEWAY,
     ADMIN_CAPTAIN_GATEWAY,
+    ADMIN_CITY_GATEWAY,
     ADMIN_CONFIGURATION_GATEWAY,
     ADMIN_CASE_GATEWAY,
     AdminCapabilitiesService,
@@ -127,6 +138,7 @@ import {
     AdminOrderOperationsService,
     AdminMerchantService,
     AdminCaptainService,
+    AdminCityService,
     AdminConfigurationService,
     AdminCaseService,
   ],
