@@ -79,8 +79,8 @@ export interface CustomerOrderItemSnapshot {
   readonly unitSellingPricePaise: number;
   readonly discountPaise: number;
   readonly totalPaise: number;
-  readonly branchInventoryVersion: number;
-  readonly branchInventoryReservationId: string;
+  readonly branchInventoryVersion?: number | null;
+  readonly branchInventoryReservationId?: string | null;
 }
 
 export interface CustomerOrderTotalsSnapshot {
