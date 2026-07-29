@@ -61,3 +61,29 @@ test('admin application reflows without losing operational navigation', async ({
   await expect(page.getByRole('main')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Operations overview' })).toBeVisible();
 });
+
+test('Phase 2E exposes fail-closed city configuration and activation evidence', async ({
+  page,
+}) => {
+  await page.goto('/cities');
+  await expect(page.getByRole('heading', { name: 'Cities' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tirupati' })).toBeVisible();
+  await expect(page.getByText('Version 2')).toBeVisible();
+  await expect(page.getByRole('cell', { name: /517501/u })).toBeVisible();
+
+  await page.getByLabel('COD limit · paise').fill('225000');
+  await page.getByRole('button', { name: 'Save configuration' }).click();
+  await expect(
+    page.getByText('Configuration saved with a new authoritative version.'),
+  ).toBeVisible();
+  await expect(page.getByText('Version 3')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Run preflight' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Evaluate Tirupati' });
+  await dialog.getByLabel('Note').fill('Phase 2E browser verification');
+  await dialog.getByRole('button', { name: 'Run preflight' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Latest preflight' })).toBeVisible();
+  await expect(page.getByRole('main').getByText('Merchants', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Activate city' })).toBeDisabled();
+});

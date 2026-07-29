@@ -4053,6 +4053,66 @@ components:
         resolutionNote: {type: string, minLength: 1, maxLength: 2000}
         reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
         note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminCityConfigurationUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, patch, reasonCode]
+      properties:
+        expectedVersion: {type: integer, minimum: 1}
+        patch: {type: object, minProperties: 1}
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminServiceZoneCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [patch, reasonCode]
+      properties:
+        expectedVersion: {type: ['integer', 'null'], minimum: 1}
+        patch: {type: object, minProperties: 1}
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminServiceZoneUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, patch, reasonCode]
+      properties:
+        expectedVersion: {type: integer, minimum: 1}
+        patch: {type: object, minProperties: 1}
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminServiceZonePincodeCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [pincode, priority, isPrimary, isActive, reasonCode]
+      properties:
+        expectedVersion: {type: ['integer', 'null'], minimum: 1}
+        pincode: {type: string, pattern: '^[1-9][0-9]{5}$'}
+        priority: {type: integer, minimum: 1}
+        isPrimary: {type: boolean}
+        isActive: {type: boolean}
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminServiceZonePincodeUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, pincode, priority, isPrimary, isActive, reasonCode]
+      properties:
+        expectedVersion: {type: integer, minimum: 1}
+        pincode: {type: string, pattern: '^[1-9][0-9]{5}$'}
+        priority: {type: integer, minimum: 1}
+        isPrimary: {type: boolean}
+        isActive: {type: boolean}
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
+    AdminCityReadinessUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, readiness, reasonCode]
+      properties:
+        expectedVersion: {type: integer, minimum: 1}
+        readiness: {type: object, minProperties: 1}
+        reasonCode: {$ref: '#/components/schemas/AdminMutationReasonCode'}
+        note: {type: ['string', 'null'], minLength: 1, maxLength: 1000}
     AdminConfigurationUpdateRequest:
       type: object
       additionalProperties: false
@@ -7706,7 +7766,7 @@ paths:
       parameters:
       - name: resourceType
         in: query
-        schema: {type: string, enum: [ORDER, DELIVERY_TASK, MERCHANT, CAPTAIN, CASE, CONFIGURATION]}
+        schema: {type: string, enum: [ORDER, DELIVERY_TASK, MERCHANT, CAPTAIN, CASE, CONFIGURATION, PAYMENT, PAYMENT_EVENT, RETURN_REQUEST, REFUND, MERCHANT_SETTLEMENT, CAPTAIN_EARNING, CAPTAIN_PAYOUT, COD_RECONCILIATION, CITY, SERVICE_ZONE, CITY_ACTIVATION]}
       - name: resourceId
         in: query
         schema: {type: string, format: uuid}
@@ -8268,6 +8328,267 @@ paths:
         content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
       responses:
         '200': {description: Case closed or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cities:
+    get:
+      operationId: listAdminCities
+      summary: List city configuration and activation control planes visible to the administrator
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: City control planes, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordListResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cities/{cityId}:
+    get:
+      operationId: getAdminCity
+      summary: Get one city configuration and activation control plane
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cityId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200': {description: City control plane, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cities/{cityId}/configuration:
+    put:
+      operationId: updateAdminCityConfiguration
+      summary: Update versioned commercial city configuration through an audited command
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cityId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminCityConfigurationUpdateRequest'}}}
+      responses:
+        '200': {description: Configuration updated or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cities/{cityId}/zones:
+    post:
+      operationId: createAdminCityServiceZone
+      summary: Create a service zone through an audited command
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cityId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminServiceZoneCreateRequest'}}}
+      responses:
+        '200': {description: Zone created or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cities/{cityId}/zones/{zoneId}:
+    put:
+      operationId: updateAdminCityServiceZone
+      summary: Update a versioned service zone through an audited command
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cityId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: zoneId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminServiceZoneUpdateRequest'}}}
+      responses:
+        '200': {description: Zone updated or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cities/{cityId}/zones/{zoneId}/pincodes:
+    post:
+      operationId: createAdminCityServiceZonePincode
+      summary: Add a pincode route to a service zone
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cityId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: zoneId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminServiceZonePincodeCreateRequest'}}}
+      responses:
+        '200': {description: Pincode route created or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cities/{cityId}/zones/{zoneId}/pincodes/{mappingId}:
+    put:
+      operationId: updateAdminCityServiceZonePincode
+      summary: Update a versioned service-zone pincode route
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cityId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: zoneId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: mappingId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminServiceZonePincodeUpdateRequest'}}}
+      responses:
+        '200': {description: Pincode route updated or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cities/{cityId}/readiness:
+    put:
+      operationId: updateAdminCityReadiness
+      summary: Record audited external and operational readiness inputs for city activation
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cityId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminCityReadinessUpdateRequest'}}}
+      responses:
+        '200': {description: Readiness updated or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cities/{cityId}/preflight:
+    post:
+      operationId: runAdminCityActivationPreflight
+      summary: Produce an immutable fail-closed city activation preflight report
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cityId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: Immutable preflight report, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cities/{cityId}/activate:
+    post:
+      operationId: activateAdminCity
+      summary: Activate or restore a city only with a fresh passing preflight
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cityId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: City activated or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /admin/cities/{cityId}/pause:
+    post:
+      operationId: pauseAdminCity
+      summary: Pause a city while preserving existing-order recovery flows
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: cityId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/AdminMutationRequest'}}}
+      responses:
+        '200': {description: City paused or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FlexibleRecordResponse'}}}}
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}

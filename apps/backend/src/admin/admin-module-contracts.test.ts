@@ -10,6 +10,7 @@ import { OPERATIONAL_READINESS_METADATA } from '../auth/operational-readiness.de
 import { REQUIRED_PERMISSIONS_METADATA } from '../auth/permissions.decorator';
 import { AdminCapabilitiesController } from './admin-capabilities.controller';
 import { AdminAuditController } from './admin-audit.controller';
+import { AdminCityController } from './admin-city.controller';
 import { AdminCaptainController } from './admin-captain.controller';
 import { AdminCaseController } from './admin-case.controller';
 import { AdminConfigurationController } from './admin-configuration.controller';
@@ -35,6 +36,7 @@ const ADMIN_CONTROLLERS = [
   AdminOrderOperationsController,
   AdminMerchantController,
   AdminCaptainController,
+  AdminCityController,
   AdminConfigurationController,
   AdminCaseController,
 ] as const;

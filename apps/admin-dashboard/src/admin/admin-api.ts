@@ -7,6 +7,9 @@ import {
   parseCapabilities,
   parseCaptainPage,
   parseCaptainSnapshot,
+  parseCityList,
+  parseCityMutationResult,
+  parseCityPreflightResult,
   parseDashboard,
   parseInvestigation,
   parseMerchantPage,
@@ -240,6 +243,63 @@ export class ApiAdminPort implements AdminPort {
       ...(input.limit === undefined ? {} : { limit: input.limit }),
     };
     return read(() => this.client.request('listAdminAudit', { query }), parseAudit);
+  }
+
+  public cities() {
+    return read(() => this.client.request('listAdminCities', {}), parseCityList);
+  }
+
+  public updateCityConfiguration(
+    cityId: string,
+    expectedVersion: number,
+    patch: Readonly<Record<string, unknown>>,
+    input: AdminMutationInput,
+  ) {
+    return read(
+      () =>
+        this.client.request('updateAdminCityConfiguration', {
+          path: { cityId },
+          headers: { 'Idempotency-Key': input.idempotencyKey },
+          body: { ...mutationBody(input), expectedVersion, patch },
+        }),
+      parseCityMutationResult,
+    );
+  }
+
+  public runCityPreflight(cityId: string, input: AdminMutationInput) {
+    return read(
+      () =>
+        this.client.request('runAdminCityActivationPreflight', {
+          path: { cityId },
+          headers: { 'Idempotency-Key': input.idempotencyKey },
+          body: mutationBody(input),
+        }),
+      parseCityPreflightResult,
+    );
+  }
+
+  public activateCity(cityId: string, input: AdminMutationInput) {
+    return read(
+      () =>
+        this.client.request('activateAdminCity', {
+          path: { cityId },
+          headers: { 'Idempotency-Key': input.idempotencyKey },
+          body: mutationBody(input),
+        }),
+      parseCityMutationResult,
+    );
+  }
+
+  public pauseCity(cityId: string, input: AdminMutationInput) {
+    return read(
+      () =>
+        this.client.request('pauseAdminCity', {
+          path: { cityId },
+          headers: { 'Idempotency-Key': input.idempotencyKey },
+          body: mutationBody(input),
+        }),
+      parseCityMutationResult,
+    );
   }
 
   private operation(

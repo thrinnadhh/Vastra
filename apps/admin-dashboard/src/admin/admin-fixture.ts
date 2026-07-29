@@ -4,6 +4,7 @@ import type {
   AdminCapabilities,
   AdminCaptainPage,
   AdminCaptainSnapshot,
+  AdminCityControlPlane,
   AdminDashboardSummary,
   AdminMerchantPage,
   AdminMerchantSnapshot,
@@ -23,6 +24,77 @@ const MERCHANT_ID = '30000000-0000-4000-8000-000000000001';
 const CAPTAIN_ID = '40000000-0000-4000-8000-000000000001';
 const AUDIT_ID = '50000000-0000-4000-8000-000000000001';
 const NOW = '2026-07-26T10:00:00.000Z';
+const CITY_ID = '70000000-0000-4000-8000-000000000001';
+const CITY_CONTROL_PLANE: AdminCityControlPlane = {
+  city: {
+    id: CITY_ID,
+    code: 'TIRUPATI',
+    slug: 'tirupati',
+    name: 'Tirupati',
+    stateCode: 'AP',
+    countryCode: 'IN',
+    status: 'READY_FOR_VALIDATION',
+    activatedAt: null,
+    pausedAt: null,
+    closedAt: null,
+    updatedAt: NOW,
+  },
+  configuration: {
+    cityId: CITY_ID,
+    timezone: 'Asia/Kolkata',
+    defaultCodLimitPaise: 200000,
+    defaultDeliveryRadiusMeters: 5000,
+    maximumDeliveryRadiusMeters: 15000,
+    baseDeliveryFeePaise: 0,
+    perKmDeliveryFeePaise: 1000,
+    merchantCommissionBps: 500,
+    localDeliveryEnabled: true,
+    postalDeliveryEnabled: false,
+    operatingHours: { monday: ['09:00', '21:00'] },
+    holidayDates: [],
+    cancellationPolicy: { version: 1 },
+    refundPolicy: { version: 1 },
+    version: 2,
+    updatedAt: NOW,
+  },
+  readiness: {
+    cityId: CITY_ID,
+    activeCaptainCount: 5,
+    standbyCaptainCount: 2,
+    paymentProviderHealthy: true,
+    smsOtpProviderHealthy: true,
+    fcmProviderHealthy: true,
+    observabilityHealthy: true,
+    validationOrderId: null,
+    unresolvedHighBlockers: 0,
+    version: 3,
+    updatedAt: NOW,
+  },
+  zones: [
+    {
+      id: '71000000-0000-4000-8000-000000000001',
+      cityId: CITY_ID,
+      code: 'TIRUPATI-CENTRAL',
+      slug: 'tirupati-central',
+      name: 'Tirupati Central',
+      status: 'READY_FOR_VALIDATION',
+      defaultDeliveryRadiusMeters: 6000,
+      version: 1,
+      updatedAt: NOW,
+      pincodes: [
+        {
+          id: '72000000-0000-4000-8000-000000000001',
+          pincode: '517501',
+          priority: 1,
+          isPrimary: true,
+          isActive: true,
+          version: 1,
+        },
+      ],
+    },
+  ],
+  latestPreflight: null,
+};
 
 const capabilities: AdminCapabilities = {
   assuranceLevel: 'aal2',
@@ -37,6 +109,8 @@ const capabilities: AdminCapabilities = {
     'admin.captains.read',
     'admin.captains.manage',
     'admin.audit.read',
+    'admin.configuration.read',
+    'admin.configuration.manage',
   ],
   mfaRequiredForSensitiveOperations: true,
 };
@@ -375,6 +449,77 @@ export class FixtureAdminPort implements AdminPort {
         (input.resourceType === undefined || entry.resourceType === input.resourceType),
     );
     return Promise.resolve(success(entries));
+  }
+  public cities() {
+    return Promise.resolve(success([CITY_CONTROL_PLANE]));
+  }
+  public updateCityConfiguration(
+    _cityId: string,
+    expectedVersion: number,
+    patch: Readonly<Record<string, unknown>>,
+    input: AdminMutationInput,
+  ) {
+    void input;
+    const configuration = {
+      ...CITY_CONTROL_PLANE.configuration,
+      ...patch,
+      version: expectedVersion + 1,
+      updatedAt: NOW,
+    } as AdminCityControlPlane['configuration'];
+    return Promise.resolve(
+      success({ replayed: false, controlPlane: { ...CITY_CONTROL_PLANE, configuration } }),
+    );
+  }
+  public runCityPreflight(cityId: string, input: AdminMutationInput) {
+    void cityId;
+    void input;
+    return Promise.resolve(
+      success({
+        id: '73000000-0000-4000-8000-000000000001',
+        cityId: CITY_ID,
+        cityConfigurationVersion: CITY_CONTROL_PLANE.configuration.version,
+        readinessVersion: CITY_CONTROL_PLANE.readiness.version,
+        cityStatus: CITY_CONTROL_PLANE.city.status,
+        checks: {
+          configurationComplete: { passed: true },
+          serviceZones: { passed: true, candidateZones: 1 },
+          merchants: { passed: false, activeMerchants: 1, minimumActiveMerchants: 5 },
+          captainCapacity: { passed: true },
+          operationalOwners: { passed: false, presentRoles: 1, requiredRoles: 5 },
+          providers: { passed: true },
+          validationOrder: { passed: false },
+          releaseBlockers: { passed: true },
+        },
+        passed: false,
+        createdAt: NOW,
+      }),
+    );
+  }
+  public activateCity(cityId: string, input: AdminMutationInput) {
+    void cityId;
+    void input;
+    return Promise.resolve(
+      success({
+        replayed: false,
+        controlPlane: {
+          ...CITY_CONTROL_PLANE,
+          city: { ...CITY_CONTROL_PLANE.city, status: 'ACTIVE' as const, activatedAt: NOW },
+        },
+      }),
+    );
+  }
+  public pauseCity(cityId: string, input: AdminMutationInput) {
+    void cityId;
+    void input;
+    return Promise.resolve(
+      success({
+        replayed: false,
+        controlPlane: {
+          ...CITY_CONTROL_PLANE,
+          city: { ...CITY_CONTROL_PLANE.city, status: 'PAUSED' as const, pausedAt: NOW },
+        },
+      }),
+    );
   }
   public cancelOrder(orderId: string, input: AdminMutationInput) {
     return Promise.resolve(outcome('admin.order.cancel', 'ORDER', orderId, input));

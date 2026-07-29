@@ -320,6 +320,8 @@ export function AdminRuntimeProvider({ children }: { readonly children: ReactNod
             'admin.captains.read',
             'admin.captains.manage',
             'admin.audit.read',
+            'admin.configuration.read',
+            'admin.configuration.manage',
           ],
           mfaRequiredForSensitiveOperations: true,
         }
