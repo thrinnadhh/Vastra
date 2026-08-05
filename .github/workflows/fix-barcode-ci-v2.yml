@@ -33,12 +33,71 @@ jobs:
         run: |
           python <<'BOOT'
           from pathlib import Path
+          import re
           import textwrap
+
+          packing_path = Path(
+              'apps/merchant-app/src/orders/merchant-order-packing.scanner.test.tsx'
+          )
+          packing = packing_path.read_text()
+          if "import { Pressable, Text } from 'react-native';" not in packing:
+              packing = packing.replace(
+                  "import { fireEvent, render } from '@testing-library/react-native';\n",
+                  "import { fireEvent, render } from '@testing-library/react-native';\n"
+                  "import { Pressable, Text } from 'react-native';\n",
+                  1,
+              )
+          mock = """function MockMerchantBarcodeScanner({
+            visible,
+            onScanned,
+          }: {
+            readonly visible: boolean;
+            readonly onScanned: (value: string) => void;
+          }) {
+            return visible ? (
+              <Pressable
+                accessibilityLabel="Emit test packing barcode"
+                onPress={() => {
+                  onScanned('CORRECT-1');
+                }}
+              >
+                <Text>Test scanner</Text>
+              </Pressable>
+            ) : null;
+          }
+
+          jest.mock('../barcode/merchant-barcode-scanner', () => ({
+            MerchantBarcodeScanner: MockMerchantBarcodeScanner,
+          }));
+
+          const ORDER_ID"""
+          packing, count = re.subn(
+              r"jest\.mock\('\.\./barcode/merchant-barcode-scanner', \(\) => \{.*?\n\}\);\n\nconst ORDER_ID",
+              mock,
+              packing,
+              count=1,
+              flags=re.DOTALL,
+          )
+          if count != 1 and 'MerchantBarcodeScanner: MockMerchantBarcodeScanner' not in packing:
+              raise SystemExit('Packing scanner mock was not replaced')
+          packing_path.write_text(packing)
 
           workflow = Path('.github/workflows/fix-barcode-ci.yml').read_text()
           marker = "python <<'PY'\n"
           script = workflow.split(marker, 1)[1].split('\n          PY', 1)[0]
           script = textwrap.dedent(script)
+          script = re.sub(
+              r"\ntransform\('apps/merchant-app/App\.test\.tsx', test_factory\)\n",
+              '\n',
+              script,
+              count=1,
+          )
+          script = re.sub(
+              r"\ntransform\(\n\s*'apps/merchant-app/src/orders/merchant-order-packing\.scanner\.test\.tsx',\n\s*test_factory,\n\)\n",
+              '\n',
+              script,
+              count=1,
+          )
           old = """remove_start = source.find('      if (shop !== null && inventory !== null) {')
           if remove_start < 0:
               remove_start = source.find('      const currentShop = shop;')
