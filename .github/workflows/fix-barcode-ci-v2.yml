@@ -1,0 +1,86 @@
+name: Fix barcode CI v2
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pull request branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20.20.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run anchored reviewed repair
+        run: |
+          python <<'BOOT'
+          from pathlib import Path
+          import textwrap
+
+          workflow = Path('.github/workflows/fix-barcode-ci.yml').read_text()
+          marker = "python <<'PY'\n"
+          script = workflow.split(marker, 1)[1].split('\n          PY', 1)[0]
+          script = textwrap.dedent(script)
+          old = """remove_start = source.find('      if (shop !== null && inventory !== null) {')
+          if remove_start < 0:
+              remove_start = source.find('      const currentShop = shop;')
+          """
+          new = """remove_callback = source.find('  const removePendingSale = useCallback(')
+          remove_start = source.find(
+              '      if (shop !== null && inventory !== null) {',
+              remove_callback,
+          )
+          if remove_start < 0:
+              remove_start = source.find('      const currentShop = shop;', remove_callback)
+          """
+          if old not in script:
+              raise SystemExit('Ambiguous pending-sale matcher was not found')
+          script = script.replace(old, new, 1)
+          exec(compile(script, 'barcode-repair.py', 'exec'))
+          BOOT
+
+      - name: Format repaired files
+        run: |
+          pnpm exec prettier --write \
+            apps/merchant-app/App.test.tsx \
+            apps/merchant-app/src/barcode/merchant-barcode-scanner.tsx \
+            apps/merchant-app/src/inventory/merchant-inventory.cache.ts \
+            apps/merchant-app/src/inventory/merchant-inventory.client.test.ts \
+            apps/merchant-app/src/inventory/merchant-inventory.screen.test.tsx \
+            apps/merchant-app/src/inventory/merchant-inventory.screen.tsx \
+            apps/merchant-app/src/inventory/merchant-offline-sale.queue.ts \
+            apps/merchant-app/src/orders/merchant-order-packing.scanner.test.tsx
+
+      - name: Validate merchant barcode slice
+        run: |
+          pnpm --filter @vastra/merchant-app lint
+          pnpm --filter @vastra/merchant-app typecheck
+          pnpm --filter @vastra/merchant-app test
+
+      - name: Commit repairs and remove temporary workflows
+        run: |
+          rm .github/workflows/fix-barcode-ci.yml
+          rm .github/workflows/fix-barcode-ci-v2.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: satisfy barcode lint and tests"
+          git push
