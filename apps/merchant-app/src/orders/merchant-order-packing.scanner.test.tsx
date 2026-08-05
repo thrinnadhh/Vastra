@@ -1,5 +1,4 @@
 import { fireEvent, render } from '@testing-library/react-native';
-import { Pressable, Text } from 'react-native';
 
 import { MerchantOrderPackingActions } from './merchant-order-packing.screen';
 import type {
@@ -8,25 +7,29 @@ import type {
   MerchantPackingList,
 } from './merchant-order.types';
 
-jest.mock('../barcode/merchant-barcode-scanner', () => ({
-  MerchantBarcodeScanner: ({
-    visible,
-    onScanned,
-  }: {
-    readonly visible: boolean;
-    readonly onScanned: (value: string) => void;
-  }) =>
-    visible ? (
-      <Pressable
-        accessibilityLabel="Emit test packing barcode"
-        onPress={() => {
-          onScanned('CORRECT-1');
-        }}
-      >
-        <Text>Test scanner</Text>
-      </Pressable>
-    ) : null,
-}));
+jest.mock('../barcode/merchant-barcode-scanner', () => {
+  const { Pressable, Text } =
+    jest.requireActual<typeof import('react-native')>('react-native');
+  return {
+    MerchantBarcodeScanner: ({
+      visible,
+      onScanned,
+    }: {
+      readonly visible: boolean;
+      readonly onScanned: (value: string) => void;
+    }) =>
+      visible ? (
+        <Pressable
+          accessibilityLabel="Emit test packing barcode"
+          onPress={() => {
+            onScanned('CORRECT-1');
+          }}
+        >
+          <Text>Test scanner</Text>
+        </Pressable>
+      ) : null,
+  };
+});
 
 const ORDER_ID = '10000000-0000-4000-8000-000000000001';
 const ITEM_ID = '40000000-0000-4000-8000-000000000001';
@@ -190,9 +193,10 @@ describe('merchant packing camera scanner', () => {
     fireEvent.press(view.getByLabelText('Emit test packing barcode'));
 
     expect(await view.findByText('VERIFIED')).toBeTruthy();
-    expect(packingClient.verifyPackingItem).toHaveBeenCalledWith(ORDER_ID, ITEM_ID, {
-      method: 'BARCODE',
-      barcode: 'CORRECT-1',
-    });
+    expect(packingClient.verifyPackingItem.mock.calls).toContainEqual([
+      ORDER_ID,
+      ITEM_ID,
+      { method: 'BARCODE', barcode: 'CORRECT-1' },
+    ]);
   });
 });
