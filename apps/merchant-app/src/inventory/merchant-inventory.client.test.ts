@@ -9,7 +9,15 @@ import { MerchantInventoryError } from './merchant-inventory.types';
 const SHOP_ID = '20000000-0000-4000-8000-000000000001';
 const VARIANT_ID = '50000000-0000-4000-8000-000000000001';
 
-function response(body: unknown, status = 200) {
+interface TestResponse {
+  readonly ok: boolean;
+  readonly status: number;
+  json(): Promise<unknown>;
+}
+
+type TestFetchFunction = (input: string, init: RequestInit) => Promise<TestResponse>;
+
+function response(body: unknown, status = 200): TestResponse {
   return {
     ok: status >= 200 && status < 300,
     status,
@@ -98,7 +106,10 @@ describe('merchant inventory client', () => {
   });
 
   it('calls exact barcode lookup with merchant authentication', async () => {
-    const fetchFunction = jest.fn(() => Promise.resolve(response(barcodeEnvelope)));
+    const fetchFunction = jest.fn<
+      ReturnType<TestFetchFunction>,
+      Parameters<TestFetchFunction>
+    >(() => Promise.resolve(response(barcodeEnvelope)));
     const client = new HttpMerchantInventoryClient(
       'https://api.example.test',
       () => Promise.resolve('token'),
@@ -108,17 +119,19 @@ describe('merchant inventory client', () => {
     const result = await client.lookupBarcode(SHOP_ID, '8901234567890');
 
     expect(result.variant.id).toBe(VARIANT_ID);
-    expect(fetchFunction).toHaveBeenCalledWith(
+    const [url, init] = fetchFunction.mock.calls[0]!;
+    expect(url).toBe(
       `https://api.example.test/merchant/catalogue/shops/${SHOP_ID}/inventory/barcode-lookup?barcode=8901234567890`,
-      expect.objectContaining({
-        method: 'GET',
-        headers: expect.objectContaining({ Authorization: 'Bearer token' }),
-      }),
     );
+    expect(init.method).toBe('GET');
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer token' });
   });
 
   it('sends one idempotent offline sale request', async () => {
-    const fetchFunction = jest.fn(() =>
+    const fetchFunction = jest.fn<
+      ReturnType<TestFetchFunction>,
+      Parameters<TestFetchFunction>
+    >(() =>
       Promise.resolve(
         response({
           success: true,
@@ -160,16 +173,13 @@ describe('merchant inventory client', () => {
       '80000000-0000-4000-8000-000000000001',
     );
 
-    expect(fetchFunction).toHaveBeenCalledWith(
-      'https://api.example.test/merchant/offline-sales',
-      expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          Authorization: 'Bearer token',
-          'Idempotency-Key': '80000000-0000-4000-8000-000000000001',
-        }),
-      }),
-    );
+    const [url, init] = fetchFunction.mock.calls[0]!;
+    expect(url).toBe('https://api.example.test/merchant/offline-sales');
+    expect(init.method).toBe('POST');
+    expect(init.headers).toMatchObject({
+      Authorization: 'Bearer token',
+      'Idempotency-Key': '80000000-0000-4000-8000-000000000001',
+    });
   });
 
   it('maps transport and structured API failures', async () => {
@@ -197,7 +207,9 @@ describe('merchant inventory client', () => {
           ),
         ),
     );
-    await expect(notFoundClient.lookupBarcode(SHOP_ID, 'unknown')).rejects.toEqual(
+    await expect(
+      notFoundClient.lookupBarcode(SHOP_ID, 'unknown'),
+    ).rejects.toEqual(
       new MerchantInventoryError('NOT_FOUND', 'BARCODE_NOT_FOUND', false),
     );
   });
