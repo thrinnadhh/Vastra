@@ -26,6 +26,13 @@ Date: 2026-08-05
 
 ## Verification
 
+The focused merchant verification completed on Node.js 20.20.2 and pnpm 8.15.0:
+
+- generated and built `@vastra/api-client` successfully;
+- merchant ESLint passed with zero warnings;
+- merchant TypeScript validation passed;
+- 23 merchant Jest suites passed, covering 86 tests.
+
 Automated coverage owns:
 
 - merchant inventory API parsing, authentication, lookup, and idempotency headers;
