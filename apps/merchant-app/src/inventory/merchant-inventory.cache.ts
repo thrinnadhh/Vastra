@@ -1,5 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import type {
   MerchantBarcodeInventory,
   MerchantInventoryCachePort,
@@ -8,6 +6,21 @@ import type { MerchantQueueStorage } from './merchant-offline-sale.queue';
 
 const CACHE_STORAGE_KEY = '@vastra/merchant/barcode-inventory-cache/v1';
 const MAX_CACHE_ENTRIES = 500;
+
+const defaultStorage: MerchantQueueStorage = {
+  async getItem(key: string): Promise<string | null> {
+    const { default: storage } = await import(
+      '@react-native-async-storage/async-storage'
+    );
+    return storage.getItem(key);
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    const { default: storage } = await import(
+      '@react-native-async-storage/async-storage'
+    );
+    await storage.setItem(key, value);
+  },
+};
 
 interface CachedInventoryEntry {
   readonly key: string;
@@ -47,19 +60,27 @@ function cacheKey(shopId: string, barcode: string): string {
   return `${shopId}:${barcode}`;
 }
 
-export class AsyncStorageMerchantInventoryCache implements MerchantInventoryCachePort {
+export class AsyncStorageMerchantInventoryCache
+  implements MerchantInventoryCachePort
+{
   public constructor(
-    private readonly storage: MerchantQueueStorage = AsyncStorage,
+    private readonly storage: MerchantQueueStorage = defaultStorage,
     private readonly now: () => string = () => new Date().toISOString(),
   ) {}
 
-  public async get(shopId: string, barcode: string): Promise<MerchantBarcodeInventory | null> {
+  public async get(
+    shopId: string,
+    barcode: string,
+  ): Promise<MerchantBarcodeInventory | null> {
     const key = cacheKey(shopId, barcode);
     const entries = parseEntries(await this.storage.getItem(CACHE_STORAGE_KEY));
     return entries.find((entry) => entry.key === key)?.inventory ?? null;
   }
 
-  public async put(shopId: string, inventory: MerchantBarcodeInventory): Promise<void> {
+  public async put(
+    shopId: string,
+    inventory: MerchantBarcodeInventory,
+  ): Promise<void> {
     const key = cacheKey(shopId, inventory.scannedBarcode);
     const entries = parseEntries(await this.storage.getItem(CACHE_STORAGE_KEY));
     const next = [
