@@ -80,7 +80,85 @@ jobs:
           )
           if count != 1 and 'MerchantBarcodeScanner: MockMerchantBarcodeScanner' not in packing:
               raise SystemExit('Packing scanner mock was not replaced')
+          packing = packing.replace(
+              "startPacking: jest.fn(() => Promise.reject(new Error('unused'))),",
+              """startPacking: jest.fn<
+                ReturnType<MerchantOrderPackingPort['startPacking']>,
+                Parameters<MerchantOrderPackingPort['startPacking']>
+              >(() => Promise.reject(new Error('unused'))),""",
+              1,
+          )
+          packing = packing.replace(
+              'verifyPackingItem: jest.fn(() =>',
+              """verifyPackingItem: jest.fn<
+                ReturnType<MerchantOrderPackingPort['verifyPackingItem']>,
+                Parameters<MerchantOrderPackingPort['verifyPackingItem']>
+              >(() =>""",
+              1,
+          )
+          packing = packing.replace(
+              "markReadyForPickup: jest.fn(() => Promise.reject(new Error('unused'))),",
+              """markReadyForPickup: jest.fn<
+                ReturnType<MerchantOrderPackingPort['markReadyForPickup']>,
+                Parameters<MerchantOrderPackingPort['markReadyForPickup']>
+              >(() => Promise.reject(new Error('unused'))),""",
+              1,
+          )
           packing_path.write_text(packing)
+
+          screen_test_path = Path(
+              'apps/merchant-app/src/inventory/merchant-inventory.screen.test.tsx'
+          )
+          screen_test = screen_test_path.read_text()
+          screen_test = screen_test.replace(
+              'lookupBarcode: jest.fn(() => Promise.resolve(inventory)),',
+              """lookupBarcode: jest.fn<
+                ReturnType<MerchantInventoryPort['lookupBarcode']>,
+                Parameters<MerchantInventoryPort['lookupBarcode']>
+              >(() => Promise.resolve(inventory)),""",
+              1,
+          )
+          screen_test = screen_test.replace(
+              'createOfflineSale: jest.fn(() =>',
+              """createOfflineSale: jest.fn<
+                ReturnType<MerchantInventoryPort['createOfflineSale']>,
+                Parameters<MerchantInventoryPort['createOfflineSale']>
+              >(() =>""",
+              1,
+          )
+          screen_test = screen_test.replace(
+              'remove: jest.fn(() => Promise.resolve([])),',
+              """remove: jest.fn<
+                ReturnType<MerchantOfflineSaleQueuePort['remove']>,
+                Parameters<MerchantOfflineSaleQueuePort['remove']>
+              >(() => Promise.resolve([])),""",
+              1,
+          )
+          screen_test = screen_test.replace(
+              'sync: jest.fn(() => Promise.resolve({ remaining: [], completed: [] })),',
+              """sync: jest.fn<
+                ReturnType<MerchantOfflineSaleQueuePort['sync']>,
+                Parameters<MerchantOfflineSaleQueuePort['sync']>
+              >(() => Promise.resolve({ remaining: [], completed: [] })),""",
+              1,
+          )
+          screen_test = screen_test.replace(
+              'get: jest.fn(() => Promise.resolve(cached)),',
+              """get: jest.fn<
+                ReturnType<MerchantInventoryCachePort['get']>,
+                Parameters<MerchantInventoryCachePort['get']>
+              >(() => Promise.resolve(cached)),""",
+              1,
+          )
+          screen_test = screen_test.replace(
+              'put: jest.fn(() => Promise.resolve()),',
+              """put: jest.fn<
+                ReturnType<MerchantInventoryCachePort['put']>,
+                Parameters<MerchantInventoryCachePort['put']>
+              >(() => Promise.resolve()),""",
+              1,
+          )
+          screen_test_path.write_text(screen_test)
 
           workflow = Path('.github/workflows/fix-barcode-ci.yml').read_text()
           marker = "python <<'PY'\n"
@@ -130,6 +208,7 @@ jobs:
 
       - name: Validate merchant barcode slice
         run: |
+          pnpm --filter @vastra/api-client build
           pnpm --filter @vastra/merchant-app lint
           pnpm --filter @vastra/merchant-app typecheck
           pnpm --filter @vastra/merchant-app test
