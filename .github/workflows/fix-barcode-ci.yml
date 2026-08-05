@@ -29,7 +29,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Apply final lint repairs
+      - name: Apply final barcode repairs
         run: |
           python <<'PY'
           from pathlib import Path
@@ -42,32 +42,24 @@ jobs:
                   return
               if new in source:
                   return
-              raise SystemExit(f'Missing expected repair pattern in {path}: {old[:100]!r}')
+              raise SystemExit(f'Missing expected repair pattern in {path}: {old[:120]!r}')
 
           app_test = 'apps/merchant-app/App.test.tsx'
           replace(
               app_test,
-              "import type { ReactNode } from 'react';\n",
-              "import type { ReactNode } from 'react';\nimport type * as ReactNative from 'react-native';\n",
-          )
-          replace(
-              app_test,
               "jest.requireActual<typeof import('react-native')>('react-native')",
-              "jest.requireActual('react-native') as typeof ReactNative",
+              "jest.requireActual('react-native')",
               2,
           )
+          replace(app_test, "import type * as ReactNative from 'react-native';\n", '', 1)
 
           packing_test = 'apps/merchant-app/src/orders/merchant-order-packing.scanner.test.tsx'
           replace(
               packing_test,
-              "import { fireEvent, render } from '@testing-library/react-native';\n",
-              "import { fireEvent, render } from '@testing-library/react-native';\nimport type * as ReactNative from 'react-native';\n",
-          )
-          replace(
-              packing_test,
               "jest.requireActual<typeof import('react-native')>('react-native')",
-              "jest.requireActual('react-native') as typeof ReactNative",
+              "jest.requireActual('react-native')",
           )
+          replace(packing_test, "import type * as ReactNative from 'react-native';\n", '', 1)
 
           call_helper = """function firstCall<T extends readonly unknown[]>(calls: readonly T[]): T {
             const call = calls[0];
@@ -109,42 +101,72 @@ jobs:
               'const [queued] = firstCall(offlineQueue.enqueue.mock.calls);',
           )
 
-          screen = Path('apps/merchant-app/src/inventory/merchant-inventory.screen.tsx')
-          source = screen.read_text()
-          if 'function isMounted(' not in source:
-              anchor = """function asInventoryError(error: unknown): MerchantInventoryError {
+          screen_path = Path('apps/merchant-app/src/inventory/merchant-inventory.screen.tsx')
+          source = screen_path.read_text()
+
+          anchor = """function asInventoryError(error: unknown): MerchantInventoryError {
             return error instanceof MerchantInventoryError
               ? error
               : new MerchantInventoryError('UNKNOWN', null, false);
           }
 
           """
-              helper = anchor + """function isMounted(ref: { readonly current: boolean }): boolean {
+          helpers = anchor + """function isMounted(ref: { readonly current: boolean }): boolean {
+            return ref.current;
+          }
+
+          function inventoryRefreshTarget(
+            shop: MerchantShopSummary | null,
+            inventory: MerchantBarcodeInventory | null,
+          ): { readonly shopId: string; readonly barcode: string } | null {
+            if (shop === null || inventory === null) return null;
+            return { shopId: shop.id, barcode: inventory.scannedBarcode };
+          }
+
+          """
+          if 'function isMounted(' not in source:
+              if anchor not in source:
+                  raise SystemExit('Missing inventory helper anchor')
+              source = source.replace(anchor, helpers, 1)
+          elif 'function inventoryRefreshTarget(' not in source:
+              mounted_helper = """function isMounted(ref: { readonly current: boolean }): boolean {
             return ref.current;
           }
 
           """
-              if anchor not in source:
-                  raise SystemExit('Missing inventory mounted-helper anchor')
-              source = source.replace(anchor, helper, 1)
+              target_helper = mounted_helper + """function inventoryRefreshTarget(
+            shop: MerchantShopSummary | null,
+            inventory: MerchantBarcodeInventory | null,
+          ): { readonly shopId: string; readonly barcode: string } | null {
+            if (shop === null || inventory === null) return null;
+            return { shopId: shop.id, barcode: inventory.scannedBarcode };
+          }
+
+          """
+              if mounted_helper not in source:
+                  raise SystemExit('Missing mounted helper for refresh target')
+              source = source.replace(mounted_helper, target_helper, 1)
 
           source = source.replace('if (!mounted.current) return;', 'if (!isMounted(mounted)) return;')
-          source = source.replace(
-              """      if (shops.length === 0) {
-                setShop(null);
-                setFailure(new MerchantInventoryError('NOT_FOUND', 'SHOP_NOT_FOUND', false));
-              } else {
-                setShop(shops[0] ?? null);
-              }""",
-              """      const [firstShop] = shops;
-              if (firstShop === undefined) {
-                setShop(null);
-                setFailure(new MerchantInventoryError('NOT_FOUND', 'SHOP_NOT_FOUND', false));
-              } else {
-                setShop(firstShop);
-              }""",
-              1,
-          )
+
+          old_shop = """      if (shops.length === 0) {
+            setShop(null);
+            setFailure(new MerchantInventoryError('NOT_FOUND', 'SHOP_NOT_FOUND', false));
+          } else {
+            setShop(shops[0] ?? null);
+          }"""
+          new_shop = """      const [firstShop] = shops;
+          if (firstShop === undefined) {
+            setShop(null);
+            setFailure(new MerchantInventoryError('NOT_FOUND', 'SHOP_NOT_FOUND', false));
+          } else {
+            setShop(firstShop);
+          }"""
+          if old_shop in source:
+              source = source.replace(old_shop, new_shop, 1)
+          elif new_shop not in source:
+              raise SystemExit('Missing owned-shop branch')
+
           source = source.replace(
               'entry.pending.input.items[0]?.variantId === inventory.variant.id',
               'entry.pending.input.items[0].variantId === inventory.variant.id',
@@ -155,77 +177,117 @@ jobs:
               '  useEffect(() => {\n    void Promise.resolve().then(loadShop);\n  }, [loadShop]);',
               1,
           )
-          source = source.replace(
-              """        } catch {
-                if (mounted.current) {
-                  setFailure(new MerchantInventoryError('UNKNOWN', 'OFFLINE_QUEUE_UNAVAILABLE', false));
-                }
-                return;
-              }""",
-              """        } catch {
-                if (!isMounted(mounted)) return;
-                setFailure(new MerchantInventoryError('UNKNOWN', 'OFFLINE_QUEUE_UNAVAILABLE', false));
-                return;
-              }""",
-              1,
-          )
+
+          old_queue_catch = """        } catch {
+            if (mounted.current) {
+              setFailure(new MerchantInventoryError('UNKNOWN', 'OFFLINE_QUEUE_UNAVAILABLE', false));
+            }
+            return;
+          }"""
+          new_queue_catch = """        } catch {
+            if (!isMounted(mounted)) return;
+            setFailure(new MerchantInventoryError('UNKNOWN', 'OFFLINE_QUEUE_UNAVAILABLE', false));
+            return;
+          }"""
+          if old_queue_catch in source:
+              source = source.replace(old_queue_catch, new_queue_catch, 1)
+
           source = source.replace(
               """      } else if (mounted.current) {
-                setFailure(inventoryError);
-              }""",
+            setFailure(inventoryError);
+          }""",
               """      } else {
-                if (!isMounted(mounted)) return;
-                setFailure(inventoryError);
-              }""",
+            if (!isMounted(mounted)) return;
+            setFailure(inventoryError);
+          }""",
               1,
           )
-          source = source.replace(
-              """      if (shop !== null && inventory !== null) {
-                try {
-                  const refreshed = await client.lookupBarcode(shop.id, inventory.scannedBarcode);""",
-              """      const currentShop = shop;
-              const currentInventory = inventory;
-              if (currentShop !== null && currentInventory !== null) {
-                try {
-                  const refreshed = await client.lookupBarcode(
-                    currentShop.id,
-                    currentInventory.scannedBarcode,
-                  );""",
-              1,
-          )
-          source = source.replace('await cache.put(shop.id, refreshed);', 'await cache.put(currentShop.id, refreshed);', 1)
-          source = source.replace(
-              """      if (mounted.current) {
-                setNotice(
-                  'Pending offline sale removed. Refresh the barcode before recording another sale.',
-                );
-              }""",
-              """      if (!isMounted(mounted)) return;
-              setNotice(
-                'Pending offline sale removed. Refresh the barcode before recording another sale.',
-              );""",
-              1,
-          )
+
+          old_remove = """      if (shop !== null && inventory !== null) {
+            try {
+              const refreshed = await client.lookupBarcode(shop.id, inventory.scannedBarcode);
+              if (!mounted.current) return;
+              setInventory(refreshed);
+              setUsingCachedInventory(false);
+              try {
+                await cache.put(shop.id, refreshed);
+              } catch {
+                // The refreshed server value remains valid for this session.
+              }
+              setNotice('Pending offline sale removed and inventory refreshed.');
+              return;
+            } catch {
+              // The command is removed even when the device is still offline. The
+              // last safe cached balance remains visible until the next lookup.
+            }
+          }
+
+          if (mounted.current) {
+            setNotice(
+              'Pending offline sale removed. Refresh the barcode before recording another sale.',
+            );
+          }"""
+          new_remove = """      const target = inventoryRefreshTarget(shop, inventory);
+          if (target !== null) {
+            try {
+              const refreshed = await client.lookupBarcode(target.shopId, target.barcode);
+              if (!isMounted(mounted)) return;
+              setInventory(refreshed);
+              setUsingCachedInventory(false);
+              try {
+                await cache.put(target.shopId, refreshed);
+              } catch {
+                // The refreshed server value remains valid for this session.
+              }
+              setNotice('Pending offline sale removed and inventory refreshed.');
+              return;
+            } catch {
+              // The command is removed even when the device is still offline. The
+              // last safe cached balance remains visible until the next lookup.
+            }
+          }
+
+          if (!isMounted(mounted)) return;
+          setNotice(
+            'Pending offline sale removed. Refresh the barcode before recording another sale.',
+          );"""
+          if old_remove in source:
+              source = source.replace(old_remove, new_remove, 1)
+          elif new_remove not in source:
+              # Replace the intermediate worktree shape from prior repair attempts.
+              start = source.find('      const currentShop = shop;')
+              end_marker = """      if (!isMounted(mounted)) return;
+          setNotice(
+            'Pending offline sale removed. Refresh the barcode before recording another sale.',
+          );"""
+              end = source.find(end_marker, start)
+              if start < 0 or end < 0:
+                  raise SystemExit('Missing pending-sale refresh block')
+              source = source[:start] + new_remove + source[end + len(end_marker):]
+
           source = source.replace(
               'entry.input.items[0]?.quantity ?? 0',
               'entry.input.items[0].quantity',
               1,
           )
-          source = source.replace(
-              """  const client = useMemo(
+
+          old_client = """  const client = useMemo(
             () => new HttpMerchantInventoryClient(session.apiBaseUrl, session.getAccessToken),
             [session.apiBaseUrl, session.getAccessToken],
-          );""",
-              """  const client = useMemo(
+          );"""
+          new_client = """  const client = useMemo(
             () =>
               new HttpMerchantInventoryClient(session.apiBaseUrl, () =>
                 session.getAccessToken(),
               ),
             [session],
-          );""",
-              1,
-          )
-          screen.write_text(source)
+          );"""
+          if old_client in source:
+              source = source.replace(old_client, new_client, 1)
+          elif new_client not in source:
+              raise SystemExit('Missing default inventory client block')
+
+          screen_path.write_text(source)
           PY
 
       - name: Format repaired files
