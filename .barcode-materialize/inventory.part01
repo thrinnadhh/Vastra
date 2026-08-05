@@ -1,0 +1,180 @@
+      .catch((error: unknown) => {
+        if (mounted.current) setFailure(asInventoryError(error));
+      });
+    const interval = setInterval(() => {
+      void syncPendingSales();
+    }, syncIntervalMs);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void syncPendingSales();
+    });
+    return () => {
+      clearInterval(interval);
+      subscription.remove();
+    };
+  }, [refreshPendingCount, syncIntervalMs, syncPendingSales]);
+
+  const loadShop = useCallback(async () => {
+    setLoadingShop(true);
+    setFailure(null);
+    try {
+      const shops = await client.listOwnedShops();
+      if (!mounted.current) return;
+      if (shops.length === 0) {
+        setShop(null);
+        setFailure(new MerchantInventoryError('NOT_FOUND', 'SHOP_NOT_FOUND', false));
+      } else {
+        setShop(shops[0] ?? null);
+      }
+    } catch (error: unknown) {
+      if (mounted.current) setFailure(asInventoryError(error));
+    } finally {
+      if (mounted.current) setLoadingShop(false);
+    }
+  }, [client]);
+
+  useEffect(() => {
+    void loadShop();
+  }, [loadShop]);
+
+  const lookup = useCallback(
+    async (rawBarcode: string) => {
+      const value = rawBarcode.trim();
+      if (shop === null || value.length === 0 || value.length > 255) {
+        setFailure(new MerchantInventoryError('VALIDATION', 'BARCODE_REQUIRED', false));
+        return;
+      }
+      setLookupBusy(true);
+      setFailure(null);
+      setNotice(null);
+      setUsingCachedInventory(false);
+      try {
+        const result = await client.lookupBarcode(shop.id, value);
+        if (!mounted.current) return;
+        setInventory(result);
+        setBarcode(result.scannedBarcode);
+        try {
+          await cache.put(shop.id, result);
+        } catch {
+          setNotice('Inventory loaded, but this device could not update its offline cache.');
+        }
+      } catch (error: unknown) {
+        const inventoryError = asInventoryError(error);
+        const cached =
+          inventoryError.retryable || inventoryError.kind === 'TRANSPORT'
+            ? await cache.get(shop.id, value)
+            : null;
+        if (!mounted.current) return;
+        if (cached !== null) {
+          setInventory(cached);
+          setBarcode(cached.scannedBarcode);
+          setUsingCachedInventory(true);
+          setNotice('Offline: using the last synchronized barcode record.');
+        } else {
+          setInventory(null);
+          setFailure(inventoryError);
+        }
+      } finally {
+        if (mounted.current) setLookupBusy(false);
+      }
+    },
+    [cache, client, shop],
+  );
+
+  const recordSale = useCallback(async () => {
+    if (saleRunning.current || shop === null || inventory === null) return;
+    const parsedQuantity = Number(quantity);
+    const unitPricePaise = toPaise(unitPrice);
+    const discountPaise = toPaise(discount);
+    const taxPaise = toPaise(tax);
+    const gross =
+      Number.isSafeInteger(parsedQuantity) && unitPricePaise !== null
+        ? parsedQuantity * unitPricePaise
+        : -1;
+
+    if (
+      !Number.isSafeInteger(parsedQuantity) ||
+      parsedQuantity < 1 ||
+      unitPricePaise === null ||
+      unitPricePaise < 0 ||
+      discountPaise === null ||
+      discountPaise < 0 ||
+      taxPaise === null ||
+      taxPaise < 0 ||
+      discountPaise > gross
+    ) {
+      setFailure(new MerchantInventoryError('VALIDATION', 'INVALID_SALE_VALUES', false));
+      return;
+    }
+
+    if (parsedQuantity > inventory.balance.availableQuantity) {
+      setFailure(
+        new MerchantInventoryError('VALIDATION', 'INSUFFICIENT_AVAILABLE_STOCK', false),
+      );
+      return;
+    }
+
+    saleRunning.current = true;
+    const idempotencyKey = createIdempotencyKey();
+    const input = {
+      shopId: shop.id,
+      customerPhone: customerPhone.trim().length === 0 ? null : customerPhone.trim(),
+      taxPaise,
+      paymentMethod,
+      items: [
+        {
+          variantId: inventory.variant.id,
+          quantity: parsedQuantity,
+          unitPricePaise,
+          discountPaise,
+          identificationMethod: 'BARCODE' as const,
+        },
+      ] as const,
+    };
+
+    setSaleBusy(true);
+    setFailure(null);
+    setNotice(null);
+    try {
+      const result = await client.createOfflineSale(input, idempotencyKey);
+      if (!mounted.current) return;
+      const synchronizedInventory = { ...inventory, balance: result.balance };
+      setInventory(synchronizedInventory);
+      setUsingCachedInventory(false);
+      try {
+        await cache.put(shop.id, synchronizedInventory);
+      } catch {
+        // The server sale is authoritative. Never retry it solely because a
+        // non-authoritative device cache write failed.
+      }
+      setNotice(
+        `Sale ${result.saleNumber} recorded. Available stock: ${String(
+          result.balance.availableQuantity,
+        )}.`,
+      );
+    } catch (error: unknown) {
+      const inventoryError = asInventoryError(error);
+      if (inventoryError.retryable || inventoryError.kind === 'TRANSPORT') {
+        let pending: readonly PendingMerchantOfflineSale[];
+        try {
+          pending = await queue.enqueue({
+            id: idempotencyKey,
+            idempotencyKey,
+            input,
+            barcode: inventory.scannedBarcode,
+            productName: inventory.product.name,
+            createdAt: new Date().toISOString(),
+          });
+        } catch {
+          if (mounted.current) {
+            setFailure(
+              new MerchantInventoryError(
+                'UNKNOWN',
+                'OFFLINE_QUEUE_UNAVAILABLE',
+                false,
+              ),
+            );
+          }
+          return;
+        }
+        if (!mounted.current) return;
+        setPendingEntries(pending);

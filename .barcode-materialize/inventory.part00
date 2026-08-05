@@ -1,0 +1,180 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  AppState,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+
+import { useMerchantApiSession } from '../auth/merchant-api-session';
+import { MerchantBarcodeScanner } from '../barcode/merchant-barcode-scanner';
+import { AsyncStorageMerchantInventoryCache } from './merchant-inventory.cache';
+import { HttpMerchantInventoryClient } from './merchant-inventory.client';
+import { AsyncStorageMerchantOfflineSaleQueue } from './merchant-offline-sale.queue';
+import {
+  MerchantInventoryError,
+  type MerchantBarcodeInventory,
+  type MerchantInventoryCachePort,
+  type MerchantInventoryPort,
+  type MerchantOfflineSalePaymentMethod,
+  type MerchantOfflineSaleQueuePort,
+  type MerchantShopSummary,
+  type PendingMerchantOfflineSale,
+} from './merchant-inventory.types';
+
+const PAYMENT_METHODS: readonly MerchantOfflineSalePaymentMethod[] = [
+  'CASH',
+  'UPI',
+  'CARD',
+  'OTHER',
+];
+
+function defaultIdempotencyKey(): string {
+  return globalThis.crypto.randomUUID();
+}
+
+function toPaise(value: string): number | null {
+  const normalized = value.trim();
+  if (!/^\d+(?:\.\d{1,2})?$/u.test(normalized)) return null;
+  const [whole, fraction = ''] = normalized.split('.');
+  const paise = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
+  return Number.isSafeInteger(paise) ? paise : null;
+}
+
+function money(paise: number): string {
+  return `₹${(paise / 100).toFixed(2)}`;
+}
+
+function errorMessage(error: MerchantInventoryError): string {
+  switch (error.kind) {
+    case 'AUTHENTICATION':
+      return 'Your merchant session expired. Sign in again.';
+    case 'FORBIDDEN':
+      return 'This inventory is not available to your merchant account.';
+    case 'NOT_FOUND':
+      return 'No owned inventory variant matches this barcode.';
+    case 'VALIDATION':
+      return 'Review the barcode and sale values, then retry.';
+    case 'CONFLICT':
+      return 'Inventory changed while this sale was being recorded. Refresh and retry.';
+    case 'TRANSPORT':
+      return 'You appear to be offline.';
+    case 'TEMPORARILY_UNAVAILABLE':
+      return 'Inventory is temporarily unavailable. Retry shortly.';
+    case 'MALFORMED_RESPONSE':
+    case 'UNKNOWN':
+      return 'The inventory response could not be verified.';
+  }
+}
+
+function asInventoryError(error: unknown): MerchantInventoryError {
+  return error instanceof MerchantInventoryError
+    ? error
+    : new MerchantInventoryError('UNKNOWN', null, false);
+}
+
+export function MerchantInventoryWorkflow({
+  client,
+  queue,
+  cache,
+  createIdempotencyKey = defaultIdempotencyKey,
+  syncIntervalMs = 15_000,
+}: {
+  readonly client: MerchantInventoryPort;
+  readonly queue: MerchantOfflineSaleQueuePort;
+  readonly cache: MerchantInventoryCachePort;
+  readonly createIdempotencyKey?: () => string;
+  readonly syncIntervalMs?: number;
+}) {
+  const [shop, setShop] = useState<MerchantShopSummary | null>(null);
+  const [loadingShop, setLoadingShop] = useState(true);
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [barcode, setBarcode] = useState('');
+  const [inventory, setInventory] = useState<MerchantBarcodeInventory | null>(null);
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [saleBusy, setSaleBusy] = useState(false);
+  const saleRunning = useRef(false);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const syncRunning = useRef(false);
+  const mounted = useRef(true);
+  const [pendingEntries, setPendingEntries] = useState<
+    readonly PendingMerchantOfflineSale[]
+  >([]);
+  const pendingCount = pendingEntries.length;
+  const [quantity, setQuantity] = useState('1');
+  const [unitPrice, setUnitPrice] = useState('');
+  const [discount, setDiscount] = useState('0');
+  const [tax, setTax] = useState('0');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [paymentMethod, setPaymentMethod] =
+    useState<MerchantOfflineSalePaymentMethod>('CASH');
+  const [failure, setFailure] = useState<MerchantInventoryError | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [usingCachedInventory, setUsingCachedInventory] = useState(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const refreshPendingCount = useCallback(async () => {
+    const entries = await queue.list();
+    if (mounted.current) setPendingEntries(entries);
+  }, [queue]);
+
+  const syncPendingSales = useCallback(async () => {
+    if (syncRunning.current) return;
+    syncRunning.current = true;
+    setSyncBusy(true);
+    try {
+      const result = await queue.sync(client);
+      if (!mounted.current) return;
+      setPendingEntries(result.remaining);
+
+      if (result.completed.length > 0) {
+        setNotice(
+          `${String(result.completed.length)} queued sale${
+            result.completed.length === 1 ? '' : 's'
+          } synchronized.`,
+        );
+
+        if (shop !== null && inventory !== null) {
+          const completedForCurrent = [...result.completed]
+            .reverse()
+            .find(
+              (entry) =>
+                entry.pending.input.items[0]?.variantId === inventory.variant.id,
+            );
+          if (completedForCurrent !== undefined) {
+            const synchronizedInventory = {
+              ...inventory,
+              balance: completedForCurrent.result.balance,
+            };
+            setInventory(synchronizedInventory);
+            setUsingCachedInventory(false);
+            try {
+              await cache.put(shop.id, synchronizedInventory);
+            } catch {
+              // A cache write must never turn an already committed server sale
+              // into a failed or duplicated merchant command.
+            }
+          }
+        }
+      }
+    } catch (error: unknown) {
+      if (mounted.current) setFailure(asInventoryError(error));
+    } finally {
+      syncRunning.current = false;
+      if (mounted.current) setSyncBusy(false);
+    }
+  }, [cache, client, inventory, queue, shop]);
+
+  useEffect(() => {
+    void refreshPendingCount()
+      .then(syncPendingSales)

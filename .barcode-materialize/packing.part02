@@ -1,0 +1,112 @@
+        <Pressable
+          accessibilityLabel={
+            failure?.retryable === true
+              ? 'Retry ready for pickup with same idempotency key'
+              : 'Mark merchant order ready for pickup'
+          }
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !packingList.allVerified || busyAction !== null }}
+          disabled={!packingList.allVerified || busyAction !== null}
+          onPress={markReady}
+          style={[
+            styles.primary,
+            !packingList.allVerified || busyAction !== null ? styles.disabled : null,
+          ]}
+        >
+          <Text style={styles.primaryText}>
+            {busyAction === 'READY' ? 'Marking ready…' : 'Ready for pickup'}
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Refresh merchant packing checklist"
+          accessibilityRole="button"
+          disabled={isLoading || busyAction !== null}
+          onPress={loadPackingList}
+          style={styles.refresh}
+        >
+          <Text style={styles.secondaryText}>Refresh checklist</Text>
+        </Pressable>
+      </View>
+
+      <MerchantBarcodeScanner
+        onClose={() => {
+          setScanningItemId(null);
+        }}
+        onScanned={(value) => {
+          const itemId = scanningItemId;
+          setScanningItemId(null);
+          if (itemId === null) return;
+          setBarcodes((current) => ({ ...current, [itemId]: value }));
+          verifyItem(itemId, { method: 'BARCODE', barcode: value });
+        }}
+        visible={scanningItemId !== null}
+      />
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: { marginTop: 18, padding: 16, borderRadius: 18, backgroundColor: '#FFFFFF' },
+  title: { color: '#241B16', fontSize: 18, fontWeight: '800' },
+  copy: { marginTop: 6, color: '#665A52', lineHeight: 20 },
+  loadingCopy: { marginTop: 10, color: '#665A52', textAlign: 'center' },
+  progress: { marginTop: 7, color: '#287A55', fontWeight: '800' },
+  item: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#EFE5DE' },
+  itemName: { color: '#241B16', fontSize: 15, fontWeight: '800' },
+  itemMeta: { marginTop: 4, color: '#665A52', fontSize: 13 },
+  itemStatus: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    color: '#7A6B61',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  verified: { color: '#287A55' },
+  mismatch: { color: '#A33A32' },
+  mismatchCopy: { marginTop: 5, color: '#A33A32', fontSize: 13, lineHeight: 18 },
+  scanAction: {
+    alignItems: 'center',
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 11,
+    backgroundColor: '#287A55',
+  },
+  scanActionText: { color: '#FFFFFF', fontWeight: '800' },
+  input: {
+    minHeight: 46,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#CDBDB2',
+    borderRadius: 11,
+    color: '#241B16',
+  },
+  row: { flexDirection: 'row', gap: 8 },
+  primary: {
+    alignItems: 'center',
+    marginTop: 15,
+    padding: 14,
+    borderRadius: 13,
+    backgroundColor: '#287A55',
+  },
+  primaryText: { color: '#FFFFFF', fontWeight: '800' },
+  secondary: {
+    flex: 1,
+    alignItems: 'center',
+    marginTop: 10,
+    padding: 11,
+    borderWidth: 1,
+    borderColor: '#8E3B46',
+    borderRadius: 11,
+  },
+  secondaryText: { color: '#8E3B46', fontSize: 13, fontWeight: '800' },
+  refresh: { alignItems: 'center', marginTop: 10, padding: 10 },
+  disabled: { opacity: 0.45 },
+  incomplete: { marginTop: 14, padding: 12, borderRadius: 12, backgroundColor: '#FFF1D6' },
+  incompleteTitle: { color: '#6A4812', fontWeight: '800' },
+  error: { marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: '#FCE5E3' },
+  errorText: { color: '#7A2929', lineHeight: 20 },
+  complete: { marginTop: 18, padding: 14, borderRadius: 14, backgroundColor: '#E7F3EC' },
+  completeTitle: { color: '#235E42', fontWeight: '800' },
+  completeCopy: { marginTop: 4, color: '#235E42', lineHeight: 20 },
+});

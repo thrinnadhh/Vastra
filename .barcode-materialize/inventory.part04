@@ -1,0 +1,179 @@
+            </Text>
+
+            <Pressable
+              accessibilityLabel="Record offline barcode sale"
+              accessibilityRole="button"
+              disabled={saleBusy}
+              onPress={() => {
+                void recordSale();
+              }}
+              style={[styles.primary, saleBusy ? styles.disabled : null]}
+            >
+              <Text style={styles.primaryText}>
+                {saleBusy ? 'Recording…' : 'Record sale'}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+      </ScrollView>
+
+      <MerchantBarcodeScanner
+        onClose={() => {
+          setScannerVisible(false);
+        }}
+        onScanned={(value) => {
+          setScannerVisible(false);
+          setBarcode(value);
+          void lookup(value);
+        }}
+        visible={scannerVisible}
+      />
+    </>
+  );
+}
+
+export function DefaultMerchantInventory() {
+  const session = useMerchantApiSession();
+  const client = useMemo(
+    () =>
+      new HttpMerchantInventoryClient(
+        session.apiBaseUrl,
+        session.getAccessToken,
+      ),
+    [session.apiBaseUrl, session.getAccessToken],
+  );
+  const queue = useMemo(() => new AsyncStorageMerchantOfflineSaleQueue(), []);
+  const cache = useMemo(() => new AsyncStorageMerchantInventoryCache(), []);
+  return <MerchantInventoryWorkflow cache={cache} client={client} queue={queue} />;
+}
+
+const styles = StyleSheet.create({
+  content: { flexGrow: 1, padding: 18, paddingBottom: 120, backgroundColor: '#FFF8F2' },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 28,
+    backgroundColor: '#FFF8F2',
+  },
+  title: { color: '#241B16', fontSize: 27, fontWeight: '900' },
+  subtitle: { marginTop: 5, color: '#665A52', fontSize: 15 },
+  syncCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 16,
+    padding: 13,
+    borderRadius: 14,
+    backgroundColor: '#E7F3EC',
+  },
+  syncTitle: { flex: 1, color: '#235E42', fontWeight: '800' },
+  smallAction: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: '#FFFFFF' },
+  smallActionText: { color: '#287A55', fontWeight: '900' },
+  pendingCard: {
+    marginTop: 12,
+    padding: 13,
+    borderRadius: 14,
+    backgroundColor: '#FFF1D6',
+  },
+  pendingTitle: { color: '#6A4812', fontWeight: '900' },
+  pendingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E8D3AA',
+  },
+  pendingCopy: { flex: 1 },
+  pendingProduct: { color: '#241B16', fontWeight: '800' },
+  pendingMeta: { marginTop: 3, color: '#6A4812', fontSize: 12 },
+  removeAction: { paddingHorizontal: 10, paddingVertical: 8 },
+  removeActionText: { color: '#8E3B46', fontWeight: '900' },
+  error: { marginTop: 14, padding: 12, borderRadius: 12, backgroundColor: '#FCE5E3' },
+  errorText: { color: '#7A2929', lineHeight: 20, textAlign: 'center' },
+  notice: { marginTop: 14, padding: 12, borderRadius: 12, backgroundColor: '#E7F3EC' },
+  noticeText: { color: '#235E42', lineHeight: 20 },
+  primary: {
+    alignItems: 'center',
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 13,
+    backgroundColor: '#8E3B46',
+  },
+  primaryText: { color: '#FFFFFF', fontWeight: '900' },
+  secondary: {
+    alignItems: 'center',
+    marginTop: 10,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: '#8E3B46',
+    borderRadius: 13,
+  },
+  secondaryText: { color: '#8E3B46', fontWeight: '900' },
+  input: {
+    minHeight: 48,
+    marginTop: 12,
+    paddingHorizontal: 13,
+    borderWidth: 1,
+    borderColor: '#CDBDB2',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    color: '#241B16',
+  },
+  disabled: { opacity: 0.48 },
+  empty: {
+    marginTop: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E4D7CE',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  emptyTitle: { color: '#241B16', fontSize: 17, fontWeight: '900' },
+  emptyCopy: { marginTop: 7, color: '#665A52', lineHeight: 21 },
+  card: {
+    marginTop: 18,
+    padding: 17,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+  },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  cardTitle: { flex: 1, color: '#241B16', fontSize: 20, fontWeight: '900' },
+  cachedBadge: {
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: '#FFF1D6',
+    color: '#6A4812',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  meta: { marginTop: 5, color: '#665A52' },
+  barcodeValue: {
+    marginTop: 10,
+    color: '#241B16',
+    fontFamily: 'monospace',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  balanceGrid: { marginTop: 14, gap: 5 },
+  balance: { color: '#665A52', fontWeight: '700' },
+  available: { color: '#287A55', fontSize: 17, fontWeight: '900' },
+  sectionTitle: { marginTop: 22, color: '#241B16', fontSize: 17, fontWeight: '900' },
+  fieldLabel: { marginTop: 16, color: '#665A52', fontWeight: '800' },
+  paymentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 9 },
+  payment: {
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: '#CDBDB2',
+    borderRadius: 999,
+  },
+  paymentSelected: { borderColor: '#8E3B46', backgroundColor: '#8E3B46' },
+  paymentText: { color: '#665A52', fontSize: 12, fontWeight: '900' },
+  paymentSelectedText: { color: '#FFFFFF' },
+  estimate: { marginTop: 16, color: '#241B16', fontWeight: '800' },
+});
