@@ -319,8 +319,11 @@ export class SupabaseMerchantInventoryBarcodeGateway implements MerchantInventor
       const variantData: unknown = variantResponse.data;
       const variant = parseNullableVariant(variantData);
 
+      // A globally unique barcode may belong to another merchant. Treat that as
+      // not found so the endpoint neither leaks barcode ownership nor reports
+      // valid cross-shop data as internal corruption.
       if (variant === null) {
-        throw new MerchantInventoryBarcodeDataInvalidError();
+        return null;
       }
 
       const productResponse = await client

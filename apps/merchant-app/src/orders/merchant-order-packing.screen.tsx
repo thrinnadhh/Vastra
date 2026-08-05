@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { MerchantBarcodeScanner } from '../barcode/merchant-barcode-scanner';
 import {
   MerchantOrderError,
   type MerchantOrderDetail,
@@ -66,6 +67,7 @@ export function MerchantOrderPackingActions({
   const mounted = useRef(true);
   const [failure, setFailure] = useState<MerchantOrderError | null>(null);
   const [barcodes, setBarcodes] = useState<Readonly<Record<string, string>>>({});
+  const [scanningItemId, setScanningItemId] = useState<string | null>(null);
   const [readyAttemptKey] = useState(createIdempotencyKey);
 
   useEffect(() => {
@@ -245,127 +247,157 @@ export function MerchantOrderPackingActions({
   if (packingList === null) return null;
 
   return (
-    <View style={styles.card}>
-      <Text accessibilityRole="header" style={styles.title}>
-        Packing checklist
-      </Text>
-      <Text
-        accessibilityLabel={`${String(packingList.verifiedLines)} of ${String(packingList.totalLines)} packing lines verified`}
-        style={styles.progress}
-      >
-        {packingList.verifiedLines} of {packingList.totalLines} verified
-      </Text>
-      {failure === null ? null : <PackingError error={failure} />}
-
-      {packingList.items.map((item) => {
-        const verified = item.fulfilmentStatus === 'VERIFIED' || item.fulfilmentStatus === 'PACKED';
-        const mismatched = item.verification?.result === 'MISMATCH';
-        return (
-          <View key={item.orderItemId} style={styles.item}>
-            <Text style={styles.itemName}>{item.productName}</Text>
-            <Text style={styles.itemMeta}>
-              {[item.colour, item.size, item.sku].filter(Boolean).join(' · ')} · Qty {item.quantity}
-            </Text>
-            <Text
-              style={[
-                styles.itemStatus,
-                verified ? styles.verified : mismatched ? styles.mismatch : null,
-              ]}
-            >
-              {mismatched ? 'BARCODE MISMATCH' : verified ? 'VERIFIED' : 'PENDING VERIFICATION'}
-            </Text>
-            {mismatched ? (
-              <Text style={styles.mismatchCopy}>
-                Scanned barcode did not match this ordered variant. Verify the correct item.
-              </Text>
-            ) : null}
-            {verified ? null : (
-              <>
-                <TextInput
-                  accessibilityLabel={`Barcode for ${item.productName}`}
-                  editable={busyAction === null}
-                  onChangeText={(value) => {
-                    setBarcodes((current) => ({ ...current, [item.orderItemId]: value }));
-                  }}
-                  placeholder="Scan or enter barcode"
-                  style={styles.input}
-                  value={barcodes[item.orderItemId] ?? ''}
-                />
-                <View style={styles.row}>
-                  <Pressable
-                    accessibilityLabel={`Verify ${item.productName} by barcode`}
-                    accessibilityRole="button"
-                    disabled={busyAction !== null}
-                    onPress={() => {
-                      verifyItem(item.orderItemId, {
-                        method: 'BARCODE',
-                        barcode: barcodes[item.orderItemId] ?? '',
-                      });
-                    }}
-                    style={styles.secondary}
-                  >
-                    <Text style={styles.secondaryText}>Verify barcode</Text>
-                  </Pressable>
-                  <Pressable
-                    accessibilityLabel={`Manually confirm ${item.productName}`}
-                    accessibilityRole="button"
-                    disabled={busyAction !== null}
-                    onPress={() => {
-                      verifyItem(item.orderItemId, { method: 'MANUAL' });
-                    }}
-                    style={styles.secondary}
-                  >
-                    <Text style={styles.secondaryText}>Confirm manually</Text>
-                  </Pressable>
-                </View>
-              </>
-            )}
-          </View>
-        );
-      })}
-
-      {!packingList.allVerified ? (
-        <View
-          accessible
-          accessibilityLabel="Ready for pickup blocked. Complete every packing verification"
-          style={styles.incomplete}
-        >
-          <Text style={styles.incompleteTitle}>Verification incomplete</Text>
-          <Text style={styles.copy}>
-            Ready for Pickup remains blocked until every ordered line is verified.
-          </Text>
-        </View>
-      ) : null}
-
-      <Pressable
-        accessibilityLabel={
-          failure?.retryable === true
-            ? 'Retry ready for pickup with same idempotency key'
-            : 'Mark merchant order ready for pickup'
-        }
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !packingList.allVerified || busyAction !== null }}
-        disabled={!packingList.allVerified || busyAction !== null}
-        onPress={markReady}
-        style={[
-          styles.primary,
-          !packingList.allVerified || busyAction !== null ? styles.disabled : null,
-        ]}
-      >
-        <Text style={styles.primaryText}>
-          {busyAction === 'READY' ? 'Marking ready…' : 'Ready for pickup'}
+    <>
+      <View style={styles.card}>
+        <Text accessibilityRole="header" style={styles.title}>
+          Packing checklist
         </Text>
-      </Pressable>
-      <Pressable
-        accessibilityLabel="Refresh merchant packing checklist"
-        accessibilityRole="button"
-        disabled={isLoading || busyAction !== null}
-        onPress={loadPackingList}
-        style={styles.refresh}
-      >
-        <Text style={styles.secondaryText}>Refresh checklist</Text>
-      </Pressable>
-    </View>
+        <Text
+          accessibilityLabel={`${String(packingList.verifiedLines)} of ${String(packingList.totalLines)} packing lines verified`}
+          style={styles.progress}
+        >
+          {packingList.verifiedLines} of {packingList.totalLines} verified
+        </Text>
+        {failure === null ? null : <PackingError error={failure} />}
+
+        {packingList.items.map((item) => {
+          const verified =
+            item.fulfilmentStatus === 'VERIFIED' || item.fulfilmentStatus === 'PACKED';
+          const mismatched = item.verification?.result === 'MISMATCH';
+          return (
+            <View key={item.orderItemId} style={styles.item}>
+              <Text style={styles.itemName}>{item.productName}</Text>
+              <Text style={styles.itemMeta}>
+                {[item.colour, item.size, item.sku].filter(Boolean).join(' · ')} · Qty{' '}
+                {item.quantity}
+              </Text>
+              <Text
+                style={[
+                  styles.itemStatus,
+                  verified ? styles.verified : mismatched ? styles.mismatch : null,
+                ]}
+              >
+                {mismatched ? 'BARCODE MISMATCH' : verified ? 'VERIFIED' : 'PENDING VERIFICATION'}
+              </Text>
+              {mismatched ? (
+                <Text style={styles.mismatchCopy}>
+                  Scanned barcode did not match this ordered variant. Verify the correct item.
+                </Text>
+              ) : null}
+              {verified ? null : (
+                <>
+                  <Pressable
+                    accessibilityLabel={`Scan barcode for ${item.productName}`}
+                    accessibilityRole="button"
+                    disabled={busyAction !== null}
+                    onPress={() => {
+                      setScanningItemId(item.orderItemId);
+                    }}
+                    style={styles.scanAction}
+                  >
+                    <Text style={styles.scanActionText}>Scan with camera</Text>
+                  </Pressable>
+                  <TextInput
+                    accessibilityLabel={`Barcode for ${item.productName}`}
+                    autoCapitalize="none"
+                    editable={busyAction === null}
+                    onChangeText={(value) => {
+                      setBarcodes((current) => ({ ...current, [item.orderItemId]: value }));
+                    }}
+                    placeholder="Scan or enter barcode"
+                    style={styles.input}
+                    value={barcodes[item.orderItemId] ?? ''}
+                  />
+                  <View style={styles.row}>
+                    <Pressable
+                      accessibilityLabel={`Verify ${item.productName} by barcode`}
+                      accessibilityRole="button"
+                      disabled={busyAction !== null}
+                      onPress={() => {
+                        verifyItem(item.orderItemId, {
+                          method: 'BARCODE',
+                          barcode: barcodes[item.orderItemId] ?? '',
+                        });
+                      }}
+                      style={styles.secondary}
+                    >
+                      <Text style={styles.secondaryText}>Verify barcode</Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityLabel={`Manually confirm ${item.productName}`}
+                      accessibilityRole="button"
+                      disabled={busyAction !== null}
+                      onPress={() => {
+                        verifyItem(item.orderItemId, { method: 'MANUAL' });
+                      }}
+                      style={styles.secondary}
+                    >
+                      <Text style={styles.secondaryText}>Confirm manually</Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
+            </View>
+          );
+        })}
+
+        {!packingList.allVerified ? (
+          <View
+            accessible
+            accessibilityLabel="Ready for pickup blocked. Complete every packing verification"
+            style={styles.incomplete}
+          >
+            <Text style={styles.incompleteTitle}>Verification incomplete</Text>
+            <Text style={styles.copy}>
+              Ready for Pickup remains blocked until every ordered line is verified.
+            </Text>
+          </View>
+        ) : null}
+
+        <Pressable
+          accessibilityLabel={
+            failure?.retryable === true
+              ? 'Retry ready for pickup with same idempotency key'
+              : 'Mark merchant order ready for pickup'
+          }
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !packingList.allVerified || busyAction !== null }}
+          disabled={!packingList.allVerified || busyAction !== null}
+          onPress={markReady}
+          style={[
+            styles.primary,
+            !packingList.allVerified || busyAction !== null ? styles.disabled : null,
+          ]}
+        >
+          <Text style={styles.primaryText}>
+            {busyAction === 'READY' ? 'Marking ready…' : 'Ready for pickup'}
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Refresh merchant packing checklist"
+          accessibilityRole="button"
+          disabled={isLoading || busyAction !== null}
+          onPress={loadPackingList}
+          style={styles.refresh}
+        >
+          <Text style={styles.secondaryText}>Refresh checklist</Text>
+        </Pressable>
+      </View>
+
+      <MerchantBarcodeScanner
+        onClose={() => {
+          setScanningItemId(null);
+        }}
+        onScanned={(value) => {
+          const itemId = scanningItemId;
+          setScanningItemId(null);
+          if (itemId === null) return;
+          setBarcodes((current) => ({ ...current, [itemId]: value }));
+          verifyItem(itemId, { method: 'BARCODE', barcode: value });
+        }}
+        visible={scanningItemId !== null}
+      />
+    </>
   );
 }
 
@@ -388,6 +420,14 @@ const styles = StyleSheet.create({
   verified: { color: '#287A55' },
   mismatch: { color: '#A33A32' },
   mismatchCopy: { marginTop: 5, color: '#A33A32', fontSize: 13, lineHeight: 18 },
+  scanAction: {
+    alignItems: 'center',
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 11,
+    backgroundColor: '#287A55',
+  },
+  scanActionText: { color: '#FFFFFF', fontWeight: '800' },
   input: {
     minHeight: 46,
     marginTop: 10,
