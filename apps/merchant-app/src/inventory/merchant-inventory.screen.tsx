@@ -77,6 +77,18 @@ function asInventoryError(error: unknown): MerchantInventoryError {
     : new MerchantInventoryError('UNKNOWN', null, false);
 }
 
+function isMounted(ref: { readonly current: boolean }): boolean {
+  return ref.current;
+}
+
+function inventoryRefreshTarget(
+  shop: MerchantShopSummary | null,
+  inventory: MerchantBarcodeInventory | null,
+): { readonly shopId: string; readonly barcode: string } | null {
+  if (shop === null || inventory === null) return null;
+  return { shopId: shop.id, barcode: inventory.scannedBarcode };
+}
+
 export function MerchantInventoryWorkflow({
   client,
   queue,
@@ -131,7 +143,7 @@ export function MerchantInventoryWorkflow({
     setSyncBusy(true);
     try {
       const result = await queue.sync(client);
-      if (!mounted.current) return;
+      if (!isMounted(mounted)) return;
       setPendingEntries(result.remaining);
 
       if (result.completed.length > 0) {
@@ -144,7 +156,7 @@ export function MerchantInventoryWorkflow({
         if (shop !== null && inventory !== null) {
           const completedForCurrent = [...result.completed]
             .reverse()
-            .find((entry) => entry.pending.input.items[0]?.variantId === inventory.variant.id);
+            .find((entry) => entry.pending.input.items[0].variantId === inventory.variant.id);
           if (completedForCurrent !== undefined) {
             const synchronizedInventory = {
               ...inventory,
@@ -192,12 +204,13 @@ export function MerchantInventoryWorkflow({
     setFailure(null);
     try {
       const shops = await client.listOwnedShops();
-      if (!mounted.current) return;
-      if (shops.length === 0) {
+      if (!isMounted(mounted)) return;
+      const [firstShop] = shops;
+      if (firstShop === undefined) {
         setShop(null);
         setFailure(new MerchantInventoryError('NOT_FOUND', 'SHOP_NOT_FOUND', false));
       } else {
-        setShop(shops[0] ?? null);
+        setShop(firstShop);
       }
     } catch (error: unknown) {
       if (mounted.current) setFailure(asInventoryError(error));
@@ -207,7 +220,7 @@ export function MerchantInventoryWorkflow({
   }, [client]);
 
   useEffect(() => {
-    void loadShop();
+    void Promise.resolve().then(loadShop);
   }, [loadShop]);
 
   const lookup = useCallback(
@@ -223,7 +236,7 @@ export function MerchantInventoryWorkflow({
       setUsingCachedInventory(false);
       try {
         const result = await client.lookupBarcode(shop.id, value);
-        if (!mounted.current) return;
+        if (!isMounted(mounted)) return;
         setInventory(result);
         setBarcode(result.scannedBarcode);
         try {
@@ -237,7 +250,7 @@ export function MerchantInventoryWorkflow({
           inventoryError.retryable || inventoryError.kind === 'TRANSPORT'
             ? await cache.get(shop.id, value)
             : null;
-        if (!mounted.current) return;
+        if (!isMounted(mounted)) return;
         if (cached !== null) {
           setInventory(cached);
           setBarcode(cached.scannedBarcode);
@@ -308,7 +321,7 @@ export function MerchantInventoryWorkflow({
     setNotice(null);
     try {
       const result = await client.createOfflineSale(input, idempotencyKey);
-      if (!mounted.current) return;
+      if (!isMounted(mounted)) return;
       const synchronizedInventory = { ...inventory, balance: result.balance };
       setInventory(synchronizedInventory);
       setUsingCachedInventory(false);
@@ -337,12 +350,11 @@ export function MerchantInventoryWorkflow({
             createdAt: new Date().toISOString(),
           });
         } catch {
-          if (mounted.current) {
-            setFailure(new MerchantInventoryError('UNKNOWN', 'OFFLINE_QUEUE_UNAVAILABLE', false));
-          }
+          if (!isMounted(mounted)) return;
+          setFailure(new MerchantInventoryError('UNKNOWN', 'OFFLINE_QUEUE_UNAVAILABLE', false));
           return;
         }
-        if (!mounted.current) return;
+        if (!isMounted(mounted)) return;
         setPendingEntries(pending);
         const optimisticBalance = {
           ...inventory.balance,
@@ -364,7 +376,8 @@ export function MerchantInventoryWorkflow({
         setNotice(
           'Offline sale saved on this device. It will synchronize automatically after reconnection.',
         );
-      } else if (mounted.current) {
+      } else {
+        if (!isMounted(mounted)) return;
         setFailure(inventoryError);
       }
     } finally {
@@ -389,17 +402,18 @@ export function MerchantInventoryWorkflow({
   const removePendingSale = useCallback(
     async (id: string) => {
       const remaining = await queue.remove(id);
-      if (!mounted.current) return;
+      if (!isMounted(mounted)) return;
       setPendingEntries(remaining);
 
-      if (shop !== null && inventory !== null) {
+      const target = inventoryRefreshTarget(shop, inventory);
+      if (target !== null) {
         try {
-          const refreshed = await client.lookupBarcode(shop.id, inventory.scannedBarcode);
-          if (!mounted.current) return;
+          const refreshed = await client.lookupBarcode(target.shopId, target.barcode);
+          if (!isMounted(mounted)) return;
           setInventory(refreshed);
           setUsingCachedInventory(false);
           try {
-            await cache.put(shop.id, refreshed);
+            await cache.put(target.shopId, refreshed);
           } catch {
             // The refreshed server value remains valid for this session.
           }
@@ -411,11 +425,8 @@ export function MerchantInventoryWorkflow({
         }
       }
 
-      if (mounted.current) {
-        setNotice(
-          'Pending offline sale removed. Refresh the barcode before recording another sale.',
-        );
-      }
+      if (!isMounted(mounted)) return;
+      setNotice('Pending offline sale removed. Refresh the barcode before recording another sale.');
     },
     [cache, client, inventory, queue, shop],
   );
@@ -490,7 +501,7 @@ export function MerchantInventoryWorkflow({
                 <View style={styles.pendingCopy}>
                   <Text style={styles.pendingProduct}>{entry.productName}</Text>
                   <Text style={styles.pendingMeta}>
-                    {entry.barcode} · Qty {String(entry.input.items[0]?.quantity ?? 0)}
+                    {entry.barcode} · Qty {String(entry.input.items[0].quantity)}
                   </Text>
                   <Text style={styles.pendingMeta}>
                     Attempts {String(entry.attemptCount)}
@@ -712,8 +723,8 @@ export function MerchantInventoryWorkflow({
 export function DefaultMerchantInventory() {
   const session = useMerchantApiSession();
   const client = useMemo(
-    () => new HttpMerchantInventoryClient(session.apiBaseUrl, session.getAccessToken),
-    [session.apiBaseUrl, session.getAccessToken],
+    () => new HttpMerchantInventoryClient(session.apiBaseUrl, () => session.getAccessToken()),
+    [session],
   );
   const queue = useMemo(() => new AsyncStorageMerchantOfflineSaleQueue(), []);
   const cache = useMemo(() => new AsyncStorageMerchantInventoryCache(), []);

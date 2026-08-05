@@ -17,6 +17,14 @@ const SHOP_ID = '20000000-0000-4000-8000-000000000001';
 const VARIANT_ID = '50000000-0000-4000-8000-000000000001';
 const IDEMPOTENCY_KEY = '80000000-0000-4000-8000-000000000001';
 
+function firstCall<T extends readonly unknown[]>(calls: readonly T[]): T {
+  const call = calls[0];
+  if (call === undefined) {
+    throw new TypeError('Expected one mock call');
+  }
+  return call;
+}
+
 const inventory: MerchantBarcodeInventory = {
   scannedBarcode: '8901234567890',
   barcode: {
@@ -64,8 +72,14 @@ function port(): jest.Mocked<MerchantInventoryPort> {
         },
       ]),
     ),
-    lookupBarcode: jest.fn(() => Promise.resolve(inventory)),
-    createOfflineSale: jest.fn(() =>
+    lookupBarcode: jest.fn<
+      ReturnType<MerchantInventoryPort['lookupBarcode']>,
+      Parameters<MerchantInventoryPort['lookupBarcode']>
+    >(() => Promise.resolve(inventory)),
+    createOfflineSale: jest.fn<
+      ReturnType<MerchantInventoryPort['createOfflineSale']>,
+      Parameters<MerchantInventoryPort['createOfflineSale']>
+    >(() =>
       Promise.resolve({
         id: '70000000-0000-4000-8000-000000000001',
         saleNumber: 'OFF-1',
@@ -87,7 +101,10 @@ function port(): jest.Mocked<MerchantInventoryPort> {
 function queue(): jest.Mocked<MerchantOfflineSaleQueuePort> {
   return {
     list: jest.fn(() => Promise.resolve([])),
-    remove: jest.fn(() => Promise.resolve([])),
+    remove: jest.fn<
+      ReturnType<MerchantOfflineSaleQueuePort['remove']>,
+      Parameters<MerchantOfflineSaleQueuePort['remove']>
+    >(() => Promise.resolve([])),
     enqueue: jest.fn((entry) =>
       Promise.resolve([
         {
@@ -99,7 +116,10 @@ function queue(): jest.Mocked<MerchantOfflineSaleQueuePort> {
         },
       ]),
     ),
-    sync: jest.fn(() => Promise.resolve({ remaining: [], completed: [] })),
+    sync: jest.fn<
+      ReturnType<MerchantOfflineSaleQueuePort['sync']>,
+      Parameters<MerchantOfflineSaleQueuePort['sync']>
+    >(() => Promise.resolve({ remaining: [], completed: [] })),
   };
 }
 
@@ -107,8 +127,14 @@ function cache(
   cached: MerchantBarcodeInventory | null = null,
 ): jest.Mocked<MerchantInventoryCachePort> {
   return {
-    get: jest.fn(() => Promise.resolve(cached)),
-    put: jest.fn(() => Promise.resolve()),
+    get: jest.fn<
+      ReturnType<MerchantInventoryCachePort['get']>,
+      Parameters<MerchantInventoryCachePort['get']>
+    >(() => Promise.resolve(cached)),
+    put: jest.fn<
+      ReturnType<MerchantInventoryCachePort['put']>,
+      Parameters<MerchantInventoryCachePort['put']>
+    >(() => Promise.resolve()),
   };
 }
 
@@ -126,21 +152,15 @@ describe('MerchantInventoryWorkflow', () => {
     );
 
     await view.findByText('Inventory scanner');
-    fireEvent.changeText(
-      view.getByLabelText('Enter product barcode manually'),
-      '8901234567890',
-    );
+    fireEvent.changeText(view.getByLabelText('Enter product barcode manually'), '8901234567890');
     fireEvent.press(view.getByLabelText('Look up entered product barcode'));
     expect(await view.findByText('Blue Kurta')).toBeTruthy();
 
-    fireEvent.changeText(
-      view.getByLabelText('Offline sale unit price in rupees'),
-      '120',
-    );
+    fireEvent.changeText(view.getByLabelText('Offline sale unit price in rupees'), '120');
     fireEvent.press(view.getByLabelText('Record offline barcode sale'));
 
     expect(await view.findByText(/Sale OFF-1 recorded/u)).toBeTruthy();
-    const [saleInput, idempotencyKey] = client.createOfflineSale.mock.calls[0]!;
+    const [saleInput, idempotencyKey] = firstCall(client.createOfflineSale.mock.calls);
     expect(saleInput.shopId).toBe(SHOP_ID);
     expect(saleInput.items[0]).toMatchObject({
       variantId: VARIANT_ID,
@@ -151,12 +171,8 @@ describe('MerchantInventoryWorkflow', () => {
 
   it('uses cached barcode data offline and queues the sale durably', async () => {
     const client = port();
-    client.lookupBarcode.mockRejectedValue(
-      new MerchantInventoryError('TRANSPORT', null, true),
-    );
-    client.createOfflineSale.mockRejectedValue(
-      new MerchantInventoryError('TRANSPORT', null, true),
-    );
+    client.lookupBarcode.mockRejectedValue(new MerchantInventoryError('TRANSPORT', null, true));
+    client.createOfflineSale.mockRejectedValue(new MerchantInventoryError('TRANSPORT', null, true));
     const offlineQueue = queue();
     const view = render(
       <MerchantInventoryWorkflow
@@ -169,24 +185,18 @@ describe('MerchantInventoryWorkflow', () => {
     );
 
     await view.findByText('Inventory scanner');
-    fireEvent.changeText(
-      view.getByLabelText('Enter product barcode manually'),
-      '8901234567890',
-    );
+    fireEvent.changeText(view.getByLabelText('Enter product barcode manually'), '8901234567890');
     fireEvent.press(view.getByLabelText('Look up entered product barcode'));
     expect(await view.findByText('CACHED')).toBeTruthy();
 
-    fireEvent.changeText(
-      view.getByLabelText('Offline sale unit price in rupees'),
-      '120',
-    );
+    fireEvent.changeText(view.getByLabelText('Offline sale unit price in rupees'), '120');
     fireEvent.press(view.getByLabelText('Record offline barcode sale'));
 
     expect(await view.findByText(/saved on this device/u)).toBeTruthy();
     await waitFor(() => {
       expect(offlineQueue.enqueue.mock.calls).toHaveLength(1);
     });
-    const queued = offlineQueue.enqueue.mock.calls[0]![0];
+    const [queued] = firstCall(offlineQueue.enqueue.mock.calls);
     expect(queued.idempotencyKey).toBe(IDEMPOTENCY_KEY);
     expect(queued.input.items[0].variantId).toBe(VARIANT_ID);
   });

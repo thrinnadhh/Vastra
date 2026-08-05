@@ -17,6 +17,14 @@ interface TestResponse {
 
 type TestFetchFunction = (input: string, init: RequestInit) => Promise<TestResponse>;
 
+function firstCall<T extends readonly unknown[]>(calls: readonly T[]): T {
+  const call = calls[0];
+  if (call === undefined) {
+    throw new TypeError('Expected one mock call');
+  }
+  return call;
+}
+
 function response(body: unknown, status = 200): TestResponse {
   return {
     ok: status >= 200 && status < 300,
@@ -106,10 +114,9 @@ describe('merchant inventory client', () => {
   });
 
   it('calls exact barcode lookup with merchant authentication', async () => {
-    const fetchFunction = jest.fn<
-      ReturnType<TestFetchFunction>,
-      Parameters<TestFetchFunction>
-    >(() => Promise.resolve(response(barcodeEnvelope)));
+    const fetchFunction = jest.fn<ReturnType<TestFetchFunction>, Parameters<TestFetchFunction>>(
+      () => Promise.resolve(response(barcodeEnvelope)),
+    );
     const client = new HttpMerchantInventoryClient(
       'https://api.example.test',
       () => Promise.resolve('token'),
@@ -119,7 +126,7 @@ describe('merchant inventory client', () => {
     const result = await client.lookupBarcode(SHOP_ID, '8901234567890');
 
     expect(result.variant.id).toBe(VARIANT_ID);
-    const [url, init] = fetchFunction.mock.calls[0]!;
+    const [url, init] = firstCall(fetchFunction.mock.calls);
     expect(url).toBe(
       `https://api.example.test/merchant/catalogue/shops/${SHOP_ID}/inventory/barcode-lookup?barcode=8901234567890`,
     );
@@ -128,25 +135,23 @@ describe('merchant inventory client', () => {
   });
 
   it('sends one idempotent offline sale request', async () => {
-    const fetchFunction = jest.fn<
-      ReturnType<TestFetchFunction>,
-      Parameters<TestFetchFunction>
-    >(() =>
-      Promise.resolve(
-        response({
-          success: true,
-          data: {
-            sale: {
-              id: '70000000-0000-4000-8000-000000000001',
-              saleNumber: 'OFF-1',
-              totalPaise: 12000,
-              replayed: false,
-              createdAt: '2026-08-05T08:00:00.000Z',
-              items: [{ balance }],
+    const fetchFunction = jest.fn<ReturnType<TestFetchFunction>, Parameters<TestFetchFunction>>(
+      () =>
+        Promise.resolve(
+          response({
+            success: true,
+            data: {
+              sale: {
+                id: '70000000-0000-4000-8000-000000000001',
+                saleNumber: 'OFF-1',
+                totalPaise: 12000,
+                replayed: false,
+                createdAt: '2026-08-05T08:00:00.000Z',
+                items: [{ balance }],
+              },
             },
-          },
-        }),
-      ),
+          }),
+        ),
     );
     const client = new HttpMerchantInventoryClient(
       'https://api.example.test',
@@ -173,7 +178,7 @@ describe('merchant inventory client', () => {
       '80000000-0000-4000-8000-000000000001',
     );
 
-    const [url, init] = fetchFunction.mock.calls[0]!;
+    const [url, init] = firstCall(fetchFunction.mock.calls);
     expect(url).toBe('https://api.example.test/merchant/offline-sales');
     expect(init.method).toBe('POST');
     expect(init.headers).toMatchObject({
@@ -207,9 +212,7 @@ describe('merchant inventory client', () => {
           ),
         ),
     );
-    await expect(
-      notFoundClient.lookupBarcode(SHOP_ID, 'unknown'),
-    ).rejects.toEqual(
+    await expect(notFoundClient.lookupBarcode(SHOP_ID, 'unknown')).rejects.toEqual(
       new MerchantInventoryError('NOT_FOUND', 'BARCODE_NOT_FOUND', false),
     );
   });

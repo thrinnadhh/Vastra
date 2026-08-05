@@ -1,26 +1,8 @@
-import {
-  CameraView,
-  useCameraPermissions,
-  type BarcodeScanningResult,
-} from 'expo-camera';
+import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { useCallback, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-const SUPPORTED_BARCODE_TYPES = [
-  'ean13',
-  'ean8',
-  'upc_a',
-  'upc_e',
-  'code128',
-  'qr',
-] as const;
+const SUPPORTED_BARCODE_TYPES = ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'qr'] as const;
 
 export function MerchantBarcodeScanner({
   visible,
@@ -31,9 +13,7 @@ export function MerchantBarcodeScanner({
   readonly onClose: () => void;
   readonly onScanned: (barcode: string) => void;
 }) {
-  return visible ? (
-    <ActiveMerchantBarcodeScanner onClose={onClose} onScanned={onScanned} />
-  ) : null;
+  return visible ? <ActiveMerchantBarcodeScanner onClose={onClose} onScanned={onScanned} /> : null;
 }
 
 function ActiveMerchantBarcodeScanner({
@@ -62,12 +42,7 @@ function ActiveMerchantBarcodeScanner({
   );
 
   return (
-    <Modal
-      animationType="slide"
-      onRequestClose={onClose}
-      presentationStyle="fullScreen"
-      visible
-    >
+    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="fullScreen" visible>
       <View style={styles.container}>
         <View style={styles.header}>
           <View>

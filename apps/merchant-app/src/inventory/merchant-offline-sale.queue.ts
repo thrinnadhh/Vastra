@@ -15,15 +15,11 @@ export interface MerchantQueueStorage {
 
 const defaultStorage: MerchantQueueStorage = {
   async getItem(key: string): Promise<string | null> {
-    const { default: storage } = await import(
-      '@react-native-async-storage/async-storage'
-    );
+    const { default: storage } = await import('@react-native-async-storage/async-storage');
     return storage.getItem(key);
   },
   async setItem(key: string, value: string): Promise<void> {
-    const { default: storage } = await import(
-      '@react-native-async-storage/async-storage'
-    );
+    const { default: storage } = await import('@react-native-async-storage/async-storage');
     await storage.setItem(key, value);
   },
 };
@@ -44,10 +40,8 @@ function parsePendingSale(value: unknown): PendingMerchantOfflineSale | null {
     typeof value['attemptCount'] !== 'number' ||
     !Number.isSafeInteger(value['attemptCount']) ||
     value['attemptCount'] < 0 ||
-    (value['lastAttemptAt'] !== null &&
-      typeof value['lastAttemptAt'] !== 'string') ||
-    (value['lastErrorCode'] !== null &&
-      typeof value['lastErrorCode'] !== 'string') ||
+    (value['lastAttemptAt'] !== null && typeof value['lastAttemptAt'] !== 'string') ||
+    (value['lastErrorCode'] !== null && typeof value['lastErrorCode'] !== 'string') ||
     !Array.isArray(items) ||
     items.length !== 1
   ) {
@@ -66,19 +60,13 @@ function parseQueue(raw: string | null): PendingMerchantOfflineSale[] {
     const value: unknown = JSON.parse(raw);
     if (!Array.isArray(value)) return [];
     const parsed = value.map(parsePendingSale);
-    return parsed.every(
-      (item): item is PendingMerchantOfflineSale => item !== null,
-    )
-      ? parsed
-      : [];
+    return parsed.every((item): item is PendingMerchantOfflineSale => item !== null) ? parsed : [];
   } catch {
     return [];
   }
 }
 
-export class AsyncStorageMerchantOfflineSaleQueue
-  implements MerchantOfflineSaleQueuePort
-{
+export class AsyncStorageMerchantOfflineSaleQueue implements MerchantOfflineSaleQueuePort {
   private tail: Promise<void> = Promise.resolve();
 
   public constructor(
@@ -106,9 +94,7 @@ export class AsyncStorageMerchantOfflineSaleQueue
   ): Promise<readonly PendingMerchantOfflineSale[]> {
     return this.runExclusive(async () => {
       const queue = await this.load();
-      const existing = queue.find(
-        (item) => item.idempotencyKey === input.idempotencyKey,
-      );
+      const existing = queue.find((item) => item.idempotencyKey === input.idempotencyKey);
       if (existing !== undefined) return queue;
       const next = [
         ...queue,
@@ -141,20 +127,15 @@ export class AsyncStorageMerchantOfflineSaleQueue
         }
 
         try {
-          const result = await client.createOfflineSale(
-            pending.input,
-            pending.idempotencyKey,
-          );
+          const result = await client.createOfflineSale(pending.input, pending.idempotencyKey);
           completed.push({ pending, result });
         } catch (error: unknown) {
-          const inventoryError =
-            error instanceof MerchantInventoryError ? error : null;
+          const inventoryError = error instanceof MerchantInventoryError ? error : null;
           remaining.push({
             ...pending,
             attemptCount: pending.attemptCount + 1,
             lastAttemptAt: this.now(),
-            lastErrorCode:
-              inventoryError?.code ?? inventoryError?.kind ?? 'UNKNOWN',
+            lastErrorCode: inventoryError?.code ?? inventoryError?.kind ?? 'UNKNOWN',
             blocked: inventoryError?.retryable !== true,
           });
 

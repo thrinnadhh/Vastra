@@ -1,4 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native';
+import { Pressable, Text } from 'react-native';
 
 import { MerchantOrderPackingActions } from './merchant-order-packing.screen';
 import type {
@@ -7,29 +8,28 @@ import type {
   MerchantPackingList,
 } from './merchant-order.types';
 
-jest.mock('../barcode/merchant-barcode-scanner', () => {
-  const { Pressable, Text } =
-    jest.requireActual<typeof import('react-native')>('react-native');
-  return {
-    MerchantBarcodeScanner: ({
-      visible,
-      onScanned,
-    }: {
-      readonly visible: boolean;
-      readonly onScanned: (value: string) => void;
-    }) =>
-      visible ? (
-        <Pressable
-          accessibilityLabel="Emit test packing barcode"
-          onPress={() => {
-            onScanned('CORRECT-1');
-          }}
-        >
-          <Text>Test scanner</Text>
-        </Pressable>
-      ) : null,
-  };
-});
+function MockMerchantBarcodeScanner({
+  visible,
+  onScanned,
+}: {
+  readonly visible: boolean;
+  readonly onScanned: (value: string) => void;
+}) {
+  return visible ? (
+    <Pressable
+      accessibilityLabel="Emit test packing barcode"
+      onPress={() => {
+        onScanned('CORRECT-1');
+      }}
+    >
+      <Text>Test scanner</Text>
+    </Pressable>
+  ) : null;
+}
+
+jest.mock('../barcode/merchant-barcode-scanner', () => ({
+  MerchantBarcodeScanner: MockMerchantBarcodeScanner,
+}));
 
 const ORDER_ID = '10000000-0000-4000-8000-000000000001';
 const ITEM_ID = '40000000-0000-4000-8000-000000000001';
@@ -149,7 +149,10 @@ function packingList(verified: boolean): MerchantPackingList {
 
 function port(): jest.Mocked<MerchantOrderPackingPort> {
   return {
-    startPacking: jest.fn(() => Promise.reject(new Error('unused'))),
+    startPacking: jest.fn<
+      ReturnType<MerchantOrderPackingPort['startPacking']>,
+      Parameters<MerchantOrderPackingPort['startPacking']>
+    >(() => Promise.reject(new Error('unused'))),
     getPackingList: jest
       .fn<
         ReturnType<MerchantOrderPackingPort['getPackingList']>,
@@ -157,7 +160,10 @@ function port(): jest.Mocked<MerchantOrderPackingPort> {
       >()
       .mockResolvedValueOnce(packingList(false))
       .mockResolvedValueOnce(packingList(true)),
-    verifyPackingItem: jest.fn(() =>
+    verifyPackingItem: jest.fn<
+      ReturnType<MerchantOrderPackingPort['verifyPackingItem']>,
+      Parameters<MerchantOrderPackingPort['verifyPackingItem']>
+    >(() =>
       Promise.resolve({
         orderId: ORDER_ID,
         orderItemId: ITEM_ID,
@@ -173,7 +179,10 @@ function port(): jest.Mocked<MerchantOrderPackingPort> {
         replayed: false,
       }),
     ),
-    markReadyForPickup: jest.fn(() => Promise.reject(new Error('unused'))),
+    markReadyForPickup: jest.fn<
+      ReturnType<MerchantOrderPackingPort['markReadyForPickup']>,
+      Parameters<MerchantOrderPackingPort['markReadyForPickup']>
+    >(() => Promise.reject(new Error('unused'))),
   };
 }
 
