@@ -29,55 +29,203 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Apply exact inventory screen repairs
+      - name: Apply final lint repairs
         run: |
           python <<'PY'
           from pathlib import Path
 
-          path = Path('apps/merchant-app/src/inventory/merchant-inventory.screen.tsx')
-          source = path.read_text()
-
-          replacements = [
-              (
-                  'entry.pending.input.items[0]?.variantId === inventory.variant.id',
-                  'entry.pending.input.items[0].variantId === inventory.variant.id',
-              ),
-              ('setShop(shops[0] ?? null);', 'setShop(shops[0]!);'),
-              (
-                  '  useEffect(() => {\n    void loadShop();\n  }, [loadShop]);',
-                  '  useEffect(() => {\n    void Promise.resolve().then(loadShop);\n  }, [loadShop]);',
-              ),
-              (
-                  "        } catch {\n          if (mounted.current) {\n            setFailure(new MerchantInventoryError('UNKNOWN', 'OFFLINE_QUEUE_UNAVAILABLE', false));\n          }\n          return;\n        }",
-                  "        } catch {\n          if (!mounted.current) return;\n          setFailure(new MerchantInventoryError('UNKNOWN', 'OFFLINE_QUEUE_UNAVAILABLE', false));\n          return;\n        }",
-              ),
-              (
-                  '      } else if (mounted.current) {\n        setFailure(inventoryError);\n      }',
-                  '      } else {\n        if (!mounted.current) return;\n        setFailure(inventoryError);\n      }',
-              ),
-              (
-                  "      if (shop !== null && inventory !== null) {\n        try {\n          const refreshed = await client.lookupBarcode(shop.id, inventory.scannedBarcode);",
-                  "      const currentShop = shop;\n      const currentInventory = inventory;\n      if (currentShop !== null && currentInventory !== null) {\n        try {\n          const refreshed = await client.lookupBarcode(\n            currentShop.id,\n            currentInventory.scannedBarcode,\n          );",
-              ),
-              ('await cache.put(shop.id, refreshed);', 'await cache.put(currentShop.id, refreshed);'),
-              (
-                  "      if (mounted.current) {\n        setNotice(\n          'Pending offline sale removed. Refresh the barcode before recording another sale.',\n        );\n      }",
-                  "      if (!mounted.current) return;\n      setNotice(\n        'Pending offline sale removed. Refresh the barcode before recording another sale.',\n      );",
-              ),
-              ('entry.input.items[0]?.quantity ?? 0', 'entry.input.items[0].quantity'),
-              (
-                  "  const client = useMemo(\n    () => new HttpMerchantInventoryClient(session.apiBaseUrl, session.getAccessToken),\n    [session.apiBaseUrl, session.getAccessToken],\n  );",
-                  "  const client = useMemo(\n    () =>\n      new HttpMerchantInventoryClient(session.apiBaseUrl, () =>\n        session.getAccessToken(),\n      ),\n    [session],\n  );",
-              ),
-          ]
-
-          for old, new in replacements:
+          def replace(path: str, old: str, new: str, count: int = 1) -> None:
+              file = Path(path)
+              source = file.read_text()
               if old in source:
-                  source = source.replace(old, new, 1)
-              elif new not in source:
-                  raise SystemExit(f'Missing expected inventory repair pattern: {old[:80]!r}')
+                  file.write_text(source.replace(old, new, count))
+                  return
+              if new in source:
+                  return
+              raise SystemExit(f'Missing expected repair pattern in {path}: {old[:100]!r}')
 
-          path.write_text(source)
+          app_test = 'apps/merchant-app/App.test.tsx'
+          replace(
+              app_test,
+              "import type { ReactNode } from 'react';\n",
+              "import type { ReactNode } from 'react';\nimport type * as ReactNative from 'react-native';\n",
+          )
+          replace(
+              app_test,
+              "jest.requireActual<typeof import('react-native')>('react-native')",
+              "jest.requireActual('react-native') as typeof ReactNative",
+              2,
+          )
+
+          packing_test = 'apps/merchant-app/src/orders/merchant-order-packing.scanner.test.tsx'
+          replace(
+              packing_test,
+              "import { fireEvent, render } from '@testing-library/react-native';\n",
+              "import { fireEvent, render } from '@testing-library/react-native';\nimport type * as ReactNative from 'react-native';\n",
+          )
+          replace(
+              packing_test,
+              "jest.requireActual<typeof import('react-native')>('react-native')",
+              "jest.requireActual('react-native') as typeof ReactNative",
+          )
+
+          call_helper = """function firstCall<T extends readonly unknown[]>(calls: readonly T[]): T {
+            const call = calls[0];
+            if (call === undefined) {
+              throw new TypeError('Expected one mock call');
+            }
+            return call;
+          }
+
+          """
+
+          client_test = 'apps/merchant-app/src/inventory/merchant-inventory.client.test.ts'
+          replace(
+              client_test,
+              "type TestFetchFunction = (input: string, init: RequestInit) => Promise<TestResponse>;\n\n",
+              "type TestFetchFunction = (input: string, init: RequestInit) => Promise<TestResponse>;\n\n" + call_helper,
+          )
+          replace(
+              client_test,
+              'const [url, init] = fetchFunction.mock.calls[0]!;',
+              'const [url, init] = firstCall(fetchFunction.mock.calls);',
+              2,
+          )
+
+          screen_test = 'apps/merchant-app/src/inventory/merchant-inventory.screen.test.tsx'
+          replace(
+              screen_test,
+              "const IDEMPOTENCY_KEY = '80000000-0000-4000-8000-000000000001';\n\n",
+              "const IDEMPOTENCY_KEY = '80000000-0000-4000-8000-000000000001';\n\n" + call_helper,
+          )
+          replace(
+              screen_test,
+              'const [saleInput, idempotencyKey] = client.createOfflineSale.mock.calls[0]!;',
+              'const [saleInput, idempotencyKey] = firstCall(client.createOfflineSale.mock.calls);',
+          )
+          replace(
+              screen_test,
+              'const queued = offlineQueue.enqueue.mock.calls[0]![0];',
+              'const [queued] = firstCall(offlineQueue.enqueue.mock.calls);',
+          )
+
+          screen = Path('apps/merchant-app/src/inventory/merchant-inventory.screen.tsx')
+          source = screen.read_text()
+          if 'function isMounted(' not in source:
+              anchor = """function asInventoryError(error: unknown): MerchantInventoryError {
+            return error instanceof MerchantInventoryError
+              ? error
+              : new MerchantInventoryError('UNKNOWN', null, false);
+          }
+
+          """
+              helper = anchor + """function isMounted(ref: { readonly current: boolean }): boolean {
+            return ref.current;
+          }
+
+          """
+              if anchor not in source:
+                  raise SystemExit('Missing inventory mounted-helper anchor')
+              source = source.replace(anchor, helper, 1)
+
+          source = source.replace('if (!mounted.current) return;', 'if (!isMounted(mounted)) return;')
+          source = source.replace(
+              """      if (shops.length === 0) {
+                setShop(null);
+                setFailure(new MerchantInventoryError('NOT_FOUND', 'SHOP_NOT_FOUND', false));
+              } else {
+                setShop(shops[0] ?? null);
+              }""",
+              """      const [firstShop] = shops;
+              if (firstShop === undefined) {
+                setShop(null);
+                setFailure(new MerchantInventoryError('NOT_FOUND', 'SHOP_NOT_FOUND', false));
+              } else {
+                setShop(firstShop);
+              }""",
+              1,
+          )
+          source = source.replace(
+              'entry.pending.input.items[0]?.variantId === inventory.variant.id',
+              'entry.pending.input.items[0].variantId === inventory.variant.id',
+              1,
+          )
+          source = source.replace(
+              '  useEffect(() => {\n    void loadShop();\n  }, [loadShop]);',
+              '  useEffect(() => {\n    void Promise.resolve().then(loadShop);\n  }, [loadShop]);',
+              1,
+          )
+          source = source.replace(
+              """        } catch {
+                if (mounted.current) {
+                  setFailure(new MerchantInventoryError('UNKNOWN', 'OFFLINE_QUEUE_UNAVAILABLE', false));
+                }
+                return;
+              }""",
+              """        } catch {
+                if (!isMounted(mounted)) return;
+                setFailure(new MerchantInventoryError('UNKNOWN', 'OFFLINE_QUEUE_UNAVAILABLE', false));
+                return;
+              }""",
+              1,
+          )
+          source = source.replace(
+              """      } else if (mounted.current) {
+                setFailure(inventoryError);
+              }""",
+              """      } else {
+                if (!isMounted(mounted)) return;
+                setFailure(inventoryError);
+              }""",
+              1,
+          )
+          source = source.replace(
+              """      if (shop !== null && inventory !== null) {
+                try {
+                  const refreshed = await client.lookupBarcode(shop.id, inventory.scannedBarcode);""",
+              """      const currentShop = shop;
+              const currentInventory = inventory;
+              if (currentShop !== null && currentInventory !== null) {
+                try {
+                  const refreshed = await client.lookupBarcode(
+                    currentShop.id,
+                    currentInventory.scannedBarcode,
+                  );""",
+              1,
+          )
+          source = source.replace('await cache.put(shop.id, refreshed);', 'await cache.put(currentShop.id, refreshed);', 1)
+          source = source.replace(
+              """      if (mounted.current) {
+                setNotice(
+                  'Pending offline sale removed. Refresh the barcode before recording another sale.',
+                );
+              }""",
+              """      if (!isMounted(mounted)) return;
+              setNotice(
+                'Pending offline sale removed. Refresh the barcode before recording another sale.',
+              );""",
+              1,
+          )
+          source = source.replace(
+              'entry.input.items[0]?.quantity ?? 0',
+              'entry.input.items[0].quantity',
+              1,
+          )
+          source = source.replace(
+              """  const client = useMemo(
+            () => new HttpMerchantInventoryClient(session.apiBaseUrl, session.getAccessToken),
+            [session.apiBaseUrl, session.getAccessToken],
+          );""",
+              """  const client = useMemo(
+            () =>
+              new HttpMerchantInventoryClient(session.apiBaseUrl, () =>
+                session.getAccessToken(),
+              ),
+            [session],
+          );""",
+              1,
+          )
+          screen.write_text(source)
           PY
 
       - name: Format repaired files
