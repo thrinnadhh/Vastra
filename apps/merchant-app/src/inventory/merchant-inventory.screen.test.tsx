@@ -7,7 +7,6 @@ import {
   type MerchantInventoryCachePort,
   type MerchantInventoryPort,
   type MerchantOfflineSaleQueuePort,
-  type PendingMerchantOfflineSale,
 } from './merchant-inventory.types';
 
 jest.mock('../barcode/merchant-barcode-scanner', () => ({
@@ -127,32 +126,37 @@ describe('MerchantInventoryWorkflow', () => {
     );
 
     await view.findByText('Inventory scanner');
-    fireEvent.changeText(view.getByLabelText('Enter product barcode manually'), '8901234567890');
+    fireEvent.changeText(
+      view.getByLabelText('Enter product barcode manually'),
+      '8901234567890',
+    );
     fireEvent.press(view.getByLabelText('Look up entered product barcode'));
     expect(await view.findByText('Blue Kurta')).toBeTruthy();
 
-    fireEvent.changeText(view.getByLabelText('Offline sale unit price in rupees'), '120');
+    fireEvent.changeText(
+      view.getByLabelText('Offline sale unit price in rupees'),
+      '120',
+    );
     fireEvent.press(view.getByLabelText('Record offline barcode sale'));
 
     expect(await view.findByText(/Sale OFF-1 recorded/u)).toBeTruthy();
-    expect(client.createOfflineSale).toHaveBeenCalledWith(
-      expect.objectContaining({
-        shopId: SHOP_ID,
-        items: [
-          expect.objectContaining({
-            variantId: VARIANT_ID,
-            identificationMethod: 'BARCODE',
-          }),
-        ],
-      }),
-      IDEMPOTENCY_KEY,
-    );
+    const [saleInput, idempotencyKey] = client.createOfflineSale.mock.calls[0]!;
+    expect(saleInput.shopId).toBe(SHOP_ID);
+    expect(saleInput.items[0]).toMatchObject({
+      variantId: VARIANT_ID,
+      identificationMethod: 'BARCODE',
+    });
+    expect(idempotencyKey).toBe(IDEMPOTENCY_KEY);
   });
 
   it('uses cached barcode data offline and queues the sale durably', async () => {
     const client = port();
-    client.lookupBarcode.mockRejectedValue(new MerchantInventoryError('TRANSPORT', null, true));
-    client.createOfflineSale.mockRejectedValue(new MerchantInventoryError('TRANSPORT', null, true));
+    client.lookupBarcode.mockRejectedValue(
+      new MerchantInventoryError('TRANSPORT', null, true),
+    );
+    client.createOfflineSale.mockRejectedValue(
+      new MerchantInventoryError('TRANSPORT', null, true),
+    );
     const offlineQueue = queue();
     const view = render(
       <MerchantInventoryWorkflow
@@ -165,21 +169,24 @@ describe('MerchantInventoryWorkflow', () => {
     );
 
     await view.findByText('Inventory scanner');
-    fireEvent.changeText(view.getByLabelText('Enter product barcode manually'), '8901234567890');
+    fireEvent.changeText(
+      view.getByLabelText('Enter product barcode manually'),
+      '8901234567890',
+    );
     fireEvent.press(view.getByLabelText('Look up entered product barcode'));
     expect(await view.findByText('CACHED')).toBeTruthy();
 
-    fireEvent.changeText(view.getByLabelText('Offline sale unit price in rupees'), '120');
+    fireEvent.changeText(
+      view.getByLabelText('Offline sale unit price in rupees'),
+      '120',
+    );
     fireEvent.press(view.getByLabelText('Record offline barcode sale'));
 
     expect(await view.findByText(/saved on this device/u)).toBeTruthy();
     await waitFor(() => {
-      expect(offlineQueue.enqueue).toHaveBeenCalledTimes(1);
+      expect(offlineQueue.enqueue.mock.calls).toHaveLength(1);
     });
-    const queued = offlineQueue.enqueue.mock.calls[0]?.[0] as Omit<
-      PendingMerchantOfflineSale,
-      'attemptCount' | 'lastAttemptAt' | 'lastErrorCode' | 'blocked'
-    >;
+    const queued = offlineQueue.enqueue.mock.calls[0]![0];
     expect(queued.idempotencyKey).toBe(IDEMPOTENCY_KEY);
     expect(queued.input.items[0].variantId).toBe(VARIANT_ID);
   });
