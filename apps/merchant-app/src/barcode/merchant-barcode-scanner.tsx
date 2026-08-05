@@ -1,26 +1,8 @@
-import {
-  CameraView,
-  useCameraPermissions,
-  type BarcodeScanningResult,
-} from 'expo-camera';
+import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-const SUPPORTED_BARCODE_TYPES = [
-  'ean13',
-  'ean8',
-  'upc_a',
-  'upc_e',
-  'code128',
-  'qr',
-] as const;
+const SUPPORTED_BARCODE_TYPES = ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'qr'] as const;
 
 export function MerchantBarcodeScanner({
   visible,

@@ -46,23 +46,14 @@ function readBoolean(record: Record<string, unknown>, key: string): boolean {
   return typeof value === 'boolean' ? value : invalidResponse();
 }
 
-function readInteger(
-  record: Record<string, unknown>,
-  key: string,
-  minimum = 0,
-): number {
+function readInteger(record: Record<string, unknown>, key: string, minimum = 0): number {
   const value = record[key];
-  return typeof value === 'number' &&
-    Number.isSafeInteger(value) &&
-    value >= minimum
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= minimum
     ? value
     : invalidResponse();
 }
 
-function readNullableInteger(
-  record: Record<string, unknown>,
-  key: string,
-): number | null {
+function readNullableInteger(record: Record<string, unknown>, key: string): number | null {
   const value = record[key];
   return value === null ? null : readInteger(record, key);
 }
@@ -157,9 +148,7 @@ function parseApiError(
   }
   const code = value['error']['code'];
   const retryable = value['error']['retryable'];
-  return typeof code === 'string' && typeof retryable === 'boolean'
-    ? { code, retryable }
-    : null;
+  return typeof code === 'string' && typeof retryable === 'boolean' ? { code, retryable } : null;
 }
 
 function mapFailureKind(code: string, status: number): MerchantInventoryFailureKind {
@@ -182,19 +171,10 @@ export class HttpMerchantInventoryClient implements MerchantInventoryPort {
   ) {}
 
   public listOwnedShops(): Promise<readonly MerchantShopSummary[]> {
-    return this.request(
-      '/merchant/catalogue/shops',
-      'GET',
-      undefined,
-      {},
-      parseOwnedShops,
-    );
+    return this.request('/merchant/catalogue/shops', 'GET', undefined, {}, parseOwnedShops);
   }
 
-  public lookupBarcode(
-    shopId: string,
-    barcode: string,
-  ): Promise<MerchantBarcodeInventory> {
+  public lookupBarcode(shopId: string, barcode: string): Promise<MerchantBarcodeInventory> {
     const query = new URLSearchParams({ barcode });
     return this.request(
       `/merchant/catalogue/shops/${encodeURIComponent(shopId)}/inventory/barcode-lookup?${query.toString()}`,

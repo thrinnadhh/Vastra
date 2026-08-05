@@ -10,16 +10,11 @@ let mockCameraProps: {
 const mockRequestPermission = jest.fn(() => Promise.resolve());
 
 jest.mock('expo-camera', () => ({
-  CameraView: (props: {
-    readonly onBarcodeScanned?: (result: BarcodeScanningResult) => void;
-  }) => {
+  CameraView: (props: { readonly onBarcodeScanned?: (result: BarcodeScanningResult) => void }) => {
     mockCameraProps = props;
     return null;
   },
-  useCameraPermissions: () => [
-    { granted: true, canAskAgain: true },
-    mockRequestPermission,
-  ],
+  useCameraPermissions: () => [{ granted: true, canAskAgain: true }, mockRequestPermission],
 }));
 
 function result(data: string): BarcodeScanningResult {
@@ -42,13 +37,7 @@ describe('MerchantBarcodeScanner', () => {
 
   it('trims one physical scan and suppresses duplicate camera events', () => {
     const onScanned = jest.fn();
-    render(
-      <MerchantBarcodeScanner
-        onClose={jest.fn()}
-        onScanned={onScanned}
-        visible
-      />,
-    );
+    render(<MerchantBarcodeScanner onClose={jest.fn()} onScanned={onScanned} visible />);
 
     const handler = mockCameraProps?.onBarcodeScanned;
     expect(handler).toBeDefined();

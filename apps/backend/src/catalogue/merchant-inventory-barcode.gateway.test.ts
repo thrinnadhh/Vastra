@@ -70,10 +70,7 @@ describe('SupabaseMerchantInventoryBarcodeGateway', () => {
     );
 
     expect(result).toBeNull();
-    expect(client.requestedTables).toStrictEqual([
-      'variant_barcodes',
-      'product_variants',
-    ]);
+    expect(client.requestedTables).toStrictEqual(['variant_barcodes', 'product_variants']);
   });
 
   it('returns an owned barcode projection with its balance', async () => {

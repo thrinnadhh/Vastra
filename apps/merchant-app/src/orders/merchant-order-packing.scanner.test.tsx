@@ -190,10 +190,9 @@ describe('merchant packing camera scanner', () => {
     fireEvent.press(view.getByLabelText('Emit test packing barcode'));
 
     expect(await view.findByText('VERIFIED')).toBeTruthy();
-    expect(packingClient.verifyPackingItem).toHaveBeenCalledWith(
-      ORDER_ID,
-      ITEM_ID,
-      { method: 'BARCODE', barcode: 'CORRECT-1' },
-    );
+    expect(packingClient.verifyPackingItem).toHaveBeenCalledWith(ORDER_ID, ITEM_ID, {
+      method: 'BARCODE',
+      barcode: 'CORRECT-1',
+    });
   });
 });

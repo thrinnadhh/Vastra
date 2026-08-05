@@ -47,27 +47,19 @@ function cacheKey(shopId: string, barcode: string): string {
   return `${shopId}:${barcode}`;
 }
 
-export class AsyncStorageMerchantInventoryCache
-  implements MerchantInventoryCachePort
-{
+export class AsyncStorageMerchantInventoryCache implements MerchantInventoryCachePort {
   public constructor(
     private readonly storage: MerchantQueueStorage = AsyncStorage,
     private readonly now: () => string = () => new Date().toISOString(),
   ) {}
 
-  public async get(
-    shopId: string,
-    barcode: string,
-  ): Promise<MerchantBarcodeInventory | null> {
+  public async get(shopId: string, barcode: string): Promise<MerchantBarcodeInventory | null> {
     const key = cacheKey(shopId, barcode);
     const entries = parseEntries(await this.storage.getItem(CACHE_STORAGE_KEY));
     return entries.find((entry) => entry.key === key)?.inventory ?? null;
   }
 
-  public async put(
-    shopId: string,
-    inventory: MerchantBarcodeInventory,
-  ): Promise<void> {
+  public async put(shopId: string, inventory: MerchantBarcodeInventory): Promise<void> {
     const key = cacheKey(shopId, inventory.scannedBarcode);
     const entries = parseEntries(await this.storage.getItem(CACHE_STORAGE_KEY));
     const next = [

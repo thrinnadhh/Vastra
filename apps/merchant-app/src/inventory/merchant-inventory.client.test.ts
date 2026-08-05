@@ -197,9 +197,7 @@ describe('merchant inventory client', () => {
           ),
         ),
     );
-    await expect(
-      notFoundClient.lookupBarcode(SHOP_ID, 'unknown'),
-    ).rejects.toEqual(
+    await expect(notFoundClient.lookupBarcode(SHOP_ID, 'unknown')).rejects.toEqual(
       new MerchantInventoryError('NOT_FOUND', 'BARCODE_NOT_FOUND', false),
     );
   });

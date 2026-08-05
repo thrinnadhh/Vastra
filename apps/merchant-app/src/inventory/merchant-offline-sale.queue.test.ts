@@ -21,7 +21,9 @@ class MemoryStorage {
   }
 }
 
-function pending(idempotencyKey: string): Omit<
+function pending(
+  idempotencyKey: string,
+): Omit<
   PendingMerchantOfflineSale,
   'attemptCount' | 'lastAttemptAt' | 'lastErrorCode' | 'blocked'
 > {
@@ -64,9 +66,7 @@ describe('AsyncStorageMerchantOfflineSaleQueue', () => {
     const queue = new AsyncStorageMerchantOfflineSaleQueue(new MemoryStorage());
 
     await queue.enqueue(pending('80000000-0000-4000-8000-000000000001'));
-    const result = await queue.enqueue(
-      pending('80000000-0000-4000-8000-000000000001'),
-    );
+    const result = await queue.enqueue(pending('80000000-0000-4000-8000-000000000001'));
 
     expect(result).toHaveLength(1);
     expect(result[0]?.attemptCount).toBe(0);
@@ -76,9 +76,7 @@ describe('AsyncStorageMerchantOfflineSaleQueue', () => {
     const queue = new AsyncStorageMerchantOfflineSaleQueue(new MemoryStorage());
     await queue.enqueue(pending('80000000-0000-4000-8000-000000000001'));
 
-    const remaining = await queue.remove(
-      '80000000-0000-4000-8000-000000000001',
-    );
+    const remaining = await queue.remove('80000000-0000-4000-8000-000000000001');
 
     expect(remaining).toHaveLength(0);
     await expect(queue.list()).resolves.toHaveLength(0);
@@ -92,13 +90,7 @@ describe('AsyncStorageMerchantOfflineSaleQueue', () => {
     await queue.enqueue(pending('80000000-0000-4000-8000-000000000001'));
 
     const firstClient = client(() =>
-      Promise.reject(
-        new MerchantInventoryError(
-          'VALIDATION',
-          'INVALID_OFFLINE_SALE',
-          false,
-        ),
-      ),
+      Promise.reject(new MerchantInventoryError('VALIDATION', 'INVALID_OFFLINE_SALE', false)),
     );
     const first = await queue.sync(firstClient);
 
