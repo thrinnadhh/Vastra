@@ -59,7 +59,6 @@ jobs:
             apps/merchant-app/src/orders/merchant-order-packing.screen.tsx \
             apps/merchant-app/src/orders/merchant-order-packing.scanner.test.tsx \
             docs/implementation/barcode-end-to-end.md \
-            supabase/migrations/20260805093333_merchant_order_packing.sql \
             .github/workflows/materialize-barcode-lock.yml
 
       - name: Commit generated changes when needed
