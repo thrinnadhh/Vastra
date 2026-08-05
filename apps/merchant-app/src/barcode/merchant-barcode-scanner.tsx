@@ -1,8 +1,26 @@
-import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  CameraView,
+  useCameraPermissions,
+  type BarcodeScanningResult,
+} from 'expo-camera';
+import { useCallback, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
-const SUPPORTED_BARCODE_TYPES = ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'qr'] as const;
+const SUPPORTED_BARCODE_TYPES = [
+  'ean13',
+  'ean8',
+  'upc_a',
+  'upc_e',
+  'code128',
+  'qr',
+] as const;
 
 export function MerchantBarcodeScanner({
   visible,
@@ -13,20 +31,23 @@ export function MerchantBarcodeScanner({
   readonly onClose: () => void;
   readonly onScanned: (barcode: string) => void;
 }) {
+  return visible ? (
+    <ActiveMerchantBarcodeScanner onClose={onClose} onScanned={onScanned} />
+  ) : null;
+}
+
+function ActiveMerchantBarcodeScanner({
+  onClose,
+  onScanned,
+}: {
+  readonly onClose: () => void;
+  readonly onScanned: (barcode: string) => void;
+}) {
   const [permission, requestPermission] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
   const [locked, setLocked] = useState(false);
   const lockRef = useRef(false);
   const [mountError, setMountError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (visible) {
-      lockRef.current = false;
-      setLocked(false);
-      setTorch(false);
-      setMountError(null);
-    }
-  }, [visible]);
 
   const handleScanned = useCallback(
     (result: BarcodeScanningResult) => {
@@ -45,7 +66,7 @@ export function MerchantBarcodeScanner({
       animationType="slide"
       onRequestClose={onClose}
       presentationStyle="fullScreen"
-      visible={visible}
+      visible
     >
       <View style={styles.container}>
         <View style={styles.header}>
@@ -127,7 +148,7 @@ export function MerchantBarcodeScanner({
         ) : (
           <View style={styles.preview}>
             <CameraView
-              active={visible}
+              active
               barcodeScannerSettings={{ barcodeTypes: [...SUPPORTED_BARCODE_TYPES] }}
               enableTorch={torch}
               facing="back"
